@@ -708,6 +708,39 @@ Six entries around the current one.
   the panel is 124 px wide, not 112.
 - Drawn only; no test reads it.
 
+## 2026-10-10 — REC proposed
+
+`proto/rec.html`, **not validated**. What he settled for the app on
+03/09 (one press: a four-beat count-in, the transport, the capture;
+snap to the nearest step and nothing finer), on a machine with keys.
+PATTERN first. REC red, `REC 4..1` in the bar with a click, then the
+phrase loops (inside the LOOP range when there is one) and each key is
+written at the nearest step; several keys on a step make a chord; a key
+landing on a written step replaces its notes. REC again stops the take
+and lets it play, STOP stops everything. One UNDO for the whole take.
+Open, asked: whether releasing a key writes OFF (proposed: yes, on an
+empty step, when no other key is held). Known limit: the keyboard
+audition has one voice, a chord is written but only its last note heard
+while recording. The player has no click yet.
+
+## 2026-10-10 — What "validated" means in these notes
+
+He said it himself at the end of the day: without the machine he has no
+opinion, and his answers to the mockups were given without weighing
+them. So every "validated" above dated 10/10 (PATTERN's layout aside,
+which he did correct: cards on top, readable type, ordinary keys) means
+"not objected to", not "chosen". Nothing here is settled about how the
+screens FEEL; what is settled is what the tests prove.
+
+To re-open with the FM-1 in hand, in the order they will be met: the
+size of type and rows, the left hand / right hand split, the twelve
+button words, MIXER rows, PHRASE's dots for chords, UNDO's one-second
+gesture, LOOP's three presses, SELECT hiding LOOP and INSTR, the effect
+list covering the notes, the RECEIVING panel.
+
+REC stays a proposal (`proto/rec.html`), unwritten, with its question
+about OFF unanswered. Not to be written before he has played the keys.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
