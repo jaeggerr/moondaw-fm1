@@ -1,0 +1,7 @@
+build/
+*.dSYM/
+moondaw-fm1.flash
+# a crash of the emulated toolchain leaves a file named core at the root;
+# core/ the directory is the tracker
+/core
+!/core/

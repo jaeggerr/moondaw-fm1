@@ -1,0 +1,44 @@
+# Upstream
+
+The hardware plumbing of this project comes from **Felucca**, the open-source
+firmware for the M-VAVE FM-1 by Leo Kuroshita (@kurogedelic), Hügelton
+Instruments — <https://github.com/hugelton/Felucca>, GPL-3.0-only.
+
+Taken at commit `129a4cf4e98e6ef06a4a89e97b65092247d69412` ("Felucca 1.5",
+2026-10-09). This is not a fork: only the files below were taken, none of
+Felucca's engines, sequencer, UI, editor, MIDI learn or project storage.
+
+| Here | From Felucca | State |
+| --- | --- | --- |
+| `firmware/hal/` (18 files) | `firmware/hal/` | verbatim |
+| `firmware/crt0.S`, `firmware/app.ld` | same | verbatim (memory map not yet recut) |
+| `firmware/loader/` | `firmware/loader/` | verbatim |
+| `firmware/src/libc.c`, `lcd.c`, `storage_hw.c`, `ota.c`, `usb.c` | `firmware/src/` | verbatim |
+| `firmware/src/panel.c` | `firmware/src/panel.c` | cut after `panel_enc`: the palette, HOLD and LEDS settings are gone |
+| `firmware/src/audio.c` | `firmware/src/audio.c` | the ISR and buffers kept; mixer, USB audio tap, scope, click and voice shedding removed; a half is rendered by `app_audio` |
+| `firmware/src/ota_hw.c` | `firmware/src/ota_hw.c` | `ota_show` redrawn with the text cells |
+| `firmware/src/firmware.c` | `firmware/src/felucca.c`, `main.c`, `master.c` | rewritten around them: same boot order, TIMER5 interrupt, boot guard, UBOOT and update entries |
+| `tools/build.py`, `build.sh` | same | generated headers and the minsize pass removed, outputs renamed, one retry under Docker |
+| `tools/fm1pkg_make.py`, `lz4blk.py`, `fm1_install.py`, `get_toolchain.sh` | `tools/` | verbatim |
+| `web/installer/` | `web/fm1pkg.js`, `fm1ota.js`, `index_pkg.html`, `make_site.py` | verbatim, **not yet adapted or run** |
+| `platform/web/` | — | new code; the design (everything in the AudioWorklet, audio as the device clock) follows `web/emu/felucca_web.c` and `worklet.js` |
+| `LICENSE`, `LICENSES/`, `docs/FELUCCA-LICENSING.md` | `LICENSE`, `LICENSES/`, `LICENSING.md` | verbatim |
+
+`usb.c` was not on the original list of files to take. It is here because
+`ota.c` receives the update through it: without USB there is no way to
+replace the firmware short of FM-1-transporter.
+
+Not Felucca's:
+
+- `app/font/font8x8_basic.h` — Daniel Hepper, public domain.
+- The kernel table `bl_step` and the routine `blep_add` in `core/synth.c` —
+  from **blip_buf 1.1.0** by Shay Green (<http://www.slack.net/~ant/>),
+  LGPL-2.1-or-later, rewritten here in 32 bits. Used in this GPL-3.0 work
+  as the LGPL allows (section 3).
+- `core/` as a whole is a fixed-point rewrite of the author's own tracker,
+  MOONDAW (`sequencer/song.c`, `songfile.c`, `player.c`,
+  `instruments/chain.c`, `pulse.c`, `noise.c`, `wave.c`), and reads the
+  same `.trk` files; its `FORMAT.md` is the specification.
+
+To compare with a later Felucca: `diff -ru Felucca/firmware/hal firmware/hal`,
+and the same for each verbatim file.

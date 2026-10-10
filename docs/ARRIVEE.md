@@ -1,0 +1,171 @@
+# Le jour où le FM-1 arrive
+
+L'ordre des opérations, écrit avant d'avoir l'appareil. Rien de ce dépôt n'a
+jamais tourné sur un vrai FM-1 : le firmware compile, se lie, passe les
+contrôles de Felucca, et c'est tout ce qu'on sait.
+
+Deux règles au-dessus de tout le reste :
+
+- **On ne flashe rien avant d'avoir une sauvegarde de la flash d'origine,
+  vérifiée, en deux endroits.**
+- **On ne flashe rien avant d'avoir prouvé qu'on sait revenir en arrière.**
+
+## 0. À préparer avant (sans l'appareil)
+
+Fait le 10/10/2026, sur ce Mac :
+
+- [x] Le firmware [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter)
+      **compilé** : `~/Documents/Code/FM-1-transporter/build/fm1_transporter.uf2`
+      (commit `a632d92`, avec `wl82loader.bin` embarqué).
+- [x] `pyserial` installé, `tools/fm1t.py` se lance.
+
+Ce qui a été installé pour ça, hors de tout dépôt :
+
+| Quoi | Où |
+|---|---|
+| pico-sdk 2.2.0 | `~/pico-sdk` |
+| GCC ARM 13.3 (archive d'Arm, sans installation système) | `~/.fm1/arm/` |
+| jl-uboot-tool, pour `wl82loader.bin` (24 064 octets) | `~/.fm1/jl-uboot-tool/` |
+
+Pour recompiler :
+
+```bash
+cd ~/Documents/Code/FM-1-transporter && ninja -C build
+```
+
+Reste à faire :
+
+- [ ] Une **Seeed XIAO RP2040** (pas une autre carte : les autres RP2040 ne
+      sont pas testées, la Waveshare RP2350-USB-A ne marche pas).
+- [ ] **Charger le firmware sur la XIAO** : la brancher en tenant son bouton
+      BOOT, elle apparaît comme un disque `RPI-RP2` ; y copier
+      `fm1_transporter.uf2`. Elle redémarre seule.
+- [ ] Un câble USB sacrifié pour atteindre D+, D− et la masse du FM-1.
+- [ ] `pip3 install mido python-rtmidi` (pour l'installateur en ligne de
+      commande de Felucca, pas pour le transporter).
+- [ ] Le fichier **FM-1.fwsc officiel** de M-VAVE (la V15), téléchargé et
+      rangé : c'est le chemin de retour.
+
+Câblage, trois fils et pas un de plus :
+
+| XIAO RP2040 | FM-1 |
+|---|---|
+| D6 (GP0) | D+ |
+| D7 (GP1) | D− |
+| GND | GND |
+
+**Ne jamais brancher VBUS (le 5 V).** Le FM-1 tourne sur sa batterie.
+
+## 1. L'appareil tel qu'il sort de la boîte
+
+- [ ] Le charger, l'allumer, jouer avec le firmware d'origine. Noter sa
+      version : le transporter n'entre tout seul en UBOOT que depuis la V15.
+- [ ] **Mesurer la diagonale de l'écran** (ou sa largeur visible, au pied à
+      coulisse). C'est la donnée qui manque pour fixer la hauteur d'une ligne.
+- [ ] Vérifier la disposition contre `proto/pattern.html` : quatre potards à
+      gauche de l'écran, quatre à droite, deux rangées de six boutons, OCT−
+      et OCT+ sous les potards de gauche.
+
+## 2. La sauvegarde
+
+```bash
+python3 tools/fm1t.py info
+```
+```bash
+python3 tools/fm1t.py dump backup-1.bin
+```
+```bash
+python3 tools/fm1t.py dump backup-2.bin --compare backup-1.bin
+```
+```bash
+shasum -a 256 backup-1.bin backup-2.bin
+```
+
+(à lancer depuis `~/Documents/Code/FM-1-transporter`)
+
+- [ ] Les deux empreintes sont identiques, les fichiers font 1 048 576 octets.
+- [ ] Une copie hors de la machine (disque externe ou nuage).
+
+À savoir : le transporter lit toute la flash mais **n'écrit que 0x4000 à
+0x93000**, la zone du firmware. Il ne restaure donc pas la zone des données
+(0x97000 et au-delà), et n'en a pas besoin : nous n'écrivons jamais dans la
+sauvegarde du firmware d'origine (0xE8000 et au-delà).
+
+## 3. Prouver le retour avant le premier aller
+
+```bash
+python3 tools/fm1t.py write --package FM-1.fwsc --ref backup-1.bin
+```
+
+Sans `--write`, cette commande **vérifie et n'écrit rien**. Elle doit passer.
+
+Le transporter est un outil de **retour**, pas d'installation : `write`
+n'accepte que le paquet officiel V15 (ou un paquet explicitement validé par
+son auteur) et refuse le reste. MOONDAW ne s'installera donc jamais par lui,
+mais par la mise à jour USB normale (`tools/fm1_install.py`, celle de
+Felucca).
+
+## 4. Felucca d'abord, pas MOONDAW
+
+Ma recommandation : le premier firmware alternatif à installer est
+**Felucca**, par son installateur web, pas le nôtre. C'est un firmware connu
+pour marcher. S'il s'installe et qu'on sait revenir à la V15 (le bouton
+« Return to official V15 » de l'installateur, ou M-VAVE), on a prouvé le
+chemin d'installation et le chemin de retour avec autre chose qu'un firmware
+qui n'a jamais tourné.
+
+- [ ] Felucca installé, joue.
+- [ ] Retour à la V15 officielle, joue.
+
+## 5. Le firmware de test (`MOONDAW_APP=hello`)
+
+Le plus petit possible : du texte, toutes les commandes lues et affichées,
+une onde carrée sous les touches. 18 Ko.
+
+```bash
+MOONDAW_APP=hello ./build.sh
+```
+
+À vérifier, dans cet ordre :
+
+- [ ] L'écran s'allume et le texte est à l'endroit, les couleurs justes
+      (sinon : ordre des octets ou inversion, `lcd.c`).
+- [ ] Chaque **touche** allume sa case, sa LED, et joue sa note, de Fa3 à
+      Sol5 de gauche à droite.
+- [ ] Chaque **bouton** allume le nom qui est imprimé dessus (sinon la table
+      `PANEL_DEFAULT` de `panel.c` ne correspond pas à cet exemplaire).
+- [ ] Chaque **potard** compte dans le bon sens, et le bon compteur bouge.
+- [ ] MASTER va de 0 à environ 1023 et règle le volume.
+- [ ] **CPU et MAX** en bas à droite : la part de son temps que prend
+      l'interruption audio, pour une simple onde carrée. C'est le plancher.
+- [ ] **OCT− et OCT+ tenus 5 secondes** : l'écran dit UBOOT. C'est la porte
+      de sortie ; si elle ne marche pas, on ne va pas plus loin.
+- [ ] Une mise à jour par-dessus (réinstaller le même paquet) passe.
+
+## 6. MOONDAW
+
+```bash
+./build.sh
+```
+
+- [ ] La démo joue. **CPU et MAX** sur l'écran de lecture : c'est LE chiffre
+      inconnu. Sous 70 % en moyenne et 90 % au pire, ça tient.
+- [ ] Charger par l'ordinateur n'existe pas encore : pour l'instant seul le
+      morceau intégré est disponible sur l'appareil.
+- [ ] EDIT ouvre PATTERN : **est-ce lisible ?** Les notes, les petits
+      libellés en 8 px, les mots des boutons.
+- [ ] Écrire une note, SAVE, éteindre, rallumer : la note est là.
+- [ ] Pendant SAVE le son s'arrête (attendu : un effacement de secteur bloque
+      les interruptions une cinquantaine de millisecondes).
+
+Si le CPU ne tient pas, les replis sont dans `NOTES.md` : moins de voix par
+piste, le filtre à demi-cadence, un noyau moins cher pour le moteur WAVE,
+moins de bandes redessinées par image.
+
+## Ce qu'on ne sait pas et qu'on saura ce jour-là
+
+- La fréquence du processeur, donc ce que coûtent réellement huit pistes.
+- La taille de l'écran, donc si onze pas par écran sont lisibles.
+- Si la table des boutons de Felucca vaut pour cet exemplaire.
+- Si l'identité `FM-1_900` de notre paquet est acceptée telle quelle par
+  l'installateur (c'est celle des versions de développement de Felucca).

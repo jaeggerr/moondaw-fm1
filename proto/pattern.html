@@ -1,0 +1,473 @@
+<meta charset="utf-8">
+<title>PATTERN sur le FM-1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+
+<!--
+  MOONDAW — PATTERN sur le M-VAVE FM-1 (écran 240 × 240).
+
+  Le système de design est celui de moondaw/proto/pattern-ios/ et de
+  proto/console/ : mêmes couleurs (les COL_* de ui.c, à l'octet près),
+  mêmes familles, mêmes primitives (dalle, slot, barre du bas).  Seules
+  les MESURES changent, et la façon dont on agit : ni doigt ni croix,
+  des potards, un clavier de piano et quatorze boutons.
+
+  Données : moondaw/songs/KIDS.trk, `pat t3 01` (piste 4, inst 09 CHORDS).
+  Une seule fonction dessine l'écran ; chaque cadre est un état.
+-->
+
+<style>
+/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
+   et une fois à la taille de l'appareil dans le plan du panneau. */
+:root{
+  color-scheme:dark;
+  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
+  --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
+  --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
+  /* la page */
+  --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
+
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --jb:'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  --s:3;
+}
+@media (max-width:820px){ :root{ --s:1.38; } }
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose);
+  font-family:var(--sf); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700;
+  text-transform:uppercase; font-size:clamp(36px,6vw,56px); line-height:.98;
+  color:var(--prose-hi); text-wrap:balance; }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; text-wrap:balance; }
+section{ margin-top:76px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--title);
+  display:block; margin-bottom:8px; }
+
+.budget{ display:grid; margin-top:24px; border-top:1px solid var(--rule);
+  border-bottom:1px solid var(--rule); }
+@media (min-width:760px){ .budget{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.budget > div{ padding:14px 20px 14px 0; min-width:0; }
+@media (min-width:760px){ .budget > div + div{ padding-left:20px; border-left:1px solid var(--rule); } }
+.budget .k{ display:block; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; color:var(--title); }
+.budget p{ margin:0; font-size:14px; }
+
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
+  height:2px; background:var(--dim); }
+
+/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+.zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
+  border-radius:calc(3px * var(--s)); overflow:hidden;
+  box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+.zoom > .sc{ transform:scale(var(--s)); transform-origin:0 0; }
+.stage{ margin-top:26px; display:flex; }
+
+.sc{ position:relative; width:240px; height:240px; background:var(--bg);
+  overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
+  color:var(--text); line-height:1; }
+
+/* la barre d'identité : où l'on est, et la sortie */
+.nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
+  border-bottom:1px solid rgba(90,100,112,.30); }
+.nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
+  letter-spacing:.05em; color:var(--title); white-space:nowrap; }
+.nav .trk{ font-family:var(--cond); font-size:11.5px; font-weight:700;
+  letter-spacing:.05em; color:var(--text); }
+.nav .slot2{ height:12px; padding:0 4px; border-radius:2px; white-space:nowrap;
+  background:rgba(200,208,200,.07); line-height:12px; }
+.nav .slot2 .u{ font-family:var(--jb); font-size:8px; letter-spacing:0;
+  color:var(--dim); margin-right:3px; }
+.nav .slot2 .n{ font-family:var(--cond); font-size:11px; font-weight:700; }
+.nav .sp{ flex:1; }
+.nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
+.nav .keys b{ color:var(--text); font-weight:500; }
+
+/* le manuel des potards de gauche : une ligne, toujours */
+.left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
+  font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
+  white-space:nowrap; }
+.left b{ color:var(--text); font-weight:500; margin-left:2px; }
+
+/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+.cols{ display:grid; column-gap:2px; padding:0 1px;
+  grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
+.head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
+  font-size:8px; letter-spacing:0; color:var(--dim); text-align:center; }
+.head .on{ color:var(--accent); }
+.rows{ flex:1; min-height:0; display:flex; flex-direction:column; gap:1px; position:relative; }
+.slab{ height:12px; flex:none; align-items:center; border-radius:2px;
+  background:rgba(200,208,200,.045); }
+.slab.beat{ background:rgba(200,208,200,.10); }
+.slab.bar{ background:rgba(200,208,200,.17); }
+.slab.playing{ background:var(--play); }
+.gauge{ align-self:stretch; border-radius:2px 0 0 2px; }
+.slab.playing .gauge{ background:var(--accent); }
+.step{ font-family:var(--jb); font-size:8px; font-weight:500; text-align:center;
+  color:var(--dim); font-variant-numeric:tabular-nums; }
+.slab.beat .step{ color:var(--beat); } .slab.bar .step{ color:var(--text); }
+.seam{ align-self:stretch; justify-self:center; width:0;
+  border-left:1px dashed rgba(98,200,217,.35); }
+.ramp{ align-self:stretch; }
+.ramp.on{ background:var(--sel); }
+
+/* un champ = un slot, plein ou vide */
+.slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
+  white-space:nowrap; background:rgba(200,208,200,.07); }
+.slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em; }
+.slot.i{ background:rgba(98,200,217,.10); }
+.slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; }
+.slot.f{ background:rgba(240,190,90,.11); }
+.slot.f .m{ font-family:var(--cond); font-size:9px; font-weight:700;
+  letter-spacing:.05em; color:var(--fx); }
+.slot.f .v{ font-family:var(--jb); font-size:8px; font-weight:500; margin-left:2px;
+  font-variant-numeric:tabular-nums; }
+.slot.empty{ background:none; box-shadow:inset 0 0 0 .5px rgba(90,100,112,.5); }
+.slot.picked{ background:var(--sel); }
+.sc .slot.cur{ background:var(--accent); box-shadow:none; }
+.sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
+
+/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
+   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
+   et l'œil va de la carte au potard sans descendre. */
+.cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
+  border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
+.card{ border-radius:2px; background:rgba(200,208,200,.08); padding:2px 3px 0;
+  display:flex; flex-direction:column; gap:2px; min-width:0; }
+.card .l{ font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
+  white-space:nowrap; }
+.card .l b{ color:var(--accent); font-weight:500; margin-right:3px; }
+.card .v{ font-family:var(--cond); font-size:11.5px; font-weight:700; white-space:nowrap;
+  letter-spacing:.03em; }
+.card .v small{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--dim);
+  margin-left:3px; letter-spacing:0; }
+.card.off{ background:rgba(200,208,200,.03); }
+.card.off .l b{ color:var(--dim); }
+
+/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+.btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:1px 2px; }
+.b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
+  font-family:var(--cond); font-size:9px; font-weight:700; letter-spacing:.05em;
+  text-align:center; line-height:9.5px; white-space:nowrap; }
+.b.back{ color:var(--title); }
+.b.on{ background:var(--accent); color:var(--on-acc); }
+.b.here{ background:var(--title); color:var(--on-acc); }
+.b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
+.b.gap{ margin-left:2px; }
+
+/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+.pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
+  border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
+  display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
+.pop .ph{ font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
+  padding:1px 3px 2px; display:flex; justify-content:space-between; }
+.pop .ph b{ color:var(--accent); font-weight:500; }
+.pop .pr{ height:11px; line-height:11px; white-space:nowrap; padding:0 3px;
+  border-radius:1.5px; background:rgba(200,208,200,.045); }
+.pop .pr .m{ display:inline-block; width:19px; font-family:var(--cond); font-size:9px;
+  font-weight:700; letter-spacing:.05em; color:var(--fx); }
+.pop .pr .d{ font-family:var(--jb); font-size:6.6px; color:var(--dim); }
+.pop .pr.cur{ background:var(--accent); }
+.pop .pr.cur .m, .pop .pr.cur .d{ color:var(--on-acc); }
+
+/* ═══ LE PANNEAU : qui fait quoi ══════════════════════════════════ */
+.devwrap{ margin-top:26px; overflow-x:auto; padding-bottom:8px; }
+.dev{ width:640px; padding:16px 18px 18px; border-radius:16px; flex:none;
+  background:linear-gradient(160deg,#2a2c31 0%,#191b20 55%,#0d0e12 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.05) inset, 0 24px 48px -20px rgba(0,0,0,.8);
+  display:grid; grid-template-columns:132px 120px 1fr; gap:14px 16px; }
+.dev .scr{ width:120px; height:120px; border-radius:5px; overflow:hidden; background:#000;
+  box-shadow:0 0 0 5px #06070a; align-self:start; margin-top:5px; }
+.dev .scr > .sc{ transform:scale(.5); transform-origin:0 0; }
+.knobs{ display:grid; gap:10px 8px; }
+.knobs.two{ grid-template-columns:1fr 1fr; }
+.knobs.four{ grid-template-columns:repeat(4,1fr); }
+.kn{ display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+.kn i{ width:26px; height:26px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 35% 30%,#8a8478,#3d3a35 70%); box-shadow:0 2px 3px rgba(0,0,0,.6); }
+.kn .p{ font-family:var(--jb); font-size:7.5px; letter-spacing:.08em; color:var(--dim); }
+.kn .w{ font-family:var(--cond); font-size:13px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--prose-hi); text-align:center; line-height:1.05; }
+.kn .w.acc{ color:var(--accent); }
+.pads{ display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-top:12px; }
+.pads.two{ grid-template-columns:1fr 1fr; margin-top:12px; }
+.pad{ border-radius:4px; background:var(--panel); box-shadow:inset 0 0 0 1px var(--cap);
+  padding:4px 2px 5px; display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; }
+.pad .p{ font-family:var(--jb); font-size:7px; letter-spacing:.06em; color:var(--dim); }
+.pad .w{ font-family:var(--cond); font-size:12.5px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--prose-hi); white-space:nowrap; }
+.pad.same .p{ color:var(--accent); }
+.pad.moved .w{ color:var(--fx); }
+.keysrow{ grid-column:1 / -1; border-radius:8px; background:#0e0f13; padding:8px 10px;
+  display:flex; align-items:center; gap:12px; }
+.keysrow .kb{ display:flex; gap:2px; flex:none; }
+.keysrow .kb span{ width:9px; height:26px; border-radius:3px; background:#3a3136; }
+.keysrow .kb span.bk{ background:#22201f; height:17px; align-self:flex-start; }
+.keysrow p{ margin:0; font-size:12.5px; line-height:1.4; color:var(--prose); min-width:0; }
+.legend{ display:flex; gap:18px; flex-wrap:wrap; margin-top:12px; font-family:var(--mono);
+  font-size:11px; color:var(--dim); }
+.legend b{ font-weight:600; }
+</style>
+
+<div class="wrap">
+
+  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026, révisée</div>
+  <h1>Pattern, sans croix <em>ni doigt</em></h1>
+  <p class="lede">L'écran PATTERN de l'app, remesuré pour une dalle de <strong>240 × 240</strong>
+  et pour ce que le FM-1 a sous les mains : quatre potards à gauche de l'écran, quatre à droite,
+  douze boutons et un clavier de 27 touches. Le dessin reste celui de l'iPhone — dalles, neuf
+  slots par pas, cyan où l'on est, vert le curseur. Ce n'est <strong>pas une grille de caractères
+  8 × 8</strong> : l'écran du FM-1 peint ce qu'on veut, Felucca y dessine déjà des fontes lissées.</p>
+
+  <section>
+    <span class="tag">Cadre 1 · le curseur sur une note</span>
+    <h2>Deux mains, deux rôles</h2>
+    <p>La main gauche <b>se déplace</b> : SELECT monte et descend d'un pas, ALGORITHM passe d'un
+    champ au suivant, PRESETS change de bloc. La main droite <b>écrit</b> : les quatre potards
+    KNOB 1–4 sont les quatre cartes sous la barre, dans le même ordre, et ne parlent que du champ sous
+    le curseur. Une touche du clavier écrit sa note dans le slot et la joue.</p>
+    <div class="stage"><div class="zoom"><div class="sc" id="f1"></div></div></div>
+    <div class="budget">
+      <div><span class="k">Ce qu'on voit</span><p><b>11 pas</b> entiers. L'iPhone en montre 8, la console 17.</p></div>
+      <div><span class="k">Ce que le chrome prend</span><p>66 px en haut (barre, cartes, manuel de la main gauche, en-tête), 25 en bas (les douze boutons).</p></div>
+      <div><span class="k">Ce qui manque</span><p>Les rails Éditer / Écouter. Leur rôle passe aux douze boutons, dessinés en bas à leur place.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">Cadre 2 · le curseur sur un effet</span>
+    <h2>Tourner KNOB 1 ouvre la liste</h2>
+    <p>Sur un slot d'effet, la première carte choisit la commande et la liste s'ouvre à côté du
+    slot tant que le potard tourne — la même liste alphabétique que partout, <code>---</code> en
+    tête pour vider. La deuxième carte règle la valeur ; pour <code>VIB</code>, <code>TRM</code> et
+    <code>SCP</code> ce sont deux cartes, une par demi-octet.</p>
+    <div class="stage"><div class="zoom"><div class="sc" id="f2"></div></div></div>
+  </section>
+
+  <section>
+    <span class="tag">Cadre 3 · en lecture, une sélection posée</span>
+    <h2>Ce qui joue en vert, ce qui est pris en ambre</h2>
+    <p>PLAY joue la phrase. La ligne jouée prend le fond et la barre verte de l'app ; le curseur
+    reste où la main l'a laissé. SELECT (le bouton EDIT) est un mode : allumé, les deux potards de
+    gauche étendent le rectangle au lieu de déplacer le curseur, et trois boutons changent de mot.</p>
+    <div class="stage"><div class="zoom"><div class="sc" id="f3"></div></div></div>
+  </section>
+
+  <section>
+    <span class="tag">Le panneau</span>
+    <h2>Qui fait quoi sur cet écran</h2>
+    <p>L'écran est ici à la moitié de la maquette : sur un portable à écran dense, c'est à peu près
+    sa taille réelle <b>si la dalle fait 1,3 pouce — je ne connais pas sa diagonale</b>, ni Felucca
+    ni SLOOP ne la donnent. C'est la première chose à vérifier à l'arrivée, elle décide de la
+    hauteur d'une ligne.</p>
+    <div class="devwrap"><div class="dev">
+      <div>
+        <div class="knobs two">
+          <div class="kn"><i></i><span class="p">MASTER</span><span class="w">Volume</span></div>
+          <div class="kn"><i></i><span class="p">SELECT</span><span class="w acc">Pas</span></div>
+          <div class="kn"><i></i><span class="p">PRESETS</span><span class="w acc">Bloc</span></div>
+          <div class="kn"><i></i><span class="p">ALGORITHM</span><span class="w acc">Champ</span></div>
+        </div>
+        <div class="pads two">
+          <div class="pad same"><span class="p">OCT−</span><span class="w">Clavier ↓</span></div>
+          <div class="pad same"><span class="p">OCT+</span><span class="w">Clavier ↑</span></div>
+        </div>
+      </div>
+      <div class="scr"><div class="sc" id="f0"></div></div>
+      <div>
+        <div class="knobs four">
+          <div class="kn"><i></i><span class="p">KNOB 1</span><span class="w">Carte 1</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 2</span><span class="w">Carte 2</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 3</span><span class="w">Carte 3</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 4</span><span class="w">Carte 4</span></div>
+        </div>
+        <div class="pads">
+          <div class="pad same"><span class="p">FX</span><span class="w">FX</span></div>
+          <div class="pad moved"><span class="p">SCL</span><span class="w">Loop</span></div>
+          <div class="pad moved"><span class="p">ENV</span><span class="w">Instr</span></div>
+          <div class="pad moved"><span class="p">LFO</span><span class="w">Clear</span></div>
+          <div class="pad same"><span class="p">EDIT</span><span class="w">Select</span></div>
+          <div class="pad same"><span class="p">GLO</span><span class="w">Mixer</span></div>
+          <div class="pad same"><span class="p">HOME</span><span class="w">‹ Phr</span></div>
+          <div class="pad same"><span class="p">SAVE</span><span class="w">Save</span></div>
+          <div class="pad moved"><span class="p">ARP</span><span class="w">Undo</span></div>
+          <div class="pad same"><span class="p">SEQ</span><span class="w">Song</span></div>
+          <div class="pad same"><span class="p">PLAY</span><span class="w">Play</span></div>
+          <div class="pad same"><span class="p">REC</span><span class="w">Rec</span></div>
+        </div>
+      </div>
+      <div class="keysrow">
+        <div class="kb" id="kb"></div>
+        <p><b>27 touches, de Fa à Sol.</b> Sur un slot de note : écrit la note et la joue ;
+        plusieurs touches tenues remplissent N1 à N4. OCT− et OCT+ déplacent le clavier d'une
+        octave, et la barre du haut dit où il est.</p>
+      </div>
+    </div></div>
+    <div class="legend">
+      <span><b style="color:var(--accent)">vert</b> : le mot imprimé sur l'appareil dit déjà la fonction</span>
+      <span><b style="color:var(--fx)">ambre</b> : le mot imprimé dit autre chose</span>
+    </div>
+    <p>Quatre boutons sur douze font autre chose que ce qui est imprimé dessus (SCL, ENV, LFO, ARP).
+    C'est pour ça que l'écran <b>redessine les douze boutons à leur place</b>, deux rangées de six :
+    on lit la position, pas l'étiquette. Les mots changent d'un écran à l'autre, la place jamais.</p>
+  </section>
+
+  <section>
+    <h2>Déjà tranché</h2>
+    <ul class="notes">
+      <li><b>10/10 — la main gauche se déplace, la main droite écrit.</b> SELECT le pas,
+      ALGORITHM le champ, PRESETS le bloc ; KNOB 1–4 les quatre cartes.</li>
+      <li><b>10/10 — les douze boutons</b> : FX, LOOP, INSTR, CLEAR, SELECT, MIXER sur la
+      rangée du haut ; ‹ PHR, SAVE, UNDO, SONG, PLAY, REC sur celle du bas. Redessinés à
+      l'écran à leur place.</li>
+      <li><b>10/10 — les mots des boutons en 9 px gras</b>, et un bouton éteint en gris clair
+      (<code>COL_BEAT</code>) : en 8 px demi-gras ils étaient illisibles dans le simulateur.</li>
+      <li><b>10/10 — la chasse fixe en 8 px, sans lissage.</b> Les libellés en 6 px étaient trop
+      petits et flous. Dans l'appareil et le simulateur, JetBrains Mono est dessinée en pixels
+      entiers à 8 px : nette, et aucun pas perdu. Cette page ne peut pas le montrer, un navigateur
+      lisse toujours. Le condensé gras reste lissé. ALGORITHM s'écrit ALGO pour tenir sur la ligne.</li>
+      <li><b>10/10 — les cartes sont en haut</b>, sous la barre, à la hauteur des potards
+      qu'elles nomment. Les douze boutons restent en bas.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Ce que je propose, et pourquoi</h2>
+    <ul class="notes">
+      <li><b>Neuf slots par pas, comme partout.</b> Le pas, N1 à N4, IN, FX1 à FX3, pleins ou en
+      pointillé, avec les deux coutures cyan après N4 et après IN. Ils tiennent dans 240 px avec des
+      notes de 10,5 px en condensé gras.</li>
+      <li><b>Vider, c'est tourner jusqu'en bas.</b> Les potards du FM-1 n'ont pas de poussoir. Sous
+      la note la plus basse il y a <code>OFF</code> puis <code>---</code> ; la liste des effets
+      commence par <code>---</code> ; l'instrument par <code>--</code>. CLEAR vide le slot d'un coup.</li>
+      <li><b>Le clavier est un vrai clavier, donc il écrit des notes.</b> La règle « aucun clavier
+      chromatique » visait un clavier dessiné sur du verre. Ici il est sous les doigts et c'est ce
+      que la machine a de mieux. KNOB 1 et 2 gardent le demi-ton et l'octave pour retoucher.</li>
+      <li><b>La portée d'un RMP reste dans la marge droite</b>, en ambre sombre, sur les pas qu'elle couvre.</li>
+      <li><b>Une carte éteinte garde sa place</b> et dit qu'elle ne fait rien sur ce champ.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Ce qui reste ouvert</h2>
+    <ul class="notes">
+      <li><b>Le rôle de REC.</b> Je l'ai laissé allumable sans rien lui faire faire : enregistrer
+      au vol les touches jouées pendant la lecture, calées au pas, serait sa suite logique.</li>
+      <li><b>Refaire</b> n'a pas de bouton. Un UNDO tenu, ou un treizième mot quelque part.</li>
+      <li><b>MUET et SOLO</b> ne sont pas sur cet écran. Dans l'app ils sont sur PHRASE.</li>
+      <li><b>Changer de piste</b> depuis PATTERN : aucun potard libre. Dans l'app ce n'est plus
+      possible non plus depuis le 23/09, on passe par PHRASE.</li>
+      <li><b>Le prérequis technique.</b> Ce dessin demande des fontes lissées dans le firmware, à
+      la place de la grille de texte que j'ai écrite pour l'écran de lecture. Felucca le fait avec
+      des fontes précalculées à la compilation ; Barlow Condensed et JetBrains Mono sont sous
+      licence libre.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+/* songs/KIDS.trk, pat t3 01 len 64 — les onze premiers pas. */
+const ROWS = [
+  { n:["A-3","C-4","E-4"], i:"09", f:[["STR","01"],["FLT","4E"],["ECH","18"]] },
+  { n:[], i:"", f:[["REV","1E"],["RMP","3E"],["FLT","C4"]] },
+  {}, { n:["A-3","C-4","E-4"], i:"09", f:[["GAT","03"]] }, {}, {},
+  { n:["A-3","C-4","E-4"], i:"09", f:[["GAT","04"]] }, {},
+  { n:["A-3","C-4","E-4"], i:"09", f:[["STR","01"]] }, {}, {},
+];
+const BTN = ["FX","LOOP","INSTR","CLEAR","SELECT","MIXER","‹ PHR","SAVE","UNDO","SONG","PLAY","REC"];
+const hex = (n) => n.toString(16).toUpperCase().padStart(2, "0");
+const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
+
+/* st : { cur:[row,col], play:row|-1, sel:[r0,c0,r1,c1]|null, cards:[...], btn:{name:state}, pop:{...} }
+   col : 0 = pas, 1..4 = N1..N4, 5 = IN, 6..8 = FX1..FX3 */
+function screen(st) {
+  const inSel = (r, c) => st.sel && r >= st.sel[0] && r <= st.sel[2] && c >= st.sel[1] && c <= st.sel[3];
+  const state = (r, c) => (st.cur[0] === r && st.cur[1] === c) ? " cur" : inSel(r, c) ? " picked" : "";
+  const heads = ["", "#", "N1", "N2", "N3", "N4", "", "IN", "", "FX1", "FX2", "FX3", ""];
+  const headCol = [-1, 0, 1, 2, 3, 4, -1, 5, -1, 6, 7, 8, -1];
+  let h = el("nav",
+    `<span class="back">‹ PHR 02</span><span class="trk">T4</span>` +
+    `<span class="slot2"><span class="u">LEN</span><span class="n">64</span></span>` +
+    `<span class="sp"></span><span class="slot2"><span class="u">PAT</span><span class="n">01</span></span>`);
+  h += `<div class="cards">` + st.cards.map((c, k) => c
+    ? el("card", `<span class="l"><b>K${k + 1}</b>${c[0]}</span><span class="v">${c[1]}${c[2] ? `<small>${c[2]}</small>` : ""}</span>`)
+    : el("card off", `<span class="l"><b>K${k + 1}</b></span><span class="v"></span>`)).join("") + `</div>`;
+  h += el("left", `<span>SELECT<b>STEP</b></span><span>ALGO<b>FIELD</b></span>` +
+                  `<span>PRESETS<b>PAT</b></span><span>OCT<b>KEYS ${st.keys || "F3-G5"}</b></span>`);
+  h += `<div class="cols head">` + heads.map((t, k) =>
+    `<span class="${headCol[k] === st.cur[1] ? "on" : ""}">${t}</span>`).join("") + `</div>`;
+  h += `<div class="rows">`;
+  ROWS.forEach((row, r) => {
+    const cls = "cols slab" + (r % 16 === 0 ? " bar" : r % 4 === 0 ? " beat" : "") + (st.play === r ? " playing" : "");
+    let s = `<span class="gauge"></span><span class="step">${hex(r)}</span>`;
+    for (let k = 0; k < 4; k++) {
+      const n = row.n && row.n[k];
+      s += `<span class="slot${n ? "" : " empty"}${state(r, 1 + k)}">${n ? `<span class="n">${n}</span>` : ""}</span>`;
+    }
+    s += `<span class="seam"></span>`;
+    s += `<span class="slot i${row.i ? "" : " empty"}${state(r, 5)}">${row.i ? `<span class="n">${row.i}</span>` : ""}</span>`;
+    s += `<span class="seam"></span>`;
+    for (let k = 0; k < 3; k++) {
+      const f = row.f && row.f[k];
+      s += `<span class="slot f${f ? "" : " empty"}${state(r, 6 + k)}">` +
+           (f ? `<span class="m">${f[0]}</span><span class="v">${f[1]}</span>` : "") + `</span>`;
+    }
+    s += `<span class="ramp${r >= 1 ? " on" : ""}"></span>`;
+    h += `<div class="${cls}">${s}</div>`;
+  });
+  if (st.pop) {
+    h += `<div class="pop" style="left:${st.pop.x}px;top:${st.pop.y}px">` +
+      `<div class="ph"><span><b>K1</b> EFFECT</span><span>FX1</span></div>` +
+      st.pop.rows.map(([m, d, cur]) =>
+        `<div class="pr${cur ? " cur" : ""}"><span class="m">${m}</span><span class="d">${d}</span></div>`).join("") +
+      `</div>`;
+  }
+  h += `</div>`;
+  h += `<div class="btns">` + BTN.map((name, k) => {
+    const o = (st.btn || {})[k] || {};
+    return `<div class="b${k === 6 ? " back" : ""}${o.cls ? " " + o.cls : ""}">${o.word || name}</div>`;
+  }).join("") + `</div>`;
+  return h;
+}
+
+const note = { cur:[3, 2], play:-1, sel:null,
+  cards:[["NOTE", "C-4"], ["OCT", "4"], null, null] };
+const fx = { cur:[6, 6], play:-1, sel:null,
+  cards:[["EFFECT", "GAT"], ["VALUE", "04", "ticks"], null, null],
+  pop:{ x:118, y:14, rows:[["DLY", "hold to tick N"], ["DUT", "pulse duty 0-3"], ["ECH", "delay send 00-7F"],
+        ["FLT", "cutoff, FF = open"], ["GAT", "lasts N ticks", 1], ["PAN", "00 left, 7F right"]] } };
+const playing = { cur:[8, 1], play:1, sel:[6, 1, 8, 3],
+  cards:[["SELECTION", "3 × 3"], null, null, null],
+  btn:{ 1:{ word:"COPY" }, 2:{ word:"PASTE", cls:"off" }, 4:{ cls:"here" }, 10:{ word:"STOP", cls:"on" } } };
+
+document.getElementById("f1").innerHTML = screen(note);
+document.getElementById("f0").innerHTML = screen(note);
+document.getElementById("f2").innerHTML = screen(fx);
+document.getElementById("f3").innerHTML = screen(playing);
+
+/* Fa3..Sol5 : 16 blanches, 11 noires. */
+const black = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+document.getElementById("kb").innerHTML = Array.from({ length: 27 }, (_, k) =>
+  `<span class="${black[(5 + k) % 12] ? "bk" : ""}"></span>`).join("");
+</script>

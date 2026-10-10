@@ -1,0 +1,371 @@
+# Notes
+
+Decisions and traps, newest section last. Nothing here has run on a real
+FM-1: the device is expected around 17 October 2026.
+
+## Rules
+
+- Never flash before the stock flash is backed up and a recovery path
+  (Seeed XIAO RP2040 + FM-1-transporter) is on the desk.
+- Never write flash outside `FL_RANGE_OK` (`hal/fm1_flash.h`), never touch
+  the stock firmware's VM backup at 0xE8000 and above.
+
+## 2026-10-10 — portability audit of the existing tracker (moondaw)
+
+- It does not port; its ideas do. `sizeof(Song)` is 588 KB against 512 KB of
+  SRAM, the undo history 9.4 MB, the binary's .bss 23 MB, the font atlas
+  1.9 MB against ~568 KB of XIP.
+- Its model is arrangement → sections → per-track numbered patterns with 3
+  FX per step. There are no chains, phrases or LSDJ tables in it (tables
+  were ruled out on purpose).
+- The audio path is float from the vtable down (`render(void*, float*, int)`),
+  with `exp2f` on every pitch change inside the audio thread.
+- Carries over as is: the vtable's shape, the tick counted inside the audio
+  callback, the UI→audio command ring, the 11-byte step, the FX mnemonics,
+  the pulse / LFSR / 4-bit wave algorithms.
+
+## 2026-10-10 — the Felucca extraction
+
+- **Felucca is one compilation unit.** The drivers have no `#include` and
+  no header: each uses whatever the files included before it define.
+  "Cutting dependencies" meant rewriting the entry file, not unlinking.
+  `firmware/src/firmware.c` is that file here.
+- **The FELUCCA_* macro names stay** (`FELUCCA_OTA`, `FELUCCA_CDC`,
+  `FELUCCA_ID`, `FELUCCA_LOADER`…): `usb.c`, `ota.c` and the loader read
+  them, and those files are verbatim.
+- **The MIDI IN ring must be drained.** `usb.c` NAKs EP1 while fewer than
+  24 slots are free, and the update's SysEx arrives on EP1. A firmware
+  that ignores MIDI and never empties the ring locks itself out of
+  updates. The main loop does `mi_r = mi_w` every frame.
+- **Three ways back in are kept from Felucca**, all in `firmware.c`: the
+  M-UPGRADE entry over USB, OCT- + OCT+ held 5 s → UBOOT, and the boot
+  guard (two boots that die within 30 s → UBOOT). Do not remove any of
+  them while changing the main loop.
+- **MASTER is not a hardware volume.** It is a pot on an ADC; the app has
+  to apply it. `PlatInput.master` carries it, 0..1023.
+- **The LCD blit is a DMA out of the caller's buffer**, which must be in
+  RAM (not XIP) and untouched until the transfer ends. `plat_blit` waits
+  for it (`lcd_sync`). Pixels are sent high byte first: `PLAT_PX` swaps
+  when the colour is built, not when it is drawn.
+- **PA2 is both the backlight and the key matrix's /OE** (lcd.c): turning
+  the backlight off blinds every key, button and encoder.
+- **No framebuffer on the device.** The screen is 30x30 text cells
+  (`app/term.c`, 2.7 KB) and only changed row spans are sent. A full
+  240x240 RGB565 buffer would be 115 KB.
+- The panel table (`PANEL_DEFAULT`) is Felucca's measurement. Its
+  calibration screen and the flash copy were not taken.
+- Sample rate is 44117.6 Hz on the device, 44100 everywhere else: 0.7
+  cent sharp.
+- Output is Q15 shifted left 7 into 24 bits: a -6 dBFS ceiling, as Felucca.
+- Package identity is `FM-1_900`, Felucca's own development identity, and
+  the USB strings still say Hügelton / Felucca (usb.c is verbatim). Both
+  to be decided before anything is published.
+- **Not found** in Felucca or SLOOP (isod89/sloop-fm1): the CPU clock.
+  Neither sets it; both run on what the boot loader leaves. Timing comes
+  from TIMER4 on the 24 MHz crystal. On hardware, `felucca_dbg.last_us`
+  (time of one audio half) is the way to measure what we really have.
+- Not found either: whether pi32v2 has an FPU. Felucca uses no float at
+  all; nothing here does.
+
+## 2026-10-10 — build
+
+- Toolchain: `~/.jieli/toolchain` (jieli-linux-toolchains-20260730.1,
+  clang 4.0.1). SDK: `~/fw-AC79_AIoT_SDK` at tag
+  AC79NN_SDK_V1.2.1_2023-12-13 (1 GB; three files of it are used).
+- Docker here is colima, and it has to be started first (`colima start`).
+- Under colima's amd64 emulation one objdump out of six parallel ones
+  died once with no output, leaving a `core` file in the tree (git-ignored).
+  `tools/build.py` retries a silent failure once.
+- First build: app 17,920 B, .data+.bss 12,720 B of 73,728, pool 2,688 B
+  of 368,640, package 610,086 B.
+- `app.ld` is still Felucca's split (72 KB RAM / 360 KB pool). Recut it
+  when the tracker's real tables exist, not before.
+- emcc is not installed; `platform/web/build.sh` falls back to
+  `zig cc -target wasm32-freestanding`, which works because nothing above
+  `platform.h` needs a libc.
+
+## 2026-10-10 — what is verified, and how
+
+- Firmware: compiles, links, passes build.py's checks (entry stub, no
+  call out of `.ram_text`, no ROM reference, register access in `hal/`
+  only), and `fm1_install.py`'s parser reads the package back. **Never
+  run.**
+- SDL (`make sim`) and web (`make web`): `make test` holds A4 on both and
+  gets the same 5509 lit pixels, the key's LED, and 440 Hz. The web page
+  was opened in a browser: screen, keys, buttons, encoder and LEDs answer.
+
+## 2026-10-10 — the model is moondaw's own
+
+Decided by Jaeger: the FM-1 runs MOONDAW as written — arrangement,
+sections, per-track numbered patterns, 3 FX per step, the same FX
+mnemonics, no tables — with whatever limits the machine forces. The
+song/chain/phrase/LSDJ wording of the first brief was a pasted prompt
+and is void.
+
+Measured on moondaw, to size those limits:
+
+- 95 % of `Song` is the pattern grid: 16 tracks x 16 patterns x 2178 B =
+  557 KB, of which a third is the VOX syllable pool. Everything else
+  (instruments 13.8 KB, arrangement 6.7 KB, sections, track init) is
+  under 25 KB.
+- What the 13 songs in `songs/` really use: 8 tracks at most, 39
+  patterns at most in one song, patterns up to 128 steps, 22 arrangement
+  rows at most.
+- Their instruments: WAVE 32, NOISE 21, SMPL 21, PULSE 19, VOX 7,
+  PLUCK 1. So a synth-only FM-1 cannot play most of them unchanged.
+
+## 2026-10-10 — limits agreed, and the file stays a .trk
+
+Agreed by Jaeger: 8 tracks; a shared pool of about 6000 steps instead of
+the fixed grid; undo as a journal of edits (not written yet); PULSE,
+NOISE and WAVE first, SMPL / PLUCK later, VOX probably never (typing
+syllables on a piano keyboard is the opposite of a tracker's flow —
+although Felucca runs a 4-voice formant engine on this chip, so the
+hardware is not the obstacle).
+
+- **The FM-1 stores the .trk text itself.** His songs are 8 to 28 KB;
+  292 KB of flash holds ten to thirty. A dump of the step pool would be
+  66 KB a song. What had to change was the reader, not the format:
+  `core/trk.c` reads and writes from memory with no libc.
+- Version 3 only. Older files go through moondaw once (nobody else has
+  the app; no compatibility shim). `patch` files are refused for now.
+- **What is not carried is counted, not hidden**: `TrkReport` says how
+  many sample, zone, reference and preview lines, syllables, `fSMP`
+  and drive / amp / tone / tract / accent fields a file had. A save from
+  the FM-1 loses them. Whether to keep those lines verbatim is open.
+- An instrument on SMPL, VOX or PLUCK keeps its engine NAME (so the file
+  round-trips) and is silent. moondaw's own rule for an unknown engine
+  is "fall back to the pulse"; a drum kit on a pulse is worse than
+  silence.
+- The step pool is chunks of 16 steps, taken when a step is first
+  written. tremolo-chip, the largest song, uses 212 of 375.
+- `sizeof(Song)` is 77 KB. Loading goes through a second one (a
+  malformed file must leave the song in memory intact), so 155 KB of the
+  360 KB pool are the song. An undo history has to fit in what is left.
+- moondaw truncates an instrument name to 7 characters on load although
+  the files carry 8 (`CHIPBASS` → `CHIPBAS`). Same here, for the same
+  files to come out the same.
+
+## 2026-10-10 — the engine in fixed point
+
+- **One band-limited buffer per track, not per voice.** moondaw gives
+  each of a track's 20 voices three engines with a blip_buf each. The
+  synthesis is linear, so all the voices of a track add their steps into
+  one buffer: same sound, 600 bytes a track. The buffer holds
+  sample << 10 instead of blip_buf's << 15, the five bits being the
+  headroom for the sum.
+- **The clock ratio is exact**: 4 MHz against 44100 Hz is 40000 clocks
+  for 441 samples. The first version rounded it to Q20 and the pitch
+  drifted 1.7 samples a second against moondaw.
+- **A layer's gain is capped at +12 dB** (moondaw: +24): the steps of a
+  whole track share 32 bits.
+- **The noise register shifts 32 times per cycle of the written note**
+  — that is the "five octaves above". Transposing the note AND dividing
+  by 32 plays it 32 times too fast, straight into the top clamp.
+- **A sweep goes below the lowest octave**: `fSWP` on a kick walks the
+  pitch four octaves under note 0 before the 1 Hz floor. Clamping at
+  note 0 changed every kick.
+- **Finished voices are stopped once a tick, not once a block.** A noise
+  register keeps shifting until its voice stops, so when that happens
+  decides the hiss of the next hit. In moondaw it depends on the audio
+  buffer size; a tick does not.
+- Curves that need a libm (periods a cent apart, dB, tan for the filter,
+  the crush tables, the wave shapes) are generated once by
+  `tools/gen_tables.c` into `core/tables.h`, 33 KB of source.
+- 64-bit multiplies are used freely (Felucca does: Q30 formant
+  coefficients); the JieLi clang inlines them — the firmware links with
+  no helper call. No 64-bit division by a variable anywhere.
+- Not ported: the reverb and the delay (`rev` / `ech` / `fREV` / `fECH`
+  are read and held, nothing is sent), the master limiter (the sum is
+  hard-clipped), the metronome, the loop range, the instrument preview,
+  patches, undo.
+
+### How it is verified
+
+`tests/difftest.sh` reduces each song to what the FM-1 carries, removes
+the two sends, and renders the SAME file through moondaw's own engine
+(linked from its build directory, 44.1 kHz, no limiter) and through
+`core/`. Track by track, 30 s:
+
+- level identical to 0.1 dB on every track of every song;
+- short-time spectra within -28 dB on the worst track (KIDS t2), -33 to
+  -51 dB on the others; several songs match sample for sample at -40 dB.
+
+Why track by track, and spectra: free-running oscillators cannot be
+compared sample for sample over a song (one clock in a period and two
+identical sounds are out of phase ten seconds later — a vibrato does it
+in two), and two tracks whose phases have drifted interfere differently
+when summed, which the spectrum of the mix reports although neither is
+wrong.
+
+AMPTEST, piano-velocity and song03 have nothing the FM-1 can play.
+
+### On the device
+
+- Firmware with the core: image 52,328 B; .data+.bss 16,816 B of 73,728;
+  pool 170,592 B of 368,640. `MOONDAW_APP=hello ./build.sh` is the
+  bring-up build, without the core.
+- **The CPU cost is unknown and is the first thing to measure** on
+  hardware (`felucca_dbg.last_us`, one audio half). The expensive parts:
+  a 16-tap kernel per oscillator edge (a wave voice makes 32 edges a
+  cycle), and four 64-bit multiplies a sample in each filtered track.
+  If it does not fit: fewer voices per track, the filter at half rate,
+  a cheaper kernel for the wave engine.
+- `app/app.c` is a player screen, NOT the interface: PLAY, keys 1-8 mute,
+  SELECT picks the phrase. It plays a built-in demo (`app/demo_trk.h`),
+  since nothing is stored yet.
+
+## 2026-10-10 — the interface: not a character grid
+
+- **The 8x8 cell grid of `app/term.c` is not the interface.** "30x30
+  characters" came from the pasted brief. The panel is 240x240 RGB565 and
+  Felucca paints antialiased type on it; a constraint of my first code is
+  not a constraint of the machine. The same mistake was made once on the
+  console (moondaw, 24/08: "on dirait toujours un truc en DOS moche").
+  The design language is the iOS app's — slabs, nine slots a step, cyan
+  where one is, green the cursor, the fixed palette — remeasured.
+- `proto/pattern.html` is the PATTERN mockup (three states and the panel
+  map), proposed, **not validated**. Its notes carry what is open. When
+  he validates something, the proto and its notes are updated first.
+- Its proposal in one line: the left hand moves (SELECT = step,
+  ALGORITHM = field, PRESETS = block), the right hand writes (KNOB 1-4 =
+  the four cards of the bottom bar), the keys write notes, and the twelve
+  buttons are redrawn on screen at their physical place because four of
+  them do not do what is printed on them.
+- **Validated by Jaeger, 10/10**: the left hand moves, the right hand
+  writes; and the four cards sit at the TOP, under the nav bar, level
+  with the knobs they name. The twelve buttons too, same day: FX LOOP
+  INSTR CLEAR SELECT MIXER / ‹PHR SAVE UNDO SONG PLAY REC, redrawn on
+  screen at their place. Open: what REC does, where REDO lives.
+- Felucca's panel photo (`docs/controls.jpg`) is where the physical
+  layout was read from: MASTER / SELECT / PRESETS / ALGORITHM left of the
+  screen, KNOB 1-4 right of it, two rows of six buttons under those,
+  OCT-/OCT+ under the left knobs. The encoders have no push switch.
+- **Not found**: the diagonal of the panel. It decides the row height.
+- Engineering prerequisite if the design is kept: baked antialiased
+  fonts and a strip renderer in the firmware, as Felucca does
+  (`gen_aa_font.py`, `gfx.c` — not taken yet).
+
+## 2026-10-10 — PATTERN written
+
+- `app/gfx.c`: no framebuffer. A screen is a function that draws
+  everything; it is called once per band of 16 lines, clipped to it, and
+  a band goes down the SPI only when its hash changed. 7.7 KB instead of
+  115. The cost is that the draw code runs 15 times a frame — unmeasured
+  on the chip, like everything else.
+- Type is baked by `tools/gen_fonts.py` (Pillow) into `app/fonts.h`, 4
+  bits of coverage a pixel: Barlow Condensed 12/11/9/8 and JetBrains Mono
+  7/6, both OFL (`assets/fonts/`, `LICENSES/`). The header is committed.
+  **Mono at 6 px is at the edge of legible** even on a desk screen; the
+  panel's diagonal will decide whether it stays.
+- `app/pattern.c` follows `proto/pattern.html` measure for measure.
+  Written: the cursor (SELECT, ALGORITHM), PRESETS through the track's
+  blocks, the four cards (note/octave, instrument, effect/value, the two
+  nibbles of a pair, LEN on the step number), the keys and chords,
+  OCT-/OCT+, CLEAR, FX, PLAY (the phrase, looped), HOME. Emptying is
+  turning all the way down: OFF then `---` under the lowest note.
+- **Not written, and drawn dim for that reason**: LOOP, INSTR, SELECT,
+  MIXER, SAVE, UNDO, SONG, REC. Also missing against the mockup: the
+  effect list that opens beside the slot, the RMP span in the right
+  margin, hearing a note as it is written (the core has no audition).
+- The way in is provisional: EDIT on the player screen, on the phrase
+  and track picked there. SONG and PHRASE will replace it.
+- An `int8_t` holds a frame's worth of detents: a test that turned a
+  knob by 200 turned it by -56.
+- Both simulators now lay the panel out as on the machine, and the
+  arrows are SELECT and ALGORITHM. `tests/pattern_test.c` drives the
+  screen with no display and reads the song back.
+- Simulator keys carry no function key (macOS keeps F11 and wants fn for
+  the rest): 1-6 and Q-Y are the two rows of six buttons, A and ' the
+  OCT pair, space is PLAY too; the notes moved to the bottom rows and
+  to 7 U I 9 O 0 P [ = ]. By scancode, so AZERTY is the same hands.
+- **The simulator cannot say how the type looks.** Jaeger's first word
+  on PATTERN in the SDL window was "très flou". Part of it was macOS
+  stretching a low-density window (fixed: high-DPI window, nearest
+  scaling); the rest is real — antialiased glyphs of 6 to 12 pixels
+  shown at twice their size are soft by nature. On the panel a pixel is
+  about a tenth of a millimetre. Judge type on the device, nowhere else.
+- **Small type: one-bit, not smoothed.** Tried side by side at panel
+  resolution: JetBrains Mono antialiased at 6 and 7 px is fog (LEN read
+  as LBI); the same face hinted and rendered in whole pixels at 8 px is
+  crisp. Barlow Condensed is the opposite, clogged without smoothing.
+  So `gen_fonts.py` bakes the mono face in mode "1" at 8 px and the
+  condensed one smoothed, nothing under 8 px mono or 9 px condensed.
+  The button words went from 8 px semibold to 9 px bold for the same
+  reason. A browser always smooths, so the proto cannot show this.
+- Firmware with it: image 71,144 B, .data+.bss 24,688 B of 73,728.
+
+## 2026-10-10 — reverb, delay, flash store
+
+Agreed order while the device is away: what can be MEASURED now (sends,
+storage), then the arrival checklist. Everything judged by eye or by
+hand waits for the machine — PATTERN's polish stopped there.
+
+- **Reverb and delay** (`core/fx.c`): moondaw's, in 16-bit lines held at
+  half scale (a bus is a sum and goes past full scale; a clipped
+  feedback loop is heard for seconds). Multiplies round TOWARD ZERO: a
+  line that rounds down settles on -1 and its tail never dies, so the
+  "empty room" test never fires.
+- **The delay is capped at 743 ms** (32768 frames a line). moondaw's
+  holds twelve seconds in four megabytes. `delay 18` at 120 bpm is 375
+  ms; below 61 bpm in `ticks 6` it would be shortened.
+- **The delay's lines and the load's working copy are the same 128 KB**
+  (`song_scratch`). They never overlap: a load happens with the audio
+  silent and is followed by `player_init`, which clears the delay.
+  Pool: 250 KB of 360 used.
+- Verified: on a song without vibrato, reverb, delay and both together
+  match moondaw sample for sample at -38 to -45 dB. `make difftest` now
+  leaves the sends in: nine songs at -28 dB or better per track, and
+  KIDS track 3 at -20 — free-phase vibrato under a heavy delay, where a
+  note beats against its own repeats and the beat's phase is not the
+  same in two engines. The threshold is -20 for that one case.
+- **The reader and the writer are streams** (`trk_begin/feed/end`,
+  `trk_write` to a sink): a file is read and written a sector at a time
+  and is never whole in RAM.
+- **The store** (`core/store.c`): a file is a run of 4 KB sectors, each
+  with header and CRC; a save writes a new generation beside the old one
+  and commits it by programming four bytes (a count and its complement)
+  into a sector already written — flash clears bits without an erase.
+  Tested against a NOR that only clears bits, with the power cut at
+  every operation of a save: the old file every time, never a broken
+  one. Two traps found on rereading, both fixed: a cut save leaves
+  sectors of generation N+1, and the next save must not reuse N+1;
+  deleting must erase EVERY generation of the slot or an older one comes
+  back as the file.
+- One song lives in the machine for now (slot 0): SAVE in PATTERN writes
+  it, boot reads it, the built-in demo is the fallback. SAVE stops the
+  song first — an erase holds the interrupts for ~50 ms on the device.
+  The simulators keep the flash in `moondaw-fm1.flash` (SDL, current
+  directory) and in the browser's localStorage (web).
+- On the FM-1 the store is 0x97000..0xE0000, Felucca's main data area,
+  bounded twice: in `firmware.c` and again by `FL_STORE_OK` in
+  `storage_hw.c`. Nothing is touched if the flash chip's ID is not the
+  expected one. **Installing MOONDAW over Felucca would read Felucca's
+  projects as garbage and overwrite them sector by sector** — the two
+  stores share the area and not the format.
+- `plat_audio_load()` puts the audio interrupt's load on the player
+  screen and on the bring-up screen (CPU, MAX): the unknown number,
+  readable without dumping RAM.
+- `docs/ARRIVEE.md` is the arrival-day checklist (in French, like the
+  rest of docs/). Its one opinion: install Felucca first, to prove the
+  way in and the way back with a firmware known to work.
+
+## 2026-10-10 — the recovery tool is built
+
+FM-1-transporter at `a632d92` compiles on this Mac into
+`~/Documents/Code/FM-1-transporter/build/fm1_transporter.uf2`, with
+`wl82loader.bin` (24,064 B, from kagaimiq/jl-uboot-tool, MIT) embedded.
+Installed for it, outside any repository: pico-sdk 2.2.0 in
+`~/pico-sdk`, Arm's GCC 13.3 tarball in `~/.fm1/arm` (no system
+install), jl-uboot-tool in `~/.fm1`. The SDK builds its own picotool;
+none is needed to load the UF2 (BOOT button, copy to `RPI-RP2`).
+**Not done and not testable without hardware**: the XIAO itself, the
+wiring, and whether the tool talks to this FM-1.
+
+## Open
+
+- The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
+- A list of songs (MENU), getting a song onto the device from a computer.
+- The limiter; undo.
+- CPU cost on the real chip.
+- `web/installer/` is copied, not adapted, not run.

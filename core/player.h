@@ -1,0 +1,34 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* The player: moondaw's sequencer/player.c and instruments/chain.c in
+ * fixed point, for the three engines of core/synth.h. The tick is the
+ * atom, counted inside the audio render; the rules of every fx are
+ * moondaw's and so is the order they are applied in.
+ *
+ * Not here yet: the master limiter, the metronome, the loop range, the
+ * instrument preview. */
+#ifndef PLAYER_H
+#define PLAYER_H
+
+#include "song.h"
+
+void player_init(Song *s); /* the song it plays; call once, and stopped */
+
+/* From the main loop. Queued, taken up at the next audio block. */
+void player_play_song(int entry, bool once);
+void player_play_entry(int entry); /* loops one phrase */
+void player_stop(void);
+void player_toggle_mute(int track);
+void player_set_master(int pot);   /* 0..1023 */
+
+/* What the audio side last did, for the screen. */
+bool player_playing(void);
+uint16_t player_row(void);
+uint16_t player_entry(void);
+bool player_muted(int track);
+
+/* From the audio interrupt: interleaved stereo, any number of frames. */
+void player_render(int16_t *out, int frames);
+/* Offline only: the same, the sum before the clamp and the MASTER pot. */
+void player_render_raw(int32_t *out, int frames);
+
+#endif
