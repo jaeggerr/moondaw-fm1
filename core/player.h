@@ -29,6 +29,9 @@ bool player_playing(void);
 uint16_t player_row(void);
 uint16_t player_entry(void);
 bool player_muted(int track);
+/* Monitoring, like the mutes: never in the file, cleared by player_init. */
+void player_toggle_solo(int track);
+bool player_soloed(int track);
 
 /* From the audio interrupt: interleaved stereo, any number of frames. */
 void player_render(int16_t *out, int frames);

@@ -28,7 +28,7 @@ static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB
                                       PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */
-static const bool btn_live[BTNS] = { true, false, true, true, false, false,
+static const bool btn_live[BTNS] = { true, false, true, true, false, true,
                                      true, true, false, true, true, false };
 
 static Song *song;
@@ -577,6 +577,10 @@ int pattern_frame(const PlatInput *in)
     if (PRESSED(B_INSTR)) {
         player_note_off();
         return PATTERN_INSTR;
+    }
+    if (PRESSED(B_MIXER)) {
+        player_note_off();
+        return PATTERN_MIXER;
     }
     return PATTERN_STAY;
 #undef PRESSED

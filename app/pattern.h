@@ -12,7 +12,7 @@
 /* False when the phrase plays nothing on that track: there is no block
  * to open. */
 bool pattern_open(Song *s, int entry, int track);
-enum { PATTERN_STAY, PATTERN_BACK, PATTERN_INSTR };
+enum { PATTERN_STAY, PATTERN_BACK, PATTERN_INSTR, PATTERN_MIXER };
 /* One frame. PATTERN_BACK: the hand asked to leave (HOME, or SONG).
  * PATTERN_INSTR: it asked for the instrument of the step under the
  * cursor; pattern_instr() says which, pattern_entry() the phrase. */

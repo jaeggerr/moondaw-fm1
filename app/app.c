@@ -6,6 +6,7 @@
  *   SONG     (songview.c)  the arrangement: phrases down, tracks across
  *   PATTERN  (pattern.c)   one block of one track
  *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
+ *   MIXER    (mixer.c)     the tracks' levels and sends; from SONG or PATTERN
  *
  * PHRASE is not written: a block is opened from its cell in SONG. */
 #include "app.h"
@@ -16,6 +17,7 @@
 #include "gfx.h"
 #include "instrument.h"
 #include "menu.h"
+#include "mixer.h"
 #include "pattern.h"
 #include "songview.h"
 
@@ -30,7 +32,8 @@ bool app_dirty;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PATTERN, AT_INSTRUMENT } screen;
+static enum { AT_MENU, AT_SONG, AT_PATTERN, AT_INSTRUMENT, AT_MIXER } screen;
+static bool mixer_from_pattern;
 
 void app_mark_dirty(void) { app_dirty = true; }
 
@@ -218,7 +221,15 @@ void app_frame(const PlatInput *in)
     player_set_master(in->master);
     int entry, track;
 
-    if (screen == AT_INSTRUMENT) {
+    if (screen == AT_MIXER) {
+        if (!mixer_frame(in)) { /* back where it was opened from */
+            screen = mixer_from_pattern ? AT_PATTERN : AT_SONG;
+            if (mixer_from_pattern)
+                pattern_resume();
+            else
+                songview_open(false);
+        }
+    } else if (screen == AT_INSTRUMENT) {
         if (!instrument_frame(in)) {
             screen = AT_PATTERN;
             pattern_resume();
@@ -233,6 +244,11 @@ void app_frame(const PlatInput *in)
             screen = AT_INSTRUMENT;
             instrument_open(pattern_instr(), pattern_entry());
             break;
+        case PATTERN_MIXER:
+            screen = AT_MIXER;
+            mixer_from_pattern = true;
+            mixer_open("PAT", pattern_entry());
+            break;
         default:
             break;
         }
@@ -241,6 +257,11 @@ void app_frame(const PlatInput *in)
         case SONGVIEW_MENU:
             screen = AT_MENU;
             menu_open();
+            break;
+        case SONGVIEW_MIXER:
+            screen = AT_MIXER;
+            mixer_from_pattern = false;
+            mixer_open("SONG", songview_entry());
             break;
         case SONGVIEW_PATTERN:
             if (pattern_open(&app_song, entry, track))

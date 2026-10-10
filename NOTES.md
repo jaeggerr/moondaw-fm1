@@ -489,6 +489,33 @@ PATTERN's INSTR button on the instrument in force at the cursor.
   or percent.
 - `gfx_line` exists for the envelope.
 
+## 2026-10-10 — MIXER proposed
+
+`proto/mixer.html`, validated the same day. A track has four things to say
+about its place in the mix — volume, pan, reverb send, delay send — and
+the right hand has four knobs: one ROW per track (not a vertical strip),
+SELECT picks it. The first row is the two returns: ROOM, DAMP, DELAY,
+FB. MUTE and SOLO act on the track under the cursor (the question left
+open on SONG). Open: level meters and the metronome (neither is in the
+engine), whether MASTER shows anywhere.
+
+## 2026-10-10 — MIXER written
+
+Validated as drawn; `app/mixer.c`, `tests/mixer_test.c`.
+
+- Reached from SONG and from PATTERN (GLO); HOME goes back to whichever
+  it came from, and the back label says so.
+- Row -1 is the returns (ROOM, DAMP, DELAY 0..96, FB); rows 0..n-1 are
+  the tracks (volume, pan, reverb send, delay send). MUTE and SOLO are
+  dark on the returns.
+- SOLO lives in the player (`solo_mask`), not in the song: it silences
+  the others without muting them, so the mutes come back as they were.
+  Nothing of it is saved.
+- Trap: pan is -64..63, as in the file. Hard right leaves 1/64 of the
+  track on the left; a test that expects an exact zero there fails.
+  The test compares the two channels by ratio instead.
+- Not there: UNDO, level meters, metronome.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

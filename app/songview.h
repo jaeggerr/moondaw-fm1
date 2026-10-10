@@ -8,7 +8,8 @@
 
 #include "../platform/platform.h"
 
-enum { SONGVIEW_STAY, SONGVIEW_MENU, SONGVIEW_PATTERN };
+enum { SONGVIEW_STAY, SONGVIEW_MENU, SONGVIEW_PATTERN, SONGVIEW_MIXER };
+int songview_entry(void); /* the phrase under the cursor, 0 on the song's line */
 
 void songview_open(bool reset_cursor);
 /* One frame. SONGVIEW_PATTERN: the hand opened a block; *entry and

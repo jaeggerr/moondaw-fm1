@@ -15,7 +15,7 @@ CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/playe
 ifeq ($(APP),hello)
 SRCS    := app/hello.c app/term.c
 else
-UI      := app/menu.c app/songview.c app/pattern.c app/instrument.c app/ui.c app/gfx.c
+UI      := app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/ui.c app/gfx.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)
@@ -50,6 +50,8 @@ test: sim web
 	build/song_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/instrument_test
 	build/instrument_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/mixer_test
+	build/mixer_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck

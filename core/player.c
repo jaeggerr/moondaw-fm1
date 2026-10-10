@@ -349,7 +349,7 @@ static int32_t master = 1024; /* Q10 */
 /* For the screen: single words, written by the audio side only. */
 static volatile uint8_t ui_playing;
 static volatile uint16_t ui_row, ui_entry;
-static volatile uint8_t mute_mask;
+static volatile uint8_t mute_mask, solo_mask;
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
 enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF };
@@ -1099,7 +1099,8 @@ static void render_tracks(int32_t *out, int frames)
 
     for (int t = 0; t < song->num_tracks; t++) {
         Track *tr = &tracks[t];
-        bool muted = (mute_mask >> t) & 1u;
+        /* A solo anywhere silences every track that is not one; else the mutes speak. */
+        bool muted = solo_mask ? !((solo_mask >> t) & 1u) : (mute_mask >> t) & 1u;
 
         if (muted) {
             if (!tr->silent) {
@@ -1250,7 +1251,7 @@ void player_init(Song *s)
     cmd_r = cmd_w;
     ui_playing = 0;
     ui_row = ui_entry = 0;
-    mute_mask = 0;
+    mute_mask = solo_mask = 0;
 }
 
 void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
@@ -1271,3 +1272,9 @@ bool player_playing(void) { return ui_playing != 0; }
 uint16_t player_row(void) { return ui_row; }
 uint16_t player_entry(void) { return ui_entry; }
 bool player_muted(int track) { return (mute_mask >> track) & 1u; }
+void player_toggle_solo(int track)
+{
+    if (track >= 0 && track < SONG_MAX_TRACKS)
+        solo_mask ^= (uint8_t)(1u << track);
+}
+bool player_soloed(int track) { return (solo_mask >> track) & 1u; }

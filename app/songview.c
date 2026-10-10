@@ -314,7 +314,7 @@ static void draw(void)
         st[b] = b == AT_BACK ? UI_BTN_BACK : UI_BTN_ON;
         if (!words[b][0])
             st[b] = UI_BTN_NONE;
-        if (b == AT_LOOP || b == AT_MIXER || b == AT_UNDO || b == AT_REC)
+        if (b == AT_LOOP || b == AT_UNDO || b == AT_REC)
             st[b] = UI_BTN_OFF; /* not written yet */
         if (b == AT_OPEN)       /* a block opens in PATTERN; a phrase has no screen yet */
             st[b] = cell_block ? UI_BTN_ON : row == -1 ? UI_BTN_NONE : UI_BTN_OFF;
@@ -334,6 +334,8 @@ static void draw(void)
 }
 
 /* -------------------------------------------------------------- api --- */
+int songview_entry(void) { return row < 0 ? 0 : row; }
+
 void songview_open(bool reset_cursor)
 {
     if (reset_cursor) {
@@ -415,6 +417,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         *track = col - 1;
         out = SONGVIEW_PATTERN;
     }
+    if (PRESSED(AT_MIXER))
+        out = SONGVIEW_MIXER;
     if (PRESSED(AT_BACK))
         out = SONGVIEW_MENU;
 
