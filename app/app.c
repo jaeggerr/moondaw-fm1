@@ -5,6 +5,7 @@
  *   MENU     (menu.c)      where the machine opens: the songs in flash
  *   SONG     (songview.c)  the arrangement: phrases down, tracks across
  *   PATTERN  (pattern.c)   one block of one track
+ *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
  *
  * PHRASE is not written: a block is opened from its cell in SONG. */
 #include "app.h"
@@ -13,6 +14,7 @@
 #include "../core/trk.h"
 #include "demo_trk.h"
 #include "gfx.h"
+#include "instrument.h"
 #include "menu.h"
 #include "pattern.h"
 #include "songview.h"
@@ -28,7 +30,7 @@ bool app_dirty;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PATTERN } screen;
+static enum { AT_MENU, AT_SONG, AT_PATTERN, AT_INSTRUMENT } screen;
 
 void app_mark_dirty(void) { app_dirty = true; }
 
@@ -216,10 +218,23 @@ void app_frame(const PlatInput *in)
     player_set_master(in->master);
     int entry, track;
 
-    if (screen == AT_PATTERN) {
-        if (!pattern_frame(in)) { /* HOME, or SONG: back to the cell it was opened from */
+    if (screen == AT_INSTRUMENT) {
+        if (!instrument_frame(in)) {
+            screen = AT_PATTERN;
+            pattern_resume();
+        }
+    } else if (screen == AT_PATTERN) {
+        switch (pattern_frame(in)) {
+        case PATTERN_BACK: /* HOME, or SONG: back to the cell it was opened from */
             screen = AT_SONG;
             songview_open(false);
+            break;
+        case PATTERN_INSTR:
+            screen = AT_INSTRUMENT;
+            instrument_open(pattern_instr(), pattern_entry());
+            break;
+        default:
+            break;
         }
     } else if (screen == AT_SONG) {
         switch (songview_frame(in, &entry, &track)) {

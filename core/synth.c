@@ -115,7 +115,10 @@ void blep_read(Blep *b, int32_t *out, int frames)
         int32_t s = sum >> SUM_SHIFT;
         sum += b->buf[i];
         out[i] = s;
-        sum -= (sum >> 15) << 6; /* the high-pass: blip_buf's bass_shift 9 */
+        /* The high-pass, blip_buf's bass_shift 9. blip_buf takes it off in
+         * steps of 64 and so leaves up to 31 of DC standing for ever after
+         * a note; taken to the unit, the buffer comes back to rest. */
+        sum -= sum >> 9;
     }
     b->integrator = sum;
     for (i = 0; i < SYNTH_BUF_EXTRA; i++)

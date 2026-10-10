@@ -12,7 +12,14 @@
 /* False when the phrase plays nothing on that track: there is no block
  * to open. */
 bool pattern_open(Song *s, int entry, int track);
-/* One frame. False once the hand asked to leave (HOME, or SONG). */
-bool pattern_frame(const PlatInput *in);
+enum { PATTERN_STAY, PATTERN_BACK, PATTERN_INSTR };
+/* One frame. PATTERN_BACK: the hand asked to leave (HOME, or SONG).
+ * PATTERN_INSTR: it asked for the instrument of the step under the
+ * cursor; pattern_instr() says which, pattern_entry() the phrase. */
+int pattern_frame(const PlatInput *in);
+int pattern_instr(void);
+int pattern_entry(void);
+/* Back from INSTRUMENT: the screen as it was left. */
+void pattern_resume(void);
 
 #endif

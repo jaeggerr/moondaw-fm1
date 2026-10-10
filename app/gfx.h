@@ -27,6 +27,7 @@ void gfx_fill(int x, int y, int w, int h, uint16_t c, int a);
 void gfx_slab(int x, int y, int w, int h, uint16_t c, int a);
 void gfx_frame_rect(int x, int y, int w, int h, uint16_t c, int a);
 void gfx_dash_v(int x, int y, int h, uint16_t c, int a); /* 2 on, 2 off */
+void gfx_line(int x0, int y0, int x1, int y1, uint16_t c);
 
 /* `y` is the BASELINE. Returns the x after the last glyph. */
 int gfx_text(int font, int x, int y, const char *s, uint16_t c);

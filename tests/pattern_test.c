@@ -140,8 +140,12 @@ int main(void)
     CHECK("SAVE asks the app to save, once", saves == 1);
     CHECK("every edit told the app the song changed", dirtied > 20);
 
+    in.btns = 1u << PB_ENV;
+    CHECK("INSTR asks for the instrument of the step", pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 0);
+    in.btns = 0;
+    go();
     in.btns = 1u << PB_HOME;
-    CHECK("HOME leaves", !pattern_frame(&in));
+    CHECK("HOME leaves", pattern_frame(&in) == PATTERN_BACK);
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

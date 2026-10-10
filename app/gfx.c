@@ -63,6 +63,26 @@ void gfx_dash_v(int x, int y, int h, uint16_t c, int a)
             gfx_fill(x, y + j, 1, 1, c, a);
 }
 
+void gfx_line(int x0, int y0, int x1, int y1, uint16_t c)
+{
+    int dx = x1 > x0 ? x1 - x0 : x0 - x1, dy = y1 > y0 ? y0 - y1 : y1 - y0;
+    int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, err = dx + dy;
+
+    for (;;) {
+        if (y0 >= by && y0 < by + BAND && x0 >= 0 && x0 < PLAT_W)
+            band[(y0 - by) * PLAT_W + x0] = c;
+        if (x0 == x1 && y0 == y1)
+            break;
+        if (2 * err >= dy) {
+            err += dy;
+            x0 += sx;
+        } else {
+            err += dx;
+            y0 += sy;
+        }
+    }
+}
+
 static const Glyph *glyph_of(const Font *f, const char **s)
 {
     unsigned char ch = (unsigned char)*(*s)++;

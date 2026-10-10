@@ -358,6 +358,20 @@ static int selftest(const char *out, const char *song, int entry, int track)
         SDL_SaveBMP(sf, path);
         SDL_FreeSurface(sf);
     }
+    /* And from there the instrument of that step: INSTR, the ENV button. */
+    kb_btns = 1u << PB_ENV;
+    frame(1080);
+    kb_btns = 0;
+    frame(1096);
+    frame(1112);
+    sf = SDL_CreateRGBSurfaceWithFormatFrom(canvas, CV_W, CV_H, 32, CV_W * 4,
+                                            SDL_PIXELFORMAT_ARGB8888);
+    if (sf) {
+        char path[512];
+        snprintf(path, sizeof path, "%.*s-instr.bmp", (int)strlen(out) - 4, out);
+        SDL_SaveBMP(sf, path);
+        SDL_FreeSurface(sf);
+    }
     int rms = (int)SDL_sqrt(sum / PLAT_FS);
     bool ok = lit > 1000 && rms > 200 && peak < 32767;
     printf("selftest: %d lit pixels, 1 s of sound at rms %d, peak %d -> %s\n",

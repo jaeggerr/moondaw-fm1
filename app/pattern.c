@@ -28,7 +28,7 @@ static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB
                                       PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */
-static const bool btn_live[BTNS] = { true, false, false, true, false, false,
+static const bool btn_live[BTNS] = { true, false, true, true, false, false,
                                      true, true, false, true, true, false };
 
 static Song *song;
@@ -449,7 +449,27 @@ bool pattern_open(Song *s, int e, int t)
     return true;
 }
 
-bool pattern_frame(const PlatInput *in)
+/* The instrument in force on a row: the last one written at or above it,
+ * else the first. What a note written there will sound like. */
+static int instr_at(int row)
+{
+    for (int r = row; r >= 0; r--)
+        if (step_at(r)->instrument != INSTR_NONE)
+            return step_at(r)->instrument;
+    return 0;
+}
+
+int pattern_instr(void) { return instr_at(cur_row); }
+int pattern_entry(void) { return entry; }
+
+void pattern_resume(void)
+{
+    prev_btns = prev_keys = 0xFFFFFFFFu;
+    saved = 0;
+    gfx_invalidate();
+}
+
+int pattern_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
     int len = pat_len(), d;
@@ -500,8 +520,11 @@ bool pattern_frame(const PlatInput *in)
 
     /* The keys write notes: the first one in the slot under the cursor,
      * the ones pressed while it is held in the slots after it. */
-    if (!in->keys)
+    if (!in->keys) {
+        if (chord_next)
+            player_note_off();
         chord_next = 0;
+    }
     for (int k = 0; k < PLAT_KEYS; k++) {
         int n = 53 + kbd_oct * 12 + k, slot;
         if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX)
@@ -511,6 +534,7 @@ bool pattern_frame(const PlatInput *in)
         if (slot >= STEP_MAX_NOTES)
             continue;
         write_note(cur_row, slot, (uint8_t)n);
+        player_note_on(instr_at(cur_row), (uint8_t)n); /* what was just written is heard */
         chord_next = slot + 1;
     }
 
@@ -546,9 +570,14 @@ bool pattern_frame(const PlatInput *in)
     play_row = is_playing && player_entry() == entry ? player_row() % len : -1;
     gfx_frame(draw);
     if (PRESSED(B_BACK) || PRESSED(B_SONG)) {
+        player_note_off();
         song_pool_compact(song);
-        return false;
+        return PATTERN_BACK;
     }
-    return true;
+    if (PRESSED(B_INSTR)) {
+        player_note_off();
+        return PATTERN_INSTR;
+    }
+    return PATTERN_STAY;
 #undef PRESSED
 }

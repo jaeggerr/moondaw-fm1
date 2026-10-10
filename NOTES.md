@@ -446,6 +446,49 @@ track of every phrase is reachable.
   in SONG's bar.
 - `tests/song_test.c` drives the screen with no display.
 
+## 2026-10-10 — INSTRUMENT proposed
+
+`proto/instrument.html`, **not validated**. The settings in rows of four
+because the right hand has four knobs: SELECT picks a row and the four
+cards become its four settings; each cell sits under the card, so under
+the knob, that sets it. Rows: engine / timbre / gain / level; attack /
+decay / sustain / release; cutoff / resonance / env / vel; vibphase;
+then the four layers, one row each (a layer's engine and timbre are one
+knob: PULSE 25%, WAVE SAW...). The envelope is drawn above. The keys
+play the instrument — which needs the audition the core does not have.
+Reached from PATTERN's INSTR button; PRESETS steps to the next
+instrument. Open: the name (letters again), a sound library, what to
+show for an instrument on SMPL / VOX / PLUCK.
+
+## 2026-10-10 — INSTRUMENT written, and the audition
+
+Validated as drawn, then written (`app/instrument.c`), reached from
+PATTERN's INSTR button on the instrument in force at the cursor.
+
+- **The audition** (`player_note_on` / `player_note_off`): a ninth track
+  no phrase plays, dry, one note and its layers. INSTRUMENT's keys use
+  it, and PATTERN now sounds the note a key just wrote.
+- **That track is put away clean when its envelope closes.** A song's
+  track keeps being rendered between notes, so its DC block and filter
+  settle; the audition stops being rendered, and whatever they still
+  held came out under the next key.
+- **Two leaks that never reached zero**, found by a test that expected
+  silence: the band-limited buffer's high-pass as blip_buf writes it
+  (steps of 64) leaves up to 31 of DC standing after a note, and the DC
+  block's `y1 >> 10` stalls under 1024 for a positive value — 64 steps
+  of DC behind every note. Both now come back to rest. `make difftest`
+  is unchanged by it.
+- **Two undefined shifts** of negative values (`<<` on the mix), caught
+  by the sanitizer the first time a test rendered audio under it. Now
+  multiplications. The render tests should all run under the sanitizer.
+- A layer's engine and timbre are one knob (12 positions, 0 = no layer).
+  Layers are a list: SELECT goes down to the first free row and no
+  further; turning KNOB 1 all the way down removes a layer and the ones
+  under it move up.
+- Not as drawn: the cards show the file's numbers, not yet milliseconds
+  or percent.
+- `gfx_line` exists for the envelope.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

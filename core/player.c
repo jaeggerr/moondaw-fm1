@@ -224,8 +224,15 @@ static void chain_process(Chain *c, const int32_t *mono, int32_t *out, int frame
         /* The tremolo's gain is slewed over 4 ms: it is set once a tick. */
         c->trem += (((c->trem_target - c->trem) >> 8) * 185) >> 7;
 
-        x = mono[i] << CH_SHIFT;
-        y = x - c->dc_x1 + c->dc_y1 - (c->dc_y1 >> 10);
+        x = mono[i] * (1 << CH_SHIFT);
+        {   /* The DC block. Its leak is at least one unit while anything
+             * is left: a shift alone stalls under 1024 and a positive
+             * offset would stand there, 64 steps of DC behind every note. */
+            int32_t leak = c->dc_y1 >> 10;
+            if (leak == 0 && c->dc_y1 > 0)
+                leak = 1;
+            y = x - c->dc_x1 + c->dc_y1 - leak;
+        }
         c->dc_x1 = x;
         c->dc_y1 = y;
         if (c->filtering) {
@@ -322,7 +329,10 @@ typedef struct {
     uint8_t sec_level;
 } Track;
 
-static Track tracks[SONG_MAX_TRACKS]
+/* One more than the song has: the last is the audition, a track no
+ * phrase plays -- a key under the hand, on the instrument being set. */
+#define AUDITION SONG_MAX_TRACKS
+static Track tracks[SONG_MAX_TRACKS + 1]
 #ifdef PLAT_FM1
     __attribute__((section(".pool")))
 #endif
@@ -342,7 +352,7 @@ static volatile uint16_t ui_row, ui_entry;
 static volatile uint8_t mute_mask;
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
-enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP };
+enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF };
 static volatile struct { uint8_t type, a, b; } cmd_q[8];
 static volatile uint8_t cmd_w, cmd_r;
 
@@ -979,6 +989,22 @@ static void handle_cmds(void)
             song_once = false;
         } else if (type == CMD_STOP) {
             stop_play();
+        } else if (type == CMD_NOTE_ON) {
+            /* The audition: one note and its layers, at the level moondaw
+             * previews at, outside the song and its sends. */
+            Track *tr = &tracks[AUDITION];
+            const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
+            for (int v = 0; v < TRACK_MAX_VOICES; v++)
+                if (tr->voices[v].sounding)
+                    voice_stop(tr, &tr->voices[v]);
+            voice_start(tr, in, in->timbre, 0, b);
+            for (int v = 0; v < TRACK_MAX_VOICES; v++)
+                osc_set_cents(&tr->voices[v].osc, tr->voices[v].detune);
+            tr->chain.pan = 0;
+            chain_note_on(&tr->chain, 100, VEL_FULL, in, in->cutoff, in->reso);
+            tr->used = true;
+        } else if (type == CMD_NOTE_OFF) {
+            track_release(&tracks[AUDITION]);
         }
     }
 }
@@ -1129,6 +1155,29 @@ static void render_tracks(int32_t *out, int frames)
             }
         }
     }
+    {   /* the audition, dry */
+        Track *tr = &tracks[AUDITION];
+        if (reap_due)
+            track_reap(tr);
+        if (tr->used) {
+            blep_begin(&tr->blep, frames);
+            for (int v = 0; v < TRACK_MAX_VOICES; v++)
+                osc_draw(&tr->voices[v].osc, &tr->blep);
+            blep_read(&tr->blep, tmono, frames);
+            chain_process(&tr->chain, tmono, out, frames);
+            /* Once it has closed it is put away CLEAN. A song's track
+             * keeps running between notes and its filters settle; this
+             * one stops being rendered, and what its DC block and its
+             * filter still held would come out under the next key. */
+            if (tr->chain.stage == ENV_IDLE && tr->chain.env == 0) {
+                for (int v = 0; v < TRACK_MAX_VOICES; v++)
+                    voice_stop(tr, &tr->voices[v]);
+                blep_reset(&tr->blep);
+                tr->chain.dc_x1 = tr->chain.dc_y1 = tr->chain.ic1 = tr->chain.ic2 = 0;
+                tr->used = false;
+            }
+        }
+    }
     /* The returns run on after the last note: a tail is not a track. */
     if (fed || reverb_ringing()) {
         reverb_set(song->reverb_size, song->reverb_damp);
@@ -1182,7 +1231,7 @@ void player_init(Song *s)
 {
     song = s;
     fx_init();
-    for (int t = 0; t < SONG_MAX_TRACKS; t++) {
+    for (int t = 0; t <= AUDITION; t++) {
         Track *tr = &tracks[t];
         chain_init(&tr->chain);
         blep_reset(&tr->blep);
@@ -1207,6 +1256,8 @@ void player_init(Song *s)
 void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
 void player_play_entry(int entry) { cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0); }
 void player_stop(void) { cmd_push(CMD_STOP, 0, 0); }
+void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
+void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }
 void player_toggle_mute(int track)
 {
     if (track >= 0 && track < SONG_MAX_TRACKS)
