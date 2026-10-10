@@ -3,6 +3,7 @@
 
 #include "app.h"
 #include "gfx.h"
+#include "loop.h"
 
 char *ui_hex2(char *b, int v)
 {
@@ -45,20 +46,38 @@ void ui_cards_rule(void)
     gfx_fill(APP_X0, UI_CARDS_Y + UI_CARDS_H + 3, APP_INNER, 1, C_ACCENT, 71);
 }
 
+int ui_loop_slot(int x, int y)
+{
+    char t[8];
+    int tx;
+    if (loop_state() == LOOP_NONE)
+        return 0;
+    ui_hex2(t, loop_from());
+    t[2] = '-';
+    if (loop_state() == LOOP_SET)
+        ui_hex2(t + 3, loop_to());
+    else
+        t[3] = t[4] = '.', t[5] = '\0';
+    gfx_slab(x, y, 58, 12, C_TITLE, 36);
+    tx = gfx_text(F_MONO8, x + 4, y + 9, "LOOP", C_TITLE);
+    gfx_text(F_COND12, tx + 3, y + 10, t, C_TITLE);
+    return 58;
+}
+
 void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t held)
 {
     for (int b = 0; b < 12; b++) {
         int w = (APP_INNER - 10) / 6, x = APP_X0 + (b % 6) * (w + 2),
             y = BTN_MAP_Y + (b / 6) * (BTN_MAP_H + 1);
         uint8_t s = state[b];
-        bool down = (s == UI_BTN_ON || s == UI_BTN_BACK) && ((held >> APP_BTN_AT[b]) & 1u);
-        bool green = s == UI_BTN_LIVE || down, red = s == UI_BTN_ASK;
+        bool down = (s == UI_BTN_ON || s == UI_BTN_BACK || s == UI_BTN_HERE) && ((held >> APP_BTN_AT[b]) & 1u);
+        bool green = s == UI_BTN_LIVE || down, red = s == UI_BTN_ASK, cyan = s == UI_BTN_HERE && !down;
 
-        gfx_slab(x, y, w, BTN_MAP_H, red ? C_MUTE : green ? C_ACCENT : C_TEXT,
-                 red || green ? 255 : s >= UI_BTN_ON ? 18 : 8);
+        gfx_slab(x, y, w, BTN_MAP_H, red ? C_MUTE : green ? C_ACCENT : cyan ? C_TITLE : C_TEXT,
+                 red || green || cyan ? 255 : s >= UI_BTN_ON ? 18 : 8);
         if (s != UI_BTN_NONE)
             gfx_text_mid(F_COND9, x, w, y + 8, word[b],
-                         red ? C_WHITE : green ? C_ON_ACC : s == UI_BTN_OFF ? C_BEAT
+                         red ? C_WHITE : green || cyan ? C_ON_ACC : s == UI_BTN_OFF ? C_BEAT
                          : s == UI_BTN_BACK ? C_TITLE : C_TEXT);
     }
 }

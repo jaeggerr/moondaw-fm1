@@ -18,6 +18,7 @@
 #include "instrument.h"
 #include "menu.h"
 #include "mixer.h"
+#include "loop.h"
 #include "phrase.h"
 #include "undo.h"
 #include "pattern.h"
@@ -65,6 +66,7 @@ static bool same_name(const char *a, const char *b)
 static void adopt(int slot, bool dirty)
 {
     player_init(&app_song);
+    loop_clear();
     undo_reset(&app_song); /* another song: nothing of the last one to take back */
     app_slot = slot;
     app_dirty = dirty;
@@ -234,13 +236,13 @@ void app_frame(const PlatInput *in)
             else if (screen == AT_PHRASE)
                 phrase_resume();
             else
-                songview_open(false);
+                loop_clear(), songview_open(false); /* the loop was a phrase's */
         }
     } else if (screen == AT_PHRASE) {
         switch (phrase_frame(in)) {
         case PHRASE_BACK:
             screen = AT_SONG;
-            songview_open(false);
+            loop_clear(), songview_open(false); /* the loop was a phrase's */
             break;
         case PHRASE_PATTERN:
             if (pattern_open(&app_song, phrase_entry(), phrase_track())) {
@@ -273,7 +275,7 @@ void app_frame(const PlatInput *in)
             /* fallthrough */
         case PATTERN_SONG:
             screen = AT_SONG;
-            songview_open(false);
+            loop_clear(), songview_open(false); /* the loop was a phrase's */
             break;
         case PATTERN_INSTR:
             screen = AT_INSTRUMENT;

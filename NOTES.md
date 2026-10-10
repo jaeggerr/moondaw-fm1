@@ -577,6 +577,38 @@ mockup). Dark when there is nothing to take back.
   longer names one; the others clamp their cursor.
 - No redo: no button for it, still open.
 
+## 2026-10-10 — LOOP proposed
+
+`proto/loop.html`, validated the same day. The app has a switch and a
+START / END bar one taps rows into; here one button does it, where the
+cursor is: first press sets the start (the button then says END), second
+sets the end, third forgets both. Shown by a cyan gutter and step
+numbers, and a `LOOP 03-08` slot in the bar. One loop for PATTERN and
+PHRASE of the same phrase, in phrase steps; gone on another phrase or
+back on SONG. Never saved, not in UNDO. On SONG the button stays dark:
+there it means something else in the app.
+
+## 2026-10-10 — LOOP written
+
+Validated as drawn. `app/loop.c` holds the three presses and whose
+phrase the loop is; `player_set_loop(from, len)` keeps a phrase played
+by `player_play_entry` to those steps. `tests/loop_test.c` listens to
+which steps the player is seen on.
+
+- The range reaches the audio side as ONE word (from | len << 16), so
+  an interrupt never sees half of it.
+- Song mode ignores it: MIXER and SONG play the song. INSTRUMENT's PLAY
+  plays the phrase, so the loop.
+- A loop past the end of a phrase that got shorter is ignored, not
+  clamped to nothing.
+- `UI_BTN_HERE` is new: a cyan button, a state that is on or waits for
+  its other half.
+- Trap (again): a press in the frame right after a screen opens is
+  swallowed. The capture walk in `platform/sdl/main.c` needs an idle
+  frame before each press.
+- LOOP on SONG stays dark: in the app it means "loop this phrase rather
+  than follow the song", another mockup.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

@@ -5,6 +5,7 @@
 #include "app.h"
 #include "edit.h"
 #include "gfx.h"
+#include "loop.h"
 #include "ui.h"
 #include "undo.h"
 
@@ -91,6 +92,7 @@ static void step_phrase(int d)
     }
     measure();
     settle_col();
+    loop_keep(entry); /* the loop was this phrase's */
 }
 
 /* ---------------------------------------------------------- drawing --- */
@@ -134,7 +136,7 @@ static void draw_cell(int t, int r, int y, bool muted)
 static void draw(void)
 {
     static const char names[] = "C-C#D-D#E-F-F#G-G#A-A#B-";
-    const char *w[12] = { "", "LOOP", "MUTE", "CLEAR", "OPEN", "MIXER",
+    const char *w[12] = { "", loop_state() == LOOP_ONE_END ? "END" : "LOOP", "MUTE", "CLEAR", "OPEN", "MIXER",
                           "\xE2\x80\xB9 SONG", "SAVE", "UNDO", "", playing ? "STOP" : "PLAY", "REC" };
     uint8_t bs[12];
     char a[12], b[12];
@@ -161,6 +163,8 @@ static void draw(void)
             right -= gfx_text_w(F_MONO8, ui_dec(a, steps)) + 2;
             gfx_text(F_MONO8, right, NAV_Y + 12, a, C_TEXT);
         }
+        if (!m && x + 62 < right)
+            x += ui_loop_slot(x, NAV_Y + 3) ? 62 : 0;
         /* the phrase's name, when it has one and there is room: shown, not edited here */
         if (song->arrangement[entry].name[0] &&
             x + gfx_text_w(F_COND9, song->arrangement[entry].name) + 4 < right)
@@ -223,9 +227,11 @@ static void draw(void)
             gfx_fill(APP_X0 + 1, y, 3, ROW_H, C_ACCENT, 255);
         } else {
             gfx_slab(APP_X0, y, APP_INNER, ROW_H, C_TEXT, r % 16 == 0 ? 43 : r % 4 == 0 ? 26 : 11);
+            if (loop_has(r))
+                gfx_fill(APP_X0 + 1, y, 3, ROW_H, C_TITLE, 255); /* the gutter: what goes round */
         }
         gfx_text_mid(F_MONO8, POS_X, POS_W, y + 9, ui_hex2(a, r),
-                     r == play_row ? C_ACCENT : r % 16 == 0 ? C_TEXT : r % 4 == 0 ? C_BEAT : C_DIM);
+                     r == play_row ? C_ACCENT : loop_has(r) ? C_TITLE : r % 16 == 0 ? C_TEXT : r % 4 == 0 ? C_BEAT : C_DIM);
         for (int t = 0; t < song->num_tracks; t++)
             if (has(t))
                 draw_cell(t, r, y, player_muted(t));
@@ -233,8 +239,10 @@ static void draw(void)
 
     for (int k = 0; k < 12; k++) {
         bs[k] = k == AT_BACK ? UI_BTN_BACK : !w[k][0] ? UI_BTN_NONE : UI_BTN_ON;
-        if (k == AT_LOOP || k == AT_REC || (k == AT_UNDO && !undo_can()))
+        if (k == AT_REC || (k == AT_UNDO && !undo_can()))
             bs[k] = UI_BTN_OFF; /* not written yet, or nothing to take back */
+        if (k == AT_LOOP) /* a column head is not a step: only forgetting the loop works there */
+            bs[k] = loop_state() != LOOP_NONE ? UI_BTN_HERE : row < 0 ? UI_BTN_OFF : UI_BTN_ON;
         if (k == AT_CLEAR)
             bs[k] = row < 0 ? UI_BTN_NONE : on_cell() ? UI_BTN_ON : UI_BTN_OFF;
         if (k == AT_OPEN && !has(col))
@@ -254,6 +262,7 @@ int phrase_row(void) { return row < 0 || !has(col) ? 0 : prow(col, row); }
 
 void phrase_resume(void)
 {
+    loop_keep(entry);
     measure(); /* PATTERN may have changed a length, or the block */
     settle_col();
     pool_full = false;
@@ -329,6 +338,8 @@ int phrase_frame(const PlatInput *in)
         pool_full = !edit_clear_step(song, col, blk(col), prow(col, row));
     if (PRESSED(AT_MUTE))
         player_toggle_mute(col);
+    if (PRESSED(AT_LOOP) && (row >= 0 || loop_state() == LOOP_SET))
+        loop_press(entry, row < 0 ? 0 : row);
     if (PRESSED(AT_UNDO) && undo_pop()) {
         if (entry >= song->arrange_len)
             entry = song->arrange_len - 1; /* it may be older than this screen */

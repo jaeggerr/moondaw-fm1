@@ -9,7 +9,7 @@ mkdir -p build/web
 if [ "${APP:-app}" = hello ]; then
     SRC="platform/web/web.c app/hello.c app/term.c"
 else
-    SRC="platform/web/web.c app/${APP:-app}.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/undo.c app/ui.c app/gfx.c app/term.c core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c"
+    SRC="platform/web/web.c app/${APP:-app}.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c app/term.c core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c"
 fi
 if command -v emcc >/dev/null 2>&1; then
     # shellcheck disable=SC2086

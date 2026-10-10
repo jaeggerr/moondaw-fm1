@@ -16,6 +16,9 @@ char *ui_dec(char *b, int v);
  * card keeps its place and says so by being empty. */
 void ui_card(int k, const char *label, const char *value, const char *unit);
 void ui_cards_rule(void); /* the green line under them */
+/* The loop's steps in the bar, `LOOP 03-08`, at x. Returns its width,
+ * 0 when there is no loop to say. */
+int ui_loop_slot(int x, int y);
 
 /* What a button of the map is, this frame. */
 enum {
@@ -25,6 +28,7 @@ enum {
     UI_BTN_BACK,  /* on, and it names where it leads: cyan */
     UI_BTN_LIVE,  /* something is running: green */
     UI_BTN_ASK,   /* a question waits on it: red */
+    UI_BTN_HERE,  /* a state of the screen is on, or waits for its other half: cyan */
 };
 /* `held` is PlatInput.btns: a button that is on shows green while down. */
 void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t held);

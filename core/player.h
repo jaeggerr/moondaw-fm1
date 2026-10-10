@@ -4,7 +4,7 @@
  * atom, counted inside the audio render; the rules of every fx are
  * moondaw's and so is the order they are applied in.
  *
- * Not here yet: the master limiter, the metronome, the loop range. */
+ * Not here yet: the master limiter, the metronome. */
 #ifndef PLAYER_H
 #define PLAYER_H
 
@@ -16,6 +16,11 @@ void player_init(Song *s); /* the song it plays; call once, and stopped */
 void player_play_song(int entry, bool once);
 void player_play_entry(int entry); /* loops one phrase */
 void player_stop(void);
+/* Restricts a phrase played by player_play_entry to the steps
+ * [from, from + len), at once, even mid-playback. len 0 = the whole
+ * phrase. A listening tool: never in the file, ignored when the song
+ * plays, cleared by player_init. */
+void player_set_loop(int from, int len);
 /* A note outside the song, on an instrument of the song: what a key
  * does on the INSTRUMENT screen, and the note PATTERN just wrote. One
  * at a time; the next one replaces it. */

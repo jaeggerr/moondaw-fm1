@@ -369,6 +369,16 @@ static int selftest(const char *out, const char *song, int entry, int track)
     turn(PE_SELECT, 3);
     turn(PE_ALGO, 3);
     frame(1042);
+    kb_btns = 1u << PB_SCL; /* LOOP: one end here, the other five steps down */
+    frame(1042);
+    kb_btns = 0;
+    turn(PE_SELECT, 5);
+    frame(1042);
+    kb_btns = 1u << PB_SCL;
+    frame(1042);
+    kb_btns = 0;
+    turn(PE_SELECT, -4);
+    frame(1042);
     frame(1042);
     sf = SDL_CreateRGBSurfaceWithFormatFrom(canvas, CV_W, CV_H, 32, CV_W * 4,
                                             SDL_PIXELFORMAT_ARGB8888);
@@ -390,6 +400,16 @@ static int selftest(const char *out, const char *song, int entry, int track)
     frame(1043);
     turn(PE_SELECT, 3);
     turn(PE_ALGO, 1);
+    frame(1048);
+    kb_btns = 1u << PB_SCL; /* LOOP here too: steps 03 to 07 */
+    frame(1048);
+    kb_btns = 0;
+    turn(PE_SELECT, 4);
+    frame(1048);
+    kb_btns = 1u << PB_SCL;
+    frame(1048);
+    kb_btns = 0;
+    turn(PE_SELECT, -4);
     frame(1048);
     frame(1064);
     sf = SDL_CreateRGBSurfaceWithFormatFrom(canvas, CV_W, CV_H, 32, CV_W * 4,

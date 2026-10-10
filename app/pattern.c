@@ -5,6 +5,7 @@
 #include "app.h"
 #include "edit.h"
 #include "gfx.h"
+#include "loop.h"
 #include "ui.h"
 #include "undo.h"
 
@@ -30,7 +31,7 @@ static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB
                                       PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */
-static const bool btn_live[BTNS] = { true, false, true, true, false, true,
+static const bool btn_live[BTNS] = { true, true, true, true, false, true,
                                      true, true, true, true, true, false };
 
 static Song *song;
@@ -253,11 +254,13 @@ static void draw_row(int r, int y)
         gfx_fill(X0 + 1, y, 3, ROW_H, C_ACCENT, 255);
     } else {
         gfx_slab(X0, y, INNER, ROW_H, C_TEXT, r % 16 == 0 ? 43 : r % 4 == 0 ? 26 : 11);
+        if (loop_has(r))
+            gfx_fill(X0 + 1, y, 3, ROW_H, C_TITLE, 255); /* the gutter: what goes round */
     }
     if (cur_row == r && cur_col == COL_STEP)
         gfx_slab(col_x[0], y + 1, col_w[0], 10, C_ACCENT, 255);
     gfx_text_mid(F_MONO8, col_x[0], col_w[0], y + 9, ui_hex2(t, r),
-                 cur_row == r && cur_col == COL_STEP ? C_ON_ACC
+                 cur_row == r && cur_col == COL_STEP ? C_ON_ACC : loop_has(r) ? C_TITLE
                  : r % 16 == 0 ? C_TEXT : r % 4 == 0 ? C_BEAT : C_DIM);
     for (int k = 0; k < STEP_MAX_NOTES; k++) {
         int c = COL_N1 + k;
@@ -318,6 +321,8 @@ static void draw(void)
     else if (saved)
         gfx_text(F_COND9, x + 52, NAV_Y + 12, saved > 0 ? "SAVED" : "NOT SAVED",
                  saved > 0 ? C_ACCENT : C_MUTE);
+    else
+        ui_loop_slot(x + 48, NAV_Y + 3);
     gfx_fill(X0, NAV_Y + NAV_H, INNER, 1, C_DIM, 77);
 
     draw_cards();
@@ -352,12 +357,13 @@ static void draw(void)
 
     {   /* The twelve buttons, where they are under the hand. What this
          * build does not do yet is OFF: named, and it says it does nothing. */
-        const char *words[12] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
+        const char *words[12] = { "FX", loop_state() == LOOP_ONE_END ? "END" : "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
                                   back_word, "SAVE", "UNDO", "SONG", is_playing ? "STOP" : "PLAY", "REC" };
         uint8_t st[12];
         for (int b = 0; b < BTNS; b++)
             st[b] = !btn_live[b] || (b == B_UNDO && !undo_can()) ? UI_BTN_OFF : b == B_BACK ? UI_BTN_BACK
-                    : b == B_PLAY && is_playing ? UI_BTN_LIVE : UI_BTN_ON;
+                    : b == B_PLAY && is_playing ? UI_BTN_LIVE
+                    : b == B_LOOP && loop_state() != LOOP_NONE ? UI_BTN_HERE : UI_BTN_ON;
         ui_btn_map(words, st, held_btns);
     }
 }
@@ -377,6 +383,7 @@ bool pattern_open(Song *s, int e, int t)
     back_word = "\xE2\x80\xB9 SONG";
     pool_full = false;
     saved = 0;
+    loop_keep(entry);
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* The picker's order: alphabetical, the empty slot first. */
     fx_count = 0;
@@ -495,6 +502,8 @@ int pattern_frame(const PlatInput *in)
         saved = app_save() == 0 ? 1 : -1;
     if (PRESSED(B_CLEAR))
         clear_slot(cur_row, cur_col);
+    if (PRESSED(B_LOOP))
+        loop_press(entry, cur_row); /* a block's steps are those of its first pass in the phrase */
     if (PRESSED(B_UNDO) && undo_pop()) {
         /* what was taken back may be older than this screen: the block
          * the phrase names here, or the track itself */

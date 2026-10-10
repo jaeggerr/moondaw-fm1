@@ -350,6 +350,7 @@ static int32_t master = 1024; /* Q10 */
 static volatile uint8_t ui_playing;
 static volatile uint16_t ui_row, ui_entry;
 static volatile uint8_t mute_mask, solo_mask;
+static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio side never sees half of it */
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
 enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF };
@@ -1009,8 +1010,21 @@ static void handle_cmds(void)
     }
 }
 
+/* The steps a looped phrase is kept to, when there is a loop and it
+ * still falls inside the phrase. */
+static bool loop_bounds(uint16_t cycle, uint16_t *lo, uint16_t *hi)
+{
+    uint32_t w = loop_word, from = w & 0xFFFFu, len = w >> 16;
+    if (song_mode || len == 0 || from >= cycle)
+        return false;
+    *lo = (uint16_t)from;
+    *hi = (uint16_t)(from + len > cycle ? cycle : from + len);
+    return true;
+}
+
 static void player_tick(void)
 {
+    uint16_t lo, hi;
     const SongEntry *e;
     uint16_t cycle;
 
@@ -1027,6 +1041,8 @@ static void player_tick(void)
     }
     e = &song->arrangement[arr_play];
     cycle = song_entry_cycle(song, e);
+    if (tick_in_step == 0 && loop_bounds(cycle, &lo, &hi) && (entry_step < lo || entry_step >= hi))
+        entry_step = lo; /* PLAY with a loop starts in it; a loop set while playing takes at once */
     tick_parity = (uint8_t)(entry_step & 1);
     if (tick_in_step == 0) {
         process_row(e);
@@ -1052,6 +1068,9 @@ static void player_tick(void)
                 advance_entry();
             }
         }
+    } else if (loop_bounds(cycle, &lo, &hi)) {
+        if (entry_step >= hi)
+            entry_step = lo;
     } else if (entry_step >= cycle) {
         entry_step = 0; /* a phrase loops indefinitely */
         if (song_entry_resolve(song, arr_pos, ref_nth + 1) >= 0) {
@@ -1252,11 +1271,16 @@ void player_init(Song *s)
     ui_playing = 0;
     ui_row = ui_entry = 0;
     mute_mask = solo_mask = 0;
+    loop_word = 0;
 }
 
 void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
 void player_play_entry(int entry) { cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0); }
 void player_stop(void) { cmd_push(CMD_STOP, 0, 0); }
+void player_set_loop(int from, int len)
+{
+    loop_word = from < 0 || len <= 0 ? 0 : ((uint32_t)from & 0xFFFFu) | ((uint32_t)len & 0xFFFFu) << 16;
+}
 void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
 void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }
 void player_toggle_mute(int track)
