@@ -2,10 +2,13 @@
 #include "edit.h"
 
 #include "app.h"
+#include "undo.h"
 
 static Step *step_w(Song *s, int track, int pat, int row)
 {
-    Step *st = song_step_w(s, track, pat, row);
+    Step *st;
+    undo_step(track, pat, row);
+    st = song_step_w(s, track, pat, row);
     if (st)
         app_mark_dirty();
     return st;

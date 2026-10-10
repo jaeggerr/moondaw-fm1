@@ -15,7 +15,7 @@ CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/playe
 ifeq ($(APP),hello)
 SRCS    := app/hello.c app/term.c
 else
-UI      := app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/ui.c app/gfx.c
+UI      := app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/undo.c app/ui.c app/gfx.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)
@@ -40,20 +40,22 @@ core/tables.h: tools/gen_tables.c
 test: sim web
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy build/sim/moondaw-fm1 --selftest build/sim/selftest.bmp $(SELFTEST_SONG)
 	node platform/web/test.mjs
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/edit.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/edit.c app/undo.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
 	build/pattern_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/store_test.c core/store.c -o build/store_test
 	build/store_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/persist_test.c app/app.c $(UI) $(CORE) -o build/persist_test
 	build/persist_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/song_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/undo.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/song_test
 	build/song_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/instrument_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/undo.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/instrument_test
 	build/instrument_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/mixer_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/undo.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/mixer_test
 	build/mixer_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/edit.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/phrase_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/edit.c app/undo.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/phrase_test
 	build/phrase_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/edit.c app/undo.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/undo_test
+	build/undo_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck

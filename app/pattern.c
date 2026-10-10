@@ -6,6 +6,7 @@
 #include "edit.h"
 #include "gfx.h"
 #include "ui.h"
+#include "undo.h"
 
 /* The measures of proto/pattern.html, in panel pixels. */
 enum {
@@ -30,7 +31,7 @@ static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */
 static const bool btn_live[BTNS] = { true, false, true, true, false, true,
-                                     true, true, false, true, true, false };
+                                     true, true, true, true, true, false };
 
 static Song *song;
 static int entry, track, pat;
@@ -55,7 +56,9 @@ static const Step *step_at(int row) { return song_step(song, track, pat, row); }
 
 static Step *step_w(int row)
 {
-    Step *st = song_step_w(song, track, pat, row);
+    Step *st;
+    undo_step(track, pat, row);
+    st = song_step_w(song, track, pat, row);
     pool_full = st == 0;
     if (st)
         app_mark_dirty();
@@ -174,6 +177,7 @@ static void step_block(int d)
         if (used || !song_pattern_blank(song, track, pat))
             break;
     }
+    undo_bytes(&song->arrangement[entry].pattern[track], 1);
     song->arrangement[entry].pattern[track] = (uint8_t)pat;
     app_mark_dirty();
     if (cur_row >= pat_len())
@@ -352,7 +356,7 @@ static void draw(void)
                                   back_word, "SAVE", "UNDO", "SONG", is_playing ? "STOP" : "PLAY", "REC" };
         uint8_t st[12];
         for (int b = 0; b < BTNS; b++)
-            st[b] = !btn_live[b] ? UI_BTN_OFF : b == B_BACK ? UI_BTN_BACK
+            st[b] = !btn_live[b] || (b == B_UNDO && !undo_can()) ? UI_BTN_OFF : b == B_BACK ? UI_BTN_BACK
                     : b == B_PLAY && is_playing ? UI_BTN_LIVE : UI_BTN_ON;
         ui_btn_map(words, st, held_btns);
     }
@@ -441,6 +445,7 @@ int pattern_frame(const PlatInput *in)
     if ((d = in->enc[PE_K1]) != 0) {
         if (cur_col == COL_STEP) {
             int n = len + d;
+            undo_bytes(&song->patterns[track][pat].length, sizeof(uint16_t));
             song->patterns[track][pat].length =
                 (uint16_t)(n < 1 ? 1 : n > PATTERN_MAX_STEPS ? PATTERN_MAX_STEPS : n);
             app_mark_dirty();
@@ -490,6 +495,16 @@ int pattern_frame(const PlatInput *in)
         saved = app_save() == 0 ? 1 : -1;
     if (PRESSED(B_CLEAR))
         clear_slot(cur_row, cur_col);
+    if (PRESSED(B_UNDO) && undo_pop()) {
+        /* what was taken back may be older than this screen: the block
+         * the phrase names here, or the track itself */
+        pat = track < song->num_tracks ? song->arrangement[entry].pattern[track] : PATTERN_NONE;
+        if (pat >= TRACK_MAX_PATTERNS) {
+            player_note_off();
+            return PATTERN_SONG; /* nothing left to show */
+        }
+        pool_full = false;
+    }
     if (PRESSED(B_FX)) {
         /* to the first free fx slot of the step, else the first */
         const Step *st = step_at(cur_row);

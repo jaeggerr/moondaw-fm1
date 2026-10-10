@@ -19,6 +19,7 @@
 #include "menu.h"
 #include "mixer.h"
 #include "phrase.h"
+#include "undo.h"
 #include "pattern.h"
 #include "songview.h"
 
@@ -64,6 +65,7 @@ static bool same_name(const char *a, const char *b)
 static void adopt(int slot, bool dirty)
 {
     player_init(&app_song);
+    undo_reset(&app_song); /* another song: nothing of the last one to take back */
     app_slot = slot;
     app_dirty = dirty;
     screen = AT_MENU;
@@ -221,6 +223,8 @@ void app_frame(const PlatInput *in)
 {
     player_set_master(in->master);
     int entry, track;
+
+    undo_frame(in->ms);
 
     if (screen == AT_MIXER) {
         if (!mixer_frame(in)) { /* back where it was opened from */

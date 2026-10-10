@@ -5,6 +5,7 @@
 #include "app.h"
 #include "gfx.h"
 #include "ui.h"
+#include "undo.h"
 
 enum {
     NAV_Y = 2, NAV_H = 17,
@@ -15,7 +16,7 @@ enum {
     CELL_W = 57, CELL_PITCH = 59,
 };
 enum { ROW_SOUND, ROW_ENV, ROW_FILTER, ROW_VIB, ROW_LAYER, ROWS_ALL = ROW_LAYER + INSTR_MAX_LAYERS };
-enum { AT_BACK = 6, AT_SAVE = 7, AT_PLAY = 10 };
+enum { AT_BACK = 6, AT_SAVE = 7, AT_UNDO = 8, AT_PLAY = 10 };
 
 static int inst, entry, row, kbd_oct;
 static uint32_t prev_btns, prev_keys, held;
@@ -92,6 +93,7 @@ static void turn(int k, int d)
 {
     InstrumentDef *in = I();
 
+    undo_bytes(in, sizeof *in);
     if (row == ROW_SOUND) {
         if (k == 0) {
             /* The three engines this machine has. One that is silent here
@@ -210,8 +212,8 @@ static void draw_cards(void)
 
 static void draw(void)
 {
-    static const char *const words[12] = { "", "", "", "", "", "", "\xE2\x80\xB9 PAT", "SAVE", "", "", "PLAY", "" };
-    static const char *const playing_words[12] = { "", "", "", "", "", "", "\xE2\x80\xB9 PAT", "SAVE", "", "", "STOP", "" };
+    static const char *const words[12] = { "", "", "", "", "", "", "\xE2\x80\xB9 PAT", "SAVE", "UNDO", "", "PLAY", "" };
+    static const char *const playing_words[12] = { "", "", "", "", "", "", "\xE2\x80\xB9 PAT", "SAVE", "UNDO", "", "STOP", "" };
     const InstrumentDef *in = I();
     uint8_t st[12];
     char a[16], b[12];
@@ -304,6 +306,7 @@ static void draw(void)
 
     for (int k = 0; k < 12; k++)
         st[k] = k == AT_BACK ? UI_BTN_BACK : k == AT_SAVE ? UI_BTN_ON
+                : k == AT_UNDO ? (undo_can() ? UI_BTN_ON : UI_BTN_OFF)
                 : k == AT_PLAY ? (playing ? UI_BTN_LIVE : UI_BTN_ON) : UI_BTN_NONE;
     ui_btn_map(playing ? playing_words : words, st, held);
 }
@@ -359,6 +362,8 @@ bool instrument_frame(const PlatInput *in)
         player_note_off();
     prev_keys = in->keys;
 
+    if (PRESSED(AT_UNDO))
+        undo_pop();
     if (PRESSED(AT_SAVE))
         saved = app_save() == 0 ? 1 : -1;
     if (PRESSED(AT_PLAY)) {

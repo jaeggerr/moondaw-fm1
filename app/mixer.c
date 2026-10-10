@@ -5,6 +5,7 @@
 #include "app.h"
 #include "gfx.h"
 #include "ui.h"
+#include "undo.h"
 
 enum {
     NAV_Y = 2, NAV_H = 17,
@@ -43,9 +44,11 @@ static void turn(int k, int d)
 {
     if (row == -1) {
         uint8_t *f[4] = { &song->reverb_size, &song->reverb_damp, &song->delay_time, &song->delay_fb };
+        undo_bytes(f[k], 1);
         *f[k] = (uint8_t)clampi(*f[k] + d, 0, k == 2 ? 96 : 127);
     } else {
         TrackInit *t = &song->track_init[row];
+        undo_bytes(k == 0 ? (void *)&t->volume : k == 1 ? (void *)&t->pan : k == 2 ? (void *)&t->send : (void *)&t->echo, 1);
         if (k == 0)
             t->volume = (uint8_t)clampi(t->volume + d, 0, 127);
         else if (k == 1)
@@ -138,8 +141,8 @@ static void draw(void)
     for (int b = 0; b < 12; b++) {
         w[b] = b == AT_BACK ? back : b == AT_PLAY && playing ? "STOP" : base_words[b];
         st[b] = b == AT_BACK ? UI_BTN_BACK : !w[b][0] ? UI_BTN_NONE : UI_BTN_ON;
-        if (b == AT_UNDO)
-            st[b] = UI_BTN_OFF; /* not written yet */
+        if (b == AT_UNDO && !undo_can())
+            st[b] = UI_BTN_OFF; /* nothing to take back */
         if ((b == AT_MUTE || b == AT_SOLO) && row < 0)
             st[b] = UI_BTN_OFF; /* the returns are not a track */
         if (b == AT_MUTE && row >= 0 && player_muted(row))
@@ -186,6 +189,8 @@ bool mixer_frame(const PlatInput *in)
         player_toggle_mute(row);
     if (PRESSED(AT_SOLO) && row >= 0)
         player_toggle_solo(row);
+    if (PRESSED(AT_UNDO) && undo_pop())
+        row = clampi(row, -1, song->num_tracks - 1);
     if (PRESSED(AT_SAVE))
         saved = app_save() == 0 ? 1 : -1;
     if (PRESSED(AT_PLAY)) {

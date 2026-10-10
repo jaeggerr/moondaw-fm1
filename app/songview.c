@@ -5,6 +5,7 @@
 #include "app.h"
 #include "gfx.h"
 #include "ui.h"
+#include "undo.h"
 
 enum {
     NAV_Y = 2, NAV_H = 17,
@@ -58,6 +59,8 @@ static void turn_block(int d)
 
     if (e->kind == ENTRY_REF)
         return; /* a reference plays its target's cells */
+    undo_bytes(&e->pattern[t], 1);
+    undo_bytes(&e->level[t], 1);
     v += d;
     v = v < -2 ? -2 : v > hi ? hi : v;
     e->pattern[t] = v == -2 ? PATTERN_NONE : v == -1 ? PATTERN_HOLD : (uint8_t)v;
@@ -72,6 +75,7 @@ static void turn_level(int d)
     int t = col - 1, v = e->level[t] + d;
     if (e->pattern[t] == PATTERN_NONE || e->kind == ENTRY_REF)
         return;
+    undo_bytes(&e->level[t], 1);
     e->level[t] = (uint8_t)(v < 0 ? 0 : v > VOL_FULL ? VOL_FULL : v);
     app_mark_dirty();
 }
@@ -84,6 +88,7 @@ static void turn_steps(int d)
     int v = e->steps;
     if (e->kind == ENTRY_REF && e->ref_kind == REF_SECTION)
         return;
+    undo_bytes(&e->steps, sizeof e->steps);
     if (v == 0 && d > 0)
         v = song_entry_cycle(song, e->kind == ENTRY_REF ? entry_at(e->ref_target) : e) + d - 1;
     else
@@ -97,18 +102,22 @@ static void turn_song(int k, int d)
     int v;
     switch (k) {
     case 0:
+        undo_bytes(&song->bpm, sizeof song->bpm);
         v = song->bpm + d;
         song->bpm = (uint16_t)(v < BPM_MIN ? BPM_MIN : v > BPM_MAX ? BPM_MAX : v);
         break;
     case 1:
+        undo_bytes(&song->swing, 1);
         v = song->swing + d;
         song->swing = (uint8_t)(v < SWING_MIN ? SWING_MIN : v > SWING_MAX ? SWING_MAX : v);
         break;
     case 2:
+        undo_bytes(&song->ticks_per_step, 1);
         v = song->ticks_per_step + d;
         song->ticks_per_step = (uint8_t)(v < 1 ? 1 : v > TICKS_MAX ? TICKS_MAX : v);
         break;
     default:
+        undo_bytes(&song->num_tracks, 1);
         v = song->num_tracks + d;
         song->num_tracks = (uint8_t)(v < 1 ? 1 : v > SONG_MAX_TRACKS ? SONG_MAX_TRACKS : v);
         if (col > song->num_tracks)
@@ -133,6 +142,17 @@ static void shift_refs(int from, int by, int gone)
     }
 }
 
+/* A row comes or goes: every row below moves and the references are
+ * renumbered. What UNDO keeps is the arrangement as it was, whole. */
+static void undo_arrangement(void)
+{
+    undo_bytes(&song->arrange_len, 1);
+    undo_bytes(&song->section_count, 1);
+    undo_bytes(song->arrangement, (uint32_t)song->arrange_len * sizeof(SongEntry));
+    if (song->section_count)
+        undo_bytes(song->sections, (uint32_t)song->section_count * sizeof song->sections[0]);
+}
+
 /* + PHRASE: a copy of the phrase under the cursor, right below it. The
  * name stays with the original: a name marks one phrase. */
 static void insert_phrase(void)
@@ -140,6 +160,7 @@ static void insert_phrase(void)
     int at = row < 0 ? 0 : row;
     if (song->arrange_len >= SONG_ARRANGE_LEN)
         return;
+    undo_arrangement();
     shift_refs(at + 1, 1, -1);
     for (int i = song->arrange_len; i > at + 1; i--)
         *entry_at(i) = *entry_at(i - 1);
@@ -153,6 +174,7 @@ static void insert_phrase(void)
 
 static void delete_phrase(void)
 {
+    undo_arrangement();
     if (song->arrange_len <= 1) { /* a song has at least one phrase: empty it instead */
         SongEntry *e = entry_at(0);
         for (int t = 0; t < SONG_MAX_TRACKS; t++) {
@@ -314,8 +336,8 @@ static void draw(void)
         st[b] = b == AT_BACK ? UI_BTN_BACK : UI_BTN_ON;
         if (!words[b][0])
             st[b] = UI_BTN_NONE;
-        if (b == AT_LOOP || b == AT_UNDO || b == AT_REC)
-            st[b] = UI_BTN_OFF; /* not written yet */
+        if (b == AT_LOOP || b == AT_REC || (b == AT_UNDO && !undo_can()))
+            st[b] = UI_BTN_OFF; /* not written yet, or nothing to take back */
         if (b == AT_OPEN)       /* a block opens in PATTERN, a phrase's number in PHRASE */
             st[b] = cell_block || (on_pos() && entry_at(row)->kind != ENTRY_REF) ? UI_BTN_ON
                     : row == -1 ? UI_BTN_NONE : UI_BTN_OFF;
@@ -397,6 +419,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
                 ask_delete = true;
             }
         } else if (entry_at(row)->kind != ENTRY_REF) {
+            undo_bytes(&entry_at(row)->pattern[col - 1], 1);
+            undo_bytes(&entry_at(row)->level[col - 1], 1);
             entry_at(row)->pattern[col - 1] = PATTERN_NONE;
             entry_at(row)->level[col - 1] = VOL_FULL;
             app_mark_dirty();
@@ -404,6 +428,12 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     if (PRESSED(AT_ADD) && row >= 0)
         insert_phrase();
+    if (PRESSED(AT_UNDO) && undo_pop()) {
+        if (row >= song->arrange_len)
+            row = song->arrange_len - 1;
+        if (col > song->num_tracks)
+            col = song->num_tracks;
+    }
     if (PRESSED(AT_SAVE))
         saved = app_save() == 0 ? 1 : -1;
     if (PRESSED(AT_PLAY)) {

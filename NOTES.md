@@ -553,10 +553,34 @@ and MIXER from SONG, PHRASE and PATTERN.
 - Not as drawn: `PRESETS PHR` (room for `OCT F3-G5`), MUTE lit is red as
   on MIXER.
 
+## 2026-10-10 — UNDO written
+
+`app/undo.c`, `tests/undo_test.c`. Lit on PATTERN, SONG, PHRASE, MIXER
+and INSTRUMENT (added there, at its usual place: it was not on that
+mockup). Dark when there is nothing to take back.
+
+- A journal of the bytes an edit is about to replace, not copies of the
+  song: 12 KB of data and 256 records, in .bss (RAM 48.5 KB of 72).
+- One press takes back one GESTURE: what was written in one frame, plus
+  what went on being written at the same place within a second. A knob
+  turned twelve notches is one press, two edits a pause apart are two.
+- A gesture that changed nothing (a knob against its stop) is dropped.
+- When the journal is full the oldest gestures are forgotten; opening
+  another song empties it. SAVE does not.
+- **Trap: a step is recorded by (track, block, row), never by address.**
+  `song_pool_compact` hands back emptied chunks; an address kept from
+  before would write into a chunk that belongs to something else.
+- Deleting or inserting a phrase records the arrangement as it was
+  (rows, references and section names move together): 36 B a phrase.
+- An undo can be older than the screen it is pressed on. PATTERN
+  re-reads its block afterwards and leaves for SONG if the cell no
+  longer names one; the others clamp their cursor.
+- No redo: no button for it, still open.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
-- A list of songs (MENU), getting a song onto the device from a computer.
-- The limiter; undo.
+- Getting a song onto the device from a computer.
+- The limiter; redo (no button for it).
 - CPU cost on the real chip.
 - `web/installer/` is copied, not adapted, not run.

@@ -6,6 +6,7 @@
 #include "edit.h"
 #include "gfx.h"
 #include "ui.h"
+#include "undo.h"
 
 enum {
     NAV_Y = 2, NAV_H = 17,
@@ -232,8 +233,8 @@ static void draw(void)
 
     for (int k = 0; k < 12; k++) {
         bs[k] = k == AT_BACK ? UI_BTN_BACK : !w[k][0] ? UI_BTN_NONE : UI_BTN_ON;
-        if (k == AT_LOOP || k == AT_UNDO || k == AT_REC)
-            bs[k] = UI_BTN_OFF; /* not written yet */
+        if (k == AT_LOOP || k == AT_REC || (k == AT_UNDO && !undo_can()))
+            bs[k] = UI_BTN_OFF; /* not written yet, or nothing to take back */
         if (k == AT_CLEAR)
             bs[k] = row < 0 ? UI_BTN_NONE : on_cell() ? UI_BTN_ON : UI_BTN_OFF;
         if (k == AT_OPEN && !has(col))
@@ -328,6 +329,13 @@ int phrase_frame(const PlatInput *in)
         pool_full = !edit_clear_step(song, col, blk(col), prow(col, row));
     if (PRESSED(AT_MUTE))
         player_toggle_mute(col);
+    if (PRESSED(AT_UNDO) && undo_pop()) {
+        if (entry >= song->arrange_len)
+            entry = song->arrange_len - 1; /* it may be older than this screen */
+        measure();
+        settle_col();
+        pool_full = false;
+    }
     if (PRESSED(AT_SAVE))
         saved = app_save() == 0 ? 1 : -1;
     if (PRESSED(AT_PLAY)) {
