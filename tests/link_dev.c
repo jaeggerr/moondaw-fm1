@@ -2,8 +2,10 @@
 /* link_dev OUT : a device with nothing but the link and an empty flash,
  * listening where the simulator does. It waits for one song from
  * tools/fm1_send.py --udp, writes what its store then holds to OUT and
- * prints the name -- the end-to-end check of the host tool against the
- * firmware's receiver, without a machine. Gives up after ten seconds. */
+ * prints the name, then goes on answering (--list, --get) until two
+ * seconds pass without a message -- the end-to-end check of the host
+ * tool against the firmware's receiver, without a machine. Gives up
+ * after ten seconds if no song comes. */
 #include <stdio.h>
 #include <time.h>
 
@@ -49,5 +51,11 @@ int main(int argc, char **argv)
         fwrite(piece, 1, (size_t)n, f);
     fclose(f);
     printf("link_dev: %s, slot %d\n", name, link_slot());
+    fflush(stdout);
+    for (uint32_t seen = udp_seen, quiet = now_ms(); now_ms() - quiet < 2000; usleep(1000)) {
+        link_frame(now_ms(), true);
+        if (udp_seen != seen)
+            seen = udp_seen, quiet = now_ms();
+    }
     return n < 0;
 }

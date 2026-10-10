@@ -676,10 +676,27 @@ another signature (`F0 7D 4D 44 ...`).
   and has not been looked at.
 - The 13 songs take 100 KB of the 290 free; the largest 25.
 
+## 2026-10-10 — Songs back to the computer
+
+`tools/fm1_send.py --list` and `--get NAME [-o FILE]`; INFO and READ in
+`app/link.c`.
+
+- The host asks for a slot piece by piece, BY OFFSET: a piece whose
+  answer was lost is asked again and the device still has it. The store
+  reads forward only, so any other offset starts the slot over and
+  skips to it.
+- 120 bytes a piece, not 240: the answer then fits the firmware's SysEx
+  queue (64 packets) without `ota_wire_send` having to wait for USB.
+- From the MENU only, and the screen says SENDING: the store's read
+  cursor is the link's while it lasts, an OPEN in the middle would
+  move it.
+- What comes back is the file as the device saved it, a version 3 .trk
+  the app opens. `tests/linktest.sh` sends KIDS, lists, fetches it and
+  compares the three byte for byte.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
-- Getting a song BACK from the device to the computer; a list of what is on it.
 - The limiter; redo (no button for it).
 - CPU cost on the real chip.
 - `web/installer/` is copied, not adapted, not run.

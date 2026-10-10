@@ -132,7 +132,7 @@ void plat_sysex_done(void) { link_len = 0; }
 
 int plat_sysex_send(const uint8_t *p, uint32_t n)
 {
-    static uint8_t wire[2 + 64];
+    static uint8_t wire[2 + 160];
     if (n > sizeof wire - 2u)
         return -1;
     wire[0] = 0xF0;

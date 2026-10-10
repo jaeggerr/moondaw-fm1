@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Send a .trk to MOONDAW on the FM-1, over USB-MIDI.
+"""Send a .trk to MOONDAW on the FM-1, over USB-MIDI, or fetch one back.
 
     tools/fm1_send.py SONG.trk [--name NAME] [--replace] [--port TEXT]
+    tools/fm1_send.py --list
+    tools/fm1_send.py --get NAME [-o FILE.trk]
     tools/fm1_send.py --ping
 
 The device must be on its MENU. The song is first reduced to what the
@@ -10,6 +12,9 @@ FM-1 carries, by the same reader and writer the firmware uses
 (tests/trkdump.c, compiled on first use), so what is sent is exactly what
 the machine would save. It lands in the flash; nothing on the device is
 replaced unless --replace is given.
+
+--get writes the song as the device holds it: a version 3 .trk the app
+opens. It refuses to overwrite a file unless --force is given.
 
 --udp sends to a simulator on this computer instead of a MIDI port
 (build/sim/moondaw-fm1 listens on 127.0.0.1:19780).
@@ -26,7 +31,7 @@ import zlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SIG = bytes([0x7D, 0x4D, 0x44])
-BEGIN, DATA, END, CANCEL, PING, ANSWER = 1, 2, 3, 4, 5, 0x7F
+BEGIN, DATA, END, CANCEL, PING, INFO, READ, ANSWER = 1, 2, 3, 4, 5, 6, 7, 0x7F
 DATA_MAX = 240
 STATUS = {
     1: "the device is busy: go back to its MENU and try again",
@@ -37,6 +42,7 @@ STATUS = {
     6: "the device could not write its flash",
     7: "that song is open on the device with unsaved changes: save it there first",
     8: "the device did not understand the message",
+    9: "nothing in that slot",
 }
 
 
@@ -108,7 +114,7 @@ class Midi:
 
 
 def ask(link, cmd, raw=b"", tries=4, timeout=1.5):
-    """One message, and its answer: (status, seq, extra). The device holds a single SysEx at a time."""
+    """One message, and its answer: (status, seq, extra, tail). The device holds a single SysEx at a time."""
     for _ in range(tries):
         link.send(SIG + bytes([cmd]) + pack7(raw))
         end = time.time() + timeout
@@ -117,8 +123,8 @@ def ask(link, cmd, raw=b"", tries=4, timeout=1.5):
             if not m or m[:4] != SIG + bytes([ANSWER]):
                 continue
             a = unpack7(m[4:])
-            if len(a) == 8 and a[0] == cmd:
-                return a[1], a[2] | a[3] << 8, int.from_bytes(a[4:8], "little")
+            if len(a) >= 8 and a[0] == cmd:
+                return a[1], a[2] | a[3] << 8, int.from_bytes(a[4:8], "little"), a[8:]
     sys.exit("no answer from the device. Is MOONDAW running on it, and the cable a data cable?")
 
 
@@ -135,6 +141,35 @@ def as_fm1(path):
     return r.stdout
 
 
+def songs(link):
+    """What the device holds: [(slot, name, bytes)]."""
+    out, slot, slots = [], 0, 1
+    while slot < slots:
+        st, slots, size, tail = ask(link, INFO, bytes([slot]))
+        if st == 0:
+            out.append((slot, tail.decode("ascii", "replace"), size))
+        elif st != 9:
+            sys.exit(STATUS.get(st, f"refused ({st})"))
+        slot += 1
+    return out
+
+
+def fetch(link, slot, name, size):
+    data = bytearray()
+    while True:
+        st, n, off, tail = ask(link, READ, bytes([slot]) + len(data).to_bytes(4, "little"))
+        if st:
+            sys.exit(STATUS.get(st, f"refused ({st})"))
+        if off != len(data) or n != len(tail):
+            sys.exit("the device answered for another piece")
+        if not n:
+            break
+        data += tail
+        print(f"\r{name}: {min(100, len(data) * 100 // max(size, 1))} %", end="", flush=True)
+    print()
+    return bytes(data)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("song", nargs="?")
@@ -145,17 +180,38 @@ def main():
                     help="a simulator on this computer instead of MIDI")
     ap.add_argument("--raw", action="store_true", help="send the file as it is, not reduced")
     ap.add_argument("--ping", action="store_true", help="only ask the device how much room it has")
+    ap.add_argument("--list", action="store_true", help="the songs on the device")
+    ap.add_argument("--get", metavar="NAME", help="fetch a song from the device")
+    ap.add_argument("-o", "--out", help="where --get writes (default: NAME.trk here)")
+    ap.add_argument("--force", action="store_true", help="let --get overwrite a file")
     a = ap.parse_args()
-    if not a.song and not a.ping:
-        ap.error("a .trk to send, or --ping")
+    if not a.song and not (a.ping or a.list or a.get):
+        ap.error("a .trk to send, or --list, --get NAME, --ping")
 
     link = Udp(a.udp) if a.udp else Midi(a.port)
-    st, ver, free = ask(link, PING)
+    st, ver, free, _ = ask(link, PING)
     print(f"device: link version {ver}, {free // 1024} KB free")
     if a.ping:
         return
     if ver != 1:
         sys.exit("this tool speaks version 1 of the link")
+    if a.list or a.get:
+        have = songs(link)
+        if a.list:
+            for slot, name, size in have:
+                print(f"  {name:<12} {(size + 1023) // 1024:>3} KB")
+            print(f"{len(have)} song{'s' if len(have) != 1 else ''}")
+        if a.get:
+            hit = [h for h in have if h[1] == a.get.upper()]
+            if not hit:
+                sys.exit(f"no song named {a.get.upper()} on the device (--list shows them)")
+            out = pathlib.Path(a.out or f"{hit[0][1]}.trk")
+            if out.exists() and not a.force:
+                sys.exit(f"{out} exists: --force to overwrite it, or -o another name")
+            data = fetch(link, *hit[0])
+            out.write_bytes(data)
+            print(f"{out}: {len(data)} bytes")
+        return
 
     path = pathlib.Path(a.song)
     data = path.read_bytes() if a.raw else as_fm1(path)
@@ -165,16 +221,16 @@ def main():
               f"{(len(data) + 1023) // 1024} KB as the FM-1 keeps it")
     head = bytes([1 if a.replace else 0]) + len(data).to_bytes(4, "little") + \
         zlib.crc32(data).to_bytes(4, "little") + name.encode("ascii", "replace")
-    st, _, _ = ask(link, BEGIN, head)
+    st, _, _, _ = ask(link, BEGIN, head)
     if st:
         sys.exit(STATUS.get(st, f"refused ({st})"))
     for seq, at in enumerate(range(0, len(data), DATA_MAX)):
-        st, _, _ = ask(link, DATA, seq.to_bytes(2, "little") + data[at:at + DATA_MAX])
+        st, _, _, _ = ask(link, DATA, seq.to_bytes(2, "little") + data[at:at + DATA_MAX])
         if st:
             ask(link, CANCEL)
             sys.exit(STATUS.get(st, f"refused ({st})"))
         print(f"\r{name}: {min(at + DATA_MAX, len(data)) * 100 // len(data)} %", end="", flush=True)
-    st, _, got = ask(link, END, timeout=5)
+    st, _, got, _ = ask(link, END, timeout=5)
     print()
     if st:
         sys.exit(STATUS.get(st, f"refused ({st})"))

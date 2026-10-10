@@ -14,14 +14,22 @@
  *   03 END
  *   04 CANCEL
  *   05 PING
- *   7F answer  cmd, status, seq u16, extra u32 (PING: bytes free)
+ *   06 INFO    slot                 -> its size (extra) and name (tail)
+ *   07 READ    slot, offset u32     -> up to 120 bytes of it (tail);
+ *                                      none = the end
+ *   7F answer  cmd, status, seq u16, extra u32, tail
+ *              (PING: version, bytes free.  INFO: slots, size.
+ *               READ: bytes in this piece, offset)
  *
  * What arrives is written straight to a slot of the store, a piece at a
  * time: it is never whole in memory and never parsed here. The host
  * sends the file as this machine would save it (tools/fm1_send.py runs
  * the same reader and writer). The new song becomes the file only at
  * END, when its length and checksum are right -- a cable pulled halfway
- * leaves the flash as it was. */
+ * leaves the flash as it was.
+ *
+ * The other way round the host asks for a slot piece by piece, by
+ * offset, so a piece whose answer was lost is simply asked again. */
 #ifndef LINK_H
 #define LINK_H
 
@@ -29,6 +37,7 @@
 #include <stdint.h>
 
 enum { LINK_CMD_BEGIN = 1, LINK_CMD_DATA, LINK_CMD_END, LINK_CMD_CANCEL, LINK_CMD_PING,
+       LINK_CMD_INFO, LINK_CMD_READ,
        LINK_CMD_ANSWER = 0x7F };
 enum {
     LINK_OK,
@@ -40,16 +49,20 @@ enum {
     LINK_IO,
     LINK_DIRTY,  /* it would replace the open song, which has unsaved changes */
     LINK_BADMSG,
+    LINK_NONE,   /* nothing in that slot */
 };
 #define LINK_VERSION  1
 #define LINK_DATA_MAX 240 /* bytes of song in one DATA */
+#define LINK_READ_MAX 120 /* in one READ: an answer never has to wait for the USB queue to drain */
 
-enum { LINK_IDLE, LINK_RECEIVING, LINK_DONE };
+enum { LINK_IDLE, LINK_RECEIVING, LINK_DONE, LINK_SENDING };
 
 void link_reset(void);
 /* Once a frame, from the main loop. `may` is false where a transfer is
  * not welcome (anywhere but the MENU). LINK_DONE is returned once, for
- * the frame a song was committed in; link_slot() says where. */
+ * the frame a song was committed in; link_slot() says where. While it
+ * is LINK_RECEIVING or LINK_SENDING the store is the link's: nothing
+ * else may save or load. */
 int link_frame(uint32_t ms, bool may);
 const char *link_name(void);
 uint32_t link_got(void);

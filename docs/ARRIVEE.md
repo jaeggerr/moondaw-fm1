@@ -176,6 +176,13 @@ les 13 morceaux en prennent 100, le plus gros 25). L'envoi réduit d'abord
 le morceau à ce que le FM-1 porte, puis l'écrit dans la flash de
 l'appareil, qui affiche RECEIVING. Rien n'y est remplacé sans `--replace`.
 
+Dans l'autre sens, pour sauvegarder ce qui a été écrit sur l'appareil :
+
+```
+tools/fm1_send.py --list
+tools/fm1_send.py --get KIDS -o KIDS-fm1.trk
+```
+
 Si aucun port MIDI n'est trouvé, l'outil liste ceux qu'il voit :
 `--port` avec un bout du bon nom. **Ce chemin MIDI n'a jamais tourné** :
 tout le reste du transfert est vérifié sans appareil, mais le nom du port

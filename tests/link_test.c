@@ -15,7 +15,7 @@ int app_slot = -1;
 bool app_dirty;
 
 /* host -> device: one message waiting; device -> host: the last answer */
-static uint8_t to_dev[700], from_dev[64];
+static uint8_t to_dev[700], from_dev[200];
 static uint32_t to_len, from_len;
 int plat_sysex_get(const uint8_t **p, uint32_t *n) { *p = to_dev; *n = to_len; return to_len != 0; }
 void plat_sysex_done(void) { to_len = 0; }
@@ -24,17 +24,20 @@ int plat_sysex_send(const uint8_t *p, uint32_t n) { memcpy(from_dev, p, n); from
 static int fails, state;
 static uint32_t ms;
 static bool at_menu = true;
-static struct { int cmd, status, seq; uint32_t extra; } ans;
+static struct { int cmd, status, seq; uint32_t extra, n; uint8_t tail[LINK_READ_MAX]; } ans;
 
 static int say(int cmd, const uint8_t *raw, uint32_t n)
 {
-    uint8_t a[8];
+    uint8_t a[8 + LINK_READ_MAX];
+    uint32_t d;
     to_dev[0] = 0x7D, to_dev[1] = 0x4D, to_dev[2] = 0x44, to_dev[3] = (uint8_t)cmd;
     to_len = 4 + link_pack7(raw, n, to_dev + 4);
     from_len = 0;
     state = link_frame(ms += 16, at_menu);
-    if (from_len < 5 || link_unpack7(from_dev + 4, from_len - 4, a, sizeof a) != 8)
+    if (from_len < 5 || (d = link_unpack7(from_dev + 4, from_len - 4, a, sizeof a)) < 8 || d > sizeof a)
         return -1;
+    ans.n = d - 8;
+    memcpy(ans.tail, a + 8, ans.n);
     ans.cmd = a[0], ans.status = a[1], ans.seq = a[2] | a[3] << 8;
     ans.extra = (uint32_t)a[4] | (uint32_t)a[5] << 8 | (uint32_t)a[6] << 16 | (uint32_t)a[7] << 24;
     return ans.status;
@@ -163,6 +166,46 @@ int main(void)
           begin("KIDS", one, sizeof one, 1) == LINK_DIRTY);
     app_dirty = false;
     CHECK("saved, it may be replaced", send("KIDS", one, sizeof one, 1) == LINK_OK && link_slot() == app_slot);
+
+    /* the other way: the device's songs, read back piece by piece */
+    {
+        static uint8_t back[2000];
+        uint8_t ask[5] = { 0 }, first[LINK_READ_MAX];
+        uint32_t at = 0, bytes;
+        int b_slot = -1;
+
+        for (int s = 0; s < APP_SONG_SLOTS; s++) {
+            uint8_t q = (uint8_t)s;
+            if (say(LINK_CMD_INFO, &q, 1) == LINK_OK && ans.n == 1 && ans.tail[0] == 'B')
+                b_slot = s, bytes = ans.extra;
+        }
+        CHECK("INFO names what a slot holds", b_slot >= 0 && ans.seq == APP_SONG_SLOTS);
+        ask[0] = APP_SONG_SLOTS - 1;
+        CHECK("and says when it holds nothing", say(LINK_CMD_INFO, ask, 1) == LINK_NONE);
+        ask[0] = (uint8_t)b_slot;
+        at_menu = false;
+        CHECK("away from the MENU nothing is read out", say(LINK_CMD_READ, ask, 5) == LINK_BUSY);
+        at_menu = true;
+        CHECK("the first piece", say(LINK_CMD_READ, ask, 5) == LINK_OK && ans.n == LINK_READ_MAX &&
+                                 state == LINK_SENDING);
+        memcpy(first, ans.tail, ans.n);
+        CHECK("asked again, it is the same piece", say(LINK_CMD_READ, ask, 5) == LINK_OK &&
+                                                   !memcmp(first, ans.tail, LINK_READ_MAX));
+        for (;;) {
+            for (int i = 0; i < 4; i++)
+                ask[1 + i] = (uint8_t)(at >> 8 * i);
+            if (say(LINK_CMD_READ, ask, 5) != LINK_OK || ans.extra != at || !ans.n)
+                break;
+            memcpy(back + at, ans.tail, ans.n);
+            at += ans.n;
+        }
+        CHECK("piece by piece the song comes back whole, and the end is said",
+              ans.status == LINK_OK && at == sizeof one && !memcmp(back, one, sizeof one) && state == LINK_IDLE);
+        ask[1] = 240, ask[2] = 0, ask[3] = 0, ask[4] = 0;
+        CHECK("a piece from the middle can be asked for on its own",
+              say(LINK_CMD_READ, ask, 5) == LINK_OK && !memcmp(ans.tail, one + 240, LINK_READ_MAX));
+        (void)bytes;
+    }
 
     printf("link test: %s\n", fails ? "FAIL" : "ok");
     return fails != 0;

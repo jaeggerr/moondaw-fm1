@@ -9,6 +9,10 @@ static int state, slot;
 static char name[STORE_NAME + 1];
 static uint32_t size, got, crc, want_crc, last_ms;
 static uint16_t next_seq;
+/* the other way: the slot being read out, where its next piece starts, and the last piece */
+static uint32_t read_at;
+static uint8_t piece[LINK_READ_MAX];
+static uint32_t piece_n, piece_at;
 
 /* Seven bytes travel as eight: their top bits first, then what is left. */
 uint32_t link_pack7(const uint8_t *in, uint32_t n, uint8_t *out)
@@ -56,13 +60,16 @@ static uint32_t rd32(const uint8_t *p)
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
-static void answer(int cmd, int status, uint32_t seq, uint32_t extra)
+static void answer(int cmd, int status, uint32_t seq, uint32_t extra, const uint8_t *tail, uint32_t n)
 {
-    uint8_t raw[8] = { (uint8_t)cmd, (uint8_t)status, (uint8_t)seq, (uint8_t)(seq >> 8),
-                       (uint8_t)extra, (uint8_t)(extra >> 8), (uint8_t)(extra >> 16),
-                       (uint8_t)(extra >> 24) };
-    uint8_t msg[4 + 10] = { 0x7D, 0x4D, 0x44, LINK_CMD_ANSWER };
-    plat_sysex_send(msg, 4 + link_pack7(raw, sizeof raw, msg + 4));
+    static uint8_t raw[8 + LINK_READ_MAX], msg[4 + (8 + LINK_READ_MAX) * 8 / 7 + 2];
+    raw[0] = (uint8_t)cmd, raw[1] = (uint8_t)status, raw[2] = (uint8_t)seq, raw[3] = (uint8_t)(seq >> 8);
+    for (int i = 0; i < 4; i++)
+        raw[4 + i] = (uint8_t)(extra >> 8 * i);
+    for (uint32_t i = 0; i < n; i++)
+        raw[8 + i] = tail[i];
+    msg[0] = 0x7D, msg[1] = 0x4D, msg[2] = 0x44, msg[3] = LINK_CMD_ANSWER;
+    plat_sysex_send(msg, 4 + link_pack7(raw, 8 + n, msg + 4));
 }
 
 /* What a failed transfer wrote is free space again. */
@@ -71,6 +78,46 @@ static void drop(void)
     if (state == LINK_RECEIVING)
         store_mount();
     state = LINK_IDLE;
+}
+
+/* One piece of a slot, by offset. The store reads forward only: the
+ * piece just sent is kept for the host that did not get it, anything
+ * else starts the slot over and skips. */
+static int read_piece(const uint8_t *p, uint32_t n, uint32_t *off)
+{
+    char other[STORE_NAME + 1];
+    int32_t k;
+
+    if (n != 5)
+        return LINK_BADMSG;
+    *off = rd32(p + 1);
+    if (p[0] >= APP_SONG_SLOTS || store_info(p[0], other, &size) != STORE_OK)
+        return LINK_NONE;
+    if (state == LINK_SENDING && p[0] == slot && *off == piece_at)
+        return LINK_OK; /* asked again: the same piece */
+    if (state != LINK_SENDING || p[0] != slot || *off != read_at) {
+        static char skip[64];
+        if (store_load_begin(p[0]) != STORE_OK)
+            return LINK_IO;
+        for (read_at = 0; read_at < *off; read_at += (uint32_t)k) {
+            uint32_t want = *off - read_at < sizeof skip ? *off - read_at : sizeof skip;
+            if ((k = store_load_get(skip, want)) <= 0)
+                return k < 0 ? LINK_IO : LINK_BADSEQ; /* past the end */
+        }
+        slot = p[0];
+        for (int i = 0; i <= STORE_NAME; i++)
+            name[i] = other[i];
+    }
+    if ((k = store_load_get((char *)piece, sizeof piece)) < 0) {
+        state = LINK_IDLE;
+        return LINK_IO;
+    }
+    piece_at = read_at;
+    piece_n = (uint32_t)k;
+    read_at += piece_n;
+    got = read_at;
+    state = piece_n ? LINK_SENDING : LINK_IDLE; /* an empty piece is the end */
+    return LINK_OK;
 }
 
 static bool same_name(const char *a, const char *b)
@@ -164,12 +211,14 @@ int link_frame(uint32_t ms, bool may)
 
     if (state == LINK_DONE)
         state = LINK_IDLE;
-    if (state == LINK_RECEIVING && ms - last_ms > TIMEOUT_MS)
+    if ((state == LINK_RECEIVING || state == LINK_SENDING) && ms - last_ms > TIMEOUT_MS)
         drop(); /* the cable was pulled, or the host gave up */
     while (plat_sysex_get(&p, &n)) {
         int cmd = n >= 4 ? p[3] : 0, status = LINK_BADMSG;
         uint16_t seq = 0;
-        uint32_t extra = 0;
+        uint32_t extra = 0, tail_n = 0;
+        const uint8_t *tail = 0;
+        char other[STORE_NAME + 1];
 
         d = n >= 4 ? link_unpack7(p + 4, n - 4, raw, sizeof raw) : sizeof raw + 1;
         plat_sysex_done();
@@ -180,6 +229,24 @@ int link_frame(uint32_t ms, bool may)
             status = LINK_OK;
             seq = LINK_VERSION;
             extra = store_free();
+        } else if (cmd == LINK_CMD_INFO) {
+            seq = APP_SONG_SLOTS;
+            if (d != 1 || raw[0] >= APP_SONG_SLOTS || store_info(raw[0], other, &extra) != STORE_OK) {
+                status = d == 1 ? LINK_NONE : LINK_BADMSG;
+            } else {
+                status = LINK_OK;
+                tail = (const uint8_t *)other;
+                while (other[tail_n])
+                    tail_n++;
+            }
+        } else if (cmd == LINK_CMD_READ) {
+            if (state == LINK_RECEIVING || !may) {
+                status = LINK_BUSY;
+            } else if ((status = read_piece(raw, d, &extra)) == LINK_OK) {
+                seq = (uint16_t)piece_n;
+                tail = piece;
+                tail_n = piece_n;
+            }
         } else if (cmd == LINK_CMD_BEGIN) {
             drop();
             status = may ? begin(raw, d) : LINK_BUSY;
@@ -203,7 +270,7 @@ int link_frame(uint32_t ms, bool may)
             drop();
             status = LINK_OK;
         }
-        answer(cmd, status, seq, extra);
+        answer(cmd, status, seq, extra, tail, tail_n);
         if (state == LINK_DONE)
             break; /* the caller sees it before anything else is taken */
     }

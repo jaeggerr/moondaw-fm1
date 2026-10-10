@@ -225,8 +225,10 @@ void app_init(void)
     adopt(-1, false);
 }
 
-/* A song is coming in from the computer: the screen says so and the
- * hands wait. Nothing to press -- pulling the cable is the way out, and
+static bool link_sending;
+
+/* A song is coming in from the computer, or going out to it: the screen
+ * says so and the hands wait. Nothing to press -- pulling the cable is the way out, and
  * it leaves the flash as it was. */
 static void draw_receiving(void)
 {
@@ -234,7 +236,7 @@ static void draw_receiving(void)
     int w = APP_INNER - 40, x, done = link_size() ? (int)((uint64_t)link_got() * w / link_size()) : 0;
 
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
-    gfx_text_mid(F_COND14, 0, PLAT_W, 96, "RECEIVING", C_TITLE);
+    gfx_text_mid(F_COND14, 0, PLAT_W, 96, link_sending ? "SENDING" : "RECEIVING", C_TITLE);
     gfx_text_mid(F_COND12, 0, PLAT_W, 114, link_name(), C_TEXT);
     gfx_slab(APP_X0 + 20, 124, w, 6, C_TEXT, 26);
     gfx_slab(APP_X0 + 20, 124, done, 6, C_ACCENT, 255);
@@ -253,9 +255,13 @@ void app_frame(const PlatInput *in)
     player_set_master(in->master);
     int entry, track;
 
+    int link_state;
+
     undo_frame(in->ms);
-    switch (link_frame(in->ms, screen == AT_MENU)) {
+    switch (link_state = link_frame(in->ms, screen == AT_MENU)) {
+    case LINK_SENDING:
     case LINK_RECEIVING:
+        link_sending = link_state == LINK_SENDING;
         gfx_frame(draw_receiving);
         return;
     case LINK_DONE:

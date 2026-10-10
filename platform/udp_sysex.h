@@ -19,6 +19,7 @@ static int udp_fd = -1;
 static struct sockaddr_in udp_peer;
 static uint8_t udp_msg[700];
 static uint32_t udp_len;
+static uint32_t udp_seen; /* messages taken so far */
 
 static int udp_sysex_open(void)
 {
@@ -46,7 +47,7 @@ int plat_sysex_get(const uint8_t **p, uint32_t *n)
         if (got <= 0)
             return 0;
         if (got >= 4 && udp_msg[0] == 0x7D && udp_msg[1] == 0x4D && udp_msg[2] == 0x44)
-            udp_len = (uint32_t)got;
+            udp_len = (uint32_t)got, udp_seen++;
     }
     if (!udp_len)
         return 0;
