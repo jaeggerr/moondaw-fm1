@@ -418,6 +418,44 @@ static const char *const fx_names[FX_COUNT] = {
     "FLT", "RES", "WAV", "RMP", "CRS", "RAT", "SYL", "SMP",
 };
 
+/* moondaw's own lines (src/sequencer/song.c), word for word: each was
+ * weighed there against its neighbours in the list. */
+static const char *const fx_descs[FX_COUNT] = {
+    "empty slot",         /* --- */
+    "hold to tick N",     /* DLY */
+    "note off, tick N",   /* CUT */
+    "lasts N ticks",      /* GAT */
+    "retrigger N ticks",  /* RET */
+    "spread, N ticks",    /* STR */
+    "fader share, 00-7F", /* VOL */
+    "how hard, 00-7F",    /* VEL */
+    "00 left, 7F right",  /* PAN */
+    "reverb send 00-7F",  /* REV */
+    "delay send 00-7F",   /* ECH */
+    "pulse duty 0-3",     /* DUT */
+    "tempo, all tracks",  /* BPM */
+    "semitones, 40 = 0",  /* TSP */
+    "glide, 00 = jump",   /* SLI */
+    "speed x, depth y",   /* VIB */
+    "sweep, 40 = none",   /* SWP */
+    "speed x, semis y",   /* SCP */
+    "N ticks per note",   /* ARP */
+    "VIB for the level",  /* TRM */
+    "cutoff, FF = open",  /* FLT */
+    "resonance, 00 = no", /* RES */
+    "wave shape 0-4",     /* WAV */
+    "N steps, fx right",  /* RMP */
+    "bit grit, 00=off",   /* CRS */
+    "downsample 00=off",  /* RAT */
+    "syllable VOX sings", /* SYL */
+    "sample NN of table", /* SMP */
+};
+
+const char *fx_desc(uint8_t cmd)
+{
+    return fx_descs[cmd < FX_COUNT ? cmd : 0];
+}
+
 const char *fx_name(uint8_t cmd)
 {
     return fx_names[cmd < FX_COUNT ? cmd : 0];

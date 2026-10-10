@@ -694,6 +694,20 @@ another signature (`F0 7D 4D 44 ...`).
   the app opens. `tests/linktest.sh` sends KIDS, lists, fetches it and
   compares the three byte for byte.
 
+## 2026-10-10 — The list of effects
+
+Frame 2 of `proto/pattern.html`, written in `app/pattern.c`
+(`draw_pop`). It opens to the left of the fx slot when KNOB 1 turns on
+it, stays 1.5 s after the last notch, and any other gesture closes it.
+Six entries around the current one.
+
+- `fx_desc()` in `core/song.c`: moondaw's own one-line descriptions,
+  word for word (18 characters at most).
+- Not as drawn: the descriptions are in the 8 px mono like everything
+  else (the mockup had them at 6.6 px, below what is readable here), so
+  the panel is 124 px wide, not 112.
+- Drawn only; no test reads it.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

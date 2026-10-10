@@ -44,6 +44,10 @@ static int8_t saved;       /* 0 nothing to say, 1 saved, -1 the save failed */
 /* SELECT is a mode: the cell it was pressed on is one corner, the cursor the other. */
 static bool selecting;
 static int anchor_row, anchor_col;
+/* The list of effects, beside the slot, while KNOB 1 turns on it and a moment after. */
+enum { POP_MS = 1500, POP_ROWS = 6, POP_W = 124 };
+static bool pop_on;
+static uint32_t pop_until;
 static const char *back_word = "\xE2\x80\xB9 SONG"; /* where HOME leads: SONG, or the PHRASE it came from */
 static uint32_t prev_btns, prev_keys;
 static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
@@ -325,6 +329,39 @@ static void draw_row(int r, int y)
     }
 }
 
+/* The list K1 walks, around where it is: the mnemonic and what it does.
+ * To the LEFT of the slot, so the value being set stays in sight. */
+static void draw_pop(void)
+{
+    static const char *const slot_name[3] = { "FX1", "FX2", "FX3" };
+    int k = cur_col - COL_FX1, at = 0, first, x, y, h = 12 + POP_ROWS * 12 + 2;
+    uint8_t cmd = step_at(cur_row)->fx[k].cmd;
+
+    for (int i = 0; i < fx_count; i++)
+        if (fx_order[i] == cmd)
+            at = i;
+    first = at - 2 < 0 ? 0 : at - 2;
+    if (first > fx_count - POP_ROWS)
+        first = fx_count - POP_ROWS;
+    x = col_x[cur_col] - 3 - POP_W;
+    y = ROWS_Y + (cur_row - top) * ROW_PITCH + ROW_H / 2 - h / 2;
+    y = y < HEAD_Y ? HEAD_Y : y + h > BTN_Y - 2 ? BTN_Y - 2 - h : y;
+
+    gfx_fill(x - 1, y - 1, POP_W + 2, h + 2, C_BG, 255);
+    gfx_slab(x, y, POP_W, h, GFX_RGB(0x1A, 0x20, 0x29), 255);
+    gfx_frame_rect(x, y, POP_W, h, C_DIM, 115);
+    gfx_text(F_MONO8, gfx_text(F_MONO8, x + 4, y + 9, "K1", C_ACCENT) + 3, y + 9, "EFFECT", C_DIM);
+    gfx_text(F_MONO8, x + POP_W - 4 - gfx_text_w(F_MONO8, slot_name[k]), y + 9, slot_name[k], C_DIM);
+    for (int i = 0; i < POP_ROWS; i++) {
+        uint8_t c = fx_order[first + i];
+        int ry = y + 12 + i * 12;
+        bool cur = first + i == at;
+        gfx_slab(x + 2, ry, POP_W - 4, 11, cur ? C_ACCENT : C_TEXT, cur ? 255 : 11);
+        gfx_text(F_COND9, x + 5, ry + 9, fx_name(c), cur ? C_ON_ACC : C_FX);
+        gfx_text(F_MONO8, x + 25, ry + 9, fx_desc(c), cur ? C_ON_ACC : C_DIM);
+    }
+}
+
 static void draw(void)
 {
     static const char *const head[COLS] = { "#", "N1", "N2", "N3", "N4", "IN", "FX1", "FX2", "FX3" };
@@ -400,6 +437,9 @@ static void draw(void)
         gfx_dash_v(133, HEAD_Y, ROWS_Y - HEAD_Y + n * ROW_PITCH - 1, C_TITLE, 90);
     }
 
+    if (pop_on)
+        draw_pop();
+
     {   /* The twelve buttons, where they are under the hand. What this
          * build does not do yet is OFF: named, and it says it does nothing. */
         const char *words[12] = { "FX", selecting ? "COPY" : loop_state() == LOOP_ONE_END ? "END" : "LOOP",
@@ -430,6 +470,7 @@ bool pattern_open(Song *s, int e, int t)
     cur_row = top = 0;
     cur_col = COL_N1;
     selecting = false;
+    pop_on = false;
     back_word = "\xE2\x80\xB9 SONG";
     pool_full = false;
     saved = 0;
@@ -493,6 +534,13 @@ int pattern_frame(const PlatInput *real)
     prev_keys = real->keys;
     held_btns = in->btns;
     is_playing = player_playing();
+
+    /* The list stays while KNOB 1 turns on an fx slot and a moment after; anything else closes it. */
+    if (in->enc[PE_K1] && cur_col >= COL_FX1 && !in->enc[PE_SELECT] && !in->enc[PE_ALGO])
+        pop_until = real->ms + POP_MS, pop_on = true;
+    else if (btns || in->keys || in->enc[PE_SELECT] || in->enc[PE_ALGO] || in->enc[PE_PRESET] ||
+             in->enc[PE_K2] || in->enc[PE_K3] || (int32_t)(real->ms - pop_until) >= 0)
+        pop_on = false;
 
     /* The left hand moves. */
     cur_row += in->enc[PE_SELECT];

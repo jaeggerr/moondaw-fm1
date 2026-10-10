@@ -191,6 +191,7 @@ bool song_section_bounds(const Song *s, int sec, int *first, int *count);
 uint8_t fx_clamp_val(uint8_t cmd, uint8_t ticks_per_step, int v);
 
 const char *fx_name(uint8_t cmd);       /* 3 letters, "---" for none */
+const char *fx_desc(uint8_t cmd);       /* what it does, 18 characters at most: the only manual */
 int fx_from_name(const char *s);        /* FX_NONE if unknown */
 int fx_ramp_slot(uint8_t cmd);          /* -1 when the command jumps */
 bool fx_conflicts(const Step *st, int slot, uint8_t cmd);
