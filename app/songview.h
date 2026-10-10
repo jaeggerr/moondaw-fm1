@@ -8,12 +8,12 @@
 
 #include "../platform/platform.h"
 
-enum { SONGVIEW_STAY, SONGVIEW_MENU, SONGVIEW_PATTERN, SONGVIEW_MIXER };
+enum { SONGVIEW_STAY, SONGVIEW_MENU, SONGVIEW_PATTERN, SONGVIEW_MIXER, SONGVIEW_PHRASE };
 int songview_entry(void); /* the phrase under the cursor, 0 on the song's line */
 
 void songview_open(bool reset_cursor);
 /* One frame. SONGVIEW_PATTERN: the hand opened a block; *entry and
- * *track say which. */
+ * *track say which. SONGVIEW_PHRASE: it opened a phrase by its number. */
 int songview_frame(const PlatInput *in, int *entry, int *track);
 
 #endif

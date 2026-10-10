@@ -516,6 +516,43 @@ Validated as drawn; `app/mixer.c`, `tests/mixer_test.c`.
   The test compares the two channels by ratio instead.
 - Not there: UNDO, level meters, metronome.
 
+## 2026-10-10 — PHRASE proposed
+
+`proto/phrase.html`, validated the same day. One row a step, one column a
+track, the cell is the step's first note. SELECT the step, ALGORITHM the
+track, PRESETS the phrase; all the way up is the column head (track and
+block number). Keys write N1; KNOB 1 semitone, KNOB 2 octave. OPEN goes
+to PATTERN on that track and step. MUTE where MIXER has it; no SOLO here
+(its MIXER place is CLEAR's).
+
+- The app stacks N2..N4 small beside N1. No room at 8 px in a 23 px
+  cell: one cyan dot per extra note instead.
+- A step with no note shows its first FX in amber, as the app does.
+- Open: the phrase's name (shown, not edited), selection.
+
+## 2026-10-10 — PHRASE written
+
+Validated as drawn; `app/phrase.c`, `tests/phrase_test.c`. Every screen
+of the road now exists: MENU -> SONG -> PHRASE -> PATTERN -> INSTRUMENT,
+and MIXER from SONG, PHRASE and PATTERN.
+
+- `app/edit.c` is new: writing a note, the semitone and octave knobs,
+  clearing a step, the instrument in force on a row. PATTERN and PHRASE
+  call the same code.
+- PATTERN knows where it was opened from: HOME returns there
+  (`PATTERN_BACK`, label `‹ PHR` or `‹ SONG`), its SONG button always
+  goes to SONG (`PATTERN_SONG`).
+- A block shorter than the phrase repeats in the grid; writing on row r
+  writes step `r % length` of the block.
+- A track the phrase leaves out draws nothing and ALGORITHM steps over
+  it. A reference is not opened and PRESETS steps over it.
+- The page follows the playhead a page at a time until SELECT turns;
+  the next PLAY gives it back.
+- Trap (tests): `*_resume()` treats everything held as not a press, so a
+  press sent in the very next frame is swallowed. Send one idle frame.
+- Not as drawn: `PRESETS PHR` (room for `OCT F3-G5`), MUTE lit is red as
+  on MIXER.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

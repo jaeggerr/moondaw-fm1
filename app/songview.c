@@ -316,8 +316,9 @@ static void draw(void)
             st[b] = UI_BTN_NONE;
         if (b == AT_LOOP || b == AT_UNDO || b == AT_REC)
             st[b] = UI_BTN_OFF; /* not written yet */
-        if (b == AT_OPEN)       /* a block opens in PATTERN; a phrase has no screen yet */
-            st[b] = cell_block ? UI_BTN_ON : row == -1 ? UI_BTN_NONE : UI_BTN_OFF;
+        if (b == AT_OPEN)       /* a block opens in PATTERN, a phrase's number in PHRASE */
+            st[b] = cell_block || (on_pos() && entry_at(row)->kind != ENTRY_REF) ? UI_BTN_ON
+                    : row == -1 ? UI_BTN_NONE : UI_BTN_OFF;
         if (b == AT_ADD && row == -1)
             st[b] = UI_BTN_NONE;
         if (b == AT_CLEAR) {
@@ -416,6 +417,11 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         *entry = row;
         *track = col - 1;
         out = SONGVIEW_PATTERN;
+    }
+    if (PRESSED(AT_OPEN) && on_pos() && entry_at(row)->kind != ENTRY_REF) {
+        *entry = row;
+        *track = 0;
+        out = SONGVIEW_PHRASE;
     }
     if (PRESSED(AT_MIXER))
         out = SONGVIEW_MIXER;

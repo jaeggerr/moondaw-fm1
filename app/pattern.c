@@ -3,6 +3,7 @@
 
 #include "../core/player.h"
 #include "app.h"
+#include "edit.h"
 #include "gfx.h"
 #include "ui.h"
 
@@ -38,6 +39,7 @@ static int kbd_oct;        /* octaves the keyboard is moved by */
 static int chord_next;     /* the note slot the next held key fills, 0 = none held */
 static bool pool_full;
 static int8_t saved;       /* 0 nothing to say, 1 saved, -1 the save failed */
+static const char *back_word = "\xE2\x80\xB9 SONG"; /* where HOME leads: SONG, or the PHRASE it came from */
 static uint32_t prev_btns, prev_keys;
 static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
 static int fx_count;
@@ -60,72 +62,19 @@ static Step *step_w(int row)
     return st;
 }
 
-/* The note an empty slot starts from: its neighbour on the left, else
- * the first note of the nearest step above, else middle C. */
-static uint8_t default_note(int row, int k)
-{
-    const Step *st = step_at(row);
-    if (k > 0 && st->notes[k - 1] <= NOTE_MAX)
-        return st->notes[k - 1];
-    for (int r = row - 1; r >= 0; r--)
-        if (step_at(r)->notes[0] <= NOTE_MAX)
-            return step_at(r)->notes[0];
-    return 60;
-}
-
 static void write_note(int row, int k, uint8_t note)
 {
-    Step *st = step_w(row);
-    if (!st)
-        return;
-    if (st->notes[0] == NOTE_OFF)
-        st->notes[0] = NOTE_NONE; /* a cut and a note cannot share a step */
-    st->notes[k] = note;
+    pool_full = !edit_write_note(song, track, pat, row, k, note);
 }
 
-/* KNOB 1 on a note: the semitones, and under the lowest one OFF (on N1
- * only -- a cut is the whole step's) and then the empty slot. The
- * encoders have no push: emptying is turning all the way down. */
 static void turn_note(int row, int k, int d)
 {
-    uint8_t n = step_at(row)->notes[k];
-    int v = n <= NOTE_MAX ? n : n == NOTE_OFF ? NOTE_MIN - 1 : NOTE_MIN - 2;
-    Step *st;
-
-    if (v < NOTE_MIN && d > 0)
-        v = default_note(row, k) + d - 1;
-    else
-        v += d;
-    if (v > NOTE_MAX)
-        v = NOTE_MAX;
-    if (v < NOTE_MIN - 2)
-        v = NOTE_MIN - 2;
-    if (v == NOTE_MIN - 1 && k != 0)
-        v = NOTE_MIN - 2;
-    if (v >= NOTE_MIN) {
-        write_note(row, k, (uint8_t)v);
-        return;
-    }
-    if (!(st = step_w(row)))
-        return;
-    if (v == NOTE_MIN - 1)
-        for (int i = 0; i < STEP_MAX_NOTES; i++)
-            st->notes[i] = i == 0 ? NOTE_OFF : NOTE_NONE;
-    else
-        st->notes[k] = NOTE_NONE;
+    pool_full = !edit_turn_note(song, track, pat, row, k, d);
 }
 
 static void turn_octave(int row, int k, int d)
 {
-    int n = step_at(row)->notes[k];
-    if (n > NOTE_MAX)
-        return;
-    n += d * 12;
-    while (n > NOTE_MAX)
-        n -= 12;
-    while (n < NOTE_MIN)
-        n += 12;
-    write_note(row, k, (uint8_t)n);
+    pool_full = !edit_turn_octave(song, track, pat, row, k, d);
 }
 
 static void turn_instr(int row, int d)
@@ -195,15 +144,14 @@ static void turn_fx_val(int row, int slot, int part, int d)
 
 static void clear_slot(int row, int col)
 {
-    Step *st = step_is_empty(step_at(row)) ? 0 : step_w(row);
-    if (!st)
-        return;
+    Step *st;
     if (col == COL_STEP) {
-        for (int i = 0; i < STEP_MAX_NOTES; i++)
-            st->notes[i] = NOTE_NONE;
-        st->instrument = INSTR_NONE;
-        for (int i = 0; i < STEP_MAX_FX; i++)
-            st->fx[i].cmd = st->fx[i].val = 0;
+        pool_full = !edit_clear_step(song, track, pat, row);
+        return;
+    }
+    if (!(st = step_is_empty(step_at(row)) ? 0 : step_w(row)))
+        return;
+    if (col <= COL_N4) {
     } else if (col <= COL_N4) {
         st->notes[col - COL_N1] = NOTE_NONE;
     } else if (col == COL_IN) {
@@ -347,9 +295,8 @@ static void draw(void)
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
 
     /* The bar: where one is, and the way out. */
-    /* The back names where it leads. PHRASE is not written: it is SONG,
-     * and the phrase one came from is said beside the track. */
-    x = gfx_text(F_COND12, X0, NAV_Y + 13, "\xE2\x80\xB9 SONG", C_TITLE);
+    /* The back names where it leads, and the phrase is said beside the track. */
+    x = gfx_text(F_COND12, X0, NAV_Y + 13, back_word, C_TITLE);
     t[0] = 'P';
     ui_hex2(t + 1, entry);
     x = gfx_text(F_COND12, x + 6, NAV_Y + 13, t, C_DIM);
@@ -401,15 +348,13 @@ static void draw(void)
 
     {   /* The twelve buttons, where they are under the hand. What this
          * build does not do yet is OFF: named, and it says it does nothing. */
-        static const char *const words[12] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
-                                               "\xE2\x80\xB9 SONG", "SAVE", "UNDO", "SONG", "PLAY", "REC" };
-        static const char *const playing_words[12] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
-                                                       "\xE2\x80\xB9 SONG", "SAVE", "UNDO", "SONG", "STOP", "REC" };
+        const char *words[12] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
+                                  back_word, "SAVE", "UNDO", "SONG", is_playing ? "STOP" : "PLAY", "REC" };
         uint8_t st[12];
         for (int b = 0; b < BTNS; b++)
             st[b] = !btn_live[b] ? UI_BTN_OFF : b == B_BACK ? UI_BTN_BACK
                     : b == B_PLAY && is_playing ? UI_BTN_LIVE : UI_BTN_ON;
-        ui_btn_map(is_playing ? playing_words : words, st, held_btns);
+        ui_btn_map(words, st, held_btns);
     }
 }
 
@@ -425,6 +370,7 @@ bool pattern_open(Song *s, int e, int t)
     pat = s->arrangement[e].pattern[t];
     cur_row = top = 0;
     cur_col = COL_N1;
+    back_word = "\xE2\x80\xB9 SONG";
     pool_full = false;
     saved = 0;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
@@ -449,14 +395,13 @@ bool pattern_open(Song *s, int e, int t)
     return true;
 }
 
-/* The instrument in force on a row: the last one written at or above it,
- * else the first. What a note written there will sound like. */
-static int instr_at(int row)
+static int instr_at(int row) { return edit_instr_at(song, track, pat, row); }
+
+void pattern_from_phrase(int row)
 {
-    for (int r = row; r >= 0; r--)
-        if (step_at(r)->instrument != INSTR_NONE)
-            return step_at(r)->instrument;
-    return 0;
+    back_word = "\xE2\x80\xB9 PHR";
+    cur_row = row < 0 ? 0 : row >= pat_len() ? pat_len() - 1 : row;
+    top = cur_row >= ROWS ? cur_row - ROWS / 2 : 0;
 }
 
 int pattern_instr(void) { return instr_at(cur_row); }
@@ -572,7 +517,7 @@ int pattern_frame(const PlatInput *in)
     if (PRESSED(B_BACK) || PRESSED(B_SONG)) {
         player_note_off();
         song_pool_compact(song);
-        return PATTERN_BACK;
+        return PRESSED(B_SONG) ? PATTERN_SONG : PATTERN_BACK;
     }
     if (PRESSED(B_INSTR)) {
         player_note_off();

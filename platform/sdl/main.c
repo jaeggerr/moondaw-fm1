@@ -361,6 +361,29 @@ static int selftest(const char *out, const char *song, int entry, int track)
     frame(1042);
     kb_btns = 0;
     frame(1042);
+    /* PHRASE: all the way left to the phrase's number, OPEN, and back. */
+    turn(PE_ALGO, -8);
+    kb_btns = 1u << PB_EDIT;
+    frame(1042);
+    kb_btns = 0;
+    turn(PE_SELECT, 3);
+    turn(PE_ALGO, 3);
+    frame(1042);
+    frame(1042);
+    sf = SDL_CreateRGBSurfaceWithFormatFrom(canvas, CV_W, CV_H, 32, CV_W * 4,
+                                            SDL_PIXELFORMAT_ARGB8888);
+    if (sf) {
+        char path[512];
+        snprintf(path, sizeof path, "%.*s-phrase.bmp", (int)strlen(out) - 4, out);
+        SDL_SaveBMP(sf, path);
+        SDL_FreeSurface(sf);
+    }
+    kb_btns = 1u << PB_HOME;
+    frame(1042);
+    kb_btns = 0;
+    frame(1042);
+    turn(PE_ALGO, track);
+    frame(1042);
     kb_btns = 1u << PB_EDIT; /* SONG -> PATTERN, on that cell */
     frame(1042);
     kb_btns = 0;

@@ -18,6 +18,7 @@
 #include "instrument.h"
 #include "menu.h"
 #include "mixer.h"
+#include "phrase.h"
 #include "pattern.h"
 #include "songview.h"
 
@@ -32,8 +33,8 @@ bool app_dirty;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PATTERN, AT_INSTRUMENT, AT_MIXER } screen;
-static bool mixer_from_pattern;
+static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER } screen;
+static int mixer_from, pattern_from; /* the screen HOME leads back to */
 
 void app_mark_dirty(void) { app_dirty = true; }
 
@@ -223,11 +224,34 @@ void app_frame(const PlatInput *in)
 
     if (screen == AT_MIXER) {
         if (!mixer_frame(in)) { /* back where it was opened from */
-            screen = mixer_from_pattern ? AT_PATTERN : AT_SONG;
-            if (mixer_from_pattern)
+            screen = mixer_from;
+            if (screen == AT_PATTERN)
                 pattern_resume();
+            else if (screen == AT_PHRASE)
+                phrase_resume();
             else
                 songview_open(false);
+        }
+    } else if (screen == AT_PHRASE) {
+        switch (phrase_frame(in)) {
+        case PHRASE_BACK:
+            screen = AT_SONG;
+            songview_open(false);
+            break;
+        case PHRASE_PATTERN:
+            if (pattern_open(&app_song, phrase_entry(), phrase_track())) {
+                pattern_from_phrase(phrase_row());
+                pattern_from = AT_PHRASE;
+                screen = AT_PATTERN;
+            }
+            break;
+        case PHRASE_MIXER:
+            screen = AT_MIXER;
+            mixer_from = AT_PHRASE;
+            mixer_open("PHR", phrase_entry());
+            break;
+        default:
+            break;
         }
     } else if (screen == AT_INSTRUMENT) {
         if (!instrument_frame(in)) {
@@ -236,7 +260,14 @@ void app_frame(const PlatInput *in)
         }
     } else if (screen == AT_PATTERN) {
         switch (pattern_frame(in)) {
-        case PATTERN_BACK: /* HOME, or SONG: back to the cell it was opened from */
+        case PATTERN_BACK: /* HOME: back where it was opened from */
+            if (pattern_from == AT_PHRASE) {
+                screen = AT_PHRASE;
+                phrase_resume();
+                break;
+            }
+            /* fallthrough */
+        case PATTERN_SONG:
             screen = AT_SONG;
             songview_open(false);
             break;
@@ -246,7 +277,7 @@ void app_frame(const PlatInput *in)
             break;
         case PATTERN_MIXER:
             screen = AT_MIXER;
-            mixer_from_pattern = true;
+            mixer_from = AT_PATTERN;
             mixer_open("PAT", pattern_entry());
             break;
         default:
@@ -260,12 +291,18 @@ void app_frame(const PlatInput *in)
             break;
         case SONGVIEW_MIXER:
             screen = AT_MIXER;
-            mixer_from_pattern = false;
+            mixer_from = AT_SONG;
             mixer_open("SONG", songview_entry());
             break;
         case SONGVIEW_PATTERN:
-            if (pattern_open(&app_song, entry, track))
+            if (pattern_open(&app_song, entry, track)) {
+                pattern_from = AT_SONG;
                 screen = AT_PATTERN;
+            }
+            break;
+        case SONGVIEW_PHRASE:
+            screen = AT_PHRASE;
+            phrase_open(entry, track);
             break;
         default:
             break;
