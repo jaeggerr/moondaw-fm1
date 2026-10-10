@@ -162,10 +162,31 @@ Si le CPU ne tient pas, les replis sont dans `NOTES.md` : moins de voix par
 piste, le filtre à demi-cadence, un noyau moins cher pour le moteur WAVE,
 moins de bandes redessinées par image.
 
+## 7. Les morceaux
+
+Une fois MOONDAW installé et l'appareil sur son écran MENU, branché en USB :
+
+```
+tools/fm1_send.py --ping
+tools/fm1_send.py ../moondaw/songs/KIDS.trk
+```
+
+`--ping` doit répondre avec la place libre (290 Ko sur une flash vide ;
+les 13 morceaux en prennent 100, le plus gros 25). L'envoi réduit d'abord
+le morceau à ce que le FM-1 porte, puis l'écrit dans la flash de
+l'appareil, qui affiche RECEIVING. Rien n'y est remplacé sans `--replace`.
+
+Si aucun port MIDI n'est trouvé, l'outil liste ceux qu'il voit :
+`--port` avec un bout du bon nom. **Ce chemin MIDI n'a jamais tourné** :
+tout le reste du transfert est vérifié sans appareil, mais le nom du port
+et le débit réel sont à découvrir ce jour-là.
+
 ## Ce qu'on ne sait pas et qu'on saura ce jour-là
 
 - La fréquence du processeur, donc ce que coûtent réellement huit pistes.
 - La taille de l'écran, donc si onze pas par écran sont lisibles.
 - Si la table des boutons de Felucca vaut pour cet exemplaire.
+- Le nom sous lequel l'appareil apparaît comme port MIDI, et si l'envoi
+  d'un morceau par SysEx passe au débit attendu.
 - Si l'identité `FM-1_900` de notre paquet est acceptée telle quelle par
   l'installateur (c'est celle des versions de développement de Felucca).

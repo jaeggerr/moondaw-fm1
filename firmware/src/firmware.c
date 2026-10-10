@@ -97,6 +97,51 @@ int plat_flash_prog(uint32_t off, const void *src, uint32_t n)
     return store_range(off, n) ? st_prog(STORE_BASE + off, src, n) : -1;
 }
 
+/* Songs from the computer (app/link.c) come in through the updater's
+ * SysEx slot. A message that is ours is COPIED out and the slot freed at
+ * once, here, in the main loop: whatever the app does or does not do
+ * with it, the updater's own messages are never held up behind it --
+ * M-UPGRADE is one of the ways back in. */
+static uint8_t link_msg[640];
+static uint32_t link_len;
+
+static void link_poll(void)
+{
+    const uint8_t *p;
+    uint32_t n;
+    if (!ota_frame_get(&p, &n))
+        return;
+    if (n < 4u || p[0] != 0x7Du || p[1] != 0x4Du || p[2] != 0x44u)
+        return;                                 /* the updater's: ota_service takes it */
+    for (uint32_t i = 0; i < n; i++)
+        link_msg[i] = p[i];
+    link_len = n;
+    ota_frame_done();
+}
+
+int plat_sysex_get(const uint8_t **p, uint32_t *n)
+{
+    if (!link_len)
+        return 0;
+    *p = link_msg;
+    *n = link_len;
+    return 1;
+}
+
+void plat_sysex_done(void) { link_len = 0; }
+
+int plat_sysex_send(const uint8_t *p, uint32_t n)
+{
+    static uint8_t wire[2 + 64];
+    if (n > sizeof wire - 2u)
+        return -1;
+    wire[0] = 0xF0;
+    for (uint32_t i = 0; i < n; i++)
+        wire[1 + i] = p[i];
+    wire[1 + n] = 0xF7;
+    return ota_wire_send(wire, n + 2u);
+}
+
 int plat_audio_load(int *worst)
 {
     uint32_t half_us = HALF_FRAMES * 1000000u / FS, mx = audio_max_us;
@@ -274,6 +319,7 @@ static void fm1_main(void)
                 fm1_enter_uboot();
             }
         }
+        link_poll();                            /* ours first: it is copied out, never left in the slot */
         ota_service();                          /* M-UPGRADE handshake */
         if (usb.ota_req) {                      /* M-UPGRADE upgrade command */
             usb.ota_req = 0;

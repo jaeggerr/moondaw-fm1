@@ -15,10 +15,12 @@
 #include "../core/trk.h"
 #include "demo_trk.h"
 #include "gfx.h"
+#include "ui.h"
 #include "instrument.h"
 #include "menu.h"
 #include "mixer.h"
 #include "edit.h"
+#include "link.h"
 #include "loop.h"
 #include "phrase.h"
 #include "undo.h"
@@ -223,12 +225,49 @@ void app_init(void)
     adopt(-1, false);
 }
 
+/* A song is coming in from the computer: the screen says so and the
+ * hands wait. Nothing to press -- pulling the cable is the way out, and
+ * it leaves the flash as it was. */
+static void draw_receiving(void)
+{
+    char a[8], b[8];
+    int w = APP_INNER - 40, x, done = link_size() ? (int)((uint64_t)link_got() * w / link_size()) : 0;
+
+    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
+    gfx_text_mid(F_COND14, 0, PLAT_W, 96, "RECEIVING", C_TITLE);
+    gfx_text_mid(F_COND12, 0, PLAT_W, 114, link_name(), C_TEXT);
+    gfx_slab(APP_X0 + 20, 124, w, 6, C_TEXT, 26);
+    gfx_slab(APP_X0 + 20, 124, done, 6, C_ACCENT, 255);
+    ui_dec(a, (int)(link_got() / 1024));
+    ui_dec(b, (int)((link_size() + 1023) / 1024));
+    x = (PLAT_W - gfx_text_w(F_MONO8, a) - gfx_text_w(F_MONO8, b) - gfx_text_w(F_MONO8, " / ") -
+         gfx_text_w(F_MONO8, " KB")) / 2;
+    x = gfx_text(F_MONO8, x, 144, a, C_TEXT);
+    x = gfx_text(F_MONO8, x, 144, " / ", C_DIM);
+    x = gfx_text(F_MONO8, x, 144, b, C_TEXT);
+    gfx_text(F_MONO8, x, 144, " KB", C_DIM);
+}
+
 void app_frame(const PlatInput *in)
 {
     player_set_master(in->master);
     int entry, track;
 
     undo_frame(in->ms);
+    switch (link_frame(in->ms, screen == AT_MENU)) {
+    case LINK_RECEIVING:
+        gfx_frame(draw_receiving);
+        return;
+    case LINK_DONE:
+        /* it replaced the open song (which had no unsaved change, or it
+         * would have been refused): what is in memory is the old one */
+        if (link_slot() == app_slot)
+            app_open_slot(app_slot);
+        menu_open();
+        break;
+    default:
+        break;
+    }
 
     if (screen == AT_MIXER) {
         if (!mixer_frame(in)) { /* back where it was opened from */

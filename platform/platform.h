@@ -67,6 +67,15 @@ int plat_flash_read(uint32_t off, void *dst, uint32_t n);
 int plat_flash_erase(uint32_t sector);
 int plat_flash_prog(uint32_t off, const void *src, uint32_t n);
 
+/* SysEx from and to the computer, for app/link.c: the bytes between F0
+ * and F7, all under 0x80. One message at a time: plat_sysex_get returns
+ * 0 when none waits, and the one it returned is the caller's until
+ * plat_sysex_done. Only messages that start with 7D 4D 44 come through.
+ * Main loop only. plat_sysex_send returns 0 when sent. */
+int plat_sysex_get(const uint8_t **p, uint32_t *n);
+void plat_sysex_done(void);
+int plat_sysex_send(const uint8_t *p, uint32_t n);
+
 /* How much of its time the audio interrupt takes, in percent, averaged
  * and at worst since the last call; -1 where nothing measures it (the
  * simulators). The one number nobody knows before the machine is on the

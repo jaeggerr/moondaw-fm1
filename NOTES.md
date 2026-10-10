@@ -643,10 +643,43 @@ PHRASE can use it later. `tests/select_test.c`.
   CLEAR on a note in PATTERN did nothing. `pattern_test` only pressed
   CLEAR on an fx and on a step number. Fixed, and checked here.
 
+## 2026-10-10 — Songs from the computer
+
+`app/link.c` on the device, `tools/fm1_send.py` on the Mac, the protocol
+in `app/link.h`. USB-MIDI SysEx, the pipe Felucca's updater uses, under
+another signature (`F0 7D 4D 44 ...`).
+
+- **What arrives goes straight to the store, never to memory and never
+  parsed on the device.** A song is up to 25 KB and there is no RAM for
+  a second one; parsing needs the delay's memory, which would stop the
+  sound. So the host reduces the file first with the firmware's own
+  reader and writer (`tests/trkdump.c`) and sends that.
+- Stop and wait, one message and its answer: the firmware holds a single
+  SysEx at a time. 240 bytes of song a message, 8 bits packed in 7.
+- The new file is the file only at END, when length and crc32 are right
+  (the store's own commit). A cable pulled halfway, a damaged byte, five
+  seconds of silence: the flash is as it was. `tests/link_test.c`.
+- Accepted on the MENU only, and the screen says RECEIVING while it
+  lasts. Replacing needs `--replace`; replacing the OPEN song is refused
+  while it has unsaved changes, and reloads it otherwise.
+- **Trap, on the firmware side**: the updater's `ota_take` frees
+  whatever SysEx it finds, ours included, and a message left in the slot
+  blocks the updater's. `link_poll` copies ours out and frees the slot
+  at once, before `ota_service`, in the main loop -- so M-UPGRADE, one
+  of the ways back in, never waits on the app (the `hello` build has no
+  link at all and must still update).
+- `platform/udp_sysex.h`: the same three calls over UDP on 127.0.0.1,
+  for the simulator and `tests/linktest.sh`, which sends KIDS with the
+  real tool and compares what the store holds byte for byte.
+- Not verified: the MIDI path itself (python-rtmidi, the port's name,
+  the real throughput). The RECEIVING panel was written without a mockup
+  and has not been looked at.
+- The 13 songs take 100 KB of the 290 free; the largest 25.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
-- Getting a song onto the device from a computer.
+- Getting a song BACK from the device to the computer; a list of what is on it.
 - The limiter; redo (no button for it).
 - CPU cost on the real chip.
 - `web/installer/` is copied, not adapted, not run.

@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include "../platform.h"
+#include "../udp_sysex.h"
 #include "../../app/font/font8x8_basic.h"
 
 #define CV_W 600
@@ -517,6 +518,7 @@ int main(int argc, char **argv)
 
     nor_open(SDL_getenv("MOONDAW_FLASH") ? SDL_getenv("MOONDAW_FLASH") : "moondaw-fm1.flash");
     app_init();
+    udp_sysex_open(); /* songs from tools/fm1_send.py --udp */
     if (argc == 2 && !load_song(argv[1], dev))
         SDL_Log("%s: not a version 3 .trk", argv[1]);
     SDL_PauseAudioDevice(dev, 0);

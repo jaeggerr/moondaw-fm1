@@ -15,7 +15,7 @@ CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/playe
 ifeq ($(APP),hello)
 SRCS    := app/hello.c app/term.c
 else
-UI      := app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
+UI      := app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)
@@ -60,6 +60,9 @@ test: sim web
 	build/loop_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/select_test.c app/pattern.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/select_test
 	build/select_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c -o build/link_test
+	build/link_test
+	tests/linktest.sh $(MOONDAW)/songs/KIDS.trk
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck

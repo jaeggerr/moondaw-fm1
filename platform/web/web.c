@@ -99,6 +99,11 @@ WEB_EXPORT void web_flash_erase(void)
         nor[i] = 0xFF;
 }
 
+/* No cable in a browser tab: songs are dropped on the page instead. */
+int plat_sysex_get(const uint8_t **p, uint32_t *n) { (void)p; (void)n; return 0; }
+void plat_sysex_done(void) {}
+int plat_sysex_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; return -1; }
+
 int plat_audio_load(int *worst)
 {
     *worst = -1;
