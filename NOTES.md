@@ -609,6 +609,40 @@ which steps the player is seen on.
 - LOOP on SONG stays dark: in the app it means "loop this phrase rather
   than follow the song", another mockup.
 
+## 2026-10-10 — SELECT proposed
+
+`proto/select.html`, validated the same day. On PATTERN only. SELECT (the
+EDIT button) is a mode: the cell under the cursor becomes the fixed
+corner, SELECT and ALGORITHM carry the other one as they carry the
+cursor, what lies between is taken (amber). While it is on, LOOP and
+INSTR read COPY and PASTE, CLEAR empties the rectangle, the four knobs
+and the keys write nothing. COPY keeps the rectangle (COPY then CLEAR is
+a cut); PASTE lands at the cursor and ends the mode. Pasting follows the
+app: only the copied fields are written, nothing wraps past the end of
+the block, a conflicting fx is refused, an fx copied alone lands in the
+fx slot under the cursor. Open: PHRASE (its EDIT button is OPEN),
+transposing a selection.
+
+## 2026-10-10 — SELECT written
+
+Validated as drawn. The mode is PATTERN's (`selecting`, the anchor);
+the clipboard is in `app/edit.c` (`edit_clip_copy`, `edit_clip_paste`,
+`edit_erase_range`), one buffer of 128 steps and a mask of fields, so
+PHRASE can use it later. `tests/select_test.c`.
+
+- In the mode the frame works on a copy of the inputs with the four
+  knobs and the keys zeroed, and the buttons that changed meaning are
+  taken out before the ordinary code sees them.
+- CLEAR and PASTE end the mode, COPY does not, PRESETS does.
+- Paste and erase go through the same `step_w` as a note, so one frame
+  is one UNDO.
+- Not said on screen: rows lost past the end of the block, an fx
+  refused. The app has a status line for that; this screen has none.
+- **A bug found by this test, made in the PHRASE commit**: moving the
+  note code to `app/edit.c` left `clear_slot` with an empty branch, and
+  CLEAR on a note in PATTERN did nothing. `pattern_test` only pressed
+  CLEAR on an fx and on a step number. Fixed, and checked here.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

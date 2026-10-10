@@ -31,7 +31,7 @@ static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB
                                       PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */
-static const bool btn_live[BTNS] = { true, true, true, true, false, true,
+static const bool btn_live[BTNS] = { true, true, true, true, true, true,
                                      true, true, true, true, true, false };
 
 static Song *song;
@@ -41,6 +41,9 @@ static int kbd_oct;        /* octaves the keyboard is moved by */
 static int chord_next;     /* the note slot the next held key fills, 0 = none held */
 static bool pool_full;
 static int8_t saved;       /* 0 nothing to say, 1 saved, -1 the save failed */
+/* SELECT is a mode: the cell it was pressed on is one corner, the cursor the other. */
+static bool selecting;
+static int anchor_row, anchor_col;
 static const char *back_word = "\xE2\x80\xB9 SONG"; /* where HOME leads: SONG, or the PHRASE it came from */
 static uint32_t prev_btns, prev_keys;
 static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
@@ -156,7 +159,6 @@ static void clear_slot(int row, int col)
     if (!(st = step_is_empty(step_at(row)) ? 0 : step_w(row)))
         return;
     if (col <= COL_N4) {
-    } else if (col <= COL_N4) {
         st->notes[col - COL_N1] = NOTE_NONE;
     } else if (col == COL_IN) {
         st->instrument = INSTR_NONE;
@@ -185,15 +187,38 @@ static void step_block(int d)
         cur_row = pat_len() - 1;
 }
 
+/* ------------------------------------------------------- selection --- */
+static int sel_r0(void) { return cur_row < anchor_row ? cur_row : anchor_row; }
+static int sel_r1(void) { return cur_row < anchor_row ? anchor_row : cur_row; }
+static int sel_c0(void) { return cur_col < anchor_col ? cur_col : anchor_col; }
+static int sel_c1(void) { return cur_col < anchor_col ? anchor_col : cur_col; }
+static bool picked(int r, int c)
+{
+    return selecting && r >= sel_r0() && r <= sel_r1() && c >= sel_c0() && c <= sel_c1();
+}
+
+/* The fields the rectangle covers. The step's number is the whole step. */
+static int sel_mask(void)
+{
+    int m = 0;
+    if (sel_c0() == COL_STEP)
+        return EDIT_CLIP_ALL;
+    for (int c = sel_c0(); c <= sel_c1(); c++)
+        m |= 1 << (c - COL_N1);
+    return m;
+}
+
 /* --------------------------------------------------------- drawing --- */
 static int play_row = -1;
 static uint32_t held_btns;
 static bool is_playing;
 
-static void slot_bg(int x, int y, int w, bool full, bool cur, uint16_t tint, int a)
+static void slot_bg(int x, int y, int w, bool full, bool cur, bool pick, uint16_t tint, int a)
 {
     if (cur)
         gfx_slab(x, y, w, 10, C_ACCENT, 255);
+    else if (pick)
+        gfx_slab(x, y, w, 10, C_SEL, 255); /* taken: amber */
     else if (full)
         gfx_slab(x, y, w, 10, tint, a);
     else
@@ -205,6 +230,11 @@ static void draw_cards(void)
     const Step *st = step_at(cur_row);
     char a[8], b[8];
 
+    if (selecting) { /* in the mode one takes, one does not write */
+        for (int k = 0; k < 4; k++)
+            ui_card(k, 0, 0, 0);
+        return;
+    }
     if (cur_col == COL_STEP) {
         ui_card(0, "LEN", ui_dec(a, pat_len()), "steps");
         ui_card(1, 0, 0, 0);
@@ -259,21 +289,24 @@ static void draw_row(int r, int y)
     }
     if (cur_row == r && cur_col == COL_STEP)
         gfx_slab(col_x[0], y + 1, col_w[0], 10, C_ACCENT, 255);
+    else if (picked(r, COL_STEP))
+        gfx_slab(col_x[0], y + 1, col_w[0], 10, C_SEL, 255);
     gfx_text_mid(F_MONO8, col_x[0], col_w[0], y + 9, ui_hex2(t, r),
-                 cur_row == r && cur_col == COL_STEP ? C_ON_ACC : loop_has(r) ? C_TITLE
+                 cur_row == r && cur_col == COL_STEP ? C_ON_ACC : picked(r, COL_STEP) ? C_TEXT
+                 : loop_has(r) ? C_TITLE
                  : r % 16 == 0 ? C_TEXT : r % 4 == 0 ? C_BEAT : C_DIM);
     for (int k = 0; k < STEP_MAX_NOTES; k++) {
         int c = COL_N1 + k;
         uint8_t n = st->notes[k];
         bool cur = cur_row == r && cur_col == c, full = n != NOTE_NONE;
-        slot_bg(col_x[c], y + 1, col_w[c], full, cur, C_TEXT, 18);
+        slot_bg(col_x[c], y + 1, col_w[c], full, cur, picked(r, c), C_TEXT, 18);
         if (full)
             gfx_text_mid(F_COND11, col_x[c], col_w[c], y + 10,
                          n == NOTE_OFF ? "OFF" : note_name(n, t), cur ? C_ON_ACC : C_TEXT);
     }
     {
         bool cur = cur_row == r && cur_col == COL_IN, full = st->instrument != INSTR_NONE;
-        slot_bg(col_x[COL_IN], y + 1, col_w[COL_IN], full, cur, C_TITLE, 26);
+        slot_bg(col_x[COL_IN], y + 1, col_w[COL_IN], full, cur, picked(r, COL_IN), C_TITLE, 26);
         if (full)
             gfx_text_mid(F_MONO8, col_x[COL_IN], col_w[COL_IN], y + 9,
                          ui_hex2(t, st->instrument), cur ? C_ON_ACC : C_TITLE);
@@ -282,7 +315,7 @@ static void draw_row(int r, int y)
         int c = COL_FX1 + k, x = col_x[c];
         StepFx f = st->fx[k];
         bool cur = cur_row == r && cur_col == c, full = f.cmd != FX_NONE;
-        slot_bg(x, y + 1, col_w[c], full, cur, C_FX, 28);
+        slot_bg(x, y + 1, col_w[c], full, cur, picked(r, c), C_FX, 28);
         if (full) {
             int w = gfx_text_w(F_COND9, fx_name(f.cmd)) + 2 + gfx_text_w(F_MONO8, ui_hex2(t, f.val));
             int tx = gfx_text(F_COND9, x + (col_w[c] - w) / 2, y + 9, fx_name(f.cmd),
@@ -321,7 +354,17 @@ static void draw(void)
     else if (saved)
         gfx_text(F_COND9, x + 52, NAV_Y + 12, saved > 0 ? "SAVED" : "NOT SAVED",
                  saved > 0 ? C_ACCENT : C_MUTE);
-    else
+    else if (selecting) { /* fields x steps */
+        int tx;
+        ui_dec(k, sel_c0() == COL_STEP ? COLS - 1 : sel_c1() - sel_c0() + 1);
+        for (tx = 0; k[tx]; tx++)
+            ;
+        k[tx] = 'x';
+        ui_dec(k + tx + 1, sel_r1() - sel_r0() + 1);
+        gfx_slab(x + 48, NAV_Y + 3, 52, 12, C_FX, 40);
+        tx = gfx_text(F_MONO8, x + 52, NAV_Y + 12, "SEL", C_FX);
+        gfx_text(F_COND12, tx + 3, NAV_Y + 13, k, C_FX);
+    } else
         ui_loop_slot(x + 48, NAV_Y + 3);
     gfx_fill(X0, NAV_Y + NAV_H, INNER, 1, C_DIM, 77);
 
@@ -330,13 +373,15 @@ static void draw(void)
 
     /* The left hand's manual: one line, always. */
     x = gfx_text(F_MONO8, X0, LEFT_Y + 8, "SELECT", C_DIM);
-    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "STEP", C_TEXT);
+    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, selecting ? "STEPS" : "STEP", C_TEXT);
     x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "ALGO", C_DIM);
-    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "FIELD", C_TEXT);
-    x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "PRESETS", C_DIM);
-    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "PAT", C_TEXT);
-    x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "OCT", C_DIM);
-    {   /* where the 27 keys are: F3..G5 unmoved */
+    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, selecting ? "FIELDS" : "FIELD", C_TEXT);
+    if (!selecting) {
+        x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "PRESETS", C_DIM);
+        x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "PAT", C_TEXT);
+        x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "OCT", C_DIM);
+    }
+    if (!selecting) {   /* where the 27 keys are: F3..G5 unmoved */
         int lo = 53 + kbd_oct * 12, hi = lo + 26;
         k[0] = names[lo % 12 * 2], k[1] = (char)('0' + lo / 12 - 1), k[2] = '-';
         k[3] = names[hi % 12 * 2], k[4] = (char)('0' + hi / 12 - 1), k[5] = '\0';
@@ -345,7 +390,7 @@ static void draw(void)
 
     for (int c = 0; c < COLS; c++)
         gfx_text_mid(F_MONO8, col_x[c], col_w[c], HEAD_Y + 7, head[c],
-                     c == cur_col ? C_ACCENT : C_DIM);
+                     c == cur_col || (selecting && c >= sel_c0() && c <= sel_c1()) ? C_ACCENT : C_DIM);
 
     for (int i = 0; i < ROWS && top + i < len; i++)
         draw_row(top + i, ROWS_Y + i * ROW_PITCH);
@@ -357,13 +402,17 @@ static void draw(void)
 
     {   /* The twelve buttons, where they are under the hand. What this
          * build does not do yet is OFF: named, and it says it does nothing. */
-        const char *words[12] = { "FX", loop_state() == LOOP_ONE_END ? "END" : "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
+        const char *words[12] = { "FX", selecting ? "COPY" : loop_state() == LOOP_ONE_END ? "END" : "LOOP",
+                                  selecting ? "PASTE" : "INSTR", "CLEAR", "SELECT", "MIXER",
                                   back_word, "SAVE", "UNDO", "SONG", is_playing ? "STOP" : "PLAY", "REC" };
         uint8_t st[12];
         for (int b = 0; b < BTNS; b++)
             st[b] = !btn_live[b] || (b == B_UNDO && !undo_can()) ? UI_BTN_OFF : b == B_BACK ? UI_BTN_BACK
                     : b == B_PLAY && is_playing ? UI_BTN_LIVE
-                    : b == B_LOOP && loop_state() != LOOP_NONE ? UI_BTN_HERE : UI_BTN_ON;
+                    : b == B_LOOP && !selecting && loop_state() != LOOP_NONE ? UI_BTN_HERE
+                    : b == B_SELECT && selecting ? UI_BTN_HERE
+                    : b == B_FX && selecting ? UI_BTN_NONE
+                    : b == B_INSTR && selecting && !edit_clip_len() ? UI_BTN_OFF : UI_BTN_ON;
         ui_btn_map(words, st, held_btns);
     }
 }
@@ -380,6 +429,7 @@ bool pattern_open(Song *s, int e, int t)
     pat = s->arrangement[e].pattern[t];
     cur_row = top = 0;
     cur_col = COL_N1;
+    selecting = false;
     back_word = "\xE2\x80\xB9 SONG";
     pool_full = false;
     saved = 0;
@@ -425,14 +475,22 @@ void pattern_resume(void)
     gfx_invalidate();
 }
 
-int pattern_frame(const PlatInput *in)
+int pattern_frame(const PlatInput *real)
 {
-    uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
+    PlatInput masked = *real;
+    const PlatInput *in = &masked;
+    uint32_t btns = real->btns & ~prev_btns, keys;
     int len = pat_len(), d;
 #define PRESSED(b) ((btns >> btn_of[b]) & 1u)
 
-    prev_btns = in->btns;
-    prev_keys = in->keys;
+    if (selecting) { /* the right hand and the keys write nothing while one takes */
+        masked.keys = 0;
+        for (int k = PE_K1; k <= PE_K4; k++)
+            masked.enc[k] = 0;
+    }
+    keys = in->keys & ~prev_keys;
+    prev_btns = real->btns;
+    prev_keys = real->keys;
     held_btns = in->btns;
     is_playing = player_playing();
 
@@ -441,8 +499,29 @@ int pattern_frame(const PlatInput *in)
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
     cur_col += in->enc[PE_ALGO];
     cur_col = cur_col < 0 ? 0 : cur_col >= COLS ? COLS - 1 : cur_col;
-    if (in->enc[PE_PRESET])
+    if (in->enc[PE_PRESET]) {
+        selecting = false; /* another block: what was taken was this one's */
         step_block(in->enc[PE_PRESET]);
+    }
+    if (PRESSED(B_SELECT)) {
+        selecting = !selecting;
+        anchor_row = cur_row;
+        anchor_col = cur_col;
+    } else if (selecting) {
+        int r0 = sel_r0(), n = sel_r1() - r0 + 1;
+        if (PRESSED(B_LOOP)) /* COPY: the rectangle stays, CLEAR after it is a cut */
+            edit_clip_copy(song, track, pat, r0, n, sel_mask());
+        if (PRESSED(B_INSTR) && edit_clip_len()) { /* PASTE: from the cursor down */
+            pool_full = edit_clip_paste(song, track, pat, cur_row,
+                                        cur_col >= COL_FX1 ? cur_col - COL_FX1 : -1) < 0;
+            selecting = false;
+        }
+        if (PRESSED(B_CLEAR)) {
+            pool_full = !edit_erase_range(song, track, pat, r0, n, sel_mask());
+            selecting = false;
+        }
+        btns &= ~(1u << btn_of[B_FX] | 1u << btn_of[B_LOOP] | 1u << btn_of[B_INSTR] | 1u << btn_of[B_CLEAR]);
+    }
     if (btns & (1u << PB_OCTDN) && kbd_oct > -3)
         kbd_oct--;
     if (btns & (1u << PB_OCTUP) && kbd_oct < 3)
@@ -532,6 +611,8 @@ int pattern_frame(const PlatInput *in)
     len = pat_len();
     if (cur_row >= len)
         cur_row = len - 1;
+    if (anchor_row >= len)
+        anchor_row = len - 1;
     if (cur_row < top)
         top = cur_row;
     if (cur_row >= top + ROWS)
@@ -541,6 +622,7 @@ int pattern_frame(const PlatInput *in)
     if (PRESSED(B_BACK) || PRESSED(B_SONG)) {
         player_note_off();
         song_pool_compact(song);
+        selecting = false;
         return PRESSED(B_SONG) ? PATTERN_SONG : PATTERN_BACK;
     }
     if (PRESSED(B_INSTR)) {
@@ -549,6 +631,7 @@ int pattern_frame(const PlatInput *in)
     }
     if (PRESSED(B_MIXER)) {
         player_note_off();
+        selecting = false;
         return PATTERN_MIXER;
     }
     return PATTERN_STAY;

@@ -420,6 +420,28 @@ static int selftest(const char *out, const char *song, int entry, int track)
         SDL_SaveBMP(sf, path);
         SDL_FreeSurface(sf);
     }
+    /* SELECT: a corner here, the other three steps down and one field right. */
+    kb_btns = 1u << PB_EDIT;
+    frame(1064);
+    kb_btns = 0;
+    turn(PE_SELECT, 3);
+    turn(PE_ALGO, 1);
+    frame(1064);
+    frame(1064);
+    sf = SDL_CreateRGBSurfaceWithFormatFrom(canvas, CV_W, CV_H, 32, CV_W * 4,
+                                            SDL_PIXELFORMAT_ARGB8888);
+    if (sf) {
+        char path[512];
+        snprintf(path, sizeof path, "%.*s-select.bmp", (int)strlen(out) - 4, out);
+        SDL_SaveBMP(sf, path);
+        SDL_FreeSurface(sf);
+    }
+    kb_btns = 1u << PB_EDIT;
+    frame(1064);
+    kb_btns = 0;
+    turn(PE_SELECT, -3);
+    turn(PE_ALGO, -1);
+    frame(1064);
     /* And from there the instrument of that step: INSTR, the ENV button. */
     kb_btns = 1u << PB_ENV;
     frame(1080);

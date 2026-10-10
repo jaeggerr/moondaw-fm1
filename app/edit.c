@@ -101,3 +101,90 @@ int edit_instr_at(const Song *s, int track, int pat, int row)
             return song_step(s, track, pat, r)->instrument;
     return 0;
 }
+
+/* ------------------------------------------------------ the clipboard --- */
+static Step clip[PATTERN_MAX_STEPS];
+static int clip_len, clip_mask;
+
+void edit_clip_reset(void) { clip_len = 0; }
+int edit_clip_len(void) { return clip_len; }
+
+void edit_clip_copy(const Song *s, int track, int pat, int from, int count, int mask)
+{
+    int len = s->patterns[track][pat].length;
+    if (count > len - from)
+        count = len - from;
+    if (count <= 0 || !(mask & EDIT_CLIP_ALL))
+        return;
+    for (int i = 0; i < count; i++)
+        clip[i] = *song_step(s, track, pat, from + i);
+    clip_len = count;
+    clip_mask = mask & EDIT_CLIP_ALL;
+}
+
+/* A cut is the whole step's: a note beside it takes its place. */
+static void settle_off(Step *st)
+{
+    if (st->notes[0] != NOTE_OFF)
+        return;
+    for (int k = 1; k < STEP_MAX_NOTES; k++)
+        if (st->notes[k] <= NOTE_MAX)
+            st->notes[0] = NOTE_NONE;
+}
+
+int edit_clip_paste(Song *s, int track, int pat, int row, int fx_slot)
+{
+    int len = s->patterns[track][pat].length, shift = 0, n = 0;
+
+    if (!(clip_mask & (EDIT_CLIP_FX1 - 1)) && fx_slot >= 0) {
+        int lo = 0, hi = STEP_MAX_FX - 1;
+        while (!(clip_mask & (EDIT_CLIP_FX1 << lo)))
+            lo++;
+        while (!(clip_mask & (EDIT_CLIP_FX1 << hi)))
+            hi--;
+        if (fx_slot + (hi - lo) >= STEP_MAX_FX)
+            fx_slot = STEP_MAX_FX - 1 - (hi - lo);
+        shift = fx_slot - lo;
+    }
+    for (int i = 0; i < clip_len && row + i < len; i++, n++) {
+        Step *st = step_w(s, track, pat, row + i);
+        if (!st)
+            return -1;
+        for (int k = 0; k < STEP_MAX_NOTES; k++)
+            if (clip_mask & (EDIT_CLIP_N1 << k))
+                st->notes[k] = clip[i].notes[k];
+        settle_off(st);
+        if (clip_mask & EDIT_CLIP_INSTR)
+            st->instrument = clip[i].instrument;
+        for (int k = 0; k < STEP_MAX_FX; k++) {
+            int to = k + shift;
+            if (!(clip_mask & (EDIT_CLIP_FX1 << k)) || to < 0 || to >= STEP_MAX_FX)
+                continue;
+            if (fx_conflicts(st, to, clip[i].fx[k].cmd))
+                continue; /* refused: the step already says it */
+            st->fx[to] = clip[i].fx[k];
+        }
+    }
+    return n;
+}
+
+bool edit_erase_range(Song *s, int track, int pat, int from, int count, int mask)
+{
+    int len = s->patterns[track][pat].length;
+    for (int i = 0; i < count && from + i < len; i++) {
+        Step *st;
+        if (step_is_empty(song_step(s, track, pat, from + i)))
+            continue;
+        if (!(st = step_w(s, track, pat, from + i)))
+            return false;
+        for (int k = 0; k < STEP_MAX_NOTES; k++)
+            if (mask & (EDIT_CLIP_N1 << k))
+                st->notes[k] = NOTE_NONE;
+        if (mask & EDIT_CLIP_INSTR)
+            st->instrument = INSTR_NONE;
+        for (int k = 0; k < STEP_MAX_FX; k++)
+            if (mask & (EDIT_CLIP_FX1 << k))
+                st->fx[k].cmd = st->fx[k].val = 0;
+    }
+    return true;
+}

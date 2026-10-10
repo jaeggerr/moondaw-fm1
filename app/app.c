@@ -18,6 +18,7 @@
 #include "instrument.h"
 #include "menu.h"
 #include "mixer.h"
+#include "edit.h"
 #include "loop.h"
 #include "phrase.h"
 #include "undo.h"
@@ -67,6 +68,7 @@ static void adopt(int slot, bool dirty)
 {
     player_init(&app_song);
     loop_clear();
+    edit_clip_reset(); /* its instrument numbers were the last song's */
     undo_reset(&app_song); /* another song: nothing of the last one to take back */
     app_slot = slot;
     app_dirty = dirty;

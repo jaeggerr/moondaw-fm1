@@ -58,6 +58,8 @@ test: sim web
 	build/undo_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/loop_test.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/loop_test
 	build/loop_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/select_test.c app/pattern.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/select_test
+	build/select_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck
