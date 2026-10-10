@@ -179,7 +179,8 @@ def build_app():
     app = os.environ.get("MOONDAW_APP", "app")
     units = [SRC / "app" / f"{app}.c", SRC / "app" / "term.c"]
     if app != "hello":                           # the bring-up build stays as small as it can be
-        units += [SRC / "app" / "pattern.c", SRC / "app" / "gfx.c", *sorted((SRC / "core").glob("*.c"))]
+        units += [SRC / "app" / f for f in ("menu.c", "songview.c", "pattern.c", "ui.c", "gfx.c")]
+        units += [ *sorted((SRC / "core").glob("*.c"))]
     objs = [OUT / f"{u.parent.name}_{u.stem}.o" for u in units]
     tc_all(("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),
            ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),

@@ -1,92 +1,84 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The tracker on the three backends. Two screens so far:
+/* The tracker on the three backends: one song in memory, and the screens
+ * that take turns in front of it.
  *
- *   - a provisional one that only PLAYS (this file, in text cells):
- *     PLAY starts and stops the song, the first eight keys mute the
- *     tracks, SELECT picks a phrase and ALGORITHM a track;
- *   - PATTERN (pattern.c), the first screen of the real interface,
- *     opened from here with EDIT on that phrase and that track.
+ *   MENU     (menu.c)      where the machine opens: the songs in flash
+ *   SONG     (songview.c)  the arrangement: phrases down, tracks across
+ *   PATTERN  (pattern.c)   one block of one track
  *
- * SONG and PHRASE will take this file's place as the way in. */
-#include "../core/player.h"
-#include "../core/store.h"
-#include "../core/trk.h"
-#include "../platform/platform.h"
-#include "demo_trk.h"
-#include "pattern.h"
-#include "term.h"
+ * PHRASE is not written: a block is opened from its cell in SONG. */
+#include "app.h"
 
-static Song song
+#include "../core/player.h"
+#include "../core/trk.h"
+#include "demo_trk.h"
+#include "gfx.h"
+#include "menu.h"
+#include "pattern.h"
+#include "songview.h"
+
+Song app_song
 #ifdef PLAT_FM1
     __attribute__((section(".pool")))
 #endif
     ;
-static TrkReport report;
-static char song_name[20] = "DEMO";
+char app_name[STORE_NAME + 1] = "DEMO";
+int app_slot = -1;
+bool app_dirty;
+
+static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static uint32_t prev_btns, prev_keys;
-static int start_entry, sel_track;
-static bool in_pattern;
+static enum { AT_MENU, AT_SONG, AT_PATTERN } screen;
 
-static void put_report(int y, const char *what, int n)
+void app_mark_dirty(void) { app_dirty = true; }
+
+int app_not_carried(void)
 {
-    if (!n)
-        return;
-    term_num(1, y, n, 4, C_AMBER, C_BLACK);
-    term_put(6, y, what, C_DIM, C_BLACK);
+    return report.samples + report.zones + report.ref_lines + report.previews + report.shaping +
+           report.syllables + report.smp_fx + report.steps_cut;
 }
 
-static void draw_static(void)
+static void set_name(const char *name)
 {
-    int y = 17;
-    term_clear();
-    term_put(0, 0, " MOONDAW FM-1                 ", C_BLACK, C_CYAN);
-    term_put(1, 2, song_name, C_WHITE, C_BLACK);
-    term_put(1, 4, "BPM", C_DIM, C_BLACK);
-    term_put(1, 5, "PHRASE", C_DIM, C_BLACK);
-    term_put(1, 6, "ROW", C_DIM, C_BLACK);
-    term_put(1, 7, "STEPS", C_DIM, C_BLACK);
-    term_put(1, 13, "PLAY song   keys 1-8 mute", C_DIM, C_BLACK);
-    term_put(1, 14, "SELECT phrase ALGORITHM track", C_DIM, C_BLACK);
-    term_put(1, 15, "EDIT opens its pattern", C_DIM, C_BLACK);
-    /* What a save from this machine would not carry. */
-    put_report(y, "sample lines", report.samples + report.zones), y += !!(report.samples + report.zones);
-    put_report(y, "syllables", report.syllables), y += !!report.syllables;
-    put_report(y, "silent instruments", report.silent_instr), y += !!report.silent_instr;
-    put_report(y, "drive/amp/voice fields", report.shaping), y += !!report.shaping;
-    put_report(y, "reference lines", report.ref_lines), y += !!report.ref_lines;
-    put_report(y, "steps cut (tracks 9+)", report.steps_cut), y += !!report.steps_cut;
-    put_report(y, "STEPS LOST: POOL FULL", report.steps_lost);
-}
-
-int app_load(const char *trk, uint32_t len, const char *name)
-{
-    TrkReport r;
     int i = 0;
-
-    ready = 0;
-    if (trk_load(&song, trk, len, &r) != TRK_OK) {
-        ready = 1; /* the song in memory is untouched */
-        return 0;
-    }
-    report = r;
-    player_init(&song);
-    for (; name && name[i] && i < (int)sizeof(song_name) - 1; i++)
-        song_name[i] = name[i] >= 'a' && name[i] <= 'z' ? (char)(name[i] - 32) : name[i];
-    if (i)
-        song_name[i] = '\0';
-    start_entry = sel_track = 0;
-    in_pattern = false;
-    term_invalidate();
-    draw_static();
-    ready = 1;
-    return 1;
+    for (; name && name[i] && i < STORE_NAME; i++)
+        app_name[i] = name[i] >= 'a' && name[i] <= 'z' ? (char)(name[i] - 32) : name[i];
+    app_name[i] = '\0';
 }
 
-/* One song lives in the machine for now, in slot 0; a list of projects
- * comes with the MENU screen. Saving stops the song first: on the FM-1
- * an erase holds every interrupt for its 50 ms, and the audio with it. */
-#define SONG_SLOT 0
+static bool same_name(const char *a, const char *b)
+{
+    while (*a && *a == *b)
+        a++, b++;
+    return *a == *b;
+}
+
+/* Whatever just became the song in memory: the player starts over on
+ * it, and the hand is back at the MENU. */
+static void adopt(int slot, bool dirty)
+{
+    player_init(&app_song);
+    app_slot = slot;
+    app_dirty = dirty;
+    screen = AT_MENU;
+    ready = 1;
+    menu_open();
+}
+
+/* ------------------------------------------------------------ flash --- */
+/* The last slot holds one byte: which song was open. So the machine
+ * comes back on what was being worked on, not on the first of the list. */
+#define LAST_SLOT (STORE_SLOTS - 1)
+
+static void remember(int slot)
+{
+    char b = (char)slot;
+    char was;
+    if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(&was, 1) == 1 && was == b)
+        return; /* already says so: an erase saved */
+    if (store_save_begin(LAST_SLOT, ".LAST") == STORE_OK && store_save_put(&b, 1) == STORE_OK)
+        store_save_commit();
+}
 
 static int flash_sink(void *ctx, const char *data, uint32_t n)
 {
@@ -94,24 +86,36 @@ static int flash_sink(void *ctx, const char *data, uint32_t n)
     return store_save_put(data, n);
 }
 
+/* Saving stops the song first: on the FM-1 an erase holds every
+ * interrupt for its 50 ms, and the audio with it. */
 int app_save(void)
 {
-    int rc;
+    int rc, slot = app_slot;
 
+    for (int s = 0; slot < 0 && s < APP_SONG_SLOTS; s++)
+        if (!store_has(s))
+            slot = s;
+    if (slot < 0)
+        return STORE_ERR_FULL;
     player_stop();
     ready = 0;
-    rc = store_save_begin(SONG_SLOT, song_name);
-    if (rc == STORE_OK && trk_write(&song, flash_sink, 0) < 0)
+    rc = store_save_begin(slot, app_name);
+    if (rc == STORE_OK && trk_write(&app_song, flash_sink, 0) < 0)
         rc = STORE_ERR_FULL;
     if (rc == STORE_OK)
         rc = store_save_commit();
     else
         store_mount(); /* what a failed save wrote is free space again */
+    if (rc == STORE_OK) {
+        app_slot = slot;
+        app_dirty = false;
+        remember(slot);
+    }
     ready = 1;
     return rc;
 }
 
-static bool load_from_flash(void)
+int app_open_slot(int slot)
 {
     static char piece[512];
     char name[STORE_NAME + 1];
@@ -119,111 +123,121 @@ static bool load_from_flash(void)
     int32_t n;
     TrkReport r;
 
-    if (store_mount() != STORE_OK || store_info(SONG_SLOT, name, &bytes) != STORE_OK ||
-        store_load_begin(SONG_SLOT) != STORE_OK)
-        return false;
-    ready = 0;
+    if (slot < 0 || slot >= APP_SONG_SLOTS || store_info(slot, name, &bytes) != STORE_OK ||
+        store_load_begin(slot) != STORE_OK)
+        return STORE_ERR_NONE;
+    ready = 0; /* the working copy is the delay's memory */
     trk_begin(&r);
     while ((n = store_load_get(piece, sizeof piece)) > 0)
         trk_feed(piece, (uint32_t)n);
-    if (n < 0 || trk_end(&song) != TRK_OK) {
+    if (n < 0 || trk_end(&app_song) != TRK_OK) {
         ready = 1;
-        return false; /* a sector failed its checksum: the song in memory is untouched */
+        return STORE_ERR_CORRUPT; /* the song in memory is untouched */
     }
     report = r;
-    player_init(&song);
-    for (int i = 0; i <= STORE_NAME; i++)
-        song_name[i] = name[i];
-    start_entry = sel_track = 0;
-    in_pattern = false;
-    term_invalidate();
-    draw_static();
-    ready = 1;
-    return true;
+    set_name(name);
+    remember(slot);
+    adopt(slot, false);
+    return STORE_OK;
+}
+
+void app_new(void)
+{
+    char name[STORE_NAME + 1] = "SONG 01", other[STORE_NAME + 1];
+    uint32_t bytes;
+
+    /* The first SONG nn no song in flash carries. */
+    for (int n = 1; n < 100; n++) {
+        bool taken = false;
+        name[5] = (char)('0' + n / 10);
+        name[6] = (char)('0' + n % 10);
+        for (int s = 0; s < APP_SONG_SLOTS; s++)
+            taken |= store_info(s, other, &bytes) == STORE_OK && same_name(other, name);
+        if (!taken)
+            break;
+    }
+    ready = 0;
+    song_init(&app_song);
+    for (uint32_t i = 0; i < sizeof report; i++)
+        ((uint8_t *)&report)[i] = 0;
+    /* One block on the first track, so there is somewhere to write. */
+    app_song.arrangement[0].pattern[0] = 0;
+    set_name(name);
+    adopt(-1, false);
+}
+
+/* -------------------------------------------------------- the host --- */
+/* A .trk handed over by the backend. It takes the place in flash of the
+ * song of the same name, if there is one, and is not written until SAVE. */
+int app_load(const char *trk, uint32_t len, const char *name)
+{
+    char other[STORE_NAME + 1];
+    uint32_t bytes;
+    int slot = -1;
+    TrkReport r;
+
+    ready = 0;
+    if (trk_load(&app_song, trk, len, &r) != TRK_OK) {
+        ready = 1;
+        return 0;
+    }
+    report = r;
+    if (name && name[0])
+        set_name(name);
+    for (int s = 0; s < APP_SONG_SLOTS; s++)
+        if (store_info(s, other, &bytes) == STORE_OK && same_name(other, app_name))
+            slot = s;
+    adopt(slot, true);
+    return 1;
 }
 
 void app_init(void)
 {
-    if (!load_from_flash())
-        app_load(demo_trk, sizeof(demo_trk) - 1, "DEMO");
+    char last;
+    int slot = -1;
+
+    store_mount();
+    if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(&last, 1) == 1)
+        slot = last;
+    for (int s = 0; !store_has(slot) && s < APP_SONG_SLOTS; s++)
+        if (store_has(s))
+            slot = s;
+    if (app_open_slot(slot) == STORE_OK)
+        return;
+    /* An empty flash: the built-in song, which lives nowhere until saved. */
+    ready = 0;
+    trk_load(&app_song, demo_trk, sizeof(demo_trk) - 1, &report);
+    set_name("DEMO");
+    adopt(-1, false);
 }
 
 void app_frame(const PlatInput *in)
 {
-    uint32_t pressed = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
-    bool playing = player_playing();
-
     player_set_master(in->master);
-    if (in_pattern) {
-        if (pattern_frame(in))
-            return;
-        in_pattern = false; /* HOME: back here, redrawn whole */
-        term_invalidate();
-        draw_static();
-        prev_btns = in->btns;
-        prev_keys = in->keys;
-        return;
-    }
-    prev_btns = in->btns;
-    prev_keys = in->keys;
-    if (pressed & (1u << PB_PLAY)) {
-        if (playing)
-            player_stop();
-        else
-            player_play_song(start_entry, false);
-    }
-    for (int t = 0; t < SONG_MAX_TRACKS; t++)
-        if ((keys >> t) & 1u)
-            player_toggle_mute(t);
-    if (in->enc[PE_SELECT] && !playing) {
-        start_entry += in->enc[PE_SELECT];
-        start_entry = start_entry < 0 ? 0
-                      : start_entry >= song.arrange_len ? song.arrange_len - 1
-                      : start_entry;
-    }
-    sel_track += in->enc[PE_ALGO];
-    sel_track = sel_track < 0 ? 0 : sel_track >= song.num_tracks ? song.num_tracks - 1 : sel_track;
-    if ((pressed & (1u << PB_EDIT)) && pattern_open(&song, playing ? player_entry() : start_entry, sel_track)) {
-        in_pattern = true;
-        for (int t = 0; t < PLAT_KEYS; t++)
-            plat_led_key(t, 0);
-        return;
-    }
+    int entry, track;
 
-    term_num(8, 4, song.bpm, 4, C_WHITE, C_BLACK);
-    term_num(8, 5, playing ? player_entry() : start_entry, 4,
-             playing ? C_GREEN : C_WHITE, C_BLACK);
-    term_put(12, 5, "/", C_DIM, C_BLACK);
-    term_num(13, 5, song.arrange_len, 3, C_DIM, C_BLACK);
-    term_num(8, 6, playing ? player_row() : 0, 4, playing ? C_GREEN : C_DIM, C_BLACK);
-    term_num(8, 7, (POOL_CHUNKS - song_pool_free(&song)) * CHUNK_STEPS, 4, C_WHITE, C_BLACK);
-    term_put(12, 7, "/", C_DIM, C_BLACK);
-    term_num(13, 7, POOL_CHUNKS * CHUNK_STEPS, 4, C_DIM, C_BLACK);
-    term_put(20, 4, playing ? "PLAYING" : "STOPPED", playing ? C_GREEN : C_DIM, C_BLACK);
-    {   /* the audio interrupt's share of its time: average, and the worst half since last frame */
-        static int worst_seen;
-        int worst, load = plat_audio_load(&worst);
-        if (load >= 0) {
-            if (worst > worst_seen || !playing)
-                worst_seen = worst;
-            term_put(20, 6, "CPU", C_DIM, C_BLACK);
-            term_num(23, 6, load, 4, load > 70 ? C_RED : C_WHITE, C_BLACK);
-            term_put(20, 7, "MAX", C_DIM, C_BLACK);
-            term_num(23, 7, worst_seen, 4, worst_seen > 90 ? C_RED : C_WHITE, C_BLACK);
+    if (screen == AT_PATTERN) {
+        if (!pattern_frame(in)) { /* HOME, or SONG: back to the cell it was opened from */
+            screen = AT_SONG;
+            songview_open(false);
         }
+    } else if (screen == AT_SONG) {
+        switch (songview_frame(in, &entry, &track)) {
+        case SONGVIEW_MENU:
+            screen = AT_MENU;
+            menu_open();
+            break;
+        case SONGVIEW_PATTERN:
+            if (pattern_open(&app_song, entry, track))
+                screen = AT_PATTERN;
+            break;
+        default:
+            break;
+        }
+    } else if (menu_frame(in)) {
+        screen = AT_SONG;
+        songview_open(true);
     }
-    for (int t = 0; t < SONG_MAX_TRACKS; t++) {
-        bool there = t < song.num_tracks, muted = player_muted(t);
-        int fg = !there ? C_DIM : t == sel_track ? C_BLACK : C_TEXT;
-        int bg = there && t == sel_track ? C_GREEN : C_BLACK;
-        term_putc(1 + t * 3, 10, 'T', fg, bg);
-        term_putc(2 + t * 3, 10, (char)('1' + t), fg, bg);
-        term_put(1 + t * 3, 11, !there ? "  " : muted ? "--" : "ON",
-                 muted ? C_RED : C_GREEN, C_BLACK);
-        plat_led_key(t, there && !muted);
-    }
-    plat_led_btn(PB_PLAY, playing);
-    term_flush();
 }
 
 void app_audio(int16_t *out, int frames)

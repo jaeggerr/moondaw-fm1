@@ -2,21 +2,9 @@
 #include "pattern.h"
 
 #include "../core/player.h"
+#include "app.h"
 #include "gfx.h"
-
-/* The palette: the COL_* of moondaw's ui, to the byte. A shape tells one
- * screen from another, never a hue. */
-#define C_BG     GFX_RGB(0x10, 0x14, 0x1C)
-#define C_TEXT   GFX_RGB(0xC8, 0xD0, 0xC8)
-#define C_DIM    GFX_RGB(0x5A, 0x64, 0x70)
-#define C_ACCENT GFX_RGB(0x7F, 0xD9, 0x62) /* the cursor, and what plays */
-#define C_TITLE  GFX_RGB(0x62, 0xC8, 0xD9) /* where one is */
-#define C_PLAY   GFX_RGB(0x24, 0x3A, 0x28)
-#define C_SEL    GFX_RGB(0x6E, 0x55, 0x18)
-#define C_FX     GFX_RGB(0xF0, 0xBE, 0x5A)
-#define C_MUTE   GFX_RGB(0x9E, 0x55, 0x55)
-#define C_BEAT   GFX_RGB(0x91, 0x9A, 0x9C)
-#define C_ON_ACC GFX_RGB(0x0B, 0x14, 0x09)
+#include "ui.h"
 
 /* The measures of proto/pattern.html, in panel pixels. */
 enum {
@@ -38,12 +26,10 @@ enum { B_FX, B_LOOP, B_INSTR, B_CLEAR, B_SELECT, B_MIXER,
        B_BACK, B_SAVE, B_UNDO, B_SONG, B_PLAY, B_REC, BTNS };
 static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO,
                                       PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
-static const char *const btn_word[BTNS] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
-                                            "\xE2\x80\xB9 PHR", "SAVE", "UNDO", "SONG", "PLAY", "REC" };
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */
 static const bool btn_live[BTNS] = { true, false, false, true, false, false,
-                                     true, true, false, false, true, false };
+                                     true, true, false, true, true, false };
 
 static Song *song;
 static int entry, track, pat;
@@ -55,28 +41,6 @@ static int8_t saved;       /* 0 nothing to say, 1 saved, -1 the save failed */
 static uint32_t prev_btns, prev_keys;
 static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
 static int fx_count;
-
-/* ----------------------------------------------------------- text --- */
-static char *hex2(char *b, int v)
-{
-    b[0] = "0123456789ABCDEF"[(v >> 4) & 15];
-    b[1] = "0123456789ABCDEF"[v & 15];
-    b[2] = '\0';
-    return b;
-}
-
-static char *dec(char *b, int v)
-{
-    char t[6];
-    int n = 0, i = 0;
-    do
-        t[n++] = (char)('0' + v % 10);
-    while ((v /= 10) > 0);
-    while (n)
-        b[i++] = t[--n];
-    b[i] = '\0';
-    return b;
-}
 
 static bool fx_is_pair(uint8_t cmd)
 {
@@ -91,6 +55,8 @@ static Step *step_w(int row)
 {
     Step *st = song_step_w(song, track, pat, row);
     pool_full = st == 0;
+    if (st)
+        app_mark_dirty();
     return st;
 }
 
@@ -261,6 +227,7 @@ static void step_block(int d)
             break;
     }
     song->arrangement[entry].pattern[track] = (uint8_t)pat;
+    app_mark_dirty();
     if (cur_row >= pat_len())
         cur_row = pat_len() - 1;
 }
@@ -280,61 +247,47 @@ static void slot_bg(int x, int y, int w, bool full, bool cur, uint16_t tint, int
         gfx_frame_rect(x, y, w, 10, C_DIM, 76);
 }
 
-static void card(int k, const char *label, const char *value, const char *unit)
-{
-    int w = (INNER - 6) / 4, x = X0 + k * (w + 2);
-    char kn[3] = { 'K', (char)('1' + k), '\0' };
-    gfx_slab(x, CARDS_Y, w, CARDS_H, C_TEXT, label ? 20 : 8);
-    gfx_text(F_MONO8, gfx_text(F_MONO8, x + 3, CARDS_Y + 8, kn, label ? C_ACCENT : C_DIM) + 3,
-             CARDS_Y + 8, label ? label : "", C_DIM);
-    if (value) {
-        int vx = gfx_text(F_COND12, x + 3, CARDS_Y + 19, value, C_TEXT);
-        if (unit)
-            gfx_text(F_MONO8, vx + 3, CARDS_Y + 19, unit, C_DIM);
-    }
-}
-
 static void draw_cards(void)
 {
     const Step *st = step_at(cur_row);
     char a[8], b[8];
 
     if (cur_col == COL_STEP) {
-        card(0, "LEN", dec(a, pat_len()), "steps");
-        card(1, 0, 0, 0);
-        card(2, 0, 0, 0);
+        ui_card(0, "LEN", ui_dec(a, pat_len()), "steps");
+        ui_card(1, 0, 0, 0);
+        ui_card(2, 0, 0, 0);
     } else if (cur_col <= COL_N4) {
         uint8_t n = st->notes[cur_col - COL_N1];
-        card(0, "NOTE", n <= NOTE_MAX ? note_name(n, a) : n == NOTE_OFF ? "OFF" : "---", 0);
+        ui_card(0, "NOTE", n <= NOTE_MAX ? note_name(n, a) : n == NOTE_OFF ? "OFF" : "---", 0);
         if (n <= NOTE_MAX)
-            card(1, "OCT", dec(b, n / 12 - 1), 0);
+            ui_card(1, "OCT", ui_dec(b, n / 12 - 1), 0);
         else
-            card(1, 0, 0, 0);
-        card(2, 0, 0, 0);
+            ui_card(1, 0, 0, 0);
+        ui_card(2, 0, 0, 0);
     } else if (cur_col == COL_IN) {
         bool has = st->instrument != INSTR_NONE;
-        card(0, "INSTR", has ? hex2(a, st->instrument) : "--",
+        ui_card(0, "INSTR", has ? ui_hex2(a, st->instrument) : "--",
              has ? song->instruments[st->instrument % SONG_MAX_INSTR].name : 0);
-        card(1, 0, 0, 0);
-        card(2, 0, 0, 0);
+        ui_card(1, 0, 0, 0);
+        ui_card(2, 0, 0, 0);
     } else {
         StepFx f = st->fx[cur_col - COL_FX1];
-        card(0, "EFFECT", fx_name(f.cmd), 0);
+        ui_card(0, "EFFECT", fx_name(f.cmd), 0);
         if (f.cmd == FX_NONE) {
-            card(1, 0, 0, 0);
-            card(2, 0, 0, 0);
+            ui_card(1, 0, 0, 0);
+            ui_card(2, 0, 0, 0);
         } else if (fx_is_pair(f.cmd)) {
             a[0] = "0123456789ABCDEF"[f.val >> 4];
             b[0] = "0123456789ABCDEF"[f.val & 15];
             a[1] = b[1] = '\0';
-            card(1, "SPEED", a, 0);
-            card(2, f.cmd == FX_SCP ? "SEMIS" : "DEPTH", b, 0);
+            ui_card(1, "SPEED", a, 0);
+            ui_card(2, f.cmd == FX_SCP ? "SEMIS" : "DEPTH", b, 0);
         } else {
-            card(1, "VALUE", hex2(a, f.val), 0);
-            card(2, 0, 0, 0);
+            ui_card(1, "VALUE", ui_hex2(a, f.val), 0);
+            ui_card(2, 0, 0, 0);
         }
     }
-    card(3, 0, 0, 0);
+    ui_card(3, 0, 0, 0);
 }
 
 static void draw_row(int r, int y)
@@ -351,7 +304,7 @@ static void draw_row(int r, int y)
     }
     if (cur_row == r && cur_col == COL_STEP)
         gfx_slab(col_x[0], y + 1, col_w[0], 10, C_ACCENT, 255);
-    gfx_text_mid(F_MONO8, col_x[0], col_w[0], y + 9, hex2(t, r),
+    gfx_text_mid(F_MONO8, col_x[0], col_w[0], y + 9, ui_hex2(t, r),
                  cur_row == r && cur_col == COL_STEP ? C_ON_ACC
                  : r % 16 == 0 ? C_TEXT : r % 4 == 0 ? C_BEAT : C_DIM);
     for (int k = 0; k < STEP_MAX_NOTES; k++) {
@@ -368,7 +321,7 @@ static void draw_row(int r, int y)
         slot_bg(col_x[COL_IN], y + 1, col_w[COL_IN], full, cur, C_TITLE, 26);
         if (full)
             gfx_text_mid(F_MONO8, col_x[COL_IN], col_w[COL_IN], y + 9,
-                         hex2(t, st->instrument), cur ? C_ON_ACC : C_TITLE);
+                         ui_hex2(t, st->instrument), cur ? C_ON_ACC : C_TITLE);
     }
     for (int k = 0; k < STEP_MAX_FX; k++) {
         int c = COL_FX1 + k, x = col_x[c];
@@ -376,7 +329,7 @@ static void draw_row(int r, int y)
         bool cur = cur_row == r && cur_col == c, full = f.cmd != FX_NONE;
         slot_bg(x, y + 1, col_w[c], full, cur, C_FX, 28);
         if (full) {
-            int w = gfx_text_w(F_COND9, fx_name(f.cmd)) + 2 + gfx_text_w(F_MONO8, hex2(t, f.val));
+            int w = gfx_text_w(F_COND9, fx_name(f.cmd)) + 2 + gfx_text_w(F_MONO8, ui_hex2(t, f.val));
             int tx = gfx_text(F_COND9, x + (col_w[c] - w) / 2, y + 9, fx_name(f.cmd),
                               cur ? C_ON_ACC : C_FX);
             gfx_text(F_MONO8, tx + 2, y + 9, t, cur ? C_ON_ACC : C_TEXT);
@@ -394,19 +347,21 @@ static void draw(void)
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
 
     /* The bar: where one is, and the way out. */
-    t[0] = (char)0xE2, t[1] = (char)0x80, t[2] = (char)0xB9;
-    t[3] = ' ', t[4] = 'P', t[5] = 'H', t[6] = 'R', t[7] = ' ';
-    hex2(t + 8, entry);
-    x = gfx_text(F_COND12, X0, NAV_Y + 13, t, C_TITLE);
+    /* The back names where it leads. PHRASE is not written: it is SONG,
+     * and the phrase one came from is said beside the track. */
+    x = gfx_text(F_COND12, X0, NAV_Y + 13, "\xE2\x80\xB9 SONG", C_TITLE);
+    t[0] = 'P';
+    ui_hex2(t + 1, entry);
+    x = gfx_text(F_COND12, x + 6, NAV_Y + 13, t, C_DIM);
     k[0] = 'T';
-    dec(k + 1, track + 1);
+    ui_dec(k + 1, track + 1);
     x = gfx_text(F_COND12, x + 6, NAV_Y + 13, k, C_TEXT);
     gfx_slab(x + 6, NAV_Y + 3, 40, 12, C_TEXT, 18);
     gfx_text(F_COND12, gfx_text(F_MONO8, x + 10, NAV_Y + 12, "LEN", C_DIM) + 3, NAV_Y + 13,
-             dec(k, len), C_TEXT);
+             ui_dec(k, len), C_TEXT);
     gfx_slab(X0 + INNER - 36, NAV_Y + 3, 36, 12, C_TEXT, 18);
     gfx_text(F_COND12, gfx_text(F_MONO8, X0 + INNER - 32, NAV_Y + 12, "PAT", C_DIM) + 3,
-             NAV_Y + 13, hex2(k, pat), C_TEXT);
+             NAV_Y + 13, ui_hex2(k, pat), C_TEXT);
     if (pool_full)
         gfx_text(F_COND9, x + 52, NAV_Y + 12, "POOL FULL", C_MUTE);
     else if (saved)
@@ -415,7 +370,7 @@ static void draw(void)
     gfx_fill(X0, NAV_Y + NAV_H, INNER, 1, C_DIM, 77);
 
     draw_cards();
-    gfx_fill(X0, CARDS_Y + CARDS_H + 3, INNER, 1, C_ACCENT, 71);
+    ui_cards_rule();
 
     /* The left hand's manual: one line, always. */
     x = gfx_text(F_MONO8, X0, LEFT_Y + 8, "SELECT", C_DIM);
@@ -444,15 +399,17 @@ static void draw(void)
         gfx_dash_v(133, HEAD_Y, ROWS_Y - HEAD_Y + n * ROW_PITCH - 1, C_TITLE, 90);
     }
 
-    /* The twelve buttons, where they are under the hand. */
-    for (int b = 0; b < BTNS; b++) {
-        int w = (INNER - 10) / 6, bx = X0 + (b % 6) * (w + 2), y = BTN_Y + (b / 6) * (BTN_H + 1);
-        bool down = (held_btns >> btn_of[b]) & 1u, on = b == B_PLAY && is_playing;
-        const char *word = b == B_PLAY && is_playing ? "STOP" : btn_word[b];
-        gfx_slab(bx, y, w, BTN_H, on || down ? C_ACCENT : C_TEXT,
-                 on || down ? 255 : btn_live[b] ? 18 : 8);
-        gfx_text_mid(F_COND9, bx, w, y + 8, word,
-                     on || down ? C_ON_ACC : !btn_live[b] ? C_BEAT : b == B_BACK ? C_TITLE : C_TEXT);
+    {   /* The twelve buttons, where they are under the hand. What this
+         * build does not do yet is OFF: named, and it says it does nothing. */
+        static const char *const words[12] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
+                                               "\xE2\x80\xB9 SONG", "SAVE", "UNDO", "SONG", "PLAY", "REC" };
+        static const char *const playing_words[12] = { "FX", "LOOP", "INSTR", "CLEAR", "SELECT", "MIXER",
+                                                       "\xE2\x80\xB9 SONG", "SAVE", "UNDO", "SONG", "STOP", "REC" };
+        uint8_t st[12];
+        for (int b = 0; b < BTNS; b++)
+            st[b] = !btn_live[b] ? UI_BTN_OFF : b == B_BACK ? UI_BTN_BACK
+                    : b == B_PLAY && is_playing ? UI_BTN_LIVE : UI_BTN_ON;
+        ui_btn_map(is_playing ? playing_words : words, st, held_btns);
     }
 }
 
@@ -521,6 +478,7 @@ bool pattern_frame(const PlatInput *in)
             int n = len + d;
             song->patterns[track][pat].length =
                 (uint16_t)(n < 1 ? 1 : n > PATTERN_MAX_STEPS ? PATTERN_MAX_STEPS : n);
+            app_mark_dirty();
         } else if (cur_col <= COL_N4) {
             turn_note(cur_row, cur_col - COL_N1, d);
         } else if (cur_col == COL_IN) {
@@ -587,7 +545,7 @@ bool pattern_frame(const PlatInput *in)
         top = cur_row - ROWS + 1;
     play_row = is_playing && player_entry() == entry ? player_row() % len : -1;
     gfx_frame(draw);
-    if (PRESSED(B_BACK)) {
+    if (PRESSED(B_BACK) || PRESSED(B_SONG)) {
         song_pool_compact(song);
         return false;
     }

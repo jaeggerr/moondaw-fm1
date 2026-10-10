@@ -1,0 +1,32 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* The pieces every screen draws the same way: the four cards of KNOB
+ * 1-4 under the bar, and the twelve buttons at their place. One
+ * implementation, so a correction lands on every screen at once. */
+#ifndef UI_H
+#define UI_H
+
+#include <stdint.h>
+
+enum { UI_CARDS_Y = 22, UI_CARDS_H = 22 };
+
+char *ui_hex2(char *b, int v);
+char *ui_dec(char *b, int v);
+
+/* Card k of four. A null label is a knob that does nothing here: the
+ * card keeps its place and says so by being empty. */
+void ui_card(int k, const char *label, const char *value, const char *unit);
+void ui_cards_rule(void); /* the green line under them */
+
+/* What a button of the map is, this frame. */
+enum {
+    UI_BTN_NONE,  /* does nothing on this screen: an empty cell */
+    UI_BTN_OFF,   /* named, and not available now (or not written yet) */
+    UI_BTN_ON,
+    UI_BTN_BACK,  /* on, and it names where it leads: cyan */
+    UI_BTN_LIVE,  /* something is running: green */
+    UI_BTN_ASK,   /* a question waits on it: red */
+};
+/* `held` is PlatInput.btns: a button that is on shows green while down. */
+void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t held);
+
+#endif

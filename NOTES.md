@@ -362,6 +362,90 @@ none is needed to load the UF2 (BOOT button, copy to `RPI-RP2`).
 **Not done and not testable without hardware**: the XIAO itself, the
 wiring, and whether the tool talks to this FM-1.
 
+## 2026-10-10 — MENU proposed
+
+Jaeger on the player screen: "pourquoi l'écran d'accueil est moche ?" It
+is the provisional 8x8 screen from before the design direction was
+known; it goes. `proto/menu.html` is the screen that replaces it, and
+the list of songs the store already knows how to keep (32 slots) but
+nothing showed. **Proposed, not validated**: one column (the song in
+memory, the songs in flash, + NEW), SELECT walks it, OPEN on the EDIT
+button, DELETE where PATTERN has CLEAR and guarded by a second press,
+PLAY to hear without opening, no cards. Open: renaming (no letters on
+this machine), getting a song in from a computer, where OPEN leads until
+SONG exists.
+
+## 2026-10-10 — MENU written
+
+Validated as drawn, then written (`app/menu.c`, `app/app.c` rewritten
+around it; the 8x8 player screen is gone, `term.c` stays for the crash
+and update screens and the bring-up app).
+
+- One song in memory, up to 31 in flash. `app_slot` is its place, -1
+  while it has none; `app_dirty` is set by every write in PATTERN and
+  asked about when another song would replace it (SAVE / DISCARD on the
+  button map). Nothing saves itself.
+- **Slot 31 holds one byte: which song was open**, so the machine comes
+  back on it. It is rewritten only when it would change.
+- The list is read from flash when the screen opens and after each
+  change, never while drawing: a frame is drawn fifteen times.
+- **PLAY is lit on the song in memory only.** Hearing a song of the list
+  without opening it needs a second Song in RAM; the scratch buffer that
+  could hold one is the delay's memory.
+- A file handed over by the host (command line, web page) becomes the
+  song in memory, takes the slot of the song of the same name if there
+  is one, and is not written until SAVE.
+- **Regression to repair with the SONG screen**: the count of what a
+  file had that the FM-1 does not carry (samples, syllables...) was on
+  the old screen and is shown nowhere now. A save still loses them.
+- PATTERN's back label still says `‹ PHR` and goes to the MENU.
+- A new song has one block, on track 1: there is no way to reach another
+  track until PHRASE exists.
+- `tests/menu_test.c` walks all of it on a simulated flash.
+
+## 2026-10-10 — SONG proposed
+
+`proto/song.html`, **not validated**. One row a phrase, the eight tracks
+side by side, the block number in each cell. SELECT the phrase,
+ALGORITHM the track; all the way left is the phrase's number (the
+buttons then speak of the phrase, KNOB 1 is its length), all the way up
+is the song's own line (the four cards become BPM, SWING, TICKS,
+TRACKS). KNOB 1 on a cell walks the track's blocks, then ON, then empty;
+KNOB 2 is the cell's level. The buttons keep PATTERN's places; SEQ
+becomes `+ PHRASE`. What the FM-1 does not carry is written in the bar,
+in amber — the information the old screen gave.
+
+None of the 13 songs has a section, a title, a reference, a cell level
+or an ON cell (checked). Nothing real to draw, so none is drawn: the
+proto says so and proposes to DISPLAY sections and references as the app
+does and not to edit them here at first.
+
+## 2026-10-10 — SONG written
+
+Validated as drawn, then written (`app/songview.c`). The road is now
+MENU -> SONG -> PATTERN, and a block is opened from its cell, so every
+track of every phrase is reachable.
+
+- `app/ui.c` is where the cards and the button map are drawn, once, for
+  the three screens: a button is NONE, OFF, ON, BACK, LIVE or ASK.
+- Edits on SONG: KNOB 1 on a cell walks empty / ON / the track's blocks,
+  up to one past the last that holds something (that is how a block is
+  made); KNOB 2 the cell's level; KNOB 1 on a phrase's number its length
+  (up from AUTO starts at the phrase's own cycle); `+ PHRASE` copies the
+  phrase below itself without its name; DELETE with a second press.
+- **References are rows, so inserting or deleting a phrase renumbers
+  their targets** (`shift_refs`). A reference whose phrase is deleted
+  becomes an empty phrase — FORMAT.md says such references are deleted
+  with it and the screen says how many first; simplified here, and no
+  song has a reference yet.
+- Sections, titles and references are displayed minimally (a reference
+  shows `REF nn`) and not edited. Titles are not drawn at all.
+- PATTERN's back now says `‹ SONG` with the phrase beside it; the SONG
+  button leads there too.
+- The count of what the file had that the FM-1 does not carry is back,
+  in SONG's bar.
+- `tests/song_test.c` drives the screen with no display.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

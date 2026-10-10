@@ -12,9 +12,7 @@
 /* False when the phrase plays nothing on that track: there is no block
  * to open. */
 bool pattern_open(Song *s, int entry, int track);
-/* The app's: writes the song to flash, 0 when done. */
-int app_save(void);
-/* One frame. False once the hand asked to leave (HOME). */
+/* One frame. False once the hand asked to leave (HOME, or SONG). */
 bool pattern_frame(const PlatInput *in);
 
 #endif

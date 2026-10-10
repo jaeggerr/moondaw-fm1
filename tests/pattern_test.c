@@ -15,8 +15,9 @@ int plat_audio_load(int *worst) { *worst = -1; return -1; }
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { (void)o; (void)d; (void)n; return -1; }
 int plat_flash_erase(uint32_t s) { (void)s; return -1; }
 int plat_flash_prog(uint32_t o, const void *d, uint32_t n) { (void)o; (void)d; (void)n; return -1; }
-static int saves;
+static int saves, dirtied;
 int app_save(void) { return saves++, 0; }
+void app_mark_dirty(void) { dirtied++; }
 
 static Song song;
 static int fails;
@@ -137,6 +138,7 @@ int main(void)
 
     press(PB_SAVE);
     CHECK("SAVE asks the app to save, once", saves == 1);
+    CHECK("every edit told the app the song changed", dirtied > 20);
 
     in.btns = 1u << PB_HOME;
     CHECK("HOME leaves", !pattern_frame(&in));

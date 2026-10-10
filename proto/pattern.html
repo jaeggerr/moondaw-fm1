@@ -133,12 +133,15 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 /* un champ = un slot, plein ou vide */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
-.slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em; }
+.slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
+  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
+     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
-.slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; }
+.slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
 .slot.f{ background:rgba(240,190,90,.11); }
 .slot.f .m{ font-family:var(--cond); font-size:9px; font-weight:700;
-  letter-spacing:.05em; color:var(--fx); }
+  letter-spacing:.05em; color:var(--fx); position:relative; top:-.5px; }
 .slot.f .v{ font-family:var(--jb); font-size:8px; font-weight:500; margin-left:2px;
   font-variant-numeric:tabular-nums; }
 .slot.empty{ background:none; box-shadow:inset 0 0 0 .5px rgba(90,100,112,.5); }
@@ -347,6 +350,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
       petits et flous. Dans l'appareil et le simulateur, JetBrains Mono est dessinée en pixels
       entiers à 8 px : nette, et aucun pas perdu. Cette page ne peut pas le montrer, un navigateur
       lisse toujours. Le condensé gras reste lissé. ALGORITHM s'écrit ALGO pour tenir sur la ligne.</li>
+      <li><b>10/10 — le retour mène à SONG</b> tant que PHRASE n'existe pas : la barre dit
+      <code>‹ SONG</code> et la phrase d'où l'on vient est écrite à côté (<code>P02</code>). Le
+      bouton SONG y mène aussi.</li>
       <li><b>10/10 — les cartes sont en haut</b>, sous la barre, à la hauteur des potards
       qu'elles nomment. Les douze boutons restent en bas.</li>
     </ul>

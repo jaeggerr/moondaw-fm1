@@ -24,7 +24,8 @@
  *                            no window, no sound card: presses PLAY and
  *                            holds A4, checks the picture and that there
  *                            is sound, writes the screen; then opens
- *                            PATTERN and writes OUT-pattern.bmp */
+ *                            SONG, moves to that phrase and track, and
+ *                            PATTERN on it: OUT-song.bmp, OUT-pattern.bmp */
 #include <SDL.h>
 
 #include <stdbool.h>
@@ -295,12 +296,11 @@ static int selftest(const char *out, const char *song, int entry, int track)
     int lit = 0, peak = 0;
     double sum = 0;
 
-    nor_open(NULL);
+    nor_open(SDL_getenv("MOONDAW_FLASH")); /* read if named, never written back */
+    nor_path = NULL;
     app_init();
     if (song && !load_song(song, 0))
         return 1;
-    turn(PE_SELECT, entry);
-    turn(PE_ALGO, track);
     frame(0);
     kb_keys = 1u << 16; /* A4 */
     kb_btns = 1u << PB_PLAY;
@@ -322,14 +322,30 @@ static int selftest(const char *out, const char *song, int entry, int track)
         SDL_SaveBMP(sf, out);
         SDL_FreeSurface(sf);
     }
-    /* Then into PATTERN, as the hand would: EDIT, three steps down, one
-     * field right, and its picture beside the first. */
+    /* Then into PATTERN, as the hand would: OPEN (the EDIT button), three
+     * steps down, one field right, and its picture beside the first. */
     kb_keys = 0;
     kb_btns = 0;
     frame(1016);
-    kb_btns = 1u << PB_EDIT;
+    kb_btns = 1u << PB_EDIT; /* MENU -> SONG */
     frame(1032);
     kb_btns = 0;
+    turn(PE_SELECT, entry);
+    turn(PE_ALGO, track);
+    frame(1040);
+    frame(1041);
+    sf = SDL_CreateRGBSurfaceWithFormatFrom(canvas, CV_W, CV_H, 32, CV_W * 4,
+                                            SDL_PIXELFORMAT_ARGB8888);
+    if (sf) {
+        char path[512];
+        snprintf(path, sizeof path, "%.*s-song.bmp", (int)strlen(out) - 4, out);
+        SDL_SaveBMP(sf, path);
+        SDL_FreeSurface(sf);
+    }
+    kb_btns = 1u << PB_EDIT; /* SONG -> PATTERN, on that cell */
+    frame(1042);
+    kb_btns = 0;
+    frame(1043);
     turn(PE_SELECT, 3);
     turn(PE_ALGO, 1);
     frame(1048);
