@@ -933,6 +933,26 @@ use it: robot-demo, LEOMOTEUR, DAFT-PUNK, DAFT-PUNK-EN.
   `'LA`...). Fetching one back with `--get` over the original loses the
   words. The originals on the computer are the only full copies.
 
+## 2026-10-28 — FX and EDIT, MIXER validated
+
+Decided with Jaeger: **FX shows the effects of where one is** -- in
+PATTERN the steps' effects (its views), elsewhere the MIXER. **EDIT opens
+the PROJECT**: NAME, BPM, SWING, TICKS, METER, TRACKS. The tempo is not
+an effect.
+
+- The meter exists in the file (`meter 4 4` in all 13 songs) and in
+  moondaw's player; the FM-1 reads and writes it and uses it nowhere.
+  It should at least set which step numbers are white (the beat), today
+  every 4 by hand.
+
+**MIXER validated on the panel, 28/10** (`app/mock.c`): one row a track,
+VOL PAN REV ECH as the file writes them (pan `C`, `L18`, `R18`; a send
+at 0 in grey); KNOB 2 on a track's number goes normal, MUTE (`M`, red),
+SOLO (`S`, cyan; the others grey). Above track 1, out of sight until
+SELECT goes up, the `FX` row of the returns: ROOM DAMP TIME FB -- **the
+column names change with the row** (Jaeger: "très malin"). A trick to
+keep wherever a grid has a row of another kind.
+
 ## Open
 
 - The voice (VOX): sound, then writing syllables (above).
