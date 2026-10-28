@@ -98,6 +98,22 @@ int main(void)
     press(PB_SEL);
     CHECK("and they were written", song_step(&app_song, 0, 0, 0)->notes[0] == 73);
 
+    press(PB_HOME);
+    sel(-1);                  /* DEMO */
+    press(PB_PLAY);
+    CHECK("PLAY on another project opens it, to play it", !strcmp(app_name, "DEMO") && !app_dirty);
+    press(PB_SEQ);            /* still HOME: SEQ does nothing here */
+    CHECK("and the hand stays on HOME", !strcmp(app_name, "DEMO"));
+    press(PB_SEL);
+    press(PB_SEQ);
+    key(5);
+    press(PB_HOME);
+    sel(1);
+    press(PB_PLAY);
+    CHECK("over unsaved changes PLAY asks first", !strcmp(app_name, "DEMO") && app_dirty);
+    press(PB_SEL);
+    CHECK("SEL answers: the other one is opened, to play", !strcmp(app_name, "SONG 01") && !app_dirty);
+
     app_init();               /* off and on */
     go();
     CHECK("the machine comes back on the song that was open",

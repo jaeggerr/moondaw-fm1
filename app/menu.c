@@ -8,7 +8,8 @@
 /* HOME, as validated on the panel on 28/10 (NOTES.md): the projects by name
  * only, CONDENSED 20, eight rows; the open one marked by a bar at its left
  * and an amber dot while it has unsaved changes; + NEW last; the version
- * small at the bottom. SELECT moves, SEL opens. */
+ * small at the bottom. SELECT moves, SEL opens, PLAY plays the project
+ * under the cursor (opening it if it is not the open one). */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
 #ifndef MOONDAW_VERSION
@@ -25,6 +26,7 @@ static struct {
 } rows[APP_SONG_SLOTS + 1];
 static int nrows, open_row;
 static int cur, top, asking, pending; /* pending: the row the question is about */
+enum { ASK_NONE, ASK_OPEN, ASK_PLAY };   /* what the question leads to once answered */
 static uint32_t prev_btns;
 
 static bool before(const char *a, const char *b)
@@ -77,7 +79,7 @@ void menu_open(void)
 {
     refresh();
     scroll_to(open_row >= 0 ? open_row : 0, true);
-    asking = 0;
+    asking = ASK_NONE;
     prev_btns = 0xFFFFFFFFu;
     gfx_invalidate();
 }
@@ -92,8 +94,11 @@ static void draw_question(void)
     gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "SEL  lose them", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", C_DIM);
-    gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then opens ", C_DIM);
-    gfx_text(F_COND12, TEXT_X + gfx_text_w(F_COND12, "then opens "), y, name, C_DIM);
+    {
+        const char *then = asking == ASK_PLAY ? "then plays " : "then opens ";
+        gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, then, C_DIM);
+        gfx_text(F_COND12, TEXT_X + gfx_text_w(F_COND12, then), y, name, C_DIM);
+    }
 }
 
 static void draw(void)
@@ -135,6 +140,12 @@ static void load(int row)
         app_open_slot(rows[row].slot);
 }
 
+/* After loading for PLAY: it plays from the top, and the hand stays here. */
+static void play(void)
+{
+    player_play_song(0, false);
+}
+
 bool menu_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns;
@@ -143,19 +154,24 @@ bool menu_frame(const PlatInput *in)
     prev_btns = in->btns;
     if (asking) {
         /* The question's two buttons answer it; anything else is "stay". */
-        if (btns & 1u << PB_SAVE) {
-            if (app_save() == 0) {
-                load(pending);
-                open_it = true;
-            }
-        } else if (btns & 1u << PB_SEL) {
-            load(pending);
-            open_it = true;
-        } else if (!btns && !in->enc[PE_SELECT]) {
+        int then = asking;
+        bool answered = false;
+        if (btns & 1u << PB_SAVE)
+            answered = app_save() == 0;
+        else if (btns & 1u << PB_SEL)
+            answered = true;
+        else if (!btns && !in->enc[PE_SELECT]) {
             gfx_frame(draw);
             return false;
         }
-        asking = 0; /* "stay": the list as it was, the cursor where it was */
+        asking = ASK_NONE; /* "stay": the list as it was, the cursor where it was */
+        if (answered) {
+            load(pending);
+            if (then == ASK_PLAY)
+                play();
+            else
+                open_it = true;
+        }
         gfx_frame(draw);
         return open_it;
     }
@@ -167,17 +183,28 @@ bool menu_frame(const PlatInput *in)
             open_it = true;
         } else if (app_dirty) {
             pending = cur;
-            asking = 1;
+            asking = ASK_OPEN;
         } else {
             load(cur);
             open_it = true;
         }
     }
-    if (btns & 1u << PB_PLAY) { /* the open project, from anywhere in the list */
-        if (player_playing())
+    /* PLAY: the project under the cursor. One song fits in memory, so
+     * hearing another is opening it -- asked first over unsaved changes --
+     * without leaving HOME. */
+    if (btns & 1u << PB_PLAY && cur < nrows) {
+        if (cur == open_row && player_playing()) {
             player_stop();
-        else
-            player_play_song(0, false);
+        } else if (cur == open_row) {
+            play();
+        } else if (app_dirty) {
+            pending = cur;
+            asking = ASK_PLAY;
+        } else {
+            player_stop();
+            load(cur);
+            play();
+        }
     }
     plat_led_btn(PB_PLAY, player_playing());
     gfx_frame(draw);

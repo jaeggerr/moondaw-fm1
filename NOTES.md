@@ -815,7 +815,10 @@ spell them.
 - A song in memory with no place in flash (the built-in DEMO, a new one)
   has its row too, among the others by name.
 - Not on HOME any more: DELETE (it was not asked for), the flash usage,
-  CPU/MAX. PLAY still plays or stops the open project from the list.
+  CPU/MAX.
+- **PLAY plays the project under the cursor** (Jaeger, 28/10). One song
+  fits in memory, so on another row PLAY opens it -- asking first over
+  unsaved changes, "then plays" -- and the hand stays on HOME.
 - Trap of the day: a build that crashes (clang under colima's emulation,
   again) leaves the previous `build/moondaw.fwsc` in place; installing
   without checking the build's exit status put the mockup back on the
