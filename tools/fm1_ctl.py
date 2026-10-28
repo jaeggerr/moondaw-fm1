@@ -4,6 +4,8 @@
 its buttons, turn its knobs, play its keys, and write into the song in memory.
 
     tools/fm1_ctl.py status [--reset]          what plays, CPU and the worst block, the screen
+    tools/fm1_ctl.py status --profile [--reset]   the worst block stage by stage (us), the second core
+    tools/fm1_ctl.py status --boot             why it last started (P33 << 24 | PWR_CON), its last crash, CPU1
     tools/fm1_ctl.py press SEL [PLAY ...]      buttons, as printed (OCT- OCT+ too)
     tools/fm1_ctl.py turn K2 -3                a knob: SELECT ALGO PRESETS K1 K2 K3 K4
     tools/fm1_ctl.py key C-4 [--hold 20]       a key of the keyboard (F-3 .. G-5), held N frames
@@ -136,6 +138,8 @@ def main():
                     help="a simulator on this computer (default port 19780)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("status"); p.add_argument("--reset", action="store_true", help="start the worst block over")
+    p.add_argument("--profile", action="store_true", help="the worst block stage by stage, in microseconds, and the second core")
+    p.add_argument("--boot", action="store_true", help="why the machine last started, its last crash, the second core")
     p = sub.add_parser("press"); p.add_argument("buttons", nargs="+")
     p = sub.add_parser("turn"); p.add_argument("knob"); p.add_argument("by", type=int)
     p = sub.add_parser("key"); p.add_argument("notes", nargs="+"); p.add_argument("--hold", type=int, default=8)
@@ -160,7 +164,8 @@ def main():
         sys.exit(f"the device speaks version {version}: install a MOONDAW with the remote (version 2)")
 
     if a.cmd == "status":
-        print(checked(link.ask(port, STATUS, bytes([1 if a.reset else 0])))[3].decode("ascii", "replace").strip())
+        print(checked(link.ask(port, STATUS, bytes([(1 if a.reset else 0) | (2 if a.profile else 0) | (4 if a.boot else 0)])))[3]
+              .decode("ascii", "replace").strip())
     elif a.cmd in ("press", "turn", "key"):
         pressed, keys, turns, hold = 0, 0, [0] * 7, 0
         if a.cmd == "press":

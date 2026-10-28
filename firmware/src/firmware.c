@@ -194,6 +194,11 @@ extern uint32_t _ra_start[], _ra_end[], _ra_load[];
 extern uint32_t (*player_clock)(void) __attribute__((weak));
 extern int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg) __attribute__((weak));
 extern int (*player_wait_other)(void) __attribute__((weak));
+/* What the link reports (app/remote.c, `fm1_ctl.py status --boot`): why the last start happened -- P33's reset
+ * source (bit0 power-on, 1 VDDIO low, 2 watchdog, 3 VCM, 4 long press, 5 1.2 V, 6 soft) and PWR_CON's --, the
+ * last crash record, and the second core's state, kept current by the main loop. */
+static uint32_t plat_boot_info[10];
+extern const uint32_t *remote_boot_info __attribute__((weak));   /* app/remote.c, absent from the bring-up build */
 #if FM1_CPU1
 static int cpu1_run(void (*fn)(uint32_t), uint32_t arg) { return fm1_cpu1_run(fn, arg); }
 static int cpu1_wait(void) { return fm1_cpu1_wait(); }
@@ -313,6 +318,16 @@ static void fm1_main(void)
     fm1_adc_init();
     panel.magic = 0;                            /* no calibration here: always the measured default */
     panel_init();
+    plat_boot_info[0] = fm1_boot.p3_rst;
+    plat_boot_info[1] = fm1_boot.rst_src;
+    if (fm1_crash.magic == FM1_CRASH_MAGIC) {
+        plat_boot_info[2] = fm1_crash.count;
+        plat_boot_info[3] = fm1_crash.vec;
+        plat_boot_info[4] = fm1_crash.pc;
+        plat_boot_info[5] = fm1_crash.uptime_ms;
+    }
+    if (&remote_boot_info)
+        remote_boot_info = plat_boot_info;
     if (&player_clock)
         player_clock = fm1_us;
 #if FM1_CPU1
@@ -347,6 +362,12 @@ static void fm1_main(void)
     for (;;) {
         uint32_t m = fm1_ms;
         fm1_wdt_feed();
+#if FM1_CPU1
+        plat_boot_info[6] = fm1_cpu1_on;
+        plat_boot_info[7] = fm1_cpu1_gave_up;  /* FM1_CPU1_*: 1 misread, 2 late, 3 barred, 4 fault, 5 silent */
+        plat_boot_info[8] = fm1_cpu1_mb.jobs;
+        plat_boot_info[9] = fm1_cpu1_stack_used();
+#endif
         usb_retry(fm1_ms);
         if (fm1_ms > 30000u && bootguard.pending) {     /* a crash or hang in the first 30 s counts */
             bootguard.pending = 0;

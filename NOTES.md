@@ -1209,6 +1209,26 @@ chorus crackles were worked on main, then merged.
   headless over UDP (`tests/remote_dev.c`) and checks what lands in the
   file.
 
+## 2026-10-29 — the second core on the device
+
+Installed and measured with the remote (`fm1_ctl.py status --profile`,
+new: the worst block stage by stage over the link, and `--boot`: the
+reset source, the last crash, CPU1's state).
+
+- **CPU1 starts on this FM-1** (`cpu1=1`) and took every job it was
+  handed: 94,146 over four minutes of DAFT-PUNK-EN, none refused, never
+  retired, its stack 424 bytes deep.
+- **DPEN-CHORUS: MAX 87 -> 57**, the worst block 1,760 us of 2,902
+  (T171 O158 V272 C556 R383 E82, W54: CPU0 waits 54 us for CPU1's share).
+  DAFT-PUNK-EN whole: 36 to 57 by phrase, CPU 28 to 50. Room for more.
+- **One restart, not explained yet.** The first full play of
+  DAFT-PUNK-EN stopped answering around phrase 0B, about 75 s in, and
+  came back reopened, nothing playing, CPU1 still allowed (so not a CPU0
+  fault beside a running CPU1: that would have barred it). The P33 reset
+  source after it read 0x04, the watchdog: the main loop stopped feeding
+  it. The next full play (four minutes, the same song, the same spot
+  twice) ran clean. To watch: `status --boot` after any silence.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
