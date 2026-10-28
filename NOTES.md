@@ -741,6 +741,34 @@ list covering the notes, the RECEIVING panel.
 REC stays a proposal (`proto/rec.html`), unwritten, with its question
 about OFF unanswered. Not to be written before he has played the keys.
 
+## 2026-10-28 — the machine is here
+
+The day is in `docs/ARRIVEE.md`. What it changes here:
+
+- **Everything below the interface works on hardware**: the panel table,
+  LCD, keys, knobs, MASTER, audio, the store's link over USB-MIDI, the
+  update path, and OCT- + OCT+ into the ROM UBOOT.
+- **CPU is not a problem.** The demo playing: load under 1 % on average,
+  MAX 0..7 % of a 2.9 ms half (under 200 µs). The fallbacks listed in
+  "the engine in fixed point" are not needed; the meter itself is
+  proved by MAX moving.
+- **Recovery needs no XIAO**: felucca-bsp's `tools/fm1_rescue.py` talks
+  to the ROM UBOOT (4C4A:8057) from the Mac. Stock V15 enters it on the
+  USB-MIDI soft key `F0 22 24 35 7D F7`; our firmware on OCT- + OCT+ or
+  the boot guard. A full flash backup was taken that way.
+- **Felucca itself is no longer actively developed (16/10)**; its hardware
+  layer lives on as felucca-bsp (MPL-2.0), the base most alternative
+  firmwares now use. Ours is a hand copy of Felucca's drivers of 10/10.
+- M-VAVE's FM1 Open (20/10) opens its app, not its engine (binary SDK,
+  Windows build): not a base for MOONDAW, which has its own engine.
+
+**The interface, seen on the panel: "horrible, trop petit", to be
+rethought from A to Z.** Every screen above was drawn without the machine
+and, as said on 10/10, "validated" meant "not objected to". None of the
+layout decisions stand: type size, row height, what one screen shows,
+the button words on screen, the four cards. What stands is what the
+tests prove (core, store, link, undo, the edit code under the screens).
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

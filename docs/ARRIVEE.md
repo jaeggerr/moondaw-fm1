@@ -192,7 +192,7 @@ Installé le 28/10 par `tools/fm1_install.py build/moondaw.fwsc` (image
 - [x] **OCT− et OCT+ tenus 5 secondes** : l'écran s'éteint (le bandeau
       UBOOT ne se voit pas) et le Mac voit `WL80UBOOT1.00` (4C4A:8057).
       La porte de sortie marche ; c'est là que `fm1_rescue` prend la main.
-- [ ] Une mise à jour par-dessus (réinstaller le même paquet) passe.
+- [x] Une mise à jour par-dessus passe : MOONDAW installé sur `hello`.
 
 ## 6. MOONDAW
 
@@ -200,11 +200,18 @@ Installé le 28/10 par `tools/fm1_install.py build/moondaw.fwsc` (image
 ./build.sh
 ```
 
-- [ ] La démo joue. **CPU et MAX** sur l'écran de lecture : c'est LE chiffre
-      inconnu. Sous 70 % en moyenne et 90 % au pire, ça tient.
-- [ ] EDIT ouvre PATTERN : **est-ce lisible ?** Les notes, les petits
-      libellés en 8 px, les mots des boutons.
-- [ ] Écrire une note, SAVE, éteindre, rallumer : la note est là.
+Installé le 28/10 sur `hello` (image 102 172 B). `--info` ne le distingue
+pas de `hello` (tous deux `FM-1_900`) ; `fm1_send.py --ping` si :
+`link version 1, 290 KB free`, sur le port `Felucca`.
+
+- [x] La démo joue, proprement. **CPU 0, MAX entre 0 et 7 %** : le
+      compteur marche (MAX n'est pas nul), et la démo prend moins de 1 %
+      en moyenne, 200 µs au pire d'une demi de 2,9 ms. La marge est
+      énorme ; les replis prévus ne servent pas.
+- [x] EDIT ouvre PATTERN : **illisible**. « Horrible, trop petit » ;
+      l'interface est à repenser de A à Z (NOTES.md, 28/10).
+- [ ] Écrire une note, SAVE, éteindre, rallumer : la note est là. Remis à
+      plus tard : naviguer est trop pénible en l'état.
 - [ ] Pendant SAVE le son s'arrête (attendu : un effacement de secteur bloque
       les interruptions une cinquantaine de millisecondes).
 
