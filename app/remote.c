@@ -79,6 +79,58 @@ static uint32_t status(uint8_t *tail, bool reset)
     return (uint32_t)(t - tail);
 }
 
+/* The platform's record of the last start: the FM-1 points it at firmware.c's;
+ * elsewhere it stays null. */
+const uint32_t *remote_boot_info;
+
+static uint8_t *put_hex(uint8_t *t, uint8_t *end, const char *key, uint32_t v)
+{
+    char d[9];
+    for (int i = 0; i < 8; i++)
+        d[i] = "0123456789ABCDEF"[v >> (28 - 4 * i) & 15];
+    d[8] = 0;
+    return put(put(put(t, end, key), end, d), end, " ");
+}
+
+/* Why the machine last started, its last crash, and the second core. */
+static uint32_t boot(uint8_t *tail)
+{
+    uint8_t *t = tail, *end = tail + LINK_READ_MAX;
+    const uint32_t *b = remote_boot_info;
+    if (!b)
+        return (uint32_t)(put(t, end, "no record here") - tail);
+    t = put_hex(t, end, "rst=", b[0] << 24 | b[1]);
+    t = put_num(t, end, "crashes=", (int)b[2]);
+    t = put_hex(t, end, "vec=", b[3]);
+    t = put_hex(t, end, "pc=", b[4]);
+    t = put_num(t, end, "at_ms=", (int)b[5]);
+    t = put_num(t, end, "cpu1=", (int)b[6]);
+    t = put_num(t, end, "gave_up=", (int)b[7]);
+    t = put_num(t, end, "jobs=", (int)b[8]);
+    t = put_num(t, end, "stack=", (int)b[9]);
+    return (uint32_t)(t - tail);
+}
+
+/* The worst audio block's time, stage by stage, in microseconds (core/player.h): the
+ * line HOME draws while a song plays, and whether the second core is taking its share. */
+static uint32_t profile(uint8_t *tail, bool reset)
+{
+    static const char *const key[PROF_N] = { "T=", "O=", "V=", "C=", "R=", "E=", "W=" };
+    uint8_t *t = tail, *end = tail + LINK_READ_MAX;
+    uint32_t p[PROF_N + 1];
+    player_profile(p);
+    t = put_num(t, end, "cpu1=", player_run_other != 0);
+    for (int k = 0; k < PROF_N; k++)
+        t = put_num(t, end, key[k], (int)p[k]);
+    t = put_num(t, end, "block=", (int)p[PROF_N]);
+    t = put_num(t, end, "max=", app_worst);
+    if (reset) {
+        player_profile_reset();
+        app_worst = 0;
+    }
+    return (uint32_t)(t - tail);
+}
+
 /* ------------------------------------------------------------ writes --- */
 static bool track_ok(int t) { return t >= 0 && t < song->num_tracks; }
 static bool block_ok(int b) { return b >= 0 && b < TRACK_MAX_PATTERNS; }
@@ -155,7 +207,9 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
     *tail_n = 0;
     switch (cmd) {
     case LINK_CMD_STATUS:
-        *tail_n = status(tail, n >= 1 && (p[0] & 1));
+        /* bit 0: start the worst block over; bit 1: the profile line instead; bit 2: the boot record */
+        *tail_n = n >= 1 && (p[0] & 4) ? boot(tail)
+                  : n >= 1 && (p[0] & 2) ? profile(tail, p[0] & 1) : status(tail, n >= 1 && (p[0] & 1));
         return LINK_OK;
     case LINK_CMD_INPUT: {
         uint16_t seq;
