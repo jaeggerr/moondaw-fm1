@@ -862,6 +862,7 @@ column a track with the note it plays on that step, `--` when none.
 Five tracks a screen, not six: at six, `A-3C#3` ran together. SELECT
 the step, KNOB 1 the track; the section's number small at the top
 left. No role for KNOB 2 yet (transposing the note is a candidate).
+**SECTION validated on the panel, 28/10.**
 
 ## Open
 
