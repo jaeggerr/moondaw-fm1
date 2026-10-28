@@ -21,7 +21,8 @@
  *                        block's length)
  *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
  *   GLO   back where it was opened from     ENV  the INSTRUMENT of the step
- *   EDIT  the MIXER      ARP  UNDO          SAVE  PLAY  as printed */
+ *   EDIT  the PROJECT    ARP  UNDO          SAVE  PLAY  as printed
+ * FX is the views here, not the MIXER: FX shows the effects of where one is. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
 static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
 static const int view_cols[VIEWS] = { STEP_MAX_NOTES, STEP_MAX_FX, 1 };
@@ -110,6 +111,10 @@ static void turn_len(int d)
 }
 
 /* --------------------------------------------------------- drawing --- */
+/* The beat: its first step's number is white. The meter's steps a beat
+ * (PROJECT's STEP), not 4 by hand. */
+static int beat(void) { return song->steps_per_beat ? song->steps_per_beat : 4; }
+
 static void draw_cell(int v, int r, int c, bool band)
 {
     const Step *st = step_at(r);
@@ -181,7 +186,7 @@ static void draw(void)
             grid_band(v, PLAT_W - 4 - (len > GRID_ROWS ? 6 : 0));
         if (r == play_row)
             grid_playing(v, band);
-        grid_num(v, r, band, band && cur_col < 0, r == play_row ? C_TITLE : r % 4 ? C_DIM : C_TEXT);
+        grid_num(v, r, band, band && cur_col < 0, r == play_row ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
         for (int c = 0; c < cols; c++)
             draw_cell(v, r, c, band);
     }
@@ -332,7 +337,7 @@ int pattern_frame(const PlatInput *in)
     }
     if (PRESSED(PB_EDIT)) {
         player_note_off();
-        return PATTERN_MIXER;
+        return PATTERN_PROJECT;
     }
     return PATTERN_STAY;
 #undef PRESSED

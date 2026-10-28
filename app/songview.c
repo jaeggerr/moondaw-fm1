@@ -19,8 +19,9 @@
  *           alone, SEL takes it, GLO goes back); on the number: the SECTION
  *   SEQ     on a cell: its block, to edit; on the number: a copy of the phrase below
  *   LFO     on the number: delete the phrase (twice)
- *   EDIT    the MIXER      ARP  UNDO      SAVE  PLAY  as printed
- * The last four have no place in a mockup yet: provisional. */
+ *   FX      the MIXER      EDIT  the PROJECT
+ *   ARP     UNDO           SAVE  PLAY  as printed
+ * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
 enum { CELL_W = 31, CELLS = 6 };
 enum { POP_X = 46, POP_TOP = 18, POP_ROWS = 7 };
 
@@ -395,8 +396,10 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         else
             player_play_song(row, false);
     }
-    if (PRESSED(PB_EDIT))
+    if (PRESSED(PB_FX))
         out = SONGVIEW_MIXER;
+    if (PRESSED(PB_EDIT))
+        out = SONGVIEW_PROJECT;
 
     grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
     {

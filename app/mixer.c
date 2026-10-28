@@ -4,46 +4,54 @@
 #include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
+#include "grid.h"
 #include "ui.h"
 #include "undo.h"
 
-enum {
-    NAV_Y = 2, NAV_H = 17,
-    LEFT_Y = 49,
-    RET_Y = 60, CELL_H = 14,
-    TRACKS_Y = 75, ROWS_Y = 85, ROW_PITCH = 15,
-    CELL_W = 57, CELL_PITCH = 59,
-};
-enum { AT_MUTE = 2, AT_SOLO = 3, AT_BACK = 6, AT_SAVE = 7, AT_UNDO = 8, AT_PLAY = 10 };
+/* MIXER, as validated on the panel on 28/10 (NOTES.md), reached by FX:
+ * one row a track, VOL PAN REV ECH as the file writes them. Above track
+ * 1, out of sight until SELECT goes up, the row of the two returns, ROOM
+ * DAMP TIME FB -- the column names change with the row.
+ *
+ *   SELECT  the row     KNOB 1  the column; left of the first, the track's number
+ *   KNOB 2  the value; on a track's number: normal -> MUTE -> SOLO (monitoring,
+ *           never in the file)
+ *   GLO     back where it was opened from     ARP  UNDO     SAVE  PLAY  as printed */
+enum { CELL_W = 45, COLS = 4 };
 
 #define song (&app_song)
 
-static int row; /* -1 the returns, 0.. a track */
-static int entry;
-static char back_word[12];
-static uint32_t prev_btns, held;
-static bool playing;
-static int8_t saved;
+static int row, col, top, entry; /* row -1: the returns; col -1: the number */
+static const char *said;
+static uint32_t prev_btns;
 
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
+static int nrows(void) { return song->num_tracks + 1; }
 
-/* L18, C, R14: where the track sits, as a hand would say it. */
-static char *pan_word(char *b, int pan)
+static int state(int t) { return player_soloed(t) ? 2 : player_muted(t) ? 1 : 0; }
+
+static bool any_solo(void)
 {
-    if (pan == 0) {
-        b[0] = 'C';
-        b[1] = '\0';
-        return b;
-    }
-    b[0] = pan < 0 ? 'L' : 'R';
-    ui_dec(b + 1, pan < 0 ? -pan : pan);
-    return b;
+    for (int t = 0; t < song->num_tracks; t++)
+        if (player_soloed(t))
+            return true;
+    return false;
+}
+
+/* KNOB 2 on a track's number: normal, MUTE, SOLO, one at a time. */
+static void turn_state(int t, int d)
+{
+    int s = clampi(state(t) + d, 0, 2);
+    if ((s == 1) != player_muted(t))
+        player_toggle_mute(t);
+    if ((s == 2) != player_soloed(t))
+        player_toggle_solo(t);
 }
 
 static void turn(int k, int d)
 {
-    if (row == -1) {
-        uint8_t *f[4] = { &song->reverb_size, &song->reverb_damp, &song->delay_time, &song->delay_fb };
+    if (row < 0) {
+        uint8_t *f[COLS] = { &song->reverb_size, &song->reverb_damp, &song->delay_time, &song->delay_fb };
         undo_bytes(f[k], 1);
         *f[k] = (uint8_t)clampi(*f[k] + d, 0, k == 2 ? 96 : 127);
     } else {
@@ -61,146 +69,104 @@ static void turn(int k, int d)
     app_mark_dirty();
 }
 
-/* One cell: a word on the left, its value on the right, and a line that
- * draws the value -- its length for a level, a mark for a position. */
-static void cell(int k, int y, bool cur, const char *label, int font, uint16_t label_ink,
-                 const char *value, bool zero, int bar, int mark)
-{
-    int x = APP_X0 + k * CELL_PITCH, base = font == F_MONO8 ? y + 9 : y + 10;
-    gfx_slab(x, y, CELL_W, CELL_H, cur ? C_ACCENT : C_TEXT, cur ? 255 : 18);
-    gfx_text(font, x + 3, base, label, cur ? C_ON_ACC : label_ink);
-    gfx_text(F_MONO8, x + CELL_W - 3 - gfx_text_w(F_MONO8, value), y + 9, value,
-             cur ? C_ON_ACC : zero ? C_DIM : C_TEXT);
-    if (mark >= 0)
-        gfx_fill(x + 2 + mark, y + CELL_H - 3, 3, 2, cur ? C_ON_ACC : C_TITLE, 255);
-    else if (bar > 0)
-        gfx_fill(x + 2, y + CELL_H - 3, bar, 2, cur ? C_ON_ACC : C_DIM, cur ? 140 : 255);
-}
-
+/* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
-    static const char *const base_words[12] = { "", "", "MUTE", "SOLO", "", "", "", "SAVE", "UNDO", "", "PLAY", "" };
-    const char *w[12];
-    uint8_t st[12];
-    char a[12], back[20] = "\xE2\x80\xB9 ";
-    int x, i = 4;
-    bool cur = row == -1;
+    static const char *const track_head[COLS] = { "VOL", "PAN", "REV", "ECH" };
+    static const char *const fx_head[COLS] = { "ROOM", "DAMP", "TIME", "FB" };
+    char s[8];
 
-    for (const char *p = back_word; *p; p++)
-        back[i++] = *p;
-    back[i] = '\0';
+    grid_clear();
+    if (said)
+        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+    else
+        grid_corner("MIXER", C_DIM, 0, 0);
+    for (int c = 0; c < COLS; c++)
+        grid_head(GRID_CELL_X + c * CELL_W, CELL_W, row < 0 ? fx_head[c] : track_head[c], c == col);
+    for (int v = 0; v < GRID_ROWS && top + v < nrows(); v++) {
+        int r = top + v - 1, base = grid_base(v);
+        bool band = r == row, on_num = band && col < 0;
+        bool silent = r >= 0 && (player_muted(r) || (any_solo() && !player_soloed(r)));
+        uint16_t num = r < 0 || (r >= 0 && player_soloed(r)) ? C_TITLE : player_muted(r) ? C_MUTE : C_TEXT;
 
-    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
-    x = gfx_text(F_COND12, APP_X0, NAV_Y + 13, back, C_TITLE);
-    gfx_text(F_COND12, x + 6, NAV_Y + 13, app_name, C_TEXT);
-    if (saved) {
-        const char *m = saved > 0 ? "SAVED" : "NOT SAVED";
-        gfx_text(F_COND9, APP_X0 + APP_INNER - gfx_text_w(F_COND9, m), NAV_Y + 12, m,
-                 saved > 0 ? C_ACCENT : C_MUTE);
+        if (band)
+            grid_band(v, PLAT_W - 4 - (nrows() > GRID_ROWS ? 6 : 0));
+        if (on_num)
+            grid_hollow(v, GRID_NUM_X - 7, GRID_CELL_X - GRID_NUM_X + 3);
+        num = grid_ink(band, on_num, num);
+        if (r < 0) {
+            gfx_text(F_COND20, GRID_NUM_X, base, "FX", num);
+        } else {
+            int x;
+            s[0] = (char)('1' + r), s[1] = 0;
+            x = gfx_text(F_COND20, GRID_NUM_X, base, s, num);
+            if (state(r))
+                gfx_text(F_COND14, x + 5, base, state(r) == 1 ? "M" : "S", num);
+        }
+        for (int c = 0; c < COLS; c++) {
+            const TrackInit *t = r >= 0 ? &song->track_init[r] : 0;
+            int val = r < 0 ? (c == 0 ? song->reverb_size : c == 1 ? song->reverb_damp
+                               : c == 2 ? song->delay_time : song->delay_fb)
+                      : c == 0 ? t->volume : c == 1 ? t->pan : c == 2 ? t->send : t->echo;
+            if (r >= 0 && c == 1) { /* pan: C, L18, R18 */
+                s[0] = val < 0 ? 'L' : val > 0 ? 'R' : 'C', s[1] = 0;
+                if (val)
+                    ui_dec(s + 1, val < 0 ? -val : val);
+            } else {
+                ui_dec(s, val);
+            }
+            grid_cell(v, GRID_CELL_X + c * CELL_W, CELL_W, s, band, band && c == col,
+                      silent || (r >= 0 && c >= 2 && !val) ? C_DIM : C_TEXT);
+        }
     }
-    gfx_fill(APP_X0, NAV_Y + NAV_H, APP_INNER, 1, C_DIM, 77);
-
-    if (cur) {
-        ui_card(0, "ROOM", ui_dec(a, song->reverb_size), 0);
-        ui_card(1, "DAMP", ui_dec(a, song->reverb_damp), 0);
-        ui_card(2, "DELAY", ui_dec(a, song->delay_time), "ticks");
-        ui_card(3, "FEEDBACK", ui_dec(a, song->delay_fb), 0);
-    } else {
-        const TrackInit *t = &song->track_init[row];
-        ui_card(0, "VOLUME", ui_dec(a, t->volume), 0);
-        ui_card(1, "PAN", pan_word(a, t->pan), 0);
-        ui_card(2, "REVERB", ui_dec(a, t->send), 0);
-        ui_card(3, "DELAY", ui_dec(a, t->echo), 0);
-    }
-    ui_cards_rule();
-
-    x = gfx_text(F_MONO8, APP_X0, LEFT_Y + 8, "SELECT", C_DIM);
-    gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "TRACK", C_TEXT);
-
-    /* The two returns: the room, and the delay. They belong to the song. */
-    cell(0, RET_Y, cur, "ROOM", F_MONO8, C_DIM, ui_dec(a, song->reverb_size), false, song->reverb_size * 51 / 127, -1);
-    cell(1, RET_Y, cur, "DAMP", F_MONO8, C_DIM, ui_dec(a, song->reverb_damp), false, song->reverb_damp * 51 / 127, -1);
-    cell(2, RET_Y, cur, "DELAY", F_MONO8, C_DIM, ui_dec(a, song->delay_time), false, song->delay_time * 51 / 96, -1);
-    cell(3, RET_Y, cur, "FB", F_MONO8, C_DIM, ui_dec(a, song->delay_fb), false, song->delay_fb * 51 / 127, -1);
-
-    gfx_text(F_MONO8, APP_X0 + 2, TRACKS_Y + 8, "TRACKS", C_DIM);
-    for (int t = 0; t < song->num_tracks; t++) {
-        const TrackInit *ti = &song->track_init[t];
-        int y = ROWS_Y + t * ROW_PITCH;
-        bool c = row == t, muted = player_muted(t), solo = player_soloed(t);
-        char tag[3] = { 'T', (char)('1' + t), '\0' };
-
-        /* a muted track's number is red, a soloed one's green: monitoring, not the song */
-        cell(0, y, c, tag, F_COND11, muted ? C_MUTE : solo ? C_ACCENT : C_TEXT, ui_dec(a, ti->volume),
-             ti->volume == 0, ti->volume * 51 / 127, -1);
-        cell(1, y, c, "PAN", F_MONO8, C_DIM, pan_word(a, ti->pan), false, 0, (ti->pan + 64) * 49 / 127);
-        cell(2, y, c, "REV", F_MONO8, C_DIM, ui_dec(a, ti->send), ti->send == 0, ti->send * 51 / 127, -1);
-        cell(3, y, c, "ECH", F_MONO8, C_DIM, ui_dec(a, ti->echo), ti->echo == 0, ti->echo * 51 / 127, -1);
-    }
-
-    for (int b = 0; b < 12; b++) {
-        w[b] = b == AT_BACK ? back : b == AT_PLAY && playing ? "STOP" : base_words[b];
-        st[b] = b == AT_BACK ? UI_BTN_BACK : !w[b][0] ? UI_BTN_NONE : UI_BTN_ON;
-        if (b == AT_UNDO && !undo_can())
-            st[b] = UI_BTN_OFF; /* nothing to take back */
-        if ((b == AT_MUTE || b == AT_SOLO) && row < 0)
-            st[b] = UI_BTN_OFF; /* the returns are not a track */
-        if (b == AT_MUTE && row >= 0 && player_muted(row))
-            st[b] = UI_BTN_ASK; /* red while this track is cut */
-        if (b == AT_SOLO && row >= 0 && player_soloed(row))
-            st[b] = UI_BTN_LIVE;
-        if (b == AT_PLAY && playing)
-            st[b] = UI_BTN_LIVE;
-    }
-    ui_btn_map(w, st, held);
+    grid_frame(top, nrows());
 }
 
+/* -------------------------------------------------------------- api --- */
 void mixer_open(const char *back, int e)
 {
-    int i = 0;
-    for (; back[i] && i < (int)sizeof(back_word) - 1; i++)
-        back_word[i] = back[i];
-    back_word[i] = '\0';
+    (void)back;
     entry = e;
-    row = row >= app_song.num_tracks ? app_song.num_tracks - 1 : row;
-    saved = 0;
-    prev_btns = 0xFFFFFFFFu;
+    row = col = 0;
+    top = 1; /* the returns' row is above, out of sight */
+    said = 0;
+    prev_btns = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     gfx_invalidate();
 }
 
 bool mixer_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns;
-#define PRESSED(at) ((btns >> APP_BTN_AT[at]) & 1u)
+    int d, vis;
+#define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    held = in->btns;
-    playing = player_playing();
-    if (btns || in->enc[PE_SELECT])
-        saved = 0;
+    if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2])
+        said = 0;
 
     row = clampi(row + in->enc[PE_SELECT], -1, song->num_tracks - 1);
-    for (int k = 0; k < 4; k++)
-        if (in->enc[PE_K1 + k]) {
-            turn(k, in->enc[PE_K1 + k]);
-            saved = 0;
-        }
-    if (PRESSED(AT_MUTE) && row >= 0)
-        player_toggle_mute(row);
-    if (PRESSED(AT_SOLO) && row >= 0)
-        player_toggle_solo(row);
-    if (PRESSED(AT_UNDO) && undo_pop())
-        row = clampi(row, -1, song->num_tracks - 1);
-    if (PRESSED(AT_SAVE))
-        saved = app_save() == 0 ? 1 : -1;
-    if (PRESSED(AT_PLAY)) {
-        if (playing)
+    col = clampi(col + in->enc[PE_K1], -1, COLS - 1);
+    if ((d = in->enc[PE_K2]) != 0) {
+        if (col >= 0)
+            turn(col, d);
+        else if (row >= 0)
+            turn_state(row, d);
+    }
+    if (PRESSED(PB_ARP))
+        undo_pop();
+    if (PRESSED(PB_SAVE))
+        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+    if (PRESSED(PB_PLAY)) {
+        if (player_playing())
             player_stop();
         else
             player_play_song(entry, false);
     }
-    plat_led_btn(PB_PLAY, playing);
+
+    vis = row + 1; /* rows as drawn: the returns first */
+    grid_follow(&vis, &top, nrows(), GRID_ROWS);
+    plat_led_btn(PB_PLAY, player_playing());
     gfx_frame(draw);
-    return !PRESSED(AT_BACK);
+    return !PRESSED(PB_GLO);
 #undef PRESSED
 }

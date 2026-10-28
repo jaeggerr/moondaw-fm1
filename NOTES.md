@@ -953,11 +953,26 @@ SELECT goes up, the `FX` row of the returns: ROOM DAMP TIME FB -- **the
 column names change with the row** (Jaeger: "très malin"). A trick to
 keep wherever a grid has a row of another kind.
 
+## 2026-10-28 — MIXER and PROJECT written
+
+Both as validated (`app/mixer.c` rewritten on the grid, `app/project.c`
+new), installed the same day. FX opens the MIXER from SONG and the
+SECTION, EDIT the PROJECT from SONG, the SECTION and PATTERN; GLO goes
+back to whichever opened them.
+
+- **The meter is used**: the step numbers in white in the SECTION and
+  PATTERN follow STEP (steps a beat), no longer every 4 by hand.
+- A new name is written at the next SAVE, in the same slot; renaming
+  is not in UNDO.
+- MUTE and SOLO from the mixer are monitoring, as before: not saved.
+- The song's line is reachable again (PROJECT), so it leaves the list
+  of what the old screens took with them.
+
 ## Open
 
 - The voice (VOX): sound, then writing syllables (above).
-- The song's line (BPM, SWING, TICKS, TRACKS), LOOP, selection, mute,
-  cell levels: gone with the old screens, to be redesigned.
-- INSTRUMENT and MIXER: still the 10/10 look.
+- LOOP, the PATTERN selection, cell levels: gone with the old screens,
+  to be redesigned.
+- INSTRUMENT: still the 10/10 look.
 - The limiter; redo (no button for it).
 - `web/installer/` is copied, not adapted, not run.

@@ -15,7 +15,7 @@
  *
  *   SELECT  the step     KNOB 1  the track     the keys  write notes, OCT-/OCT+ their octave
  *   SEL     the block of that track, to edit   GLO  back to SONG
- *   EDIT    the MIXER    ARP  UNDO             SAVE  PLAY  as printed */
+ *   FX      the MIXER    EDIT  the PROJECT     ARP  UNDO     SAVE  PLAY  as printed */
 enum { CELL_W = 37, CELLS = 5 };
 
 #define song (&app_song)
@@ -48,6 +48,10 @@ static void measure(void)
 }
 
 /* ---------------------------------------------------------- drawing --- */
+/* The beat: its first step's number is white. The meter's steps a beat
+ * (PROJECT's STEP), not 4 by hand. */
+static int beat(void) { return song->steps_per_beat ? song->steps_per_beat : 4; }
+
 /* The first note; else OFF; else the step's first effect, in amber: something happens here. */
 static void draw_cell(int v, int t, int r, bool band)
 {
@@ -98,7 +102,7 @@ static void draw(void)
             grid_band(v, PLAT_W - 4 - (steps > GRID_ROWS ? 6 : 0));
         if (r == play_row)
             grid_playing(v, band);
-        grid_num(v, r, band, false, r == play_row ? C_TITLE : r % 4 ? C_DIM : C_TEXT);
+        grid_num(v, r, band, false, r == play_row ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
         for (int t = left; t < left + CELLS && t < song->num_tracks; t++)
             draw_cell(v, t, r, band);
     }
@@ -196,9 +200,13 @@ int phrase_frame(const PlatInput *in)
         player_note_off();
         return PHRASE_PATTERN;
     }
-    if (PRESSED(PB_EDIT)) {
+    if (PRESSED(PB_FX)) {
         player_note_off();
         return PHRASE_MIXER;
+    }
+    if (PRESSED(PB_EDIT)) {
+        player_note_off();
+        return PHRASE_PROJECT;
     }
     return PHRASE_STAY;
 #undef PRESSED

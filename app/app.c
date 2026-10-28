@@ -7,11 +7,12 @@
  *   SECTION  (phrase.c)    one phrase, step by step
  *   PATTERN  (pattern.c)   one block of one track, in three views
  *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
- *   MIXER    (mixer.c)     the tracks' levels and sends
+ *   MIXER    (mixer.c)     the tracks' levels and sends, the returns: FX
+ *   PROJECT  (project.c)   name, tempo, swing, meter, step, ticks, tracks: EDIT
  *
  * The road down is HOME -> SONG -> SECTION -> PATTERN, SEL a level down,
  * GLO a level up, HOME home from anywhere (NOTES.md, 28/10). INSTRUMENT
- * and MIXER still have the 10/10 look. */
+ * still has the 10/10 look. */
 #include "app.h"
 
 #include "../core/player.h"
@@ -28,6 +29,7 @@
 #include "phrase.h"
 #include "undo.h"
 #include "pattern.h"
+#include "project.h"
 #include "songview.h"
 
 Song app_song
@@ -41,8 +43,8 @@ bool app_dirty;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER } screen;
-static int mixer_from, pattern_from; /* the screen HOME leads back to */
+static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT } screen;
+static int mixer_from, project_from, pattern_from; /* the screen GLO leads back to */
 
 void app_mark_dirty(void) { app_dirty = true; }
 
@@ -253,6 +255,18 @@ static void draw_receiving(void)
     gfx_text(F_MONO8, x, 144, " KB", C_DIM);
 }
 
+/* Back from MIXER or PROJECT to the screen that opened it, as it was left. */
+static void back_to(int from)
+{
+    screen = from;
+    if (screen == AT_PATTERN)
+        pattern_resume();
+    else if (screen == AT_PHRASE)
+        phrase_resume();
+    else
+        loop_clear(), songview_open(false); /* the loop was a phrase's */
+}
+
 void app_frame(const PlatInput *in)
 {
     player_set_master(in->master);
@@ -294,15 +308,11 @@ void app_frame(const PlatInput *in)
     }
 
     if (screen == AT_MIXER) {
-        if (!mixer_frame(in)) { /* back where it was opened from */
-            screen = mixer_from;
-            if (screen == AT_PATTERN)
-                pattern_resume();
-            else if (screen == AT_PHRASE)
-                phrase_resume();
-            else
-                loop_clear(), songview_open(false); /* the loop was a phrase's */
-        }
+        if (!mixer_frame(in))
+            back_to(mixer_from);
+    } else if (screen == AT_PROJECT) {
+        if (!project_frame(in))
+            back_to(project_from);
     } else if (screen == AT_PHRASE) {
         switch (phrase_frame(in)) {
         case PHRASE_BACK:
@@ -320,6 +330,11 @@ void app_frame(const PlatInput *in)
             screen = AT_MIXER;
             mixer_from = AT_PHRASE;
             mixer_open("PHR", phrase_entry());
+            break;
+        case PHRASE_PROJECT:
+            screen = AT_PROJECT;
+            project_from = AT_PHRASE;
+            project_open();
             break;
         default:
             break;
@@ -346,10 +361,10 @@ void app_frame(const PlatInput *in)
             screen = AT_INSTRUMENT;
             instrument_open(pattern_instr(), pattern_entry());
             break;
-        case PATTERN_MIXER:
-            screen = AT_MIXER;
-            mixer_from = AT_PATTERN;
-            mixer_open("PAT", pattern_entry());
+        case PATTERN_PROJECT:
+            screen = AT_PROJECT;
+            project_from = AT_PATTERN;
+            project_open();
             break;
         default:
             break;
@@ -360,6 +375,11 @@ void app_frame(const PlatInput *in)
             screen = AT_MIXER;
             mixer_from = AT_SONG;
             mixer_open("SONG", songview_entry());
+            break;
+        case SONGVIEW_PROJECT:
+            screen = AT_PROJECT;
+            project_from = AT_SONG;
+            project_open();
             break;
         case SONGVIEW_PATTERN:
             if (pattern_open(&app_song, entry, track)) {

@@ -108,8 +108,11 @@ int main(void)
     CHECK("ARP takes the last edit back", E(0).steps != 0 || app_song.arrange_len == 3);
     press(PB_SAVE);
     CHECK("SAVE saves", saves == 1);
+    press(PB_FX);
+    CHECK("FX asks for the MIXER", last == SONGVIEW_MIXER);
+    go();
     press(PB_EDIT);
-    CHECK("EDIT asks for the MIXER", last == SONGVIEW_MIXER);
+    CHECK("EDIT asks for the PROJECT", last == SONGVIEW_PROJECT);
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
