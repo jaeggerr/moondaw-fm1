@@ -152,8 +152,16 @@ pour marcher. S'il s'installe et qu'on sait revenir à la V15 (le bouton
 chemin d'installation et le chemin de retour avec autre chose qu'un firmware
 qui n'a jamais tourné.
 
-- [ ] Felucca installé, joue.
-- [ ] Retour à la V15 officielle, joue.
+- [x] Felucca 1.7.0 installé le 28/10 par son installateur web, câble
+      direct, Chrome : identité `FM-1_917`, port MIDI `Felucca`. Son,
+      écran et commandes répondent.
+- [x] Retour à la V15 officielle : `FM-1_015`, port `USB Composite Device`.
+
+Felucca n'est plus développé activement depuis le 16/10 (maintenance
+« occasionnelle ») ; sa couche matérielle vit dans felucca-bsp, sur
+laquelle Felucca 1.7 et la plupart des firmwares alternatifs sont bâtis.
+MOONDAW porte une copie à la main des pilotes de Felucca du 10/10 : passer
+à felucca-bsp est à décider après le premier démarrage de MOONDAW.
 
 ## 5. Le firmware de test (`MOONDAW_APP=hello`)
 
