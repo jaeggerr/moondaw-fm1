@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* The grid every screen of the road is drawn as, since 28/10 (NOTES.md):
+ * SONG, the SECTION, PATTERN. CONDENSED 20 on rows of 28 px, eight rows
+ * under a line of small column names; the row's number fixed at the left,
+ * the columns to the right of a rule; the cursor's row a green band, the
+ * cursor's cell hollowed out of it.
+ *
+ * One grammar goes with it: SELECT the row, KNOB 1 the column (left of
+ * the first one, the row's number), KNOB 2 the value under the cursor,
+ * SEL one level down, GLO one level up, HOME home. */
+#ifndef GRID_H
+#define GRID_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+enum {
+    GRID_ROW = 28, GRID_ROWS = 8, GRID_HEAD = 16,
+    GRID_NUM_X = 14,  /* the row's number */
+    GRID_CELL_X = 50, /* the first column */
+    GRID_RIGHT = 234, /* columns end here: the scroll bar is to the right */
+};
+
+void grid_clear(void);
+int grid_y(int vis);    /* top of visible row `vis` */
+int grid_base(int vis); /* its baseline */
+
+/* A column's name, small, in the line above the rows; white when the
+ * cursor is in that column. */
+void grid_head(int x, int w, const char *s, bool on);
+/* The small words at the top left, over the numbers: where one is, or
+ * what just happened (SAVED, POOL FULL). */
+void grid_corner(const char *a, uint16_t ca, const char *b, uint16_t cb);
+
+/* The cursor's row: the green band, `w` wide from the left edge. */
+void grid_band(int vis, int w);
+/* The row's number; `on` when the cursor is on it (hollowed), `ink` its colour otherwise. */
+void grid_num(int vis, int n, bool band, bool on, uint16_t ink);
+/* A cell's text, centred in [x, x + w); `on` when the cursor is on it. */
+void grid_cell(int vis, int x, int w, const char *s, bool band, bool on, uint16_t ink);
+/* The colour a cell's text takes: on the band, hollowed, or as it is. */
+uint16_t grid_ink(bool band, bool on, uint16_t ink);
+void grid_hollow(int vis, int x, int w);
+/* The triangle of what plays, left of the number. */
+void grid_playing(int vis, bool band);
+/* The rule between the numbers and the columns, and the scroll bar when
+ * `n` rows do not fit. */
+void grid_frame(int top, int n);
+
+/* Keeps *cur in [0, n) and *first so that *cur is one of `shown`. */
+void grid_follow(int *cur, int *first, int n, int shown);
+/* As hex, two digits. */
+char *grid_hex2(char *b, int v);
+
+#endif

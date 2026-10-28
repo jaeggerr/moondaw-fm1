@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The PHRASE screen, after proto/phrase.html: the eight tracks of one
- * phrase side by side, one row a step, the cell is the step's first
- * note. What SONG does not show (the notes) and PATTERN does not (the
- * other tracks). */
+/* The SECTION screen (a "phrase" in the file), validated on the panel on
+ * 28/10: the tracks of one phrase side by side, one row a step, the cell
+ * is the step's first note. phrase.c says how the hands move on it. */
 #ifndef PHRASE_H
 #define PHRASE_H
 

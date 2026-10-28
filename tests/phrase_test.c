@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* PHRASE's hands without a screen: where the cursor may go, what the
- * keys and the two knobs write, and into which step of which block. */
+/* The SECTION's hands without a screen: where the cursor may go, what
+ * the keys write, and into which step of which block. */
 #include <stdio.h>
 #include <string.h>
 
@@ -45,58 +45,33 @@ int main(void)
 {
     trk_load(&app_song, trk, sizeof trk - 1, NULL);
     player_init(&app_song);
-
-    phrase_open(0, 1);
+    phrase_open(0, 0);
     go();
-    CHECK("a track the phrase leaves out is not where the cursor lands", phrase_track() == 2);
-    enc(PE_ALGO, -1);
-    CHECK("ALGORITHM steps over it", phrase_track() == 0);
-    enc(PE_ALGO, -1);
-    CHECK("and stops at the first track", phrase_track() == 0);
 
+    enc(PE_K1, 1);
+    CHECK("KNOB 1 goes to the next track, even one the phrase leaves out", phrase_track() == 1);
+    CHECK("SEL there opens nothing", press(PB_SEL) == PHRASE_STAY);
+    enc(PE_K1, -5);
+    CHECK("and stops at the first track", phrase_track() == 0);
     enc(PE_SELECT, 5);
     CHECK("a short block repeats: row 5 of the phrase is its step 1", phrase_row() == 1);
-    key(7); /* the eighth key: C4 */
+    key(7);
     CHECK("a key writes the first note, in the step that plays there", st(0, 1)->notes[0] == 60);
-    enc(PE_K1, 2);
-    CHECK("KNOB 1 moves it by semitones", st(0, 1)->notes[0] == 62);
-    enc(PE_K2, -1);
-    CHECK("KNOB 2 by octaves", st(0, 1)->notes[0] == 50);
     in.keys = 1u << 7; go(); in.keys |= 1u << 11; go(); in.keys = 0; go();
     CHECK("a second key held with the first makes a chord", st(0, 1)->notes[0] == 60 && st(0, 1)->notes[1] == 64);
-    press(PB_LFO);
-    CHECK("CLEAR empties the step", step_is_empty(st(0, 1)));
+    press(PB_OCTUP);
+    key(7);
+    CHECK("OCT+ moves the keyboard an octave", st(0, 1)->notes[0] == 72);
     enc(PE_SELECT, 100);
     CHECK("SELECT stops at the phrase's last step", phrase_row() == 3);
-
-    enc(PE_SELECT, -100);
-    app_dirty = false;
-    key(7);
-    enc(PE_K1, 1);
-    press(PB_LFO);
-    CHECK("on a column head nothing is written", !app_dirty && st(0, 0)->notes[0] == 60);
-    press(PB_ENV);
-    CHECK("MUTE cuts the track under the cursor", player_muted(0) && !player_muted(2));
-    press(PB_ENV);
-    CHECK("and gives it back", !player_muted(0));
-
-    enc(PE_PRESET, 1);
-    CHECK("PRESETS goes to the next phrase", phrase_entry() == 1);
-    enc(PE_ALGO, 1);
-    CHECK("where track 2 has a block the cursor stops on it", phrase_track() == 1);
-    enc(PE_PRESET, 1);
-    CHECK("and no further than the last", phrase_entry() == 1);
-    enc(PE_PRESET, -1);
-    CHECK("back on a phrase without it, the cursor moves off", phrase_entry() == 0 && phrase_track() != 1);
-
-    CHECK("OPEN asks for PATTERN", press(PB_EDIT) == PHRASE_PATTERN);
+    CHECK("SEL asks for PATTERN", press(PB_SEL) == PHRASE_PATTERN);
     phrase_resume();
     go();
-    CHECK("MIXER for the mixer", press(PB_GLO) == PHRASE_MIXER);
+    CHECK("EDIT for the mixer", press(PB_EDIT) == PHRASE_MIXER);
     phrase_resume();
     go();
-    CHECK("HOME leaves", press(PB_HOME) == PHRASE_BACK);
+    CHECK("GLO leaves", press(PB_GLO) == PHRASE_BACK);
 
     printf("phrase test: %s\n", fails ? "FAIL" : "ok");
-    return fails != 0;
+    return fails ? 1 : 0;
 }

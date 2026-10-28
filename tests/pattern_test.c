@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* PATTERN's hands, without a screen: inputs go in as the panel would
- * send them and the song is read back. */
+ * send them (three views that FX turns through, KNOB 1 the column, KNOB 2
+ * the value) and the song is read back. */
 #include <stdio.h>
 #include <string.h>
 
@@ -46,106 +47,80 @@ int main(void)
     pattern_open(&song, 0, 0);
     go(); /* the frame after the way in: nothing held counts as a press */
 
-    /* the keys: A4 is key 16 (F3 = 53) */
+    /* NOTES */
     enc(PE_SELECT, 2);
-    keys(1u << 16);
+    keys(1u << 16); keys(0);
     CHECK("a key writes its note under the cursor", st(2)->notes[0] == 69);
-    keys(1u << 16 | 1u << 19);
-    keys(1u << 16 | 1u << 19 | 1u << 23);
+    keys(1u << 16); keys(1u << 16 | 1u << 19); keys(1u << 16 | 1u << 19 | 1u << 23); keys(0);
     CHECK("keys held together fill the next slots", st(2)->notes[1] == 72 && st(2)->notes[2] == 76);
-    keys(0);
     press(PB_OCTUP);
-    keys(1u << 16);
+    keys(1u << 16); keys(0);
     CHECK("OCT+ moves the keyboard an octave", st(2)->notes[0] == 81);
-    keys(0);
     press(PB_OCTDN);
-
-    /* KNOB 1 and 2 on a note */
-    enc(PE_K1, -2);
-    CHECK("KNOB 1 is semitones", st(2)->notes[0] == 79);
-    enc(PE_K2, -1);
-    CHECK("KNOB 2 is octaves", st(2)->notes[0] == 67);
-    enc(PE_SELECT, 1);
-    enc(PE_K1, 1);
-    CHECK("an empty slot starts from the note above", st(3)->notes[0] == 67);
-    enc(PE_K1, -100);
-    CHECK("all the way down empties the slot", st(3)->notes[0] == NOTE_NONE);
-    enc(PE_K1, 1);
-    enc(PE_K1, -(67 - NOTE_MIN) - 1);
-    CHECK("under the lowest note of N1: OFF", st(3)->notes[0] == NOTE_OFF);
-    enc(PE_ALGO, 1);
-    enc(PE_K1, 1);
-    CHECK("a note on a cut step replaces the cut", st(3)->notes[0] == NOTE_NONE && st(3)->notes[1] <= NOTE_MAX);
-
-    /* instrument */
-    enc(PE_ALGO, 3);
+    enc(PE_K2, -2);
+    CHECK("KNOB 2 on a note is semitones", st(2)->notes[0] == 79);
     enc(PE_K1, 3);
-    CHECK("KNOB 1 on IN picks the instrument", st(3)->instrument == 2);
-    enc(PE_K1, -10);
-    CHECK("and under 00 there is none", st(3)->instrument == INSTR_NONE);
+    keys(1u << 0); keys(0);
+    CHECK("KNOB 1 picks the note: a key writes into slot 4", st(2)->notes[3] == 53);
+    enc(PE_K1, -3);
+    enc(PE_SELECT, 1);
+    enc(PE_K2, 1);
+    CHECK("an empty slot starts from the note above", st(3)->notes[0] == 79);
+    enc(PE_K2, -100); /* a frame holds an int8_t of detents */
+    enc(PE_K2, -100);
+    CHECK("all the way down: OFF, then empty", st(3)->notes[0] == NOTE_NONE);
 
-    /* fx: alphabetical from ---, ARP is the first */
+    /* FX */
     enc(PE_SELECT, -3);
-    enc(PE_ALGO, 2); /* FX2 of step 0, whose FX1 is GAT03 */
+    press(PB_FX);
+    CHECK("the effect GAT is in place", st(0)->fx[0].cmd == FX_GAT);
     enc(PE_K1, 1);
-    CHECK("the first effect after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
-    for (int i = 0; i < 40 && st(0)->fx[1].cmd != FX_PAN; i++)
-        enc(PE_K1, 1);
+    enc(PE_K3, 1);
+    CHECK("KNOB 3 on an effect: the first after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
+    enc(PE_K3, -1);
     {
         bool saw_gat = false;
-        enc(PE_K1, -40);
         for (int i = 0; i < 40; i++) {
-            enc(PE_K1, 1);
+            enc(PE_K3, 1);
             saw_gat |= st(0)->fx[1].cmd == FX_GAT;
         }
         CHECK("an effect already on the row is stepped over", !saw_gat);
         CHECK("the list ends on WAV", st(0)->fx[1].cmd == FX_WAV);
     }
-    enc(PE_K1, -1);
+    enc(PE_K3, -1);
     CHECK("before WAV: VOL", st(0)->fx[1].cmd == FX_VOL);
     enc(PE_K2, 100);
     enc(PE_K2, 100);
-    CHECK("VOL stops at 7F", st(0)->fx[1].val == 0x7F);
+    CHECK("KNOB 2 is the value: VOL stops at 7F", st(0)->fx[1].val == 0x7F);
     enc(PE_K1, -1);
-    CHECK("before VOL: VIB", st(0)->fx[1].cmd == FX_VIB);
-    enc(PE_K2, -100);
-    enc(PE_K3, -100);
-    enc(PE_K2, 5);
-    enc(PE_K3, 3);
-    CHECK("a pair is two knobs, one per nibble", st(0)->fx[1].val == 0x53);
-    enc(PE_ALGO, -1);
-    enc(PE_K2, 100);
+    enc(PE_K2, 50);
     CHECK("GAT cannot outlast its step", st(0)->fx[0].val == song.ticks_per_step);
 
-    /* the buttons */
-    press(PB_LFO);
-    CHECK("CLEAR empties the slot under the cursor", st(0)->fx[0].cmd == FX_NONE && st(0)->notes[0] == 60);
-    enc(PE_ALGO, -9);
-    enc(PE_K1, -4);
-    CHECK("KNOB 1 on the step number is the length", song.patterns[0][0].length == 12);
-    press(PB_LFO);
-    CHECK("CLEAR on the step number empties the step", step_is_empty(st(0)));
+    /* INS */
     press(PB_FX);
-    enc(PE_K1, 1);
-    CHECK("FX goes to the first free fx slot", st(0)->fx[0].cmd == FX_ARP);
+    enc(PE_SELECT, 2);
+    enc(PE_K2, 3);
+    CHECK("KNOB 2 on INS picks the instrument", st(2)->instrument == 2);
+    enc(PE_K2, -10);
+    CHECK("and under 00 there is none", st(2)->instrument == INSTR_NONE);
+    press(PB_FX);
 
-    /* PRESETS */
-    enc(PE_PRESET, 1);
-    CHECK("PRESETS steps to the track's next block, in the phrase",
-          song.arrangement[0].pattern[0] == 1 && st(0)->notes[0] == 64);
-    enc(PE_PRESET, 1);
-    CHECK("and wraps", song.arrangement[0].pattern[0] == 0);
+    /* the step's number */
+    enc(PE_K1, -1);
+    enc(PE_K2, -4);
+    CHECK("KNOB 2 on the step's number is the block's length", song.patterns[0][0].length == 12);
 
     press(PB_SAVE);
     CHECK("SAVE asks the app to save, once", saves == 1);
-    CHECK("every edit told the app the song changed", dirtied > 20);
-
+    CHECK("every edit told the app the song changed", dirtied > 10);
     in.btns = 1u << PB_ENV;
-    CHECK("INSTR asks for the instrument of the step", pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 0);
+    CHECK("ENV asks for the instrument of the step", pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 0);
     in.btns = 0;
+    pattern_resume();
     go();
-    in.btns = 1u << PB_HOME;
-    CHECK("HOME leaves", pattern_frame(&in) == PATTERN_BACK);
+    in.btns = 1u << PB_GLO;
+    CHECK("GLO leaves", pattern_frame(&in) == PATTERN_BACK);
+
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

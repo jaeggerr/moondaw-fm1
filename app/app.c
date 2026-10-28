@@ -2,13 +2,16 @@
 /* The tracker on the three backends: one song in memory, and the screens
  * that take turns in front of it.
  *
- *   MENU     (menu.c)      where the machine opens: the songs in flash
+ *   HOME     (menu.c)      where the machine opens: the projects, by name
  *   SONG     (songview.c)  the arrangement: phrases down, tracks across
- *   PATTERN  (pattern.c)   one block of one track
+ *   SECTION  (phrase.c)    one phrase, step by step
+ *   PATTERN  (pattern.c)   one block of one track, in three views
  *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
- *   MIXER    (mixer.c)     the tracks' levels and sends; from SONG or PATTERN
+ *   MIXER    (mixer.c)     the tracks' levels and sends
  *
- * PHRASE is not written: a block is opened from its cell in SONG. */
+ * The road down is HOME -> SONG -> SECTION -> PATTERN, SEL a level down,
+ * GLO a level up, HOME home from anywhere (NOTES.md, 28/10). INSTRUMENT
+ * and MIXER still have the 10/10 look. */
 #include "app.h"
 
 #include "../core/player.h"
@@ -280,6 +283,10 @@ void app_frame(const PlatInput *in)
         bool home = (in->btns & ~prev_btns) >> PB_HOME & 1u;
         prev_btns = in->btns;
         if (home && screen != AT_MENU) {
+            if (screen == AT_SONG)
+                songview_cancel(); /* a block being previewed goes back to what it was */
+            player_note_off();
+            song_pool_compact(&app_song);
             screen = AT_MENU;
             loop_clear();
             menu_open();
@@ -324,7 +331,7 @@ void app_frame(const PlatInput *in)
         }
     } else if (screen == AT_PATTERN) {
         switch (pattern_frame(in)) {
-        case PATTERN_BACK: /* HOME: back where it was opened from */
+        case PATTERN_BACK: /* GLO: back where it was opened from */
             if (pattern_from == AT_PHRASE) {
                 screen = AT_PHRASE;
                 phrase_resume();
@@ -349,10 +356,6 @@ void app_frame(const PlatInput *in)
         }
     } else if (screen == AT_SONG) {
         switch (songview_frame(in, &entry, &track)) {
-        case SONGVIEW_MENU:
-            screen = AT_MENU;
-            menu_open();
-            break;
         case SONGVIEW_MIXER:
             screen = AT_MIXER;
             mixer_from = AT_SONG;

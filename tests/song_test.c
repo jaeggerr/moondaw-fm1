@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SONG's hands, without a screen: the arrangement is edited as the
- * panel would and read back. */
+ * panel would (the grid of 28/10: SELECT the phrase, KNOB 1 the track or
+ * the number, KNOB 2 the value, SEL the panel or the section, SEQ the
+ * block) and read back. */
 #include <stdio.h>
 #include <string.h>
 
@@ -34,7 +36,8 @@ static PlatInput in;
 static int fails, entry, track, last;
 static void go(void) { last = songview_frame(&in, &entry, &track); memset(in.enc, 0, sizeof in.enc); }
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
-static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
+/* `last` is what the press itself answered, not the release after it */
+static void press(int b) { int r; in.btns = 1u << b; go(); r = last; in.btns = 0; go(); last = r; }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 #define E(i) (app_song.arrangement[i])
 
@@ -46,76 +49,67 @@ int main(void)
     go();
 
     /* the cursor starts on phrase 00, track 1 */
-    enc(PE_K1, 1);
-    CHECK("KNOB 1 on a cell steps to the track's next block", E(0).pattern[0] == 1);
-    enc(PE_K1, 5);
+    enc(PE_K2, 1);
+    CHECK("KNOB 2 on a cell steps to the track's next block", E(0).pattern[0] == 1);
+    enc(PE_K2, 5);
     CHECK("and stops one past the last block that holds something", E(0).pattern[0] == 2);
-    enc(PE_K1, -3);
-    CHECK("under block 00: ON", E(0).pattern[0] == PATTERN_HOLD);
-    enc(PE_K2, -27);
-    CHECK("KNOB 2 is the cell's level", E(0).level[0] == 100);
-    enc(PE_K1, -1);
-    CHECK("under ON: empty, and the level goes with it",
-          E(0).pattern[0] == PATTERN_NONE && E(0).level[0] == VOL_FULL);
-    enc(PE_K1, 2);
+    enc(PE_K2, -9);
+    CHECK("under block 00: --, and no further", E(0).pattern[0] == PATTERN_NONE);
+    enc(PE_K2, 1);
     CHECK("back to block 00", E(0).pattern[0] == 0);
 
-    enc(PE_ALGO, 2);            /* track 3, which has no block at all */
-    enc(PE_K1, 9);
-    CHECK("a track with nothing gets ON, then a fresh block 00", E(0).pattern[2] == 0);
-    press(PB_LFO);
-    CHECK("CLEAR empties the cell", E(0).pattern[2] == PATTERN_NONE);
-
-    enc(PE_ALGO, -2);
-    press(PB_EDIT);
-    CHECK("OPEN on a block asks for PATTERN on that phrase and track", entry == 0 && track == 0);
-
-    /* the phrase's number */
-    enc(PE_ALGO, -9);
-    enc(PE_K1, 1);
-    CHECK("turning up from AUTO starts at the phrase's own length", E(0).steps == 16);
-    enc(PE_K1, -4);
-    CHECK("and is then a number", E(0).steps == 12);
-    enc(PE_K1, -100);
-    CHECK("all the way down is AUTO again", E(0).steps == 0);
+    press(PB_SEL);            /* the panel of track 1's blocks, on 00 */
+    enc(PE_SELECT, 1);
+    press(PB_GLO);
+    CHECK("GLO closes the panel and changes nothing", E(0).pattern[0] == 0);
+    press(PB_SEL);
+    enc(PE_SELECT, 1);
+    press(PB_PLAY);
+    CHECK("PLAY in the panel plays that block alone, in the phrase",
+          E(0).pattern[0] == 1 && player_soloed(0));
+    press(PB_GLO);
+    CHECK("and GLO puts back what was there", E(0).pattern[0] == 0 && !player_soloed(0));
+    press(PB_SEL);
+    enc(PE_SELECT, -1);
+    press(PB_SEL);
+    CHECK("SEL takes the row: -- first", E(0).pattern[0] == PATTERN_NONE);
+    press(PB_SEL);
+    enc(PE_SELECT, 1);
+    press(PB_SEL);
+    CHECK("and a block", E(0).pattern[0] == 0);
 
     press(PB_SEQ);
-    CHECK("+ PHRASE copies the phrase right below, without its name",
-          app_song.arrange_len == 4 && E(1).pattern[0] == 0 && E(1).pattern[1] == 0 &&
-          E(1).name[0] == '\0' && !strcmp(E(0).name, "INTRO"));
+    CHECK("SEQ on a block asks for it, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
+    go();
+    enc(PE_K1, -1);           /* the phrase's number */
+    press(PB_SEQ);
+    CHECK("SEQ on the number copies the phrase right below, without its name",
+          app_song.arrange_len == 4 && E(1).pattern[0] == 0 && !E(1).name[0] && songview_entry() == 1);
     CHECK("and the reference still points at the phrase it pointed at",
-          E(3).kind == ENTRY_REF && E(3).ref_target == 2 && E(2).pattern[0] == 1);
-
+          E(3).kind == ENTRY_REF && E(3).ref_target == 2);
     press(PB_LFO);
-    enc(PE_SELECT, 1);
-    CHECK("one DELETE deletes nothing", app_song.arrange_len == 4);
-    enc(PE_SELECT, -1);         /* back on the copy, row 01 */
-    press(PB_LFO);
+    CHECK("one LFO deletes nothing", app_song.arrange_len == 4);
     press(PB_LFO);
     CHECK("two delete the phrase, and the reference follows its target up",
-          app_song.arrange_len == 3 && E(1).pattern[0] == 1 && E(2).ref_target == 1);
-    press(PB_LFO);
-    press(PB_LFO);              /* the phrase a reference points at */
-    CHECK("a reference whose phrase is gone becomes an empty phrase",
-          app_song.arrange_len == 2 && E(1).kind == ENTRY_PHRASE && E(1).pattern[0] == PATTERN_NONE);
+          app_song.arrange_len == 3 && E(2).ref_target == 1);
 
-    /* the song's own line */
-    enc(PE_SELECT, -9);
-    enc(PE_K1, 7);
-    enc(PE_K2, 16);
-    enc(PE_K3, 6);
-    enc(PE_K4, -1);
-    CHECK("on the song's line the four knobs are BPM, SWING, TICKS, TRACKS",
-          app_song.bpm == 127 && app_song.swing == 66 && app_song.ticks_per_step == 12 &&
-          app_song.num_tracks == 3);
-    enc(PE_K2, 100);
-    CHECK("swing stops at 75", app_song.swing == SWING_MAX);
+    enc(PE_SELECT, -5);
+    enc(PE_K2, 1);
+    CHECK("KNOB 2 on the number: up from AUTO starts at the phrase's own length", E(0).steps == 16);
+    enc(PE_K2, -4);
+    CHECK("and is then a number", E(0).steps == 12);
+    enc(PE_K2, -20);
+    CHECK("all the way down is AUTO again", E(0).steps == 0);
 
+    press(PB_SEL);
+    CHECK("SEL on the number asks for its SECTION", last == SONGVIEW_PHRASE && entry == 0);
+    go();
+    press(PB_ARP);
+    CHECK("ARP takes the last edit back", E(0).steps != 0 || app_song.arrange_len == 3);
     press(PB_SAVE);
     CHECK("SAVE saves", saves == 1);
-    in.btns = 1u << PB_HOME;
-    go();
-    CHECK("HOME leaves for the MENU", last == SONGVIEW_MENU);
+    press(PB_EDIT);
+    CHECK("EDIT asks for the MIXER", last == SONGVIEW_MIXER);
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

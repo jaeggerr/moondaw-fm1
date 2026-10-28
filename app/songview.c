@@ -4,33 +4,41 @@
 #include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
+#include "grid.h"
 #include "ui.h"
 #include "undo.h"
 
-enum {
-    NAV_Y = 2, NAV_H = 17,
-    LEFT_Y = 49,
-    LINE_Y = 60,
-    HEAD_Y = 73,
-    ROWS_Y = 82, ROW_H = 12, ROW_PITCH = 13, ROWS = 10,
-    POS_X = 9, POS_W = 15, CELL_X = 26, CELL_W = 23, CELL_PITCH = 25,
-};
-enum { AT_FX, AT_LOOP, AT_ENV, AT_CLEAR, AT_OPEN, AT_MIXER,
-       AT_BACK, AT_SAVE, AT_UNDO, AT_ADD, AT_PLAY, AT_REC };
+/* SONG, as validated on the panel on 28/10 (NOTES.md): one row a phrase,
+ * its number fixed at the left, then the block each track plays, six
+ * tracks a screen.
+ *
+ *   SELECT  the phrase          KNOB 1  the track; left of the first, the phrase's number
+ *   KNOB 2  on a cell its block, -- below 00 and one new block past the last;
+ *           on the number the phrase's length (AUTO, then steps)
+ *   SEL     on a cell: the track's blocks in a panel (SELECT walks, PLAY plays one
+ *           alone, SEL takes it, GLO goes back); on the number: the SECTION
+ *   SEQ     on a cell: its block, to edit; on the number: a copy of the phrase below
+ *   LFO     on the number: delete the phrase (twice)
+ *   EDIT    the MIXER      ARP  UNDO      SAVE  PLAY  as printed
+ * The last four have no place in a mockup yet: provisional. */
+enum { CELL_W = 31, CELLS = 6 };
+enum { POP_X = 46, POP_TOP = 18, POP_ROWS = 7 };
 
 #define song (&app_song)
 
-/* row -1 is the song's own line; col 0 the phrase's number, 1.. a track. */
-static int row, col, top;
+static int row, col, top, left; /* col -1: the phrase's number */
 static bool ask_delete;
-static int8_t saved;
-static uint32_t prev_btns, held;
+static const char *said;        /* SAVED, NOT SAVED: until the hand does something else */
+static uint32_t prev_btns;
 static bool playing;
-static int play_row, play_fill; /* the row the playhead is on, how far through it (0..ROW_H) */
+static int play_row = -1;
+/* The panel of a track's blocks. While PLAY previews one, the cell holds it
+ * for real, the track soloed; GLO or HOME puts back what was there. */
+static bool pop;
+static int pop_cur, pop_top, pop_orig, pop_preview = -1;
 
 static SongEntry *entry_at(int r) { return &song->arrangement[r]; }
-static bool on_cell(void) { return row >= 0 && col >= 1; }
-static bool on_pos(void) { return row >= 0 && col == 0; }
+static bool is_ref(int r) { return entry_at(r)->kind == ENTRY_REF; }
 
 /* ------------------------------------------------------------ edits --- */
 /* One past the last block of the track that holds something or is played
@@ -49,81 +57,39 @@ static int block_limit(int t)
     return last + 1 < TRACK_MAX_PATTERNS ? last + 1 : TRACK_MAX_PATTERNS - 1;
 }
 
-/* KNOB 1 on a cell: empty, then ON (plays nothing, cuts nothing), then
- * the track's blocks. */
-static void turn_block(int d)
+static void set_block(int r, int t, uint8_t p)
 {
-    SongEntry *e = entry_at(row);
-    int t = col - 1, p = e->pattern[t];
-    int v = p == PATTERN_NONE ? -2 : p == PATTERN_HOLD ? -1 : p, hi = block_limit(t);
-
-    if (e->kind == ENTRY_REF)
-        return; /* a reference plays its target's cells */
+    SongEntry *e = entry_at(r);
     undo_bytes(&e->pattern[t], 1);
     undo_bytes(&e->level[t], 1);
-    v += d;
-    v = v < -2 ? -2 : v > hi ? hi : v;
-    e->pattern[t] = v == -2 ? PATTERN_NONE : v == -1 ? PATTERN_HOLD : (uint8_t)v;
-    if (v == -2)
+    e->pattern[t] = p;
+    if (p == PATTERN_NONE)
         e->level[t] = VOL_FULL; /* a level with no block under it would resurface */
     app_mark_dirty();
 }
 
-static void turn_level(int d)
+/* KNOB 2 on a cell: --, then the blocks; ON (a cell that plays nothing and
+ * cuts nothing, from moondaw's files) counts as -- when turned from. */
+static void turn_block(int d)
 {
-    SongEntry *e = entry_at(row);
-    int t = col - 1, v = e->level[t] + d;
-    if (e->pattern[t] == PATTERN_NONE || e->kind == ENTRY_REF)
-        return;
-    undo_bytes(&e->level[t], 1);
-    e->level[t] = (uint8_t)(v < 0 ? 0 : v > VOL_FULL ? VOL_FULL : v);
-    app_mark_dirty();
+    int p = entry_at(row)->pattern[col], v = p >= TRACK_MAX_PATTERNS ? -1 : p, hi = block_limit(col);
+    v += d;
+    v = v < -1 ? -1 : v > hi ? hi : v;
+    set_block(row, col, v < 0 ? PATTERN_NONE : (uint8_t)v);
 }
 
-/* KNOB 1 on a phrase's number: how long it lasts. AUTO is one full
- * cycle of its blocks; turning up from AUTO starts at that length. */
+/* KNOB 2 on a phrase's number: how long it lasts. AUTO is one full cycle
+ * of its blocks; turning up from AUTO starts at that length. */
 static void turn_steps(int d)
 {
     SongEntry *e = entry_at(row);
     int v = e->steps;
-    if (e->kind == ENTRY_REF && e->ref_kind == REF_SECTION)
-        return;
     undo_bytes(&e->steps, sizeof e->steps);
     if (v == 0 && d > 0)
-        v = song_entry_cycle(song, e->kind == ENTRY_REF ? entry_at(e->ref_target) : e) + d - 1;
+        v = song_entry_cycle(song, e) + d - 1;
     else
         v += d;
     e->steps = (uint16_t)(v < 1 ? 0 : v > ENTRY_CYCLE_MAX ? ENTRY_CYCLE_MAX : v);
-    app_mark_dirty();
-}
-
-static void turn_song(int k, int d)
-{
-    int v;
-    switch (k) {
-    case 0:
-        undo_bytes(&song->bpm, sizeof song->bpm);
-        v = song->bpm + d;
-        song->bpm = (uint16_t)(v < BPM_MIN ? BPM_MIN : v > BPM_MAX ? BPM_MAX : v);
-        break;
-    case 1:
-        undo_bytes(&song->swing, 1);
-        v = song->swing + d;
-        song->swing = (uint8_t)(v < SWING_MIN ? SWING_MIN : v > SWING_MAX ? SWING_MAX : v);
-        break;
-    case 2:
-        undo_bytes(&song->ticks_per_step, 1);
-        v = song->ticks_per_step + d;
-        song->ticks_per_step = (uint8_t)(v < 1 ? 1 : v > TICKS_MAX ? TICKS_MAX : v);
-        break;
-    default:
-        undo_bytes(&song->num_tracks, 1);
-        v = song->num_tracks + d;
-        song->num_tracks = (uint8_t)(v < 1 ? 1 : v > SONG_MAX_TRACKS ? SONG_MAX_TRACKS : v);
-        if (col > song->num_tracks)
-            col = song->num_tracks;
-        break;
-    }
     app_mark_dirty();
 }
 
@@ -153,22 +119,21 @@ static void undo_arrangement(void)
         undo_bytes(song->sections, (uint32_t)song->section_count * sizeof song->sections[0]);
 }
 
-/* + PHRASE: a copy of the phrase under the cursor, right below it. The
- * name stays with the original: a name marks one phrase. */
+/* A copy of the phrase under the cursor, right below it. The name stays
+ * with the original: a name marks one phrase. */
 static void insert_phrase(void)
 {
-    int at = row < 0 ? 0 : row;
     if (song->arrange_len >= SONG_ARRANGE_LEN)
         return;
     undo_arrangement();
-    shift_refs(at + 1, 1, -1);
-    for (int i = song->arrange_len; i > at + 1; i--)
+    shift_refs(row + 1, 1, -1);
+    for (int i = song->arrange_len; i > row + 1; i--)
         *entry_at(i) = *entry_at(i - 1);
-    *entry_at(at + 1) = *entry_at(at);
-    entry_at(at + 1)->name[0] = '\0';
+    *entry_at(row + 1) = *entry_at(row);
+    entry_at(row + 1)->name[0] = '\0';
     song->arrange_len++;
     song_sections_normalize(song);
-    row = at + 1;
+    row++;
     app_mark_dirty();
 }
 
@@ -195,280 +160,250 @@ static void delete_phrase(void)
     app_mark_dirty();
 }
 
-/* ---------------------------------------------------------- drawing --- */
-static void draw_cards(void)
-{
-    char a[8], b[8];
+/* ------------------------------------------------------------ panel --- */
+/* Its rows: --, then 00 up to one past the track's last block. */
+static int pop_rows(void) { return block_limit(col) + 2; }
+static uint8_t pop_block(int k) { return k == 0 ? PATTERN_NONE : (uint8_t)(k - 1); }
 
-    if (row == -1) {
-        ui_card(0, "BPM", ui_dec(a, song->bpm), 0);
-        ui_card(1, "SWING", ui_dec(b, song->swing), "%");
-        ui_card(2, "TICKS", ui_dec(a, song->ticks_per_step), 0);
-        ui_card(3, "TRACKS", ui_dec(b, song->num_tracks), 0);
+static void preview_end(void)
+{
+    if (pop_preview < 0)
         return;
+    player_stop();
+    if (player_soloed(col))
+        player_toggle_solo(col);
+    entry_at(row)->pattern[col] = (uint8_t)pop_orig;
+    pop_preview = -1;
+}
+
+static void pop_close(bool take)
+{
+    preview_end();
+    if (take && pop_block(pop_cur) != pop_orig)
+        set_block(row, col, pop_block(pop_cur));
+    pop = false;
+}
+
+/* ---------------------------------------------------------- drawing --- */
+static void hint(int x, const char *key, const char *word, bool right)
+{
+    int w = gfx_text_w(F_COND14, key) + 5 + gfx_text_w(F_COND14, word);
+    if (right)
+        x -= w;
+    x = gfx_text(F_COND14, x, PLAT_H - 6, key, C_TEXT);
+    gfx_text(F_COND14, x + 5, PLAT_H - 6, word, C_DIM);
+}
+
+static void draw_pop(void)
+{
+    int n = pop_rows();
+    char s[8] = "TRACK ";
+    gfx_fill(POP_X, 0, PLAT_W - POP_X, PLAT_H, C_BG, 255);
+    gfx_fill(POP_X, 0, 1, PLAT_H, C_TEXT, 255); /* over the grid: its edge */
+    s[6] = (char)('1' + col), s[7] = 0;
+    gfx_text(F_COND12, POP_X + 10, 13, s, C_DIM);
+    for (int r = 0; r < POP_ROWS && pop_top + r < n; r++) {
+        int k = pop_top + r, y = POP_TOP + r * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent, x;
+        uint8_t b = pop_block(k);
+        bool here = k == pop_cur;
+        uint16_t ink = here ? C_ON_ACC : b == PATTERN_NONE || k == n - 1 ? C_DIM : C_TEXT;
+        char h[3];
+        if (here)
+            gfx_slab(POP_X + 4, y + 1, PLAT_W - POP_X - 8 - (n > POP_ROWS ? 6 : 0), GRID_ROW - 2, C_ACCENT, 255);
+        if (b == pop_orig) /* the block in place, as HOME marks the open project */
+            gfx_fill(POP_X + 6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        if (k == pop_preview)
+            for (int i = 0; i < 6; i++)
+                gfx_fill(PLAT_W - 24 + i, y + 8 + i, 1, 12 - 2 * i, here ? C_ON_ACC : C_TITLE, 255);
+        x = gfx_text(F_COND20, POP_X + 14, base, b == PATTERN_NONE ? "--" : grid_hex2(h, b), ink);
+        if (b == PATTERN_NONE)
+            gfx_text(F_COND14, x + 8, base, "silent", ink);
+        else if (k == n - 1 && song_pattern_blank(song, col, b))
+            gfx_text(F_COND14, x + 8, base, "new", ink);
     }
-    if (col == 0) {
-        const SongEntry *e = entry_at(row);
-        if (e->kind == ENTRY_REF && e->ref_kind == REF_SECTION)
-            ui_card(0, "STEPS", "REF", 0);
-        else if (e->steps)
-            ui_card(0, "STEPS", ui_dec(a, e->steps), 0);
-        else
-            ui_card(0, "STEPS", "AUTO", ui_dec(b, song_entry_steps(song, row)));
-        ui_card(1, 0, 0, 0);
-    } else {
-        const SongEntry *e = entry_at(row);
-        uint8_t p = e->pattern[col - 1];
-        ui_card(0, "BLOCK", p == PATTERN_NONE ? "--" : p == PATTERN_HOLD ? "ON" : ui_hex2(a, p), 0);
-        if (p == PATTERN_NONE)
-            ui_card(1, 0, 0, 0);
-        else
-            ui_card(1, "LEVEL", ui_dec(b, e->level[col - 1]), 0);
+    if (n > POP_ROWS) {
+        int h = POP_ROWS * GRID_ROW * POP_ROWS / n, y = POP_TOP + POP_ROWS * GRID_ROW * pop_top / n;
+        gfx_fill(PLAT_W - 4, POP_TOP, 2, POP_ROWS * GRID_ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
-    ui_card(2, 0, 0, 0);
-    ui_card(3, 0, 0, 0);
+    hint(POP_X + 10, "SEL", "OK", false);
+    hint(PLAT_W - 8, "GLO", "BACK", true);
 }
 
 static void draw(void)
 {
-    static const char *const words[12] = { "", "LOOP", "", "CLEAR", "OPEN", "MIXER",
-                                           "\xE2\x80\xB9 MENU", "SAVE", "UNDO", "+ PHRASE", "PLAY", "REC" };
-    const char *w[12];
-    uint8_t st[12];
-    char t[16], n[8];
-    int x, lost = app_not_carried();
-    uint8_t cur_block = on_cell() ? entry_at(row)->pattern[col - 1] : PATTERN_NONE;
+    int n = song->arrange_len, tracks = song->num_tracks;
+    char s[8];
 
-    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
-    x = gfx_text(F_COND12, APP_X0, NAV_Y + 13, "\xE2\x80\xB9 MENU", C_TITLE);
-    gfx_text(F_COND12, x + 6, NAV_Y + 13, app_name, C_TEXT);
-    if (saved) {
-        const char *m = saved > 0 ? "SAVED" : "NOT SAVED";
-        gfx_text(F_COND9, APP_X0 + APP_INNER - gfx_text_w(F_COND9, m), NAV_Y + 12, m,
-                 saved > 0 ? C_ACCENT : C_MUTE);
-    } else if (lost) {
-        /* What this file had that the machine does not carry, and that a
-         * save from here would lose. */
-        x = APP_X0 + APP_INNER - gfx_text_w(F_MONO8, " NOT CARRIED");
-        gfx_text(F_MONO8, x, NAV_Y + 12, " NOT CARRIED", C_FX);
-        gfx_text(F_MONO8, x - gfx_text_w(F_MONO8, ui_dec(n, lost)), NAV_Y + 12, n, C_FX);
+    grid_clear();
+    if (said)
+        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+    else if (col < 0 && !is_ref(row)) /* the phrase's length, while the cursor is on it */
+        grid_corner(entry_at(row)->steps ? ui_dec(s, entry_at(row)->steps) : "AUTO", C_TEXT, 0, 0);
+    for (int c = 0; c < CELLS && left + c < tracks; c++) {
+        s[0] = (char)('1' + left + c), s[1] = 0;
+        grid_head(GRID_CELL_X + c * CELL_W, CELL_W, s, left + c == col);
     }
-    gfx_fill(APP_X0, NAV_Y + NAV_H, APP_INNER, 1, C_DIM, 77);
-
-    draw_cards();
-    ui_cards_rule();
-
-    x = gfx_text(F_MONO8, APP_X0, LEFT_Y + 8, "SELECT", C_DIM);
-    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "PHRASE", C_TEXT);
-    x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "ALGO", C_DIM);
-    gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "TRACK", C_TEXT);
-
-    {   /* the song's own line: always readable, and a place the cursor goes */
-        bool cur = row == -1;
-        uint16_t ink = cur ? C_ON_ACC : C_TEXT, dim = cur ? C_ON_ACC : C_DIM;
-        gfx_slab(APP_X0, LINE_Y, APP_INNER, ROW_H, cur ? C_ACCENT : C_TEXT, cur ? 255 : 11);
-        x = gfx_text(F_MONO8, APP_X0 + 4, LINE_Y + 9, ui_dec(n, song->bpm), ink);
-        x = gfx_text(F_MONO8, x + 2, LINE_Y + 9, "BPM", dim);
-        x = gfx_text(F_MONO8, x + 7, LINE_Y + 9, "SWING", dim);
-        x = gfx_text(F_MONO8, x + 2, LINE_Y + 9, ui_dec(n, song->swing), ink);
-        x = gfx_text(F_MONO8, x + 7, LINE_Y + 9, ui_dec(n, song->ticks_per_step), ink);
-        x = gfx_text(F_MONO8, x + 2, LINE_Y + 9, "TICKS", dim);
-        x = gfx_text(F_MONO8, x + 7, LINE_Y + 9, ui_dec(n, song->num_tracks), ink);
-        gfx_text(F_MONO8, x + 2, LINE_Y + 9, "TRACKS", dim);
-    }
-
-    gfx_text_mid(F_MONO8, POS_X, POS_W, HEAD_Y + 7, "#", C_DIM);
-    for (int k = 0; k < song->num_tracks; k++) {
-        t[0] = 'T', t[1] = (char)('1' + k), t[2] = '\0';
-        gfx_text_mid(F_MONO8, CELL_X + k * CELL_PITCH, CELL_W, HEAD_Y + 7, t,
-                     row >= 0 && col == k + 1 ? C_ACCENT : C_DIM);
-    }
-
-    for (int i = 0; i < ROWS && top + i < song->arrange_len; i++) {
-        int r = top + i, y = ROWS_Y + i * ROW_PITCH;
+    for (int v = 0; v < GRID_ROWS && top + v < n; v++) {
+        int r = top + v;
         const SongEntry *e = entry_at(r);
-        bool here = row == r, asked = here && col == 0 && ask_delete;
-
-        if (r == play_row) {
-            gfx_slab(APP_X0, y, APP_INNER, ROW_H, C_PLAY, 255);
-            /* the playhead is a gauge: it fills down the row as the phrase goes */
-            gfx_fill(APP_X0 + 1, y, 3, ROW_H, C_ACCENT, 64);
-            gfx_fill(APP_X0 + 1, y, 3, play_fill, C_ACCENT, 255);
-        } else {
-            gfx_slab(APP_X0, y, APP_INNER, ROW_H, C_TEXT, 11);
-        }
-        if (here && col == 0)
-            gfx_slab(POS_X, y + 1, POS_W, 10, asked ? C_MUTE : C_ACCENT, 255);
-        gfx_text_mid(F_MONO8, POS_X, POS_W, y + 9, ui_hex2(t, r),
-                     asked ? C_WHITE : here && col == 0 ? C_ON_ACC : r == play_row ? C_ACCENT : C_DIM);
-        if (e->kind == ENTRY_REF) {
-            /* A reference wears where it points: it has no cells of its own. */
-            x = gfx_text(F_MONO8, CELL_X + 2, y + 9, e->ref_kind == REF_SECTION ? "REF SEC" : "REF", C_DIM);
-            gfx_text(F_MONO8, x + 4, y + 9, ui_hex2(t, e->ref_target), C_FX);
+        bool band = r == row, asked = band && col < 0 && ask_delete;
+        if (band)
+            gfx_slab(2, grid_y(v) + 1, PLAT_W - 4 - (n > GRID_ROWS ? 6 : 0), GRID_ROW - 2,
+                     asked ? C_MUTE : C_ACCENT, 255);
+        if (r == play_row)
+            grid_playing(v, band);
+        grid_num(v, r, band, band && col < 0 && !asked, r == play_row ? C_TITLE : C_TEXT);
+        if (e->kind == ENTRY_REF) { /* a reference wears where it points: it has no cells of its own */
+            int x = gfx_text(F_COND20, GRID_CELL_X + 6, grid_base(v),
+                             e->ref_kind == REF_SECTION ? "REF SEC" : "REF", band ? C_ON_ACC : C_DIM);
+            gfx_text(F_COND20, x + 8, grid_base(v), grid_hex2(s, e->ref_target), band ? C_ON_ACC : C_FX);
             continue;
         }
-        for (int k = 0; k < song->num_tracks; k++) {
-            int cx = CELL_X + k * CELL_PITCH;
-            uint8_t p = e->pattern[k];
-            bool cur = here && col == k + 1;
-            /* the other cells of the column that play the cursor's block */
-            bool echo = !cur && on_cell() && col == k + 1 && p == cur_block && p < TRACK_MAX_PATTERNS;
-
-            if (cur)
-                gfx_slab(cx, y + 1, CELL_W, 10, C_ACCENT, 255);
-            else if (p < TRACK_MAX_PATTERNS)
-                gfx_slab(cx, y + 1, CELL_W, 10, echo ? C_ACCENT : C_TEXT, echo ? 41 : 18);
-            else
-                gfx_frame_rect(cx, y + 1, CELL_W, 10, C_DIM, 76);
-            if (p == PATTERN_HOLD)
-                gfx_text_mid(F_COND9, cx, CELL_W, y + 9, "ON", cur ? C_ON_ACC : C_DIM);
-            else if (p < TRACK_MAX_PATTERNS)
-                gfx_text_mid(F_COND11, cx, CELL_W, y + 10, ui_hex2(t, p), cur ? C_ON_ACC : C_TEXT);
-            /* a cell turned down says so: a line as wide as its level */
-            if (p != PATTERN_NONE && e->level[k] != VOL_FULL && !cur)
-                gfx_fill(cx + 1, y + 10, (CELL_W - 2) * e->level[k] / VOL_FULL, 1, C_FX, 255);
+        for (int t = left; t < left + CELLS && t < tracks; t++) {
+            uint8_t p = e->pattern[t];
+            bool on = band && t == col;
+            uint16_t ink = p < TRACK_MAX_PATTERNS ? (r == play_row ? C_TITLE : C_TEXT) : C_DIM;
+            grid_cell(v, GRID_CELL_X + (t - left) * CELL_W, CELL_W,
+                      p < TRACK_MAX_PATTERNS ? grid_hex2(s, p) : p == PATTERN_HOLD ? "ON" : "--",
+                      band, on, ink);
         }
     }
-
-    for (int b = 0; b < 12; b++) {
-        bool cell_block = on_cell() && entry_at(row)->pattern[col - 1] < TRACK_MAX_PATTERNS;
-        w[b] = words[b];
-        st[b] = b == AT_BACK ? UI_BTN_BACK : UI_BTN_ON;
-        if (!words[b][0])
-            st[b] = UI_BTN_NONE;
-        if (b == AT_LOOP || b == AT_REC || (b == AT_UNDO && !undo_can()))
-            st[b] = UI_BTN_OFF; /* not written yet, or nothing to take back */
-        if (b == AT_OPEN)       /* a block opens in PATTERN, a phrase's number in PHRASE */
-            st[b] = cell_block || (on_pos() && entry_at(row)->kind != ENTRY_REF) ? UI_BTN_ON
-                    : row == -1 ? UI_BTN_NONE : UI_BTN_OFF;
-        if (b == AT_ADD && row == -1)
-            st[b] = UI_BTN_NONE;
-        if (b == AT_CLEAR) {
-            w[b] = on_pos() ? (ask_delete ? "SURE" : "DELETE") : "CLEAR";
-            st[b] = row == -1 ? UI_BTN_NONE : ask_delete ? UI_BTN_ASK
-                    : on_cell() && entry_at(row)->pattern[col - 1] == PATTERN_NONE ? UI_BTN_OFF : UI_BTN_ON;
-        }
-        if (b == AT_PLAY && playing) {
-            w[b] = "STOP";
-            st[b] = UI_BTN_LIVE;
-        }
-    }
-    ui_btn_map(w, st, held);
+    grid_frame(top, n);
+    if (pop)
+        draw_pop();
 }
 
 /* -------------------------------------------------------------- api --- */
-int songview_entry(void) { return row < 0 ? 0 : row; }
+int songview_entry(void) { return row; }
 
 void songview_open(bool reset_cursor)
 {
-    if (reset_cursor) {
-        row = top = 0;
-        col = 1;
-    }
+    if (reset_cursor)
+        row = top = col = left = 0;
     if (row >= song->arrange_len)
         row = song->arrange_len - 1;
-    if (col > song->num_tracks)
-        col = song->num_tracks;
+    if (col >= song->num_tracks)
+        col = song->num_tracks - 1;
     ask_delete = false;
-    saved = 0;
-    prev_btns = 0xFFFFFFFFu;
+    said = 0;
+    pop = false;
+    prev_btns = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     gfx_invalidate();
+}
+
+void songview_cancel(void)
+{
+    if (pop)
+        pop_close(false);
 }
 
 int songview_frame(const PlatInput *in, int *entry, int *track)
 {
     uint32_t btns = in->btns & ~prev_btns;
-    bool moved = in->enc[PE_SELECT] || in->enc[PE_ALGO];
-    bool turned = in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] || in->enc[PE_K4];
-    int out = SONGVIEW_STAY, d;
-#define PRESSED(at) ((btns >> APP_BTN_AT[at]) & 1u)
+    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2];
+    int out = SONGVIEW_STAY;
+#define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    held = in->btns;
     playing = player_playing();
+    if (acted)
+        said = 0;
 
-    if (btns || moved || turned)
-        saved = 0;
-    /* DELETE asks; only a second DELETE answers yes. */
-    if (ask_delete && (moved || turned || (btns && !PRESSED(AT_CLEAR))))
+    if (pop) {
+        pop_cur += in->enc[PE_SELECT];
+        grid_follow(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
+        if (PRESSED(PB_PLAY)) {
+            if (pop_preview == pop_cur) {
+                preview_end();
+            } else {
+                preview_end();
+                if (pop_block(pop_cur) != PATTERN_NONE) { /* the block alone, round and round */
+                    entry_at(row)->pattern[col] = pop_block(pop_cur);
+                    if (!player_soloed(col))
+                        player_toggle_solo(col);
+                    player_play_entry(row);
+                    pop_preview = pop_cur;
+                }
+            }
+        }
+        if (PRESSED(PB_SEL))
+            pop_close(true);
+        else if (PRESSED(PB_GLO))
+            pop_close(false);
+        play_row = -1;
+        plat_led_btn(PB_PLAY, pop_preview >= 0);
+        gfx_frame(draw);
+        return SONGVIEW_STAY;
+    }
+
+    /* DELETE asks; only a second LFO answers yes. */
+    if (ask_delete && (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] ||
+                       (btns && !PRESSED(PB_LFO))))
         ask_delete = false;
 
     row += in->enc[PE_SELECT];
-    row = row < -1 ? -1 : row >= song->arrange_len ? song->arrange_len - 1 : row;
-    col += in->enc[PE_ALGO];
-    col = col < 0 ? 0 : col > song->num_tracks ? song->num_tracks : col;
+    row = row < 0 ? 0 : row >= song->arrange_len ? song->arrange_len - 1 : row;
+    col += in->enc[PE_K1];
+    col = col < -1 ? -1 : col >= song->num_tracks ? song->num_tracks - 1 : col;
 
-    if (row == -1) {
-        if ((d = in->enc[PE_K1]) != 0) turn_song(0, d);
-        if ((d = in->enc[PE_K2]) != 0) turn_song(1, d);
-        if ((d = in->enc[PE_K3]) != 0) turn_song(2, d);
-        if ((d = in->enc[PE_K4]) != 0) turn_song(3, d);
-    } else if (col == 0) {
-        if ((d = in->enc[PE_K1]) != 0) turn_steps(d);
-    } else {
-        if ((d = in->enc[PE_K1]) != 0) turn_block(d);
-        if ((d = in->enc[PE_K2]) != 0) turn_level(d);
+    if (in->enc[PE_K2] && !is_ref(row)) {
+        if (col < 0)
+            turn_steps(in->enc[PE_K2]);
+        else
+            turn_block(in->enc[PE_K2]);
     }
-
-    if (PRESSED(AT_CLEAR) && row >= 0) {
-        if (col == 0) {
-            if (ask_delete) {
-                delete_phrase();
-                ask_delete = false;
-            } else {
-                ask_delete = true;
-            }
-        } else if (entry_at(row)->kind != ENTRY_REF) {
-            undo_bytes(&entry_at(row)->pattern[col - 1], 1);
-            undo_bytes(&entry_at(row)->level[col - 1], 1);
-            entry_at(row)->pattern[col - 1] = PATTERN_NONE;
-            entry_at(row)->level[col - 1] = VOL_FULL;
-            app_mark_dirty();
+    if (PRESSED(PB_SEL) && !is_ref(row)) {
+        if (col < 0) {
+            *entry = row;
+            *track = 0;
+            out = SONGVIEW_PHRASE;
+        } else {
+            pop = true;
+            pop_orig = entry_at(row)->pattern[col];
+            pop_cur = pop_orig < TRACK_MAX_PATTERNS ? pop_orig + 1 : 0;
+            pop_top = 0;
+            pop_preview = -1;
+            grid_follow(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
         }
     }
-    if (PRESSED(AT_ADD) && row >= 0)
-        insert_phrase();
-    if (PRESSED(AT_UNDO) && undo_pop()) {
+    if (PRESSED(PB_SEQ) && !is_ref(row)) {
+        if (col < 0) {
+            insert_phrase();
+        } else if (entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS) {
+            *entry = row;
+            *track = col;
+            out = SONGVIEW_PATTERN;
+        }
+    }
+    if (PRESSED(PB_LFO) && col < 0) {
+        if (ask_delete)
+            delete_phrase();
+        ask_delete = !ask_delete;
+    }
+    if (PRESSED(PB_ARP) && undo_pop()) {
         if (row >= song->arrange_len)
             row = song->arrange_len - 1;
-        if (col > song->num_tracks)
-            col = song->num_tracks;
+        if (col >= song->num_tracks)
+            col = song->num_tracks - 1;
     }
-    if (PRESSED(AT_SAVE))
-        saved = app_save() == 0 ? 1 : -1;
-    if (PRESSED(AT_PLAY)) {
+    if (PRESSED(PB_SAVE))
+        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+    if (PRESSED(PB_PLAY)) {
         if (playing)
             player_stop();
         else
-            player_play_song(row < 0 ? 0 : row, false);
+            player_play_song(row, false);
     }
-    if (PRESSED(AT_OPEN) && on_cell() && entry_at(row)->kind != ENTRY_REF &&
-        entry_at(row)->pattern[col - 1] < TRACK_MAX_PATTERNS) {
-        *entry = row;
-        *track = col - 1;
-        out = SONGVIEW_PATTERN;
-    }
-    if (PRESSED(AT_OPEN) && on_pos() && entry_at(row)->kind != ENTRY_REF) {
-        *entry = row;
-        *track = 0;
-        out = SONGVIEW_PHRASE;
-    }
-    if (PRESSED(AT_MIXER))
+    if (PRESSED(PB_EDIT))
         out = SONGVIEW_MIXER;
-    if (PRESSED(AT_BACK))
-        out = SONGVIEW_MENU;
 
-    if (row >= 0 && row < top)
-        top = row;
-    if (row >= top + ROWS)
-        top = row - ROWS + 1;
-    play_row = playing ? player_entry() : -1;
-    if (play_row >= 0) {
-        int steps = song_entry_steps(song, play_row);
-        play_fill = steps > 0 ? 1 + (int)player_row() * (ROW_H - 1) / steps : ROW_H;
-        if (play_fill > ROW_H)
-            play_fill = ROW_H;
+    grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
+    {
+        int t = col < 0 ? 0 : col;
+        grid_follow(&t, &left, song->num_tracks, CELLS);
     }
+    play_row = playing ? player_entry() : -1;
     plat_led_btn(PB_PLAY, playing);
     gfx_frame(draw);
     return out;

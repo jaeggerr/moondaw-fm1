@@ -889,6 +889,30 @@ off the device, `build/mock/pattern-views.png`):
 **PATTERN validated on the panel, 28/10**, as above (KNOB 2, KNOB 3 and
 the keys were described, not yet tried: the mockup does not edit).
 
+## 2026-10-28 — SONG, SECTION and PATTERN written
+
+The three validated screens replace the 10/10 ones, behind the same
+interfaces (`songview`, `phrase`, `pattern`); `app/grid.c` draws the grid
+they share. Installed on the FM-1 the same day; the tests pass.
+
+- **Buttons with no mockup yet, provisional**: ARP = UNDO (where the
+  10/10 map had it), EDIT = MIXER, ENV = INSTRUMENT (from PATTERN), on
+  SONG's phrase number SEQ = a copy of the phrase below and LFO twice =
+  delete it. SAVE and PLAY as printed. To weigh with the machine.
+- KNOB 2 on a number is a length: the phrase's (AUTO, then steps) on
+  SONG, the block's on PATTERN; the corner says it while the cursor is
+  there.
+- In the block panel, PLAY puts the block in the cell for real, solos
+  the track and loops the phrase; GLO, SEL or HOME end it and put back
+  what was there (unless SEL took another).
+- **Gone with the old screens**, not redesigned yet: LOOP, the PATTERN
+  selection (COPY / PASTE / CLEAR a rectangle; `edit_clip_*` stays,
+  untested now), MUTE on the section, a cell's level, the song's line
+  (BPM, SWING, TICKS, TRACKS: unreachable for now), PRESETS stepping
+  through blocks or phrases, the effect list beside the slot.
+  `tests/loop_test.c` and `tests/select_test.c` went with them.
+- INSTRUMENT and MIXER keep the 10/10 look until their turn.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

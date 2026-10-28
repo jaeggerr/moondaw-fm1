@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../app/app.h"
+#include "../app/pattern.h"
 #include "../app/phrase.h"
 #include "../app/songview.h"
 #include "../app/undo.h"
@@ -36,13 +37,15 @@ static const char trk[] =
 
 static PlatInput in;
 static int fails;
-static bool on_song;
+static enum { ON_SECTION, ON_PATTERN, ON_SONG } on;
 static void go(void)
 {
     int e, t;
     undo_frame(in.ms);
-    if (on_song)
+    if (on == ON_SONG)
         songview_frame(&in, &e, &t);
+    else if (on == ON_PATTERN)
+        pattern_frame(&in);
     else
         phrase_frame(&in);
     memset(in.enc, 0, sizeof in.enc);
@@ -74,88 +77,85 @@ int main(void)
     undo();
     CHECK("UNDO takes it back", step_is_empty(st(3)) && !undo_can());
 
-    /* a knob turned over several frames is one gesture */
+    /* a knob turned over several frames is one gesture: KNOB 2 on a note in PATTERN */
     wait(2000);
-    enc(PE_SELECT, -3);
+    on = ON_PATTERN;
+    pattern_open(&app_song, 0, 0);
+    go();
     for (int i = 0; i < 12; i++)
-        enc(PE_K1, 1);
+        enc(PE_K2, 1);
     CHECK("twelve notches up", st(0)->notes[0] == 72);
     undo();
     CHECK("are taken back by one press", st(0)->notes[0] == 60 && !undo_can());
 
     /* the same place a second later is another gesture */
     wait(2000);
-    enc(PE_K1, 2);
+    enc(PE_K2, 2);
     wait(2000);
-    enc(PE_K1, 3);
+    enc(PE_K2, 3);
     undo();
     CHECK("a pause makes two gestures: the second goes first", st(0)->notes[0] == 62);
     undo();
     CHECK("then the first", st(0)->notes[0] == 60 && !undo_can());
 
     wait(2000);
-    enc(PE_K1, -1);
-    undo();
-    wait(2000);
-    enc(PE_K2, 40);
-    wait(2000);
+    enc(PE_K2, 100);
+    enc(PE_K2, 100);
     n = st(0)->notes[0];
-    enc(PE_K1, 100);
-    enc(PE_K1, 100);
     wait(2000);
-    enc(PE_K1, 100); /* against the stop: nothing changes */
+    enc(PE_K2, 100); /* against the stop: nothing changes */
     go();
     undo();
-    CHECK("a knob against its stop is not a gesture", st(0)->notes[0] == n);
-    while (undo_can())
-        undo();
-    CHECK("everything back, the song is as it was loaded", st(0)->notes[0] == 60);
+    CHECK("a knob against its stop is not a gesture", st(0)->notes[0] == 60);
+    CHECK("(it was at the top)", n == NOTE_MAX);
 
-    /* the pool hands back a chunk emptied by CLEAR; the step still returns */
+    /* the pool hands back a chunk emptied by the knobs; the step still returns */
     wait(2000);
-    press(PB_LFO);
-    CHECK("CLEAR emptied the block's only step", step_is_empty(st(0)));
+    enc(PE_K2, -100);         /* the note: OFF, then nothing */
+    enc(PE_K2, -100);
+    wait(2000);
+    press(PB_FX);
+    press(PB_FX);             /* INS */
+    enc(PE_K2, -10);          /* the instrument: none */
+    press(PB_FX);
+    CHECK("the block's only step is empty", step_is_empty(st(0)));
     song_pool_compact(&app_song);
+    undo();
     undo();
     CHECK("UNDO puts it back after the pool was compacted",
           st(0)->notes[0] == 60 && st(0)->instrument == 0);
 
     /* SONG: deleting a phrase moves every row below it */
     wait(2000);
-    on_song = true;
+    on = ON_SONG;
     songview_open(true);
     go();
     memcpy(before, app_song.arrangement, sizeof before);
     enc(PE_SELECT, 1);
-    enc(PE_ALGO, -1);
+    enc(PE_K1, -1);
     press(PB_LFO);
     press(PB_LFO);
-    CHECK("DELETE, twice, removed phrase 01",
+    CHECK("LFO, twice, removed phrase 01",
           app_song.arrange_len == 2 && app_song.arrangement[1].pattern[0] == 0);
     undo();
     CHECK("UNDO brings the phrase back where it was",
           app_song.arrange_len == 3 && !memcmp(before, app_song.arrangement, 3 * sizeof(SongEntry)));
     press(PB_SEQ);
-    CHECK("+ PHRASE added one", app_song.arrange_len == 4);
+    CHECK("SEQ on the number added one", app_song.arrange_len == 4);
     undo();
     CHECK("and UNDO removes it", app_song.arrange_len == 3 && !undo_can());
-    wait(2000);
-    enc(PE_SELECT, -5);
-    enc(PE_K1, 20);
-    CHECK("the tempo went up", app_song.bpm == 140);
-    undo();
-    CHECK("and came back", app_song.bpm == 120);
 
     /* more gestures than the journal holds: the oldest are forgotten, the last are right */
-    on_song = false;
-    phrase_open(0, 0);
+    on = ON_PATTERN;
+    pattern_open(&app_song, 0, 0);
     go();
-    for (int r = 1; r < 64; r++)
+    for (int r = 1; r < 64; r++) {
+        enc(PE_SELECT, 1);
         for (int pass = 0; pass < 8; pass++) {
             wait(2000);
-            enc(PE_SELECT, r - phrase_row());
-            enc(PE_K1, pass == 0 || pass % 2 ? 1 : -1); /* stays clear of the top note */
+            enc(PE_K2, pass == 0 || pass % 2 ? 1 : -1); /* stays clear of the top note */
         }
+    }
     CHECK("504 gestures written", st(63)->notes[0] != NOTE_NONE && undo_can());
     n = st(63)->notes[0];
     undo();
