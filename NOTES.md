@@ -1077,12 +1077,31 @@ the chorus measurements.
 - A layer shows its timbre alone: each timbre belongs to one engine
   (SAW is WAVE, 25% is PULSE).
 
+## 2026-10-28 — INSTRUMENT written (branch `instrument-grid`)
+
+Written on its own branch while another session changed the firmware on
+main for the chorus crackles; to be merged after it. Not installed.
+
+- `app/instrument.c` on the agreed rows: NAME, SOUND, ENV, FILTER,
+  LEVEL (GAIN LEVEL and VIB, the vibrato's phase, which had no row of
+  its own), VOICE for a VOX instrument (TRACT 50..150 %, ACCENT FR/EN),
+  a row a layer, `+ LYR` (KNOB 2 up makes one; the layer's SOUND all
+  the way down removes it).
+- ENGINE turns through PULSE, NOISE, WAVE and VOX; SMPL and PLUCK, silent
+  here, are shown in amber and leave for PULSE at a turn. VOX's timbres
+  are its styles (GLIDE HARD SOFT MELO SINGR).
+- **PLAY is the preview**: C E G C an octave up, 250 ms a note, a rest,
+  round, until PLAY again; a key stops it and plays itself. The song
+  stops if it was playing. PRESETS still steps to the next instrument.
+- The name editor is shared now (`app/namer.c`): PROJECT and INSTRUMENT
+  (seven letters there, the file's limit).
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
   that do not know it sounds (above).
 - LOOP, the PATTERN selection, cell levels: gone with the old screens,
   to be redesigned.
-- INSTRUMENT: still the 10/10 look.
+- INSTRUMENT: written on branch `instrument-grid`, to merge.
 - The limiter; redo (no button for it).
 - `web/installer/` is copied, not adapted, not run.

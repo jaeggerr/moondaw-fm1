@@ -4,26 +4,82 @@
 #include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
+#include "grid.h"
+#include "namer.h"
 #include "ui.h"
 #include "undo.h"
 
-enum {
-    NAV_Y = 2, NAV_H = 17,
-    LEFT_Y = 49,
-    PLOT_Y = 60, PLOT_H = 34,
-    ROWS_Y = 97, ROW_H = 12, ROW_PITCH = 13,
-    LAYERS_Y = 150, LAYER_ROWS_Y = 160,
-    CELL_W = 57, CELL_PITCH = 59,
-};
-enum { ROW_SOUND, ROW_ENV, ROW_FILTER, ROW_VIB, ROW_LAYER, ROWS_ALL = ROW_LAYER + INSTR_MAX_LAYERS };
-enum { AT_BACK = 6, AT_SAVE = 7, AT_UNDO = 8, AT_PLAY = 10 };
+/* INSTRUMENT, as agreed on 28/10 (NOTES.md): the name first, PLAY a preview of the sound,
+ * then the settings by importance -- those that go together on one row, and the column
+ * names at the top change with the row.
+ *
+ *   NAME    SEL types it
+ *   SOUND   ENGINE TIMBRE           ENV     ATK DEC SUS REL
+ *   FILTER  CUT RES ENV VEL         LEVEL   GAIN LEVEL VIB
+ *   VOICE   TRACT ACCENT (a VOX instrument only)
+ *   LYR n   SOUND SEMI FINE GAIN, one row a layer; + LYR makes one (KNOB 2 up)
+ *
+ *   SELECT  the row     KNOB 1  the column     KNOB 2  the value
+ *   PLAY    the preview: a few notes up, round and round, until PLAY again
+ *   the keys  play the sound, OCT-/OCT+ their octave     PRESETS  the next instrument
+ *   GLO     back to PATTERN     ARP  UNDO     SAVE  as printed
+ *
+ * Five cells of 33 px a row; a column takes one or two (an engine's name). */
+enum { LABEL_X = 8, CELL_X = 66, CELL_W = 33 };
+enum { L_NAME, L_SOUND, L_ENV, L_FILTER, L_LEVEL, L_VOICE, L_LAYER };
 
-static int inst, entry, row, kbd_oct;
-static uint32_t prev_btns, prev_keys, held;
-static bool playing;
-static int8_t saved;
+static int inst, row, col, top, kbd_oct;
+static bool naming;
+static const char *said;
+static uint32_t prev_btns, prev_keys;
+/* The preview: when it started, and the note it is on (-1 none yet). */
+static bool previewing;
+static uint32_t preview_t0;
+static int preview_at;
 
 static InstrumentDef *I(void) { return &app_song.instruments[inst]; }
+static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+/* ------------------------------------------------------------- rows --- */
+/* The rows as drawn: the fixed ones, VOICE only for a voice, a row a layer,
+ * and + LYR while there is room for one more. */
+static int nrows(void)
+{
+    return L_VOICE + (I()->engine == ENGINE_VOX) + I()->nlayers + (I()->nlayers < INSTR_MAX_LAYERS);
+}
+
+static int kind(int r)
+{
+    if (r < L_VOICE)
+        return r;
+    if (I()->engine == ENGINE_VOX && r == L_VOICE)
+        return L_VOICE;
+    return L_LAYER;
+}
+
+/* The layer row r stands for, nlayers for + LYR. */
+static int layer_of(int r) { return r - L_VOICE - (I()->engine == ENGINE_VOX); }
+
+static int ncols(int r)
+{
+    static const int n[] = { 0, 2, 4, 4, 3, 2 };
+    int k = kind(r);
+    return k == L_LAYER ? (layer_of(r) < I()->nlayers ? 4 : 1) : n[k];
+}
+
+static int span(int r, int c)
+{
+    int k = kind(r);
+    return (k == L_SOUND) || (k == L_LAYER && c == 0) ? 2 : 1;
+}
+
+static int col_x(int r, int c)
+{
+    int x = CELL_X;
+    for (int k = 0; k < c; k++)
+        x += span(r, k) * CELL_W;
+    return x;
+}
 
 /* ------------------------------------------------------------ words --- */
 static const char *timbre_word(uint8_t engine, uint8_t timbre)
@@ -31,27 +87,25 @@ static const char *timbre_word(uint8_t engine, uint8_t timbre)
     static const char *const duty[4] = { "12.5%", "25%", "50%", "75%" };
     static const char *const len[2] = { "LONG", "SHORT" };
     static const char *const shape[5] = { "SAW", "TRI", "SINE", "HALF", "ABS" };
+    static const char *const style[5] = { "GLIDE", "HARD", "SOFT", "MELO", "SINGR" };
     if (engine == ENGINE_PULSE)
         return duty[timbre & 3];
     if (engine == ENGINE_NOISE)
         return len[timbre & 1];
     if (engine == ENGINE_WAVE)
         return shape[timbre < 5 ? timbre : 0];
+    if (engine == ENGINE_VOX)
+        return style[timbre < 5 ? timbre : 0];
     return "--";
 }
 
-static const char *timbre_label(uint8_t engine)
-{
-    return engine == ENGINE_NOISE ? "LENGTH" : engine == ENGINE_WAVE ? "SHAPE" : "DUTY";
-}
-
-static char *sdec(char *b, int v, bool plus)
+static char *sdec(char *b, int v)
 {
     int i = 0;
     if (v < 0) {
         b[i++] = '-';
         v = -v;
-    } else if (plus && v > 0) {
+    } else if (v > 0) {
         b[i++] = '+';
     }
     ui_dec(b + i, v);
@@ -59,7 +113,8 @@ static char *sdec(char *b, int v, bool plus)
 }
 
 /* A layer's engine and timbre are one knob: 0 is no layer, then the four
- * duties, the two noise lengths, the five shapes. */
+ * duties, the two noise lengths, the five shapes. A layer shows its timbre
+ * alone: each belongs to one engine. */
 #define WAVES 12
 static int wave_of(const Layer *l)
 {
@@ -73,64 +128,93 @@ static void wave_set(Layer *l, int w)
     l->timbre = (uint8_t)(w < 5 ? w - 1 : w < 7 ? w - 5 : w - 7);
 }
 
-static char *wave_word(char *b, const Layer *l)
+static const char *value(int r, int c, char *b)
 {
-    const char *e = engine_name(l->engine), *t = timbre_word(l->engine, l->timbre);
-    int i = 0;
-    while (*e)
-        b[i++] = *e++;
-    b[i++] = ' ';
-    while (*t)
-        b[i++] = *t++;
-    b[i] = '\0';
-    return b;
+    const InstrumentDef *in = I();
+    switch (kind(r)) {
+    case L_SOUND:
+        return c == 0 ? engine_name(in->engine) : timbre_word(in->engine, in->timbre);
+    case L_ENV:
+        return ui_dec(b, c == 0 ? in->attack : c == 1 ? in->decay : c == 2 ? in->sustain : in->release);
+    case L_FILTER:
+        if (c == 0)
+            return in->cutoff == FILTER_OPEN ? "OPEN" : ui_dec(b, in->cutoff);
+        if (c == 1)
+            return ui_dec(b, in->reso);
+        return sdec(b, (c == 2 ? in->filt_env : in->filt_vel) - FILTER_ENV_NONE);
+    case L_LEVEL:
+        if (c == 2)
+            return in->vib_phase == VIB_PHASE_FREE ? "FREE" : ui_dec(b, in->vib_phase);
+        return sdec(b, c == 0 ? in->gain : in->level);
+    case L_VOICE:
+        if (c == 1)
+            return in->accent == VOX_ACCENT_EN ? "EN" : "FR";
+        ui_dec(b, in->tract ? in->tract : 100);
+        for (char *p = b;; p++)
+            if (!*p) {
+                p[0] = '%', p[1] = 0;
+                break;
+            }
+        return b;
+    default: {
+        const Layer *l = &in->layers[layer_of(r)];
+        if (c == 0)
+            return timbre_word(l->engine, l->timbre);
+        return sdec(b, c == 1 ? l->transpose : c == 2 ? l->detune : l->gain);
+    }
+    }
 }
 
 /* ------------------------------------------------------------ edits --- */
-static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
+/* The engines that sound here, in KNOB 2's order. One that does not (SMPL,
+ * PLUCK) leaves for the first of them at a turn. */
+static const uint8_t engines[] = { ENGINE_PULSE, ENGINE_NOISE, ENGINE_WAVE, ENGINE_VOX };
 
-static void turn(int k, int d)
+static void turn(int d)
 {
     InstrumentDef *in = I();
+    int k = kind(row);
 
     undo_bytes(in, sizeof *in);
-    if (row == ROW_SOUND) {
-        if (k == 0) {
-            /* The three engines this machine has. One that is silent here
-             * (SMPL, VOX, PLUCK) leaves for the first of them at a turn. */
-            int e = engine_sounds(in->engine) ? clampi(in->engine + d, 0, ENGINE_WAVE) : ENGINE_PULSE;
-            in->engine = (uint8_t)e;
-            if (in->timbre > engine_timbre_max(in->engine))
-                in->timbre = engine_timbre_max(in->engine);
-        } else if (k == 1) {
-            in->timbre = (uint8_t)clampi(in->timbre + d, 0, engine_timbre_max(in->engine));
-        } else if (k == 2) {
-            in->gain = (int8_t)clampi(in->gain + d, GAIN_MIN_DB, GAIN_MAX_DB);
-        } else {
-            in->level = (int8_t)clampi(in->level + d, GAIN_MIN_DB, GAIN_MAX_DB);
-        }
-    } else if (row == ROW_ENV) {
+    if (k == L_SOUND && col == 0) {
+        int at = -1;
+        for (int i = 0; i < (int)sizeof engines; i++)
+            if (engines[i] == in->engine)
+                at = i;
+        in->engine = engines[at < 0 ? 0 : clampi(at + d, 0, (int)sizeof engines - 1)];
+        if (in->timbre > engine_timbre_max(in->engine))
+            in->timbre = engine_timbre_max(in->engine);
+    } else if (k == L_SOUND) {
+        in->timbre = (uint8_t)clampi(in->timbre + d, 0, engine_timbre_max(in->engine));
+    } else if (k == L_ENV) {
         uint8_t *f[4] = { &in->attack, &in->decay, &in->sustain, &in->release };
-        *f[k] = (uint8_t)clampi(*f[k] + d, 0, 255);
-    } else if (row == ROW_FILTER) {
+        *f[col] = (uint8_t)clampi(*f[col] + d, 0, 255);
+    } else if (k == L_FILTER) {
         uint8_t *f[4] = { &in->cutoff, &in->reso, &in->filt_env, &in->filt_vel };
-        *f[k] = (uint8_t)clampi(*f[k] + d, 0, k < 2 ? 255 : 127);
-    } else if (row == ROW_VIB) {
-        if (k != 0)
-            return;
-        in->vib_phase = (int16_t)clampi(in->vib_phase + d, VIB_PHASE_FREE, 255);
+        *f[col] = (uint8_t)clampi(*f[col] + d, 0, col < 2 ? 255 : 127);
+    } else if (k == L_LEVEL) {
+        if (col == 2)
+            in->vib_phase = (int16_t)clampi(in->vib_phase + d, VIB_PHASE_FREE, 255);
+        else if (col == 0)
+            in->gain = (int8_t)clampi(in->gain + d, GAIN_MIN_DB, GAIN_MAX_DB);
+        else
+            in->level = (int8_t)clampi(in->level + d, GAIN_MIN_DB, GAIN_MAX_DB);
+    } else if (k == L_VOICE) {
+        if (col == 0)
+            in->tract = (uint8_t)clampi((in->tract ? in->tract : 100) + d, VOX_TRACT_MIN, VOX_TRACT_MAX);
+        else
+            in->accent = (uint8_t)clampi(in->accent + d, VOX_ACCENT_FR, VOX_ACCENT_EN);
     } else {
-        int j = row - ROW_LAYER;
-        if (j >= in->nlayers) {
-            /* A free row: turning KNOB 1 up makes the layer. */
-            if (k != 0 || d <= 0 || in->nlayers >= INSTR_MAX_LAYERS)
+        int j = layer_of(row);
+        if (j >= in->nlayers) { /* + LYR: turning up makes the layer */
+            if (d <= 0)
                 return;
             j = in->nlayers++;
             in->layers[j].transpose = in->layers[j].detune = in->layers[j].gain = 0;
             wave_set(&in->layers[j], clampi(d, 1, WAVES - 1));
         } else {
             Layer *l = &in->layers[j];
-            if (k == 0) {
+            if (col == 0) {
                 int w = clampi(wave_of(l) + d, 0, WAVES - 1);
                 if (w == 0) { /* all the way down: the layer goes, the ones under it move up */
                     for (int i = j; i < in->nlayers - 1; i++)
@@ -139,9 +223,9 @@ static void turn(int k, int d)
                 } else {
                     wave_set(l, w);
                 }
-            } else if (k == 1) {
+            } else if (col == 1) {
                 l->transpose = (int8_t)clampi(l->transpose + d, -48, 48);
-            } else if (k == 2) {
+            } else if (col == 2) {
                 l->detune = (int8_t)clampi(l->detune + d, -100, 100);
             } else {
                 l->gain = (int8_t)clampi(l->gain + d, GAIN_MIN_DB, GAIN_MAX_DB);
@@ -151,202 +235,124 @@ static void turn(int k, int d)
     app_mark_dirty();
 }
 
-/* ---------------------------------------------------------- drawing --- */
-static void cell(int k, int y, bool cur, const char *label, const char *value, bool warn)
+/* The preview: C E G C an octave on, a note every 250 ms, a rest, again. */
+static void preview(uint32_t ms)
 {
-    int x = APP_X0 + k * CELL_PITCH;
-    if (!value) {
-        if (label) /* a free layer */
-            gfx_frame_rect(x, y, CELL_W, ROW_H, C_DIM, 76);
+    static const uint8_t tune[] = { 60, 64, 67, 72, 0, 0 };
+    int at = (int)((ms - preview_t0) / 250u % sizeof tune);
+    if (at == preview_at)
         return;
-    }
-    gfx_slab(x, y, CELL_W, ROW_H, cur ? C_ACCENT : C_TEXT, cur ? 255 : 18);
-    gfx_text(F_MONO8, x + 3, y + 9, label, cur ? C_ON_ACC : C_DIM);
-    gfx_text(F_MONO8, x + CELL_W - 3 - gfx_text_w(F_MONO8, value), y + 9, value,
-             cur ? C_ON_ACC : warn ? C_FX : C_TEXT);
+    preview_at = at;
+    if (tune[at])
+        player_note_on(inst, (uint8_t)(tune[at] + 12 * kbd_oct));
+    else
+        player_note_off();
 }
 
-static int ms_of(int v) { return v * v / 8; }
-
-static void draw_cards(void)
-{
-    const InstrumentDef *in = I();
-    char a[16], b[12];
-
-    if (row == ROW_SOUND) {
-        ui_card(0, "ENGINE", engine_name(in->engine), 0);
-        if (engine_sounds(in->engine))
-            ui_card(1, timbre_label(in->engine), timbre_word(in->engine, in->timbre), 0);
-        else
-            ui_card(1, 0, 0, 0);
-        ui_card(2, "GAIN", sdec(a, in->gain, true), "dB");
-        ui_card(3, "LEVEL", sdec(b, in->level, true), "dB");
-    } else if (row == ROW_ENV) {
-        ui_card(0, "ATTACK", ui_dec(a, in->attack), 0);
-        ui_card(1, "DECAY", ui_dec(a, in->decay), 0);
-        ui_card(2, "SUSTAIN", ui_dec(a, in->sustain), 0);
-        ui_card(3, "RELEASE", ui_dec(a, in->release), 0);
-    } else if (row == ROW_FILTER) {
-        ui_card(0, "CUTOFF", in->cutoff == FILTER_OPEN ? "OPEN" : ui_dec(a, in->cutoff), 0);
-        ui_card(1, "RESO", ui_dec(a, in->reso), 0);
-        ui_card(2, "ENV", sdec(a, in->filt_env - FILTER_ENV_NONE, true), 0);
-        ui_card(3, "VEL", sdec(a, in->filt_vel - FILTER_ENV_NONE, true), 0);
-    } else if (row == ROW_VIB) {
-        ui_card(0, "VIBPHASE", in->vib_phase == VIB_PHASE_FREE ? "FREE" : ui_dec(a, in->vib_phase), 0);
-        ui_card(1, 0, 0, 0);
-        ui_card(2, 0, 0, 0);
-        ui_card(3, 0, 0, 0);
-    } else if (row - ROW_LAYER < in->nlayers) {
-        const Layer *l = &in->layers[row - ROW_LAYER];
-        ui_card(0, "WAVE", wave_word(a, l), 0);
-        ui_card(1, "TRANSP", sdec(b, l->transpose, true), "st");
-        ui_card(2, "DETUNE", sdec(b, l->detune, true), "ct");
-        ui_card(3, "GAIN", sdec(b, l->gain, true), "dB");
-    } else {
-        ui_card(0, "WAVE", "--", 0);
-        ui_card(1, 0, 0, 0);
-        ui_card(2, 0, 0, 0);
-        ui_card(3, 0, 0, 0);
-    }
-}
-
+/* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
-    static const char *const words[12] = { "", "", "", "", "", "", "\xE2\x80\xB9 PAT", "SAVE", "UNDO", "", "PLAY", "" };
-    static const char *const playing_words[12] = { "", "", "", "", "", "", "\xE2\x80\xB9 PAT", "SAVE", "UNDO", "", "STOP", "" };
+    static const char *const heads[][4] = {
+        { 0 }, { "ENGINE", "TIMBRE" }, { "ATK", "DEC", "SUS", "REL" }, { "CUT", "RES", "ENV", "VEL" },
+        { "GAIN", "LEVEL", "VIB" }, { "TRACT", "ACCENT" }, { "SOUND", "SEMI", "FINE", "GAIN" },
+    };
     const InstrumentDef *in = I();
-    uint8_t st[12];
-    char a[16], b[12];
-    int x;
-    bool silent = !engine_sounds(in->engine);
+    char s[12];
+    int n = nrows();
 
-    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
-    x = gfx_text(F_COND12, APP_X0, NAV_Y + 13, "\xE2\x80\xB9 PAT", C_TITLE);
-    x = gfx_text(F_MONO8, x + 6, NAV_Y + 12, ui_hex2(a, inst), C_TITLE);
-    gfx_text(F_COND12, x + 4, NAV_Y + 13, in->name[0] ? in->name : "--", C_TEXT);
-    if (saved) {
-        const char *m = saved > 0 ? "SAVED" : "NOT SAVED";
-        gfx_text(F_COND9, APP_X0 + APP_INNER - gfx_text_w(F_COND9, m), NAV_Y + 12, m,
-                 saved > 0 ? C_ACCENT : C_MUTE);
-    } else if (silent) {
-        gfx_text(F_MONO8, APP_X0 + APP_INNER - gfx_text_w(F_MONO8, "SILENT HERE"), NAV_Y + 12,
-                 "SILENT HERE", C_FX);
+    grid_clear();
+    if (said)
+        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+    else
+        grid_corner("INS", C_DIM, grid_hex2(s, inst), C_TITLE);
+    if (naming) {
+        namer_draw();
+        return;
     }
-    gfx_fill(APP_X0, NAV_Y + NAV_H, APP_INNER, 1, C_DIM, 77);
-
-    draw_cards();
-    ui_cards_rule();
-
-    x = gfx_text(F_MONO8, APP_X0, LEFT_Y + 8, "SELECT", C_DIM);
-    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "ROW", C_TEXT);
-    x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "PRESETS", C_DIM);
-    x = gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "INSTR", C_TEXT);
-    x = gfx_text(F_MONO8, x + 5, LEFT_Y + 8, "KEYS", C_DIM);
-    gfx_text(F_MONO8, x + 3, LEFT_Y + 8, "PLAY", C_TEXT);
-
-    {   /* The envelope: its times to scale, the sustain on a fixed width. */
-        int ta = ms_of(in->attack), td = ms_of(in->decay), tr = ms_of(in->release), hold = 300;
-        int total = ta + td + hold + tr, w = APP_INNER - 8, h = PLOT_H - 9;
-        int x0 = APP_X0 + 4, yb = PLOT_Y + PLOT_H - 4, ys = yb - h * in->sustain / 255;
-        int xa = x0 + w * ta / total, xd = x0 + w * (ta + td) / total,
-            xh = x0 + w * (ta + td + hold) / total;
-
-        gfx_slab(APP_X0, PLOT_Y, APP_INNER, PLOT_H, C_TEXT, 9);
-        gfx_line(x0, yb, xa, yb - h, C_ACCENT);
-        gfx_line(xa, yb - h, xd, ys, C_ACCENT);
-        gfx_line(xd, ys, xh, ys, C_ACCENT);
-        gfx_line(xh, ys, x0 + w, yb, C_ACCENT);
-        ui_dec(a, total - hold);
-        x = APP_X0 + APP_INNER - 4 - gfx_text_w(F_MONO8, " ms");
-        gfx_text(F_MONO8, x, PLOT_Y + 9, " ms", C_DIM);
-        gfx_text(F_MONO8, x - gfx_text_w(F_MONO8, a), PLOT_Y + 9, a, C_DIM);
-    }
-
-    {
-        int y = ROWS_Y;
-        bool c = row == ROW_SOUND;
-        cell(0, y, c, "", engine_name(in->engine), silent);
-        /* LEN, not LENGTH: the word and SHORT do not both fit a cell; the card says it whole */
-        cell(1, y, c, in->engine == ENGINE_NOISE ? "LEN" : timbre_label(in->engine),
-             silent ? "--" : timbre_word(in->engine, in->timbre), false);
-        cell(2, y, c, "GAIN", sdec(a, in->gain, false), false);
-        cell(3, y, c, "LEVEL", sdec(b, in->level, false), false);
-        y += ROW_PITCH;
-        c = row == ROW_ENV;
-        cell(0, y, c, "ATK", ui_dec(a, in->attack), false);
-        cell(1, y, c, "DEC", ui_dec(a, in->decay), false);
-        cell(2, y, c, "SUS", ui_dec(a, in->sustain), false);
-        cell(3, y, c, "REL", ui_dec(a, in->release), false);
-        y += ROW_PITCH;
-        c = row == ROW_FILTER;
-        cell(0, y, c, "CUT", ui_dec(a, in->cutoff), false);
-        cell(1, y, c, "RES", ui_dec(a, in->reso), false);
-        cell(2, y, c, "ENV", sdec(a, in->filt_env - FILTER_ENV_NONE, true), false);
-        cell(3, y, c, "VEL", sdec(a, in->filt_vel - FILTER_ENV_NONE, true), false);
-        y += ROW_PITCH;
-        cell(0, y, row == ROW_VIB, "VIB", in->vib_phase == VIB_PHASE_FREE ? "FREE" : ui_dec(a, in->vib_phase), false);
-    }
-    gfx_text(F_MONO8, APP_X0 + 2, LAYERS_Y + 8, "LAYERS", C_DIM);
-    for (int j = 0; j < INSTR_MAX_LAYERS; j++) {
-        int y = LAYER_ROWS_Y + j * ROW_PITCH;
-        bool c = row == ROW_LAYER + j;
-        if (j < in->nlayers) {
-            const Layer *l = &in->layers[j];
-            cell(0, y, c, "", wave_word(a, l), false);
-            cell(1, y, c, "TSP", sdec(b, l->transpose, true), false);
-            cell(2, y, c, "DET", sdec(b, l->detune, true), false);
-            cell(3, y, c, "GAIN", sdec(b, l->gain, true), false);
-        } else {
-            for (int k = 0; k < 4; k++)
-                cell(k, y, false, "", 0, false);
-            if (c) /* the cursor on a free row: its first cell, the one KNOB 1 fills */
-                gfx_slab(APP_X0, y, CELL_W, ROW_H, C_ACCENT, 255);
+    if (layer_of(row) < in->nlayers || kind(row) != L_LAYER) /* the column names: this row's */
+        for (int c = 0; c < ncols(row); c++)
+            grid_head(col_x(row, c), span(row, c) * CELL_W, heads[kind(row)][c], c == col);
+    for (int v = 0; v < GRID_ROWS && top + v < n; v++) {
+        int r = top + v, k = kind(r);
+        bool band = r == row, adder = k == L_LAYER && layer_of(r) >= in->nlayers;
+        if (band)
+            grid_band(v, PLAT_W - 4 - (n > GRID_ROWS ? 6 : 0));
+        if (k == L_NAME && previewing) /* what plays */
+            for (int i = 0; i < 6; i++)
+                gfx_fill(PLAT_W - 16 + i, grid_y(v) + 8 + i, 1, 12 - 2 * i, band ? C_ON_ACC : C_TITLE, 255);
+        {
+            static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE" };
+            char lyr[6] = "LYR 1";
+            lyr[4] = (char)('1' + layer_of(r));
+            gfx_text(F_COND20, LABEL_X, grid_base(v), k != L_LAYER ? label[k] : adder ? "+ LYR" : lyr,
+                     band ? C_ON_ACC : C_DIM);
+        }
+        if (k == L_NAME) {
+            if (band)
+                grid_hollow(v, CELL_X - 4, 130);
+            gfx_text(F_COND20, CELL_X, grid_base(v), in->name[0] ? in->name : "--", band ? C_ACCENT : C_TEXT);
+            continue;
+        }
+        if (adder)
+            continue;
+        for (int c = 0; c < ncols(r); c++) {
+            bool on = band && c == col, silent = k == L_SOUND && c == 0 && !engine_sounds(in->engine) &&
+                                                 in->engine != ENGINE_VOX;
+            grid_cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, silent ? C_FX : C_TEXT);
         }
     }
-
-    for (int k = 0; k < 12; k++)
-        st[k] = k == AT_BACK ? UI_BTN_BACK : k == AT_SAVE ? UI_BTN_ON
-                : k == AT_UNDO ? (undo_can() ? UI_BTN_ON : UI_BTN_OFF)
-                : k == AT_PLAY ? (playing ? UI_BTN_LIVE : UI_BTN_ON) : UI_BTN_NONE;
-    ui_btn_map(playing ? playing_words : words, st, held);
+    gfx_fill(CELL_X - 5, GRID_HEAD, 1, (n < GRID_ROWS ? n : GRID_ROWS) * GRID_ROW, C_DIM, 255);
+    if (n > GRID_ROWS) {
+        int h = GRID_ROWS * GRID_ROW * GRID_ROWS / n, y = GRID_HEAD + GRID_ROWS * GRID_ROW * top / n;
+        gfx_fill(PLAT_W - 4, GRID_HEAD, 2, GRID_ROWS * GRID_ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
+    }
 }
 
 /* -------------------------------------------------------------- api --- */
 void instrument_open(int instr, int e)
 {
+    (void)e; /* PLAY is the preview here, not the phrase */
     inst = instr < 0 || instr >= SONG_MAX_INSTR ? 0 : instr;
-    entry = e;
-    row = ROW_ENV;
-    saved = 0;
-    prev_btns = prev_keys = 0xFFFFFFFFu;
+    row = col = top = 0;
+    naming = previewing = false;
+    said = 0;
+    prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     gfx_invalidate();
 }
 
 bool instrument_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
-    int last;
-#define PRESSED(at) ((btns >> APP_BTN_AT[at]) & 1u)
+#define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    held = in->btns;
-    playing = player_playing();
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_PRESET])
-        saved = 0;
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2])
+        said = 0;
 
-    inst += in->enc[PE_PRESET];
-    inst = clampi(inst, 0, SONG_MAX_INSTR - 1);
-    /* down to the first free layer row and no further */
-    last = ROW_LAYER + (I()->nlayers < INSTR_MAX_LAYERS ? I()->nlayers : INSTR_MAX_LAYERS - 1);
-    row = clampi(row + in->enc[PE_SELECT], 0, last);
-    for (int k = 0; k < 4; k++)
-        if (in->enc[PE_K1 + k]) {
-            turn(k, in->enc[PE_K1 + k]);
-            saved = 0;
-        }
-    last = ROW_LAYER + (I()->nlayers < INSTR_MAX_LAYERS ? I()->nlayers : INSTR_MAX_LAYERS - 1);
-    if (row > last)
-        row = last;
+    if (naming) {
+        naming = namer_frame(in, btns) == NAMER_TYPING;
+        if (!naming)
+            app_mark_dirty();
+        gfx_frame(draw);
+        return true;
+    }
+
+    if (in->enc[PE_PRESET]) {
+        inst = clampi(inst + in->enc[PE_PRESET], 0, SONG_MAX_INSTR - 1);
+        row = row >= nrows() ? nrows() - 1 : row;
+    }
+    row = clampi(row + in->enc[PE_SELECT], 0, nrows() - 1);
+    col = clampi(col + in->enc[PE_K1], 0, ncols(row) ? ncols(row) - 1 : 0);
+    if (in->enc[PE_K2] && kind(row) != L_NAME) {
+        turn(in->enc[PE_K2]);
+        row = row >= nrows() ? nrows() - 1 : row; /* a layer gone, or VOICE */
+        col = clampi(col, 0, ncols(row) ? ncols(row) - 1 : 0);
+    }
+    if (PRESSED(PB_SEL) && kind(row) == L_NAME) {
+        namer_open(I()->name, INSTR_NAME_LEN - 1);
+        naming = true;
+    }
 
     if (btns & (1u << PB_OCTDN) && kbd_oct > -3)
         kbd_oct--;
@@ -355,26 +361,36 @@ bool instrument_frame(const PlatInput *in)
     /* The keys play the sound: the last one pressed, until all are up. */
     for (int k = 0; k < PLAT_KEYS; k++) {
         int n = 53 + kbd_oct * 12 + k;
-        if (((keys >> k) & 1u) && n >= NOTE_MIN && n <= NOTE_MAX)
+        if (((keys >> k) & 1u) && n >= NOTE_MIN && n <= NOTE_MAX) {
+            previewing = false;
             player_note_on(inst, (uint8_t)n);
+        }
     }
-    if (!in->keys && prev_keys && prev_keys != 0xFFFFFFFFu)
+    if (!in->keys && prev_keys && prev_keys != 0xFFFFFFFFu && !previewing)
         player_note_off();
     prev_keys = in->keys;
 
-    if (PRESSED(AT_UNDO))
-        undo_pop();
-    if (PRESSED(AT_SAVE))
-        saved = app_save() == 0 ? 1 : -1;
-    if (PRESSED(AT_PLAY)) {
-        if (playing)
+    if (PRESSED(PB_PLAY)) { /* the preview, not the song */
+        if (player_playing())
             player_stop();
-        else
-            player_play_entry(entry);
+        previewing = !previewing;
+        preview_t0 = in->ms;
+        preview_at = -1;
+        if (!previewing)
+            player_note_off();
     }
-    plat_led_btn(PB_PLAY, playing);
+    if (previewing)
+        preview(in->ms);
+    if (PRESSED(PB_ARP))
+        undo_pop();
+    if (PRESSED(PB_SAVE))
+        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+
+    grid_follow(&row, &top, nrows(), GRID_ROWS);
+    plat_led_btn(PB_PLAY, previewing);
     gfx_frame(draw);
-    if (PRESSED(AT_BACK)) {
+    if (PRESSED(PB_GLO)) {
+        previewing = false;
         player_note_off();
         return false;
     }
