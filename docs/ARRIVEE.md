@@ -84,6 +84,28 @@ l'USB : la XIAO reste le seul recours pour ce cas.
 
 ## 2. La sauvegarde
 
+**Faite le 28/10 sans XIAO**, avec `fm1_rescue.py` de felucca-bsp
+(`tools/`, commit `5942e68`), qui parle au chargeur de la puce
+(`WL80UBOOT1.00`, 4C4A:8057) directement depuis le Mac :
+
+1. `sudo ~/fm1-rescue/env/bin/python ~/fm1-rescue/fm1_rescue.py
+   ~/fm1-rescue/FM-1.fwsc --loader ~/fm1-rescue/wl82loader.bin`
+   (sans `--write` : lit, sauvegarde, compare, n'écrit rien) ;
+2. pendant qu'il attend, la V15 reçoit par USB-MIDI `F0 22 24 35 7D F7`
+   et passe dans le chargeur ; trouvé en 8 s ;
+3. puce 980F, flash 856014, 1 Mo lu en 2,6 s, **0 secteur sur 147 ne
+   diffère de la V15** ; le FM-1 redémarre seul en V15.
+
+- [x] `fm1-backup-20261028-181751.bin`, 1 048 576 octets, sha256
+      `d562b0e8…534f62`, dans `~/fm1-rescue` et `~/.fm1/backups`.
+- [ ] Une copie hors de la machine (disque externe ou nuage).
+
+C'est aussi le chemin de secours sans XIAO : un firmware qui plante au
+démarrage finit dans ce chargeur (garde de démarrage), et le même script
+avec `--write` y remet la V15.
+
+Avec la XIAO, prévu à l'origine :
+
 ```bash
 python3 tools/fm1t.py info
 ```
