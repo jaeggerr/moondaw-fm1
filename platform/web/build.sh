@@ -8,7 +8,7 @@ cd "$(dirname "$0")/../.."
 mkdir -p build/web
 if [ "${APP:-app}" = hello ]; then
     SRC="platform/web/web.c app/hello.c app/term.c"
-elif [ "${APP:-app}" = type ] || [ "${APP:-app}" = mock ]; then
+elif [ "${APP:-app}" = type ]; then
     SRC="-DGFX_SPECIMEN=1 platform/web/web.c app/$APP.c app/gfx.c app/term.c"
 else
     SRC="platform/web/web.c app/${APP:-app}.c app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/project.c app/remote.c app/canvas.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c app/term.c core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c"

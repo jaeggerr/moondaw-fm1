@@ -1288,6 +1288,16 @@ research asked for):
 - Where the band is kept: with the song (check that moondaw keeps lines
   it does not know in a .trk) or apart in the device's flash.
 
+## 2026-10-29 — the mockup app removed
+
+`app/mock.c` (MOONDAW_APP=mock) and `app/mock_kids.h` are gone (Jaeger:
+mockups do not belong in the source). The canvas does it without a
+firmware: a script in `tools/protos/` (copy `list_demo.py`) draws on the
+panel and reads the hands, HOME goes back to the app. Its limits: the
+app's fonts only (20, 14, 12, mono 8), and the computer plugged in. To
+weigh other sizes, `MOONDAW_APP=type` (`app/type.c`) stays. The old
+mockups (HOME, SONG, PATTERN, MIXER, INSTRUMENT...) are in the history.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
