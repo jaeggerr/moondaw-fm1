@@ -1,11 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Screen mockups judged on the panel (MOONDAW_APP=mock, built with GFX_SPECIMEN): one screen
  * at a time, in CONDENSED 20, the size chosen on the FM-1 on 28/10. Nothing here touches a
- * song; the data is made up. KNOB 1 turns the variant, SELECT moves the cursor in it.
+ * song; the data is copied from real ones. KNOB 1 turns the variant, SELECT moves the cursor.
  *
- * HOME: the projects, by name only, one a row; the open one marked by a bar at its left, a dot
- * after its name while it has unsaved changes; + NEW last; the firmware version small at the
- * bottom. The cursor starts on the open project. */
+ * SONG, what a project opens on: its structure. One row a phrase, in the song's order: the
+ * phrase's number, then one square a track -- filled when the track plays in that phrase,
+ * empty when it does not. No names (none of the 13 songs has one), no blocks, no tempo. The
+ * cursor starts on the first phrase; the phrase playing is marked by a triangle. (HOME, the
+ * first mockup, is now app/menu.c.) */
 #include "../platform/platform.h"
 #include "gfx.h"
 
@@ -13,68 +15,68 @@
 #define FG GFX_RGB(235, 235, 235)
 #define DIM GFX_RGB(120, 120, 120)
 #define CYAN GFX_RGB(0, 200, 230)
-#define AMBER GFX_RGB(255, 170, 0)
 #define CURSOR GFX_RGB(80, 220, 120)
 
-#define ROW 28                    /* CONDENSED 20 is 24 px high: 4 px between rows */
-#define ROWS 8                    /* 8 x 28 = 224, the version takes the last 16 */
-#define TEXT_X 12
+#define ROW 28
+#define ROWS 8
+#define TEXT_X 14
+#define SQ 14                     /* a track's square */
+#define SQ_GAP 5
+#define SQ_X 54
 
 typedef struct {
-    const char *title;            /* shown nowhere: what the variant is for */
-    const char *const *names;
-    int n, open, dirty;           /* open: index or -1 */
+    const uint8_t *phrases;       /* bit t: track t plays in that phrase */
+    int n, tracks, playing;       /* playing: a phrase, or -1 stopped */
 } Variant;
 
-static const char *const few[] = { "KIDS", "tremolo-chip", "robot-demo", "sandstorm3" };
-static const char *const many[] = {
-    "AMPTEST", "DAFT-PUNK", "DAFT-PUNK-EN", "KIDS", "LEOMOTEUR", "clavioline", "piano-velocity",
-    "robot-demo", "sandstorm3", "song03", "supersaw2", "tremolo", "tremolo-chip",
-};
+/* KIDS.trk and robot-demo.trk, as their arrangements are */
+static const uint8_t kids[] = { 0x85, 0xAD, 0xFD, 0xFF, 0xFF, 0xFF, 0x8C, 0xFF, 0xFF, 0xFF,
+                                0xFF, 0xFB, 0xFA, 0xFF, 0xFF, 0xFF, 0xAD, 0x84, 0x84 };
+static const uint8_t robot[] = { 0x3E, 0x3F, 0x3F, 0x30 };
 
 static const Variant variants[] = {
-    { "a few projects", few, 4, 1, 0 },
-    { "the open one has unsaved changes", few, 4, 1, 1 },
-    { "more than a screen", many, 13, 11, 0 },
-    { "the first start: nothing yet", 0, 0, -1, 0 },
+    { kids, 19, 8, -1 },          /* KIDS just opened */
+    { kids, 19, 8, 5 },           /* KIDS playing */
+    { robot, 4, 6, -1 },          /* a short song on six tracks */
 };
 #define NVAR ((int)(sizeof variants / sizeof variants[0]))
 
 static int var, cursor, top;
 
-static void enter(int v)
-{
-    var = v;
-    int count = variants[v].n + 1, last = count > ROWS ? count - ROWS : 0;
-    cursor = variants[v].open >= 0 ? variants[v].open : 0;
-    top = cursor - ROWS / 2 > 0 ? cursor - ROWS / 2 : 0; /* the open one mid-screen... */
-    top = top > last ? last : top;                       /* ...but never blank rows below */
-}
-
-static void draw_home(void)
+static void draw_song(void)
 {
     const Variant *v = &variants[var];
-    int count = v->n + 1;                      /* + NEW */
     gfx_fill(0, 0, PLAT_W, PLAT_H, BG, 255);
-    for (int r = 0; r < ROWS && top + r < count; r++) {
+    for (int r = 0; r < ROWS && top + r < v->n; r++) {
         int i = top + r, y = r * ROW, base = y + 2 + FONTS[F_COND_20].ascent;
-        int here = i == cursor;
-        const char *name = i < v->n ? v->names[i] : "+ NEW";
-        uint16_t c = here ? BG : i < v->n ? FG : DIM;
+        int here = i == cursor, plays = i == v->playing;
+        char num[3] = { "0123456789ABCDEF"[i >> 4], "0123456789ABCDEF"[i & 15], 0 };
         if (here)
-            gfx_slab(2, y + 1, PLAT_W - 4 - (count > ROWS ? 6 : 0), ROW - 2, CURSOR, 255);
-        if (i == v->open)
-            gfx_fill(4, y + 6, 3, ROW - 12, here ? BG : CYAN, 255);
-        int x = gfx_text(F_COND_20, TEXT_X, base, name, c);
-        if (i == v->open && v->dirty)
-            gfx_fill(x + 6, base - 9, 7, 7, here ? BG : AMBER, 255);
+            gfx_slab(2, y + 1, PLAT_W - 4 - (v->n > ROWS ? 6 : 0), ROW - 2, CURSOR, 255);
+        if (plays) /* a triangle pointing right: what plays */
+            for (int k = 0; k < 6; k++)
+                gfx_fill(4 + k, y + 8 + k, 1, 12 - 2 * k, here ? BG : CYAN, 255);
+        gfx_text(F_COND_20, TEXT_X, base, num, here ? BG : plays ? CYAN : FG);
+        for (int t = 0; t < v->tracks; t++) {
+            int x = SQ_X + t * (SQ + SQ_GAP), sy = y + (ROW - SQ) / 2;
+            if (v->phrases[i] >> t & 1)
+                gfx_fill(x, sy, SQ, SQ, here ? BG : plays ? CYAN : FG, 255);
+            else
+                gfx_frame_rect(x, sy, SQ, SQ, here ? BG : DIM, 255);
+        }
     }
-    if (count > ROWS) {                        /* where the screen is in the list */
-        int h = ROWS * ROW * ROWS / count, y = ROWS * ROW * top / count;
+    if (v->n > ROWS) { /* where the screen is in the song */
+        int h = ROWS * ROW * ROWS / v->n, y = ROWS * ROW * top / v->n;
         gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, GFX_RGB(40, 40, 40), 255);
         gfx_fill(PLAT_W - 4, y, 2, h, DIM, 255);
     }
-    gfx_text(F_COND_12, TEXT_X, PLAT_H - 4, "MOONDAW v0.1", DIM);
+}
+
+static void enter(int v)
+{
+    var = v;
+    cursor = 0;
+    top = 0;
 }
 
 void app_init(void)
@@ -91,17 +93,17 @@ int app_load(const char *trk, uint32_t len, const char *name)
 
 void app_frame(const PlatInput *in)
 {
-    int count;
+    int n;
     if (in->enc[PE_K1])
         enter(((var + in->enc[PE_K1]) % NVAR + NVAR) % NVAR);
-    count = variants[var].n + 1;
+    n = variants[var].n;
     cursor += in->enc[PE_SELECT];
-    cursor = cursor < 0 ? 0 : cursor >= count ? count - 1 : cursor;
+    cursor = cursor < 0 ? 0 : cursor >= n ? n - 1 : cursor;
     if (cursor < top)
         top = cursor;
     if (cursor >= top + ROWS)
         top = cursor - ROWS + 1;
-    gfx_frame(draw_home);
+    gfx_frame(draw_song);
 }
 
 void app_audio(int16_t *out, int frames)
