@@ -129,17 +129,28 @@ static void draw(void)
         gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
-    gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);
+    if (player_playing() && player_clock) {
+        /* the worst block's time, stage by stage, in microseconds: O the oscillators,
+         * V the voice, C the filters and mix, R the reverb, E the delay, T the tick */
+        static const char tag[PROF_N] = { 'T', 'O', 'V', 'C', 'R', 'E' };
+        static const uint8_t order[PROF_N] = { PROF_OSC, PROF_VOX, PROF_CHAIN, PROF_REV, PROF_ECHO, PROF_TICK };
+        uint32_t p[PROF_N + 1];
+        char t[8];
+        int x = 4;
+        player_profile(p);
+        for (int i = 0; i < PROF_N; i++) {
+            t[0] = tag[order[i]];
+            ui_dec(t + 1, (int)p[order[i]]);
+            x = gfx_text(F_COND12, x, PLAT_H - 4, t, C_TEXT) + 5;
+        }
+    } else {
+        gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);
+    }
     if (app_cpu >= 0) { /* what the song costs the chip: the worst block held while it plays */
-        char a[8], b[8];
+        char b[8];
         int x = PLAT_W - 8 - gfx_text_w(F_COND12, ui_dec(b, peak));
         gfx_text(F_COND12, x, PLAT_H - 4, b, peak > 90 ? C_MUTE : C_TEXT);
-        x -= gfx_text_w(F_COND12, "MAX ") + 8;
-        gfx_text(F_COND12, x, PLAT_H - 4, "MAX", C_DIM);
-        x -= gfx_text_w(F_COND12, ui_dec(a, app_cpu)) + 8;
-        gfx_text(F_COND12, x, PLAT_H - 4, a, app_cpu > 70 ? C_MUTE : C_TEXT);
-        x -= gfx_text_w(F_COND12, "CPU ");
-        gfx_text(F_COND12, x, PLAT_H - 4, "CPU", C_DIM);
+        gfx_text(F_COND12, x - gfx_text_w(F_COND12, "MAX ") - 2, PLAT_H - 4, "MAX", C_DIM);
     }
 }
 
@@ -220,6 +231,8 @@ bool menu_frame(const PlatInput *in)
         }
     }
     peak = !player_playing() ? 0 : app_block > peak ? app_block : peak; /* the worst block, from PLAY on */
+    if (!player_playing())
+        player_profile_reset();
     plat_led_btn(PB_PLAY, player_playing());
     gfx_frame(draw);
     return open_it;

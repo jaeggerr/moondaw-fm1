@@ -83,7 +83,9 @@ void reverb_process(const int32_t *in, int32_t *out, int frames)
             int32_t s = rv.mem[line_at[k] + rv.pos[k]];
             rv.lp[k] = s + mul15(damp, rv.lp[k] - s);
             wet[k] = s; /* heard undamped: the first arrival is bright */
-            v[k] = (int32_t)(((int64_t)rv.lp[k] * fb[k]) / 65536);
+            /* lp is a one-pole of int16 samples, so |lp| <= 32768, and 32768 x 65535
+             * fits an int32: the same quotient as in 64 bits, a third the work */
+            v[k] = rv.lp[k] * (int32_t)fb[k] / 65536;
         }
         for (int span = 1; span < LINES; span <<= 1)
             for (int k = 0; k < LINES; k++)

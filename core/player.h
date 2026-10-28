@@ -40,6 +40,16 @@ bool player_soloed(int track);
 
 /* From the audio interrupt: interleaved stereo, any number of frames. */
 void player_render(int16_t *out, int frames);
+/* Where the audio block's time goes, measured on the machine (28/10: the
+ * chorus of DAFT-PUNK-EN overran its block). The platform sets the clock,
+ * microseconds; unset, nothing is measured. player_profile() gives the
+ * breakdown of the worst block since the last reset: PROF_* microseconds,
+ * then the block's whole. */
+enum { PROF_TICK, PROF_OSC, PROF_VOX, PROF_CHAIN, PROF_REV, PROF_ECHO, PROF_N };
+extern uint32_t (*player_clock)(void);
+void player_profile(uint32_t out[PROF_N + 1]);
+void player_profile_reset(void);
+
 /* Offline only: the same, the sum before the clamp and the MASTER pot. */
 void player_render_raw(int32_t *out, int frames);
 

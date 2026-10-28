@@ -1077,10 +1077,55 @@ the chorus measurements.
 - A layer shows its timbre alone: each timbre belongs to one engine
   (SAW is WAVE, 25% is PULSE).
 
-## 2026-10-28 — INSTRUMENT written (branch `instrument-grid`)
+## 2026-10-28 — the audio block overran: measured, and what was tried
 
-Written on its own branch while another session changed the firmware on
-main for the chorus crackles; to be merged after it. Not installed.
+DAFT-PUNK-EN crackled at its chorus once the voice was in. HOME now shows,
+while a song plays, the worst audio block since PLAY: MAX in percent, and
+its microseconds stage by stage (`player_profile`, the firmware's TIMER4):
+O oscillators, V voice, C each track's filter/envelope/mix, R reverb,
+E delay, T the tick. `tests/dpen-chorus.trk` is the chorus alone (phrases
+06 and 07: all 8 tracks, both voices), looped by PLAY.
+
+| build | O | V | C | R | E | T | MAX |
+|---|---|---|---|---|---|---|---|
+| -Os, from XIP | 519 | 723 | 1078 | 584 | 72 | 93 | 101-102 |
+| core at -O2 | 543 | 523 | 1079 | 398 | 71 | 82 | 89 |
+| + 32-bit sat/pan/reverb | 503 | 556 | 1030 | 400 | 71 | 84 | 87 |
+
+(microseconds of a 2,902 us block; KIDS, no voice, was already MAX 89 at -Os.)
+
+- **Not the cache.** The audio core (synth, player, fx) now runs from RAM
+  (`.ram_audio`, `firmware/app.ld`), copied at boot: no change at all.
+  Kept: it costs nothing and removes a doubt. RAMTEXT moved to the top of
+  the SRAM (0x01C6C000, 32 KiB, POOL 328 KiB) because **a direct call
+  reaches +-4 MiB and 0x01C00000 is just past that from the XIP code**;
+  `-mlong-calls` is accepted by the JieLi clang and does nothing.
+- **-O2 for synth, player and fx** (the rest stays -Os): V and R fell by
+  a quarter to a third; C and O did not move.
+- Exact rewrites, the five reference renders hashed identical before and
+  after: `sat_add` with the carry instead of in 64 bits, the pan in 32
+  bits under 2^25, the reverb's feedback in 32 bits, the chain's state in
+  locals for the block. A few percent: **the chip has too much work, not
+  wasteful arithmetic.**
+- The clock is not the lever: felucca-bsp (`chip/fm1_clock.h`) measured
+  360 MHz under M-VAVE's boot loader, ours, and about 51 one-instruction
+  loops a microsecond -- the core is slow per instruction.
+- **felucca-bsp has a working second core** (`chip/fm1_cpu1.h`, from
+  Melodee, MPL-2.0): CPU0 hands it one job (half the render), does its
+  share, waits. On some FM-1s CPU1 now and then misreads shared RAM, so
+  each job carries a check word and a failure restarts (or falls back to
+  one core). Not tried here yet.
+- **A hardware fault to keep in mind** (felucca-bsp `docs/CPU.md`):
+  inlined 32x32->64 multiplies among 16-bit loads now and then corrupt a
+  register and the firmware crashes; fm1-radio cured it by moving the
+  multiplies into `noinline` helpers (half the speed). Our synth and
+  voice do exactly that (int16 tables beside 64-bit products). Not seen
+  here yet.
+
+## 2026-10-28 — INSTRUMENT written
+
+Written on its own branch (`instrument-grid`) while another session
+changed the firmware on main for the chorus crackles, then merged.
 
 - `app/instrument.c` on the agreed rows: NAME, SOUND, ENV, FILTER,
   LEVEL (GAIN LEVEL and VIB, the vibrato's phase, which had no row of
@@ -1096,12 +1141,12 @@ main for the chorus crackles; to be merged after it. Not installed.
 - The name editor is shared now (`app/namer.c`): PROJECT and INSTRUMENT
   (seven letters there, the file's limit).
 
-## 2026-10-28 — the remote and the canvas (branch `link-control`)
+## 2026-10-28 — the remote and the canvas
 
 Jaeger: a model working on this machine should not have to ask him to
 read figures off the screen, and should be able to compose on it. Built
-on its own branch (from `instrument-grid`) while the chorus crackles were
-worked on main; to merge. Not installed.
+on its own branch (`link-control`, from `instrument-grid`) while the
+chorus crackles were worked on main, then merged.
 
 - **Link version 2** (`app/link.h`): from STATUS on, the commands go to
   `link_control`, a hook the app sets (`app/remote.c`), so `link.c` and
@@ -1135,6 +1180,5 @@ worked on main; to merge. Not installed.
   that do not know it sounds (above).
 - LOOP, the PATTERN selection, cell levels: gone with the old screens,
   to be redesigned.
-- INSTRUMENT: written on branch `instrument-grid`, to merge.
 - The limiter; redo (no button for it).
 - `web/installer/` is copied, not adapted, not run.

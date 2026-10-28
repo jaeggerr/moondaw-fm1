@@ -177,6 +177,10 @@ static void input_read(PlatInput *in)
 /* ---------------------------------------------------- interrupts --- */
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
 extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
+extern uint32_t _ra_start[], _ra_end[], _ra_load[];
+/* the player's stopwatch (core/player.h), absent from the bring-up build */
+extern uint32_t (*player_clock)(void) __attribute__((weak));
+static uint32_t fm1_us(void) { return fm1_ticks() / FM1_TICKS_PER_US; }
 
 /* TIMER5, 10 kHz, above ALNK0: the key scan keeps its pace while a half
  * buffer renders. Nested in the audio ISR it only scans and counts ms;
@@ -282,6 +286,8 @@ static void fm1_main(void)
     fm1_adc_init();
     panel.magic = 0;                            /* no calibration here: always the measured default */
     panel_init();
+    if (&player_clock)
+        player_clock = fm1_us;
     app_init();
     (void)fm1_adc_read(FM1_ADC_MASTER);         /* the first conversion after the pin setup: dropped */
     {
@@ -374,6 +380,8 @@ void fm1_cstart(void)
         *d = *s;
     for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++)
         *d = *s;                                /* flash driver code that must run from RAM */
+    for (s = _ra_load, d = _ra_start; d < _ra_end; s++, d++)
+        *d = *s;                                /* the audio core: from RAM, no cache to miss */
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     fm1_boot.p3_rst = (uint8_t)p3;
