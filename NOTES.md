@@ -886,6 +886,8 @@ off the device, `build/mock/pattern-views.png`):
 - An instrument per track was weighed and kept only as the default: 7 of
   the 13 songs change instrument inside a track (KIDS t1 and t7,
   tremolo t4 with four), and KIDS has all 8 tracks taken.
+**PATTERN validated on the panel, 28/10**, as above (KNOB 2, KNOB 3 and
+the keys were described, not yet tried: the mockup does not edit).
 
 ## Open
 
