@@ -769,6 +769,23 @@ layout decisions stand: type size, row height, what one screen shows,
 the button words on screen, the four cards. What stands is what the
 tests prove (core, store, link, undo, the edit code under the screens).
 
+## 2026-10-28 — the type size, chosen on the panel
+
+`MOONDAW_APP=type` (`app/type.c`): a ruler, then 17 pages of one face and
+size each, filled with tracker rows. Jaeger, with the FM-1 at playing
+distance: readable "sans trop d'effort" from 18, **read at a glance at
+20 -- CONDENSED 20 is the size, whatever it costs in layout.**
+
+- What it costs: **9 lines of 26 characters a screen**, against 15 to 20
+  rows on the screens drawn on 10/10. Every screen is to be redesigned
+  from that, from the start; nothing of the old layouts is kept.
+- Barlow Condensed is proportional: columns of notes and numbers line up
+  only if each field is placed at its own x, not by counting characters.
+  Whether its figures are tabular is to be checked before relying on it.
+- No mono face was offered at 18 or 20; if one is wanted for numbers, it
+  is to be put on the panel at that size before being chosen.
+- The 100 px square has not been measured yet (the panel's pixel pitch).
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
