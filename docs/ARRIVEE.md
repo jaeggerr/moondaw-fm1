@@ -41,10 +41,12 @@ Reste à faire :
       BOOT, elle apparaît comme un disque `RPI-RP2` ; y copier
       `fm1_transporter.uf2`. Elle redémarre seule.
 - [ ] Un câble USB sacrifié pour atteindre D+, D− et la masse du FM-1.
-- [ ] `pip3 install mido python-rtmidi` (pour l'installateur en ligne de
-      commande de Felucca, pas pour le transporter).
-- [ ] Le fichier **FM-1.fwsc officiel** de M-VAVE (la V15), téléchargé et
-      rangé : c'est le chemin de retour.
+- [x] `pip3 install --user mido python-rtmidi` (fait le 28/10).
+- [x] Le fichier **V15 officiel**, rangé dans `~/.fm1/stock/FM-1_015.fwsc` :
+      699 956 octets, l'empreinte attendue par `fm1_install.py`, identité
+      `FM-1_015`. Pris dans le dépôt de M-VAVE
+      (`m-vave/fm1_open`, `sdk/firmware/FM-1_015.fwsc`) : depuis le 21/10,
+      le `FM-1.fwsc` de m-vave.com/download est la **V16**, pas la V15.
 
 Câblage, trois fils et pas un de plus :
 
@@ -58,13 +60,27 @@ Câblage, trois fils et pas un de plus :
 
 ## 1. L'appareil tel qu'il sort de la boîte
 
-- [ ] Le charger, l'allumer, jouer avec le firmware d'origine. Noter sa
-      version : le transporter n'entre tout seul en UBOOT que depuis la V15.
+- [x] Reçu le 28/10, en **V14**. Le firmware d'origine n'affiche pas sa
+      version au démarrage (il démarre instantanément) ; elle se lit par
+      USB : `python3 tools/fm1_install.py --info` (requête d'identité seule,
+      n'écrit rien). `FM-1_014` = V14, `FM-1_015` = V15.
+- [x] Passé en **V15** par le Workbench de M-VAVE
+      (open.m-vave.com/fm1-workbench, Chrome) : bouton « retour à la V15
+      d'usine », V15 intégrée à la page. Piège : le bouton par défaut
+      installe **FM1 Open** (identité `FM-1_8000014`, port `FM1 Community`),
+      pas la V15. `--info` répond maintenant `FM-1_015`.
+- [x] Port MIDI de la V15 : `USB Composite Device`. La poignée de main de
+      Felucca y répond du premier coup.
 - [ ] **Mesurer la diagonale de l'écran** (ou sa largeur visible, au pied à
       coulisse). C'est la donnée qui manque pour fixer la hauteur d'une ligne.
-- [ ] Vérifier la disposition contre `proto/pattern.html` : quatre potards à
+- [x] La disposition correspond à `proto/pattern.html` : quatre potards à
       gauche de l'écran, quatre à droite, deux rangées de six boutons, OCT−
       et OCT+ sous les potards de gauche.
+
+Depuis le 20/10, M-VAVE publie aussi **FM1 Open** (application GPLv3,
+moteur en SDK binaire) et un Workbench qui installe et revient à la V15.
+Rien n'y dit comment récupérer un appareil dont le firmware plante avant
+l'USB : la XIAO reste le seul recours pour ce cas.
 
 ## 2. La sauvegarde
 
@@ -150,8 +166,6 @@ MOONDAW_APP=hello ./build.sh
 
 - [ ] La démo joue. **CPU et MAX** sur l'écran de lecture : c'est LE chiffre
       inconnu. Sous 70 % en moyenne et 90 % au pire, ça tient.
-- [ ] Charger par l'ordinateur n'existe pas encore : pour l'instant seul le
-      morceau intégré est disponible sur l'appareil.
 - [ ] EDIT ouvre PATTERN : **est-ce lisible ?** Les notes, les petits
       libellés en 8 px, les mots des boutons.
 - [ ] Écrire une note, SAVE, éteindre, rallumer : la note est là.
@@ -193,7 +207,7 @@ et le débit réel sont à découvrir ce jour-là.
 - La fréquence du processeur, donc ce que coûtent réellement huit pistes.
 - La taille de l'écran, donc si onze pas par écran sont lisibles.
 - Si la table des boutons de Felucca vaut pour cet exemplaire.
-- Le nom sous lequel l'appareil apparaît comme port MIDI, et si l'envoi
-  d'un morceau par SysEx passe au débit attendu.
+- Si l'envoi d'un morceau par SysEx passe au débit attendu (le port de la
+  V15 s'appelle `USB Composite Device` ; celui de MOONDAW reste à voir).
 - Si l'identité `FM-1_900` de notre paquet est acceptée telle quelle par
   l'installateur (c'est celle des versions de développement de Felucca).
