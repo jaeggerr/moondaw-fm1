@@ -1,154 +1,192 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Screen mockups judged on the panel (MOONDAW_APP=mock, built with GFX_SPECIMEN): one screen
  * at a time, in CONDENSED 20, the size chosen on the FM-1 on 28/10. Nothing here touches a
- * song, and nothing sounds; the data is copied from a real song and edited in RAM only.
- * (HOME, SONG, the SECTION and PATTERN, the mockups before this one, are now the app's.)
+ * song, and nothing sounds; the data is KIDS's, edited in RAM only.
+ * (HOME, SONG, the SECTION, PATTERN and the MIXER, the mockups before this one, are decided.)
  *
- * MIXER, reached by FX: the grid once more. One row a track, its number at the left; four
- * columns, VOL PAN REV ECH, the values as the file writes them. Above track 1, hidden until
- * SELECT goes up to it, the row of the two global effects: ROOM DAMP (the reverb), TIME FB
- * (the delay); the column names change with it.
- *
- *   SELECT  the row       KNOB 1  the column; left of the first, the track's number
- *   KNOB 2  the value; on a track's number: normal -> MUTE -> SOLO
- * A muted track is grey, its number red; a soloed one has its number in cyan. */
+ * PROJECT, reached by EDIT: what holds for the whole song, one setting a row, the value in
+ * the right column. SELECT the setting, KNOB 2 its value.
+ *   NAME    SEL opens the name: one cell a letter, KNOB 1 the place, KNOB 2 the letter
+ *           (space, A-Z, 0-9, -), SEL keeps it, GLO goes back without it
+ *   BPM     20..400            SWING  50..75 %
+ *   METER   beats in a bar: 2/4 3/4 4/4 ... (the file's beats_per_bar)
+ *   STEP    what a step is worth: 1/16 at 4 steps a beat, 1/12 at 3 (triplets), 1/8 at 2
+ *           (the file's steps_per_beat)
+ *   TICKS   1..24 a step       TRACKS  1..8 */
 #include "../platform/platform.h"
 #include "theme.h"
 
 #define ROW 28
-#define ROWS 8
 #define HEAD 16
-#define NUM_X 14
-#define CELL_X 50
-#define CELL_W 45
-#define COLS 4
+#define LABEL_X 14
+#define VALUE_X 120
+#define NAME_LEN 12
 
-/* KIDS.trk: trk lines, then reverb 76 98 and delay 18 52 */
-static int mix[8][COLS] = {
-    { 51, 0, 0, 0 },    { 44, 0, 12, 0 },    { 26, -18, 30, 38 }, { 28, 18, 22, 22 },
-    { 52, 0, 0, 0 },    { 25, -34, 8, 0 },   { 27, 30, 22, 0 },   { 22, 14, 54, 18 },
-};
-static int fx[COLS] = { 76, 98, 18, 52 };
-static int state[8];          /* 0 plays, 1 muted, 2 solo */
-static int row, col, top;     /* row -1: the effects; col -1: the number */
+enum { S_NAME, S_BPM, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
+static const char *const label[SETTINGS] = { "NAME", "BPM", "SWING", "METER", "STEP", "TICKS", "TRACKS" };
+static const int lo[SETTINGS] = { 0, 20, 50, 1, 1, 1, 1 }, hi[SETTINGS] = { 0, 400, 75, 16, 8, 24, 8 };
+static int val[SETTINGS] = { 0, 120, 50, 4, 4, 6, 8 };
+static char name[NAME_LEN + 1] = "KIDS";
+static char draft[NAME_LEN + 1];
+static int row, naming, at;
 static uint32_t prev_btns;
+
+static const char letters[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
 
 static char *dec(char *s, int v)
 {
     char d[6];
-    int k = 0, neg = v < 0;
-    if (neg)
-        v = -v;
+    int k = 0;
     do
         d[k++] = (char)('0' + v % 10);
     while ((v /= 10) > 0);
-    if (neg)
-        *s++ = '-';
     while (k)
         *s++ = d[--k];
     *s = 0;
     return s;
 }
 
-static int any_solo(void)
+static void value_of(int k, char *s)
 {
-    for (int t = 0; t < 8; t++)
-        if (state[t] == 2)
-            return 1;
-    return 0;
+    char *p;
+    switch (k) {
+    case S_NAME:
+        for (p = name; *p; p++)
+            *s++ = *p;
+        *s = 0;
+        break;
+    case S_SWING:
+        p = dec(s, val[k]);
+        p[0] = ' ', p[1] = '%', p[2] = 0;
+        break;
+    case S_METER: /* beats in a bar, over the quarter */
+        p = dec(s, val[k]);
+        p[0] = '/', p[1] = '4', p[2] = 0;
+        break;
+    case S_STEP: /* a step is 1 / (4 x steps a beat) of a whole note */
+        s[0] = '1', s[1] = '/';
+        dec(s + 2, 4 * val[k]);
+        break;
+    default:
+        dec(s, val[k]);
+    }
+}
+
+static void hint(int x, const char *key, const char *word, int right)
+{
+    int w = gfx_text_w(F_COND_14, key) + 5 + gfx_text_w(F_COND_14, word);
+    if (right)
+        x -= w;
+    x = gfx_text(F_COND_14, x, PLAT_H - 6, key, C_TEXT);
+    gfx_text(F_COND_14, x + 5, PLAT_H - 6, word, C_DIM);
+}
+
+static void draw_name(void)
+{
+    enum { CELL = 18, X0 = (PLAT_W - NAME_LEN * CELL) / 2, Y = 90 };
+    gfx_text_mid(F_COND_12, 0, PLAT_W, 60, "NAME", C_DIM);
+    for (int i = 0; i < NAME_LEN; i++) {
+        char s[2] = { draft[i] ? draft[i] : ' ', 0 };
+        int x = X0 + i * CELL, here = i == at;
+        if (here)
+            gfx_slab(x + 1, Y, CELL - 2, ROW, C_ACCENT, 255);
+        else
+            gfx_fill(x + 3, Y + ROW - 2, CELL - 6, 1, C_DIM, 255); /* where a letter goes */
+        gfx_text_mid(F_COND_20, x, CELL, Y + 2 + FONTS[F_COND_20].ascent, s, here ? C_ON_ACC : C_TEXT);
+    }
+    hint(14, "SEL", "OK", 0);
+    hint(PLAT_W - 14, "GLO", "BACK", 1);
 }
 
 static void draw(void)
 {
-    static const char *const track_head[COLS] = { "VOL", "PAN", "REV", "ECH" };
-    static const char *const fx_head[COLS] = { "ROOM", "DAMP", "TIME", "FB" };
-    char s[8];
-
+    char s[NAME_LEN + 4];
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
-    gfx_text(F_COND_12, 4, HEAD - 3, "MIXER", C_DIM);
-    for (int c = 0; c < COLS; c++)
-        gfx_text_mid(F_COND_12, CELL_X + c * CELL_W, CELL_W, HEAD - 3,
-                     row < 0 ? fx_head[c] : track_head[c], c == col ? C_TEXT : C_DIM);
-    for (int v = 0; v < ROWS && top + v < 9; v++) {
-        int r = top + v - 1, y = HEAD + v * ROW, base = y + 2 + FONTS[F_COND_20].ascent;
-        int band = r == row, silent = r >= 0 && (state[r] == 1 || (any_solo() && state[r] != 2));
-        uint16_t num_ink, ink;
-        if (band)
-            gfx_slab(2, y + 1, PLAT_W - 10, ROW - 2, C_ACCENT, 255);
-        if (band && col < 0)
-            gfx_slab(NUM_X - 6, y + 3, CELL_X - NUM_X + 1, ROW - 6, C_BG, 255);
-        num_ink = r < 0 ? C_TITLE : state[r] == 1 ? C_MUTE : state[r] == 2 ? C_TITLE : C_TEXT;
-        num_ink = band && col < 0 ? C_ACCENT : band ? C_ON_ACC : num_ink;
-        if (r < 0) {
-            gfx_text(F_COND_20, NUM_X, base, "FX", num_ink);
-        } else {
-            int x;
-            s[0] = (char)('1' + r), s[1] = 0;
-            x = gfx_text(F_COND_20, NUM_X, base, s, num_ink);
-            if (state[r])
-                gfx_text(F_COND_14, x + 5, base, state[r] == 1 ? "M" : "S", num_ink);
-        }
-        for (int c = 0; c < COLS; c++) {
-            int x = CELL_X + c * CELL_W, on = band && c == col;
-            int val = r < 0 ? fx[c] : mix[r][c];
-            if (r >= 0 && c == 1) { /* pan: C, L18, R18 */
-                s[0] = val < 0 ? 'L' : val > 0 ? 'R' : 'C', s[1] = 0;
-                if (val)
-                    dec(s + 1, val < 0 ? -val : val);
-            } else {
-                dec(s, val);
-            }
-            ink = on ? C_ACCENT : band ? C_ON_ACC : silent ? C_DIM
-                  : (r >= 0 && c >= 2 && val == 0) ? C_DIM : C_TEXT;
-            if (on)
-                gfx_slab(x + 1, y + 3, CELL_W - 2, ROW - 6, C_BG, 255);
-            gfx_text_mid(F_COND_20, x, CELL_W, base, s, ink);
-        }
+    gfx_text(F_COND_12, 4, HEAD - 3, "PROJECT", C_DIM);
+    if (naming) {
+        draw_name();
+        return;
     }
-    gfx_fill(CELL_X - 3, HEAD, 1, ROWS * ROW, C_DIM, 255);
-    {   /* nine rows: one hides */
-        int h = ROWS * ROW * ROWS / 9, y = HEAD + ROWS * ROW * top / 9;
-        gfx_fill(PLAT_W - 4, HEAD, 2, ROWS * ROW, C_TRACK, 255);
-        gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
+    for (int k = 0; k < SETTINGS; k++) {
+        int y = HEAD + k * ROW, base = y + 2 + FONTS[F_COND_20].ascent, here = k == row;
+        if (here) {
+            gfx_slab(2, y + 1, PLAT_W - 4, ROW - 2, C_ACCENT, 255);
+            gfx_slab(VALUE_X - 6, y + 3, PLAT_W - VALUE_X - 2, ROW - 6, C_BG, 255);
+        }
+        gfx_text(F_COND_20, LABEL_X, base, label[k], here ? C_ON_ACC : C_DIM);
+        value_of(k, s);
+        gfx_text(F_COND_20, VALUE_X, base, s, here ? C_ACCENT : C_TEXT);
     }
 }
 
 void app_init(void)
 {
-    row = col = 0;
-    top = 1; /* the effects' row is above, out of sight */
+    row = naming = 0;
     prev_btns = 0xFFFFFFFFu;
     gfx_invalidate();
 }
 
-int app_load(const char *trk, uint32_t len, const char *name)
+int app_load(const char *trk, uint32_t len, const char *name_)
 {
-    (void)trk, (void)len, (void)name;
+    (void)trk, (void)len, (void)name_;
+    return 0;
+}
+
+static int letter_index(char c)
+{
+    for (int i = 0; letters[i]; i++)
+        if (letters[i] == c)
+            return i;
     return 0;
 }
 
 void app_frame(const PlatInput *in)
 {
-    static const int lo[COLS] = { 0, -64, 0, 0 }, hi[COLS] = { 127, 63, 127, 127 };
-    int d = in->enc[PE_K2];
+    uint32_t press = in->btns & ~prev_btns;
     prev_btns = in->btns;
 
+    if (naming) {
+        int n = (int)sizeof letters - 1;
+        at += in->enc[PE_K1];
+        at = at < 0 ? 0 : at >= NAME_LEN ? NAME_LEN - 1 : at;
+        if (in->enc[PE_K2]) {
+            int i = (letter_index(draft[at] ? draft[at] : ' ') + in->enc[PE_K2]) % n;
+            for (int j = 0; j < at; j++) /* a letter after the end pulls spaces in before it */
+                if (!draft[j])
+                    draft[j] = ' ';
+            draft[at] = letters[i < 0 ? i + n : i];
+        }
+        if (press & 1u << PB_SEL) { /* the spaces at the end are not kept */
+            int end = NAME_LEN;
+            while (end > 0 && (!draft[end - 1] || draft[end - 1] == ' '))
+                end--;
+            if (end > 0) {
+                for (int j = 0; j < end; j++)
+                    name[j] = draft[j];
+                name[end] = 0;
+            }
+            naming = 0;
+        }
+        if (press & 1u << PB_GLO)
+            naming = 0;
+        gfx_frame(draw);
+        return;
+    }
+
     row += in->enc[PE_SELECT];
-    row = row < -1 ? -1 : row > 7 ? 7 : row;
-    col += in->enc[PE_K1];
-    col = col < -1 ? -1 : col >= COLS ? COLS - 1 : col;
-    if (row + 1 < top)
-        top = row + 1;
-    if (row + 1 >= top + ROWS)
-        top = row + 1 - ROWS + 1;
-    if (d && col < 0 && row >= 0) {
-        state[row] += d;
-        state[row] = state[row] < 0 ? 0 : state[row] > 2 ? 2 : state[row];
-    } else if (d && col >= 0) {
-        int *p = row < 0 ? &fx[col] : &mix[row][col];
-        int l = row < 0 ? 0 : lo[col], h = row < 0 ? 127 : hi[col];
-        *p += d;
-        *p = *p < l ? l : *p > h ? h : *p;
+    row = row < 0 ? 0 : row >= SETTINGS ? SETTINGS - 1 : row;
+    if (in->enc[PE_K2] && row != S_NAME) {
+        val[row] += in->enc[PE_K2];
+        val[row] = val[row] < lo[row] ? lo[row] : val[row] > hi[row] ? hi[row] : val[row];
+    }
+    if (press & 1u << PB_SEL && row == S_NAME) {
+        int end = 0;
+        while (name[end])
+            end++;
+        for (int j = 0; j <= NAME_LEN; j++)
+            draft[j] = j < end ? name[j] : 0;
+        at = 0;
+        naming = 1;
     }
     gfx_frame(draw);
 }
