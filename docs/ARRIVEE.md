@@ -240,6 +240,11 @@ tools/fm1_send.py --list
 tools/fm1_send.py --get KIDS -o KIDS-fm1.trk
 ```
 
+**Fait le 28/10** : les 13 morceaux envoyés d'un coup, 131 Ko, 159 Ko
+restent libres. L'appareil n'accepte que sur l'accueil (« busy » sinon,
+sans rien écrire). Les noms sont mis en majuscules et coupés à 12
+caractères (`PIANO-VELOCI`).
+
 Si aucun port MIDI n'est trouvé, l'outil liste ceux qu'il voit :
 `--port` avec un bout du bon nom. **Ce chemin MIDI n'a jamais tourné** :
 tout le reste du transfert est vérifié sans appareil, mais le nom du port
