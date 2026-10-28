@@ -172,20 +172,26 @@ une onde carrée sous les touches. 18 Ko.
 MOONDAW_APP=hello ./build.sh
 ```
 
-À vérifier, dans cet ordre :
+Installé le 28/10 par `tools/fm1_install.py build/moondaw.fwsc` (image
+18 484 B) : écriture, redémarrage, identité `FM-1_900` acceptée, port MIDI
+`Felucca` (les chaînes USB de usb.c).
 
-- [ ] L'écran s'allume et le texte est à l'endroit, les couleurs justes
+- [x] L'écran s'allume et le texte est à l'endroit, les couleurs justes
       (sinon : ordre des octets ou inversion, `lcd.c`).
-- [ ] Chaque **touche** allume sa case, sa LED, et joue sa note, de Fa3 à
+- [x] Chaque **touche** allume sa case, sa LED, et joue sa note, de Fa3 à
       Sol5 de gauche à droite.
-- [ ] Chaque **bouton** allume le nom qui est imprimé dessus (sinon la table
-      `PANEL_DEFAULT` de `panel.c` ne correspond pas à cet exemplaire).
-- [ ] Chaque **potard** compte dans le bon sens, et le bon compteur bouge.
-- [ ] MASTER va de 0 à environ 1023 et règle le volume.
-- [ ] **CPU et MAX** en bas à droite : la part de son temps que prend
-      l'interruption audio, pour une simple onde carrée. C'est le plancher.
-- [ ] **OCT− et OCT+ tenus 5 secondes** : l'écran dit UBOOT. C'est la porte
-      de sortie ; si elle ne marche pas, on ne va pas plus loin.
+- [x] Chaque **bouton** allume le nom qui est imprimé dessus :
+      `PANEL_DEFAULT` vaut pour cet exemplaire.
+- [x] Chaque **potard** compte dans le bon sens, et le bon compteur bouge.
+- [x] MASTER va de 0 à environ 1023 et règle le volume.
+- [x] **CPU et MAX** : 0 et 0. Le compteur est en pourcents entiers
+      arrondis vers le bas sur une demi de 2,9 ms : moins de 12 µs en
+      moyenne, moins de 29 µs au pire. Sous sa résolution, donc ; il
+      ne prouve pas encore que TIMER4 compte. MOONDAW doit montrer un
+      chiffre nettement non nul, sinon c'est la mesure qui est fausse.
+- [x] **OCT− et OCT+ tenus 5 secondes** : l'écran s'éteint (le bandeau
+      UBOOT ne se voit pas) et le Mac voit `WL80UBOOT1.00` (4C4A:8057).
+      La porte de sortie marche ; c'est là que `fm1_rescue` prend la main.
 - [ ] Une mise à jour par-dessus (réinstaller le même paquet) passe.
 
 ## 6. MOONDAW
