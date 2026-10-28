@@ -10,13 +10,13 @@
 
 typedef struct {
     uint16_t tracks_in_file; /* what `tracks` said; > 8 means some are cut */
-    uint16_t silent_instr;   /* instruments on SMPL, VOX or PLUCK */
+    uint16_t silent_instr;   /* instruments on SMPL or PLUCK */
     uint16_t samples;        /* smp lines */
     uint16_t zones;          /* zone lines */
     uint16_t ref_lines;      /* ref, refbpm, refstart, refbar */
     uint16_t previews;       /* preview lines */
-    uint16_t shaping;        /* instruments carrying drive, amp, tone, tract or accent */
-    uint16_t syllables;      /* 'XX tokens */
+    uint16_t shaping;        /* instruments carrying drive, amp or tone */
+    uint16_t syllables;      /* 'XX tokens the syllable table had no room for */
     uint16_t smp_fx;         /* fSMP tokens */
     uint16_t steps_cut;      /* step lines on a track past the eighth */
     uint16_t steps_lost;     /* step lines the pool had no room for */

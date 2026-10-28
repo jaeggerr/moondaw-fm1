@@ -1,0 +1,128 @@
+# anbernic tracker song
+# The five VOX styles side by side, for tests/difftest.sh: no song in
+# moondaw/songs uses SOFT, MELO or SINGR. One track a style, the same
+# lyric on each, every sign of the alphabet somewhere in it; the tract,
+# the English accent, a melisma, a syllable struck over a slide, a coda
+# closed by an OFF and by the next note, an unstressed mark, a syllable
+# with no vowel, SINGR's own vibrato and an fVIB that silences it.
+version 3
+bpm 110
+ticks 6
+meter 4 4
+tracks 5
+reverb 64 64
+delay 18 60
+
+inst 00 engine VOX timbre 0 adsr 0 20 230 30 name GLIDE
+inst 01 engine VOX timbre 1 adsr 0 20 230 30 tract 130 name HARD
+inst 02 engine VOX timbre 2 adsr 4 20 230 40 tract 85 accent EN name SOFT
+inst 03 engine VOX timbre 3 adsr 0 20 230 30 accent EN name MELO
+inst 04 engine VOX timbre 4 adsr 6 30 230 50 tract 72 name SINGR
+
+trk 0 vol 100 pan 0
+trk 1 vol 100 pan 0
+trk 2 vol 100 pan 0
+trk 3 vol 100 pan 0
+trk 4 vol 100 pan 0
+
+pat t0 00 len 64
+00 A-2 i00 'B8I
+04 C-3 'K4T
+08 D-3 'STAP
+0C E-3 'PL
+10 G-3 '.+2
+14 A-3 'MI fSLI20
+16 C-4
+18 D-4 'Q7U
+1C OFF
+20 E-3 'G6 fSLI00
+24 G-3 'F1L
+28 A-3 'XED
+2C C-4 'Z9R
+30 D-4 'J0N
+34 E-4 'V3W
+38 G-4 'HY5
+3C OFF
+
+pat t1 00 len 64
+00 A-2 i01 'B8I
+04 C-3 'K4T
+08 D-3 'STAP
+0C E-3 'PL
+10 G-3 '.+2
+14 A-3 'MI fSLI20
+16 C-4
+18 D-4 'Q7U
+1C OFF
+20 E-3 'G6 fSLI00
+24 G-3 'F1L
+28 A-3 'XED
+2C C-4 'Z9R
+30 D-4 'J0N
+34 E-4 'V3W
+38 G-4 'HY5
+3C OFF
+
+pat t2 00 len 64
+00 A-2 i02 'B8I
+04 C-3 'K4T
+08 D-3 'STAP
+0C E-3 'PL
+10 G-3 '.+2
+14 A-3 'MI fSLI20
+16 C-4 'CINZ
+18 D-4 'Q7U
+1C OFF
+20 E-3 'G6 fSLI00
+24 G-3 'F1L
+28 A-3 'XED
+2C C-4 'Z9R
+30 D-4 'J0N
+34 E-4 'V3W
+38 G-4 'HY5
+3C OFF
+
+pat t3 00 len 64
+00 A-2 i03 'B8I
+04 C-3 'K4T
+08 D-3 'STAP
+0C E-3 'PL
+10 G-3 '.+2
+14 A-3 'MI fSLI20
+16 C-4
+18 D-4 'Q7U
+1C OFF
+20 E-3 'G6 fSLI00
+24 G-3 'F1L
+28 A-3 'XED
+2C C-4 'Z9R
+30 D-4 'J0N
+34 E-4 'V3W
+38 G-4 'HY5
+3C OFF
+
+pat t4 00 len 64
+00 A-2 i04 'B8I
+04 C-3 'K4T
+08 D-3 'STAP
+0C E-3 'PL
+10 G-3 '.+2
+14 A-3 'MI fSLI20
+16 C-4
+18 D-4 'Q7U
+1C OFF
+20 E-3 'G6 fSLI00
+24 G-3 'F1L
+28 A-3 'XED
+2C C-4 'Z9R fVIB24
+30 D-4 'J0N fVIB00
+34 E-4 'V3W
+38 G-4 'HY5
+3C OFF
+
+arr 00 steps auto
+t0 00
+t1 00
+t2 00
+t3 00
+t4 00

@@ -15,8 +15,8 @@ static Song a, b;
 static char src[1 << 20], out1[1 << 18], out2[1 << 18];
 
 /* Does `line` appear in the original, as a whole cleaned line? Tokens
- * of a step line the FM-1 drops (syllables, fSMP) are removed from the
- * original before comparing. */
+ * of a step line the FM-1 drops (fSMP) are removed from the original
+ * before comparing. Syllables are carried, so they must be there. */
 static int in_original(const char *line, const char *text)
 {
     char buf[600], want[600];
@@ -35,7 +35,7 @@ static int in_original(const char *line, const char *text)
         char clean[600] = "";
         char *sv = NULL;
         for (char *tok = strtok_r(buf, " \t\r", &sv); tok; tok = strtok_r(NULL, " \t\r", &sv)) {
-            if (tok[0] == '\'' || !strncmp(tok, "fSMP", 4))
+            if (!strncmp(tok, "fSMP", 4))
                 continue;
             if (clean[0])
                 strcat(clean, " ");

@@ -3,7 +3,7 @@
 #
 #   make sim        the FM-1 simulated in an SDL2 window  -> build/sim/moondaw-fm1 [song.trk]
 #   make web        the same in the browser               -> build/web/
-#   make test       both, headless, and the song file reader
+#   make test       both, headless, the song file reader, and the voice through the app
 #   make difftest   the engine against moondaw's own, on real songs (needs ../moondaw, built)
 #
 #   APP=hello       the bring-up app instead of the player (keys, knobs, a square wave)
@@ -66,12 +66,15 @@ test: sim web
 	tests/linktest.sh $(MOONDAW)/songs/KIDS.trk
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/vox_test.c app/app.c $(UI) $(CORE) -o build/vox_test -lm
+	@V="tests/vox-styles.trk"; for s in robot-demo LEOMOTEUR DAFT-PUNK DAFT-PUNK-EN; do \
+	   [ -f $(MOONDAW)/songs/$$s.trk ] && V="$$V $(MOONDAW)/songs/$$s.trk"; done; build/vox_test $$V
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck
 	@if ls $(MOONDAW)/songs/*.trk >/dev/null 2>&1; then build/trkcheck $(MOONDAW)/songs/*.trk | cut -c1-72; \
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
 
 difftest:
-	MOONDAW=$(MOONDAW) tests/difftest.sh 30 $(MOONDAW)/songs/*.trk
+	MOONDAW=$(MOONDAW) tests/difftest.sh 30 $(MOONDAW)/songs/*.trk tests/vox-styles.trk
 
 clean:
 	rm -rf build

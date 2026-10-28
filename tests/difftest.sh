@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # The FM-1 core against moondaw itself, on real songs.
 #   tests/difftest.sh [SECONDS] SONG.trk...      (MOONDAW=path to the moondaw checkout, built)
-# Each song is first reduced to what the FM-1 carries (build/trkdump), and VOX / PLUCK instruments
-# are made silent in the reference as they are on the FM-1. Both engines then render the SAME file,
-# reverb and delay included.
+# Each song is first reduced to what the FM-1 carries (build/trkdump), and PLUCK instruments are
+# made silent in the reference as they are on the FM-1. Both engines then render the SAME file,
+# reverb and delay included -- the voice too: VOX, its syllables, tract and accent are carried.
 set -e
 cd "$(dirname "$0")/.."
 M="${MOONDAW:-../moondaw}"
@@ -21,7 +21,7 @@ cc -std=c11 -O2 -Wall -Wextra tests/trkdump.c core/song.c core/trk.c -o build/tr
 bad=0
 for song in "$@"; do
     name=$(basename "$song" .trk)
-    build/trkdump "$song" | sed -E -e '/^inst /s/engine (VOX|PLUCK)/engine SMPL/' > "build/diff/$name.trk"
+    build/trkdump "$song" | sed -E -e '/^inst /s/engine PLUCK/engine SMPL/' > "build/diff/$name.trk"
     # Track by track: summed, two tracks whose phases have drifted apart interfere differently
     # in each render, and the spectrum of the sum says so although neither track is wrong.
     worst=-200; n=0; fails=""
@@ -38,7 +38,7 @@ for song in "$@"; do
         worst=$(python3 -c "print(max($worst, $spec))")
     done
     if [ $n = 0 ]; then
-        printf '%-18s --    nothing the FM-1 can play (samples, voice or string only)\n' "$name"
+        printf '%-18s --    nothing the FM-1 can play (samples or string only)\n' "$name"
     elif [ -z "$fails" ]; then
         printf '%-18s ok    %d tracks, worst spectral difference %6.1f dB\n' "$name" $n "$worst"
     else

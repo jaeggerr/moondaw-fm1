@@ -131,7 +131,10 @@ def ask(link, cmd, raw=b"", tries=4, timeout=1.5):
 def as_fm1(path):
     """The file as the FM-1 would save it."""
     tool = ROOT / "build" / "trkdump"
-    if not tool.exists():
+    srcs = [ROOT / f for f in ("tests/trkdump.c", "core/song.c", "core/song.h", "core/trk.c", "core/trk.h")]
+    # Rebuilt when the reader changed: a stale one reduces songs by the old rules (it dropped
+    # the syllables until 28/10/2026).
+    if not tool.exists() or any(f.stat().st_mtime > tool.stat().st_mtime for f in srcs):
         tool.parent.mkdir(exist_ok=True)
         subprocess.run(["cc", "-std=c11", "-O2", str(ROOT / "tests/trkdump.c"), str(ROOT / "core/song.c"),
                         str(ROOT / "core/trk.c"), "-o", str(tool)], check=True)

@@ -118,6 +118,64 @@ int main(void)
         }
         printf("\n    },");
     }
-    printf("\n};\n\n#endif\n");
+    printf("\n};\n");
+
+    /* VOX (moondaw's instruments/vox.c). The cosine every resonator is
+     * tuned with, a quarter wave in 1024 steps, Q30, one past the end for
+     * the interpolation. */
+    open("int32_t", "VOX_COS_Q30", 1026);
+    for (int i = 0; i <= 1025; i++)
+        printf("%s%.0f,", i % 8 ? " " : "\n    ", floor(cos(M_PI / 2.0 * i / 1024.0) * 1073741824.0 + 0.5));
+    printf("\n};\n");
+
+    /* The fractional impulse: 128 sub-sample phases, 32 taps, Blackman
+     * window, each phase summing to one. vox.c sinc_build, in float as it
+     * is there. Q14. */
+    printf("\nstatic const int16_t VOX_SINC_Q14[128][32] = {");
+    for (int p = 0; p < 128; p++) {
+        float tab[32], sum = 0;
+        for (int k = 0; k < 32; k++) {
+            float t = (float)k - 15.0f + (float)p / 128.0f;
+            float sn = t == 0.0f ? 1.0f : sinf(3.14159265358979323846f * t) / (3.14159265358979323846f * t);
+            float u = t / 16.0f;
+            float wn = u < -1.0f || u > 1.0f ? 0.0f
+                     : .42f + .5f * cosf(3.14159265358979323846f * u) + .08f * cosf(2.0f * 3.14159265358979323846f * u);
+            tab[k] = sn * wn;
+            sum += tab[k];
+        }
+        printf("\n    {");
+        for (int k = 0; k < 32; k++)
+            printf("%s%.0f,", k % 8 ? " " : "\n        ", floor(tab[k] / sum * 16384.0 + 0.5));
+        printf("\n    },");
+    }
+    printf("\n};\n");
+
+    /* The voice's phase step for one octave a cent apart from note 0,
+     * 2^40 f / FS: a note's is a shift of it. */
+    open("uint32_t", "VOX_INC_Q40", 1200);
+    for (int c = 0; c < 1200; c++)
+        printf("%s%.0f,", c % 8 ? " " : "\n    ",
+               floor(440.0 * pow(2.0, (c - 6900) / 1200.0) / FS * 1099511627776.0 + 0.5));
+    printf("\n};\n");
+
+    /* A burst's decay, exp(-3t) over the segment, t in 256 steps. Q15. */
+    open("uint16_t", "VOX_BURST_Q15", 257);
+    for (int i = 0; i <= 256; i++)
+        printf("%s%.0f,", i % 8 ? " " : "\n    ", floor(exp(-3.0 * i / 256.0) * 32768.0 + 0.5));
+    printf("\n};\n");
+
+    /* Constants. The source's -6 dB/oct tilt; the cascade's three lags
+     * (articulation 20 ms, pitch 12 ms, voicing 4 ms); the SINGR vibrato's
+     * 5.5 Hz step; and the factors that turn Hz into a fraction of the
+     * sample rate and a bandwidth into pi bw / FS. */
+    printf("\n#define VOX_TILT_Q30 %.0f\n", floor(exp(-2.0 * M_PI * 300.0 / FS) * 1073741824.0 + 0.5));
+    printf("#define VOX_KART_Q30 %.0f\n", floor((1.0 - exp(-1.0 / (.020 * FS))) * 1073741824.0 + 0.5));
+    printf("#define VOX_KF0_Q30 %.0f\n", floor((1.0 - exp(-1.0 / (.012 * FS))) * 1073741824.0 + 0.5));
+    printf("#define VOX_KFAST_Q30 %.0f\n", floor((1.0 - exp(-1.0 / (.004 * FS))) * 1073741824.0 + 0.5));
+    printf("#define VOX_VIB_INC %.0fu\n", floor(5.5 / FS * 4294967296.0 + 0.5));
+    printf("#define VOX_HZ8_TO_U %.0fu /* (Hz Q8 * this) >> 16 = Hz / FS, Q32 */\n", floor(1099511627776.0 / FS + 0.5));
+    printf("#define VOX_HZ16_TO_U %.0fu /* (Hz Q16 * this) >> 31 = Hz / FS, Q32 */\n", floor(140737488355328.0 / FS + 0.5));
+    printf("#define VOX_BW8_TO_X %.0fu /* (Hz Q8 * this) >> 16 = pi bw / FS, Q30 */\n", floor(M_PI * 274877906944.0 / FS + 0.5));
+    printf("\n#endif\n");
     return 0;
 }

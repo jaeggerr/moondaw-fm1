@@ -184,6 +184,54 @@ int song_pool_free(const Song *s)
     return n;
 }
 
+/* ------------------------------------------------------- syllables --- */
+static bool syl_named(const Song *s, uint8_t idx)
+{
+    for (int k = 0; k < POOL_CHUNKS; k++) {
+        if (!((s->pool_used[k / 8] >> (k % 8)) & 1u))
+            continue;
+        for (int i = 0; i < CHUNK_STEPS; i++)
+            for (int f = 0; f < STEP_MAX_FX; f++)
+                if (s->pool[k][i].fx[f].cmd == FX_SYL && s->pool[k][i].fx[f].val == idx)
+                    return true;
+    }
+    return false;
+}
+
+int song_syl_intern(Song *s, const char *text)
+{
+    int free_at = -1;
+
+    if (!text || !text[0])
+        return -1;
+    for (int i = 0; i < SONG_SYL_MAX; i++) {
+        int k = 0;
+        while (k < SONG_SYL_LEN - 1 && text[k] && s->syl[i][k] == text[k])
+            k++;
+        if (s->syl[i][0] && (k == SONG_SYL_LEN - 1 || (!text[k] && !s->syl[i][k])))
+            return i;
+        if (free_at < 0 && !s->syl[i][0])
+            free_at = i;
+    }
+    for (int i = 0; i < SONG_SYL_MAX && free_at < 0; i++)
+        if (!syl_named(s, (uint8_t)i)) {
+            s->syl[i][0] = '\0';
+            free_at = i;
+        }
+    if (free_at < 0)
+        return -1;
+    for (int k = 0; k < SONG_SYL_LEN; k++)
+        s->syl[free_at][k] = '\0';
+    for (int k = 0; k < SONG_SYL_LEN - 1 && text[k]; k++)
+        s->syl[free_at][k] = text[k];
+    return free_at;
+}
+
+const char *song_syl(const Song *s, uint8_t idx)
+{
+    return idx < SONG_SYL_MAX ? s->syl[idx] : "";
+}
+
 /* -------------------------------------------------------- sections --- */
 /* Renumbers the sections in the order they appear and drops the ones no
  * phrase carries; a section broken into two runs keeps its first. As
