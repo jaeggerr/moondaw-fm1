@@ -188,6 +188,7 @@ def build_app():
     tc_all(("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),
            ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),
            ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
+           ("cc", "-c", FW / "hal" / "fm1_cpu1.S", "-o", OUT / "fm1_cpu1.o"),
            ("cc", *flags, "-c", FW / "src" / "firmware.c", "-o", OUT / "moondaw.o"))
     for u, o in zip(units, objs):               # one at a time: six at once is what crashed qemu
         # the audio core for speed, the rest for size: at -Os the chorus of DAFT-PUNK-EN overran
@@ -195,7 +196,7 @@ def build_app():
         speed = ["-O2"] if u.parent.name == "core" and u.stem in ("synth", "player", "fx") else []
         tc("cc", *flags, *speed, "-std=gnu11", "-c", u, "-o", o)
     elf = OUT / "moondaw.elf"
-    tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
+    tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o", OUT / "fm1_cpu1.o",
        OUT / "moondaw.o", *objs, "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin", "ramaudio.bin"):
         (OUT / sect).unlink(missing_ok=True)

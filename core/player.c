@@ -1508,9 +1508,6 @@ void player_profile_reset(void)
         prof_worst[k] = 0;
 }
 
-static int32_t tmono[SYNTH_MAX_FRAMES];
-static int32_t tstereo[SYNTH_MAX_FRAMES * 2];
-static int32_t sendbus[SYNTH_MAX_FRAMES], echobus[SYNTH_MAX_FRAMES];
 static int32_t mix[SYNTH_MAX_FRAMES * 2];
 
 static int32_t tick_samples(void);
@@ -1521,18 +1518,114 @@ static int32_t tick_samples(void);
  * does not move with the size of the audio buffer. */
 static bool reap_due;
 
+/* What one core renders tracks into: its scratch, its share of the mix and
+ * of the two sends. Two of them since 28/10, one for each core: the chorus
+ * of DAFT-PUNK-EN did not fit one core's 2.9 ms. */
+typedef struct {
+    int32_t mono[SYNTH_MAX_FRAMES];
+    int32_t stereo[SYNTH_MAX_FRAMES * 2];
+    int32_t send[SYNTH_MAX_FRAMES], echo[SYNTH_MAX_FRAMES];
+    int32_t out[SYNTH_MAX_FRAMES * 2]; /* the second core's share of the mix */
+    bool fed, fed_echo;
+} Lane;
+static Lane lanes[2];
+
+int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg);
+int (*player_wait_other)(void);
+
 /* The VOX voices a track has lent, added to what its oscillators drew. */
-static void track_sing(Track *tr, int frames)
+static void track_sing(Track *tr, int32_t *mono, int frames)
 {
     for (int v = 0; v < TRACK_MAX_VOICES; v++)
         if (tr->voices[v].vox >= 0)
-            vox_render(&vox_pool[tr->voices[v].vox], tmono, frames);
+            vox_render(&vox_pool[tr->voices[v].vox], mono, frames);
+}
+
+/* One track into a lane's mix and sends. It touches the track's own state
+ * and the lane's buffers, nothing else: the two cores run it side by side.
+ * `timed`: the first core's own tracks are timed, the second core's not. */
+static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool timed)
+{
+    if (timed)
+        prof_mark();
+    blep_begin(&tr->blep, frames);
+    for (int v = 0; v < TRACK_MAX_VOICES; v++)
+        osc_draw(&tr->voices[v].osc, &tr->blep);
+    blep_read(&tr->blep, ln->mono, frames);
+    if (timed)
+        prof(PROF_OSC);
+    track_sing(tr, ln->mono, frames);
+    if (timed)
+        prof(PROF_VOX);
+    if (tr->fx.send == 0 && tr->fx.echo == 0) {
+        chain_process(&tr->chain, ln->mono, out, frames);
+        if (timed)
+            prof(PROF_CHAIN);
+        return;
+    }
+    /* A track that sends is mixed apart, so that what goes to the
+     * room is what the track puts out: post-fader, and mono -- the
+     * pan's own gain taken back out, or a track panned hard would
+     * send half of what a centred one does. */
+    {
+        int32_t lg = tr->chain.pan <= 0 ? 64 : 64 - tr->chain.pan;
+        int32_t rg = tr->chain.pan >= 0 ? 64 : 64 + tr->chain.pan;
+        int32_t g = (int32_t)tr->fx.send * 2097152 / (127 * (lg + rg));
+        int32_t ge = (int32_t)tr->fx.echo * 2097152 / (127 * (lg + rg));
+
+        for (int i = 0; i < frames * 2; i++)
+            ln->stereo[i] = 0;
+        chain_process(&tr->chain, ln->mono, ln->stereo, frames);
+        if (tr->fx.send != 0 && !ln->fed) {
+            for (int i = 0; i < frames; i++)
+                ln->send[i] = 0;
+            ln->fed = true;
+        }
+        if (tr->fx.echo != 0 && !ln->fed_echo) {
+            for (int i = 0; i < frames; i++)
+                ln->echo[i] = 0;
+            ln->fed_echo = true;
+        }
+        for (int i = 0; i < frames; i++) {
+            int32_t mono = ln->stereo[2 * i] + ln->stereo[2 * i + 1];
+            out[2 * i] = sat_add(out[2 * i], ln->stereo[2 * i]);
+            out[2 * i + 1] = sat_add(out[2 * i + 1], ln->stereo[2 * i + 1]);
+            if (g)
+                ln->send[i] += mul_q(mono, g, 15);
+            if (ge)
+                ln->echo[i] += mul_q(mono, ge, 15);
+        }
+        if (timed)
+            prof(PROF_CHAIN);
+    }
+}
+
+/* The second core's share: every other track that sounds, into lanes[1]. */
+static struct {
+    uint8_t list[SONG_MAX_TRACKS];
+    int n, frames;
+} other;
+
+static void render_other(uint32_t unused)
+{
+    Lane *ln = &lanes[1];
+    (void)unused;
+    for (int i = 0; i < other.frames * 2; i++)
+        ln->out[i] = 0;
+    ln->fed = ln->fed_echo = false;
+    for (int k = 0; k < other.n; k++)
+        render_track(&tracks[other.list[k]], ln, ln->out, other.frames, false);
 }
 
 static void render_tracks(int32_t *out, int frames)
 {
-    bool fed = false, fed_echo = false;
+    Lane *ln = &lanes[0];
+    uint8_t sounding[SONG_MAX_TRACKS];
+    int n = 0;
+    bool split;
 
+    /* First, on this core: what changes shared state (the mutes, the
+     * VOX voices put away), and which tracks sound at all. */
     for (int t = 0; t < song->num_tracks; t++) {
         Track *tr = &tracks[t];
         /* A solo anywhere silences every track that is not one; else the mutes speak. */
@@ -1552,54 +1645,42 @@ static void render_tracks(int32_t *out, int frames)
             track_reap(tr);
         if (!tr->used && tr->chain.env == 0)
             continue;
-        prof_mark();
-        blep_begin(&tr->blep, frames);
-        for (int v = 0; v < TRACK_MAX_VOICES; v++)
-            osc_draw(&tr->voices[v].osc, &tr->blep);
-        blep_read(&tr->blep, tmono, frames);
-        prof(PROF_OSC);
-        track_sing(tr, frames);
-        prof(PROF_VOX);
-        if (tr->fx.send == 0 && tr->fx.echo == 0) {
-            chain_process(&tr->chain, tmono, out, frames);
-            prof(PROF_CHAIN);
-            continue;
-        }
-        /* A track that sends is mixed apart, so that what goes to the
-         * room is what the track puts out: post-fader, and mono -- the
-         * pan's own gain taken back out, or a track panned hard would
-         * send half of what a centred one does. */
-        {
-            int32_t lg = tr->chain.pan <= 0 ? 64 : 64 - tr->chain.pan;
-            int32_t rg = tr->chain.pan >= 0 ? 64 : 64 + tr->chain.pan;
-            int32_t g = (int32_t)tr->fx.send * 2097152 / (127 * (lg + rg));
-            int32_t ge = (int32_t)tr->fx.echo * 2097152 / (127 * (lg + rg));
+        sounding[n++] = (uint8_t)t;
+    }
 
-            for (int i = 0; i < frames * 2; i++)
-                tstereo[i] = 0;
-            chain_process(&tr->chain, tmono, tstereo, frames);
-            if (tr->fx.send != 0 && !fed) {
-                for (int i = 0; i < frames; i++)
-                    sendbus[i] = 0;
-                fed = true;
-            }
-            if (tr->fx.echo != 0 && !fed_echo) {
-                for (int i = 0; i < frames; i++)
-                    echobus[i] = 0;
-                fed_echo = true;
-            }
-            for (int i = 0; i < frames; i++) {
-                int32_t mono = tstereo[2 * i] + tstereo[2 * i + 1];
-                out[2 * i] = sat_add(out[2 * i], tstereo[2 * i]);
-                out[2 * i + 1] = sat_add(out[2 * i + 1], tstereo[2 * i + 1]);
-                if (g)
-                    sendbus[i] += mul_q(mono, g, 15);
-                if (ge)
-                    echobus[i] += mul_q(mono, ge, 15);
-            }
-            prof(PROF_CHAIN);
+    /* Then every other sounding track to the second core, where there is
+     * one, so that the two voices of a chorus (t6, t7) land on both. */
+    other.n = 0;
+    other.frames = frames;
+    for (int k = 1; k < n; k += 2)
+        other.list[other.n++] = sounding[k];
+    split = other.n && player_run_other && player_run_other(render_other, 0);
+
+    ln->fed = ln->fed_echo = false;
+    for (int k = 0; k < n; k++)
+        if (!split || (k & 1) == 0)
+            render_track(&tracks[sounding[k]], ln, out, frames, true);
+
+    if (split) {
+        Lane *o = &lanes[1];
+        prof_mark();
+        if (player_wait_other() != 0)
+            render_other(0); /* the second core gave up: its share, here (it may have begun it) */
+        prof(PROF_WAIT);
+        for (int i = 0; i < frames * 2; i++)
+            out[i] = sat_add(out[i], o->out[i]);
+        if (o->fed) {
+            for (int i = 0; i < frames; i++)
+                ln->send[i] = ln->fed ? ln->send[i] + o->send[i] : o->send[i];
+            ln->fed = true;
+        }
+        if (o->fed_echo) {
+            for (int i = 0; i < frames; i++)
+                ln->echo[i] = ln->fed_echo ? ln->echo[i] + o->echo[i] : o->echo[i];
+            ln->fed_echo = true;
         }
     }
+
     {   /* the audition, dry */
         Track *tr = &tracks[AUDITION];
         if (reap_due)
@@ -1608,9 +1689,9 @@ static void render_tracks(int32_t *out, int frames)
             blep_begin(&tr->blep, frames);
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 osc_draw(&tr->voices[v].osc, &tr->blep);
-            blep_read(&tr->blep, tmono, frames);
-            track_sing(tr, frames);
-            chain_process(&tr->chain, tmono, out, frames);
+            blep_read(&tr->blep, ln->mono, frames);
+            track_sing(tr, ln->mono, frames);
+            chain_process(&tr->chain, ln->mono, out, frames);
             /* Once it has closed it is put away CLEAN. A song's track
              * keeps running between notes and its filters settle; this
              * one stops being rendered, and what its DC block and its
@@ -1628,14 +1709,14 @@ static void render_tracks(int32_t *out, int frames)
     }
     /* The returns run on after the last note: a tail is not a track. */
     prof_mark();
-    if (fed || reverb_ringing()) {
+    if (ln->fed || reverb_ringing()) {
         reverb_set(song->reverb_size, song->reverb_damp);
-        reverb_process(fed ? sendbus : 0, out, frames);
+        reverb_process(ln->fed ? ln->send : 0, out, frames);
     }
     prof(PROF_REV);
-    if (fed_echo || echo_ringing()) {
+    if (ln->fed_echo || echo_ringing()) {
         echo_set(song->delay_time, song->delay_fb, tick_samples());
-        echo_process(fed_echo ? echobus : 0, out, frames);
+        echo_process(ln->fed_echo ? ln->echo : 0, out, frames);
     }
     prof(PROF_ECHO);
 }

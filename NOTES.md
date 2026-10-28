@@ -1122,6 +1122,41 @@ E delay, T the tick. `tests/dpen-chorus.trk` is the chorus alone (phrases
   voice do exactly that (int16 tables beside 64-bit products). Not seen
   here yet.
 
+## 2026-10-28 — the second core: prepared, not yet run
+
+Decided with Jaeger: the second core rather than a lighter sound. Built,
+committed, **not installed**: the test waits for his tool to talk to the
+machine directly.
+
+- **From felucca-bsp at 5942e68** (MPL-2.0, `LICENSES/MPL-2.0.txt`):
+  `firmware/hal/fm1_cpu1.h`, `fm1_cpu1.S`, `fm1_cpu1_stop.h` verbatim
+  (Melodee's worker); into our HAL: the CPU1 fault hook in `fm1_irq.h`
+  and its resume in `fm1_vec.S`, `fm1_cnum`, `fm1_uptime_ms`, the
+  DBG_MSG bits per core; `fm1_cpu1_stop()` before every reset, UBOOT and
+  update; **VDC14 7 and SYSVDD 15 at boot** (M-VAVE's own values: at the
+  boot loader's, under two cores, some units misread flash and SRAM).
+- `FM1_CPU1_FALLBACK 1`: a misread, a fault or a job late (8 ms) holds
+  CPU1 until power-off and CPU0 renders everything, as before; the job is
+  then rendered by CPU0 (CPU1 may have begun it: a glitch at worst). A new
+  build lifts the bar (`fm1_cpu1_bar_build`, from __DATE__ __TIME__).
+  `MOONDAW_CPU1=0 ./build.sh` builds with one core.
+- **The split** (`core/player.c`): CPU0 first does what touches shared
+  state (mutes, VOX voices put away, reaping) and lists the tracks that
+  sound; every other one goes to CPU1 (`player_run_other`), so the two
+  voices of the chorus (t6, t7) land on both; each core renders into its
+  own `Lane` (scratch, mix, sends); CPU0 waits (`player_wait_other`),
+  sums the mixes with saturation and the sends, then the audition,
+  reverb and delay as before. Profile: `W` on HOME is the wait.
+- Same samples: the five reference renders hash identical with one core
+  and with a simulated second core that runs its share at once (23,000
+  jobs a minute). Saturation is the only place the order could differ.
+- RAM code: `.c1_text` (CPU1's idle loop) is in `.ram_audio`; RAMTEXT is
+  full to 1.5 KiB. RAM .data+.bss 59.4 KiB of 72 (the second lane, CPU1's
+  stacks).
+- To watch on the device: that CPU1 answers at boot (else one core,
+  silently: `W0` and the old figures), MAX on DPEN-CHORUS, and crashes
+  (the misreading units).
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
