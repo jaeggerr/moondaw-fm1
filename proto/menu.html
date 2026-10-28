@@ -265,7 +265,7 @@ function screen(st) {
   }
   return h + `</div>`;
 }
-/* place des boutons : 0 FX 1 SCL 2 ENV 3 LFO 4 EDIT 5 GLO / 6 HOME 7 SAVE 8 ARP 9 SEQ 10 PLAY 11 REC */
+/* place des boutons : 0 FX 1 SEL 2 ENV 3 LFO 4 EDIT 5 GLO / 6 HOME 7 SAVE 8 ARP 9 SEQ 10 PLAY 11 REC */
 document.getElementById("m1").innerHTML = screen({ cur: -1, btn: { 4: { word: "OPEN" }, 10: { word: "PLAY" } } });
 document.getElementById("m2").innerHTML = screen({ cur: 4, btn: { 3: { word: "DELETE" }, 4: { word: "OPEN" }, 10: { word: "PLAY" } } });
 document.getElementById("m3").innerHTML = screen({ cur: 4, ask: true, btn: { 3: { word: "SURE", cls: "danger" }, 4: { word: "OPEN", cls: "off" }, 10: { word: "PLAY", cls: "off" } } });

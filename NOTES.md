@@ -800,8 +800,26 @@ bar at its left, an amber dot after its name while it has unsaved
 changes; `+ NEW` last; the cursor starts on the open project; a thin
 scroll bar on the right only when the list is longer than a screen; the
 firmware version small (CONDENSED 12) at the bottom. Names as the files
-spell them. Not yet written into the app: `app/menu.c` is still the
-10/10 screen.
+spell them.
+
+**HOME written** (`app/menu.c`, same day), with what Jaeger added:
+
+- **The button printed SEL was read SCL** from Felucca's photo; renamed
+  everywhere (`PB_SEL`). **SEL selects**: on HOME it opens the project
+  under the cursor and goes straight into it.
+- **HOME leads home from every screen** (`app.c`, before any screen sees
+  the press). The screens that used HOME as "back" (PATTERN to PHRASE,
+  INSTRUMENT, MIXER) lose that way back until they are redesigned.
+- Opening another project over unsaved changes puts a question in place
+  of the list: SAVE keeps them, SEL loses them, anything else stays.
+- A song in memory with no place in flash (the built-in DEMO, a new one)
+  has its row too, among the others by name.
+- Not on HOME any more: DELETE (it was not asked for), the flash usage,
+  CPU/MAX. PLAY still plays or stops the open project from the list.
+- Trap of the day: a build that crashes (clang under colima's emulation,
+  again) leaves the previous `build/moondaw.fwsc` in place; installing
+  without checking the build's exit status put the mockup back on the
+  device.
 
 ## Open
 

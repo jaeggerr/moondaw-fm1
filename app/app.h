@@ -38,7 +38,7 @@ int app_not_carried(void);
 
 /* The twelve buttons in the two rows of six they sit in under the
  * knobs: position k of the map is this physical button. */
-static const uint8_t APP_BTN_AT[12] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO,
+static const uint8_t APP_BTN_AT[12] = { PB_FX, PB_SEL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO,
                                         PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
 enum { BTN_MAP_Y = 215, BTN_MAP_H = 10, APP_X0 = 3, APP_INNER = 234 };
 

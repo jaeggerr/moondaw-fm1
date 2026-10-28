@@ -19,7 +19,7 @@ static volatile uint32_t voice_inc; /* 0 = silent */
 static volatile int32_t voice_amp;  /* peak, Q15 */
 
 static const char *const btn_name[PLAT_BTNS] = {
-    "FX", "SCL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE",
+    "FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE",
     "ARP", "SEQ", "PLAY", "REC", "OCT-", "OCT+",
 };
 static const char *const enc_name[PLAT_ENCS] = {

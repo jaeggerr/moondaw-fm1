@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The MENU and several songs, through the app and a simulated flash:
- * save, new, open, the question about changes, delete and its guard,
+/* HOME and several songs, through the app and a simulated flash: save,
+ * new, open with SEL, the question about changes, HOME from anywhere,
  * and what the machine comes back on. */
 #include <stdio.h>
 #include <string.h>
@@ -30,11 +30,8 @@ static void go(void) { app_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void sel(int d) { in.enc[PE_SELECT] = (int8_t)d; go(); }
 static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
-#define OPEN PB_EDIT
-#define DELETE PB_LFO
-/* MENU -> SONG -> the block of its first cell, and back out. */
-static void into(void) { press(OPEN); press(OPEN); }
-static void out(void) { press(PB_HOME); press(PB_HOME); }
+/* HOME -> SONG on the open project, then the block of its first cell. */
+static void into(void) { press(PB_SEL); press(PB_EDIT); }
 static int songs_in_flash(void)
 {
     int n = 0;
@@ -51,69 +48,60 @@ int main(void)
     CHECK("an empty flash opens on the built-in song, which lives nowhere",
           !strcmp(app_name, "DEMO") && app_slot == -1 && songs_in_flash() == 0);
 
-    press(OPEN);              /* into SONG */
+    press(PB_SEL);            /* the cursor starts on it: into SONG */
     press(PB_SAVE);
     press(PB_HOME);
     CHECK("SAVE gives it a place", app_slot >= 0 && songs_in_flash() == 1 && !app_dirty);
 
     sel(100);                 /* the last row: + NEW */
-    press(OPEN);
+    press(PB_SEL);
     CHECK("NEW makes SONG 01, in memory only",
           !strcmp(app_name, "SONG 01") && app_slot == -1 && songs_in_flash() == 1);
-    into();
+    press(PB_HOME);
+    press(PB_SEL);
+    CHECK("an unsaved new song has its row, and SEL on it goes back in",
+          !strcmp(app_name, "SONG 01") && app_slot == -1);
+    press(PB_EDIT);
     key(16);                  /* A4 on its first step */
     CHECK("writing marks the song as changed", app_dirty);
     press(PB_SAVE);
-    out();
+    press(PB_HOME);           /* from PATTERN, straight home */
     CHECK("a second song beside the first", songs_in_flash() == 2 && !app_dirty);
 
-    sel(1);                   /* rows by name: DEMO, SONG 01, + NEW */
-    press(OPEN);
-    CHECK("OPEN on a row loads it", !strcmp(app_name, "DEMO"));
+    sel(-1);                  /* rows by name: DEMO, SONG 01, + NEW; the cursor was on SONG 01 */
+    press(PB_SEL);
+    CHECK("SEL on another row opens it", !strcmp(app_name, "DEMO"));
 
-    into();
+    press(PB_EDIT);
     key(3);
-    out();
-    sel(2);
-    press(OPEN);
+    press(PB_HOME);
+    sel(1);
+    press(PB_SEL);
     CHECK("opening another song over changes asks first", !strcmp(app_name, "DEMO") && app_dirty);
-    sel(1);                   /* anything else: no */
-    CHECK("and anything but an answer is no", !strcmp(app_name, "DEMO") && app_dirty);
-    press(OPEN);
-    press(DELETE);            /* DISCARD sits where DELETE does */
-    CHECK("DISCARD opens it, the changes gone",
+    sel(1);                   /* anything else: stay */
+    CHECK("and anything but an answer is stay", !strcmp(app_name, "DEMO") && app_dirty);
+    press(PB_SEL);            /* the cursor stayed on SONG 01: asked again */
+    press(PB_SEL);            /* SEL again: lose the changes */
+    CHECK("SEL answers: open it, the changes gone",
           !strcmp(app_name, "SONG 01") && !app_dirty &&
           song_step(&app_song, 0, 0, 0)->notes[0] == 69);
 
-    into();
+    press(PB_EDIT);
     key(20);
-    out();
-    sel(1);
-    press(OPEN);
-    press(PB_SAVE);           /* SAVE answers the same question the other way */
+    press(PB_HOME);
+    sel(-1);
+    press(PB_SEL);
+    press(PB_SAVE);           /* SAVE answers the other way */
     CHECK("SAVE writes the changes, then opens", !strcmp(app_name, "DEMO") && songs_in_flash() == 2);
-    sel(2);
-    press(OPEN);
-    CHECK("and they were written", song_step(&app_song, 0, 0, 0)->notes[0] == 73);
-
-    sel(1);                   /* DEMO */
-    press(DELETE);
+    press(PB_HOME);
     sel(1);
-    CHECK("one DELETE deletes nothing", songs_in_flash() == 2);
-    press(DELETE);            /* the cursor has not moved: the question was all that went */
-    press(DELETE);
-    CHECK("two do", songs_in_flash() == 1);
+    press(PB_SEL);
+    CHECK("and they were written", song_step(&app_song, 0, 0, 0)->notes[0] == 73);
 
     app_init();               /* off and on */
     go();
     CHECK("the machine comes back on the song that was open",
           !strcmp(app_name, "SONG 01") && app_slot >= 0);
-
-    sel(1);
-    press(DELETE);
-    press(DELETE);
-    CHECK("deleting the song in memory leaves it in memory, unsaved",
-          songs_in_flash() == 0 && !strcmp(app_name, "SONG 01") && app_slot == -1 && app_dirty);
 
     printf("menu test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

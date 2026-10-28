@@ -18,6 +18,7 @@ D = "assets/fonts/"
 # strokes to grey fog (LEN read as LBI at 7 px), while the hinted one-bit rendering at 8 px is
 # crisp -- tried side by side on 10/10. So "1" below: whole pixels, placed by the font's own hints.
 FONTS = [  # name, file, variation, size in pixels, mode
+    ("F_COND20", "BarlowCondensed-Bold.ttf", None, 20, "L"),  # the size chosen on the panel, 28/10
     ("F_COND14", "BarlowCondensed-Bold.ttf", None, 14, "L"),
     ("F_COND12", "BarlowCondensed-Bold.ttf", None, 12, "L"),
     ("F_COND11", "BarlowCondensed-Bold.ttf", None, 11, "L"),

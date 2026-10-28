@@ -53,7 +53,7 @@ int main(void)
     app_init();                 /* empty flash: the built-in song */
     go();
     before = note_on_flash();   /* nothing saved yet */
-    press(PB_EDIT);             /* SONG */
+    press(PB_SEL);              /* HOME: open it, SONG */
     press(PB_EDIT);             /* PATTERN, phrase 0 track 1 */
     in.enc[PE_SELECT] = 5;
     go();
@@ -66,7 +66,7 @@ int main(void)
 
     app_init();                 /* the machine switched off and on */
     go();
-    press(PB_EDIT);
+    press(PB_SEL);
     press(PB_EDIT);
     press(PB_SAVE);             /* saved again, untouched: still there */
     again = note_on_flash();

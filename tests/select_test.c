@@ -36,7 +36,7 @@ static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
 static const Step *st(int row) { return song_step(&song, 0, 0, row); }
 static void at(int row, int col) { enc(PE_SELECT, -100); enc(PE_ALGO, -100); enc(PE_SELECT, row); enc(PE_ALGO, col); }
 #define SELECT PB_EDIT
-#define COPY   PB_SCL
+#define COPY   PB_SEL
 #define PASTE  PB_ENV
 #define CLEAR  PB_LFO
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)

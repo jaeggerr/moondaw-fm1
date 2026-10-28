@@ -61,12 +61,12 @@ int main(void)
     CHECK("without a loop the phrase plays whole", seen == 0xFFFFu);
 
     enc(PE_SELECT, 9);
-    press(PB_SCL);
+    press(PB_SEL);
     CHECK("the first press sets one end", loop_state() == LOOP_ONE_END && loop_from() == 9);
     seen = listen();
     CHECK("one end alone changes nothing to the sound", seen == 0xFFFFu);
     enc(PE_SELECT, -4);
-    press(PB_SCL);
+    press(PB_SEL);
     CHECK("the second, set above the first, trades places with it",
           loop_state() == LOOP_SET && loop_from() == 5 && loop_to() == 9);
     listen(); /* whatever was playing when it was set */
@@ -78,18 +78,18 @@ int main(void)
     seen = listen();
     CHECK("PLAY with a loop starts in it", seen == 0x03E0u);
 
-    press(PB_SCL);
+    press(PB_SEL);
     CHECK("the third press forgets it", loop_state() == LOOP_NONE);
     seen = listen();
     CHECK("and the phrase plays whole again", seen == 0xFFFFu);
 
     enc(PE_SELECT, -100);
-    press(PB_SCL);
+    press(PB_SEL);
     CHECK("on a column head LOOP sets nothing", loop_state() == LOOP_NONE);
     enc(PE_SELECT, 3);
-    press(PB_SCL);
+    press(PB_SEL);
     enc(PE_SELECT, 2);
-    press(PB_SCL);
+    press(PB_SEL);
     CHECK("a loop of steps 2 to 4", loop_state() == LOOP_SET && loop_from() == 2 && loop_to() == 4);
     enc(PE_PRESET, 1);
     CHECK("another phrase: the loop was the first one's and is gone", loop_state() == LOOP_NONE);

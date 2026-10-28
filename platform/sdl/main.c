@@ -9,7 +9,7 @@
  * Keys are named by their place on a US keyboard; it is the PLACE that
  * counts (scancodes), so an AZERTY keyboard works the same way.
  *
- *   buttons   1 2 3 4 5 6   = FX SCL ENV LFO EDIT GLO     two rows of six,
+ *   buttons   1 2 3 4 5 6   = FX SEL ENV LFO EDIT GLO     two rows of six,
  *             Q W E R T Y   = HOME SAVE ARP SEQ PLAY REC  as on the machine
  *             A and ' are OCT- and OCT+; SPACE is PLAY too; or click
  *   keys      Z S X D C F V B H N J M , L . ; /     F3..A4 (the home row: sharps)
@@ -132,7 +132,7 @@ int plat_flash_prog(uint32_t off, const void *src, uint32_t n)
 
 /* --------------------------------------------------------- panel --- */
 static const char *const btn_label[PLAT_BTNS] = {
-    "FX", "SCL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE",
+    "FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE",
     "ARP", "SEQ", "PLAY", "REC", "OCT-", "OCT+",
 };
 static const char *const knob_label[PLAT_ENCS + 1] = {
@@ -323,12 +323,12 @@ static int selftest(const char *out, const char *song, int entry, int track)
         SDL_SaveBMP(sf, out);
         SDL_FreeSurface(sf);
     }
-    /* Then into PATTERN, as the hand would: OPEN (the EDIT button), three
+    /* Then into PATTERN, as the hand would: SEL opens the project, OPEN (EDIT), three
      * steps down, one field right, and its picture beside the first. */
     kb_keys = 0;
     kb_btns = 0;
     frame(1016);
-    kb_btns = 1u << PB_EDIT; /* MENU -> SONG */
+    kb_btns = 1u << PB_SEL; /* HOME -> SONG */
     frame(1032);
     kb_btns = 0;
     turn(PE_SELECT, entry);
@@ -370,12 +370,12 @@ static int selftest(const char *out, const char *song, int entry, int track)
     turn(PE_SELECT, 3);
     turn(PE_ALGO, 3);
     frame(1042);
-    kb_btns = 1u << PB_SCL; /* LOOP: one end here, the other five steps down */
+    kb_btns = 1u << PB_SEL; /* LOOP: one end here, the other five steps down */
     frame(1042);
     kb_btns = 0;
     turn(PE_SELECT, 5);
     frame(1042);
-    kb_btns = 1u << PB_SCL;
+    kb_btns = 1u << PB_SEL;
     frame(1042);
     kb_btns = 0;
     turn(PE_SELECT, -4);
@@ -402,12 +402,12 @@ static int selftest(const char *out, const char *song, int entry, int track)
     turn(PE_SELECT, 3);
     turn(PE_ALGO, 1);
     frame(1048);
-    kb_btns = 1u << PB_SCL; /* LOOP here too: steps 03 to 07 */
+    kb_btns = 1u << PB_SEL; /* LOOP here too: steps 03 to 07 */
     frame(1048);
     kb_btns = 0;
     turn(PE_SELECT, 4);
     frame(1048);
-    kb_btns = 1u << PB_SCL;
+    kb_btns = 1u << PB_SEL;
     frame(1048);
     kb_btns = 0;
     turn(PE_SELECT, -4);

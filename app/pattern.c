@@ -27,7 +27,7 @@ static const uint8_t col_w[COLS] = { 12, 20, 20, 20, 20, 14, 29, 29, 29 };
 /* The twelve buttons, in the two rows of six they sit in under the knobs. */
 enum { B_FX, B_LOOP, B_INSTR, B_CLEAR, B_SELECT, B_MIXER,
        B_BACK, B_SAVE, B_UNDO, B_SONG, B_PLAY, B_REC, BTNS };
-static const uint8_t btn_of[BTNS] = { PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO,
+static const uint8_t btn_of[BTNS] = { PB_FX, PB_SEL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO,
                                       PB_HOME, PB_SAVE, PB_ARP, PB_SEQ, PB_PLAY, PB_REC };
 /* What this build does not do yet is drawn dim: a button keeps its place
  * and says it does nothing. */

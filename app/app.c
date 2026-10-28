@@ -275,6 +275,17 @@ void app_frame(const PlatInput *in)
         break;
     }
 
+    {   /* HOME leads home from every screen, whatever that screen was doing */
+        static uint32_t prev_btns;
+        bool home = (in->btns & ~prev_btns) >> PB_HOME & 1u;
+        prev_btns = in->btns;
+        if (home && screen != AT_MENU) {
+            screen = AT_MENU;
+            loop_clear();
+            menu_open();
+        }
+    }
+
     if (screen == AT_MIXER) {
         if (!mixer_frame(in)) { /* back where it was opened from */
             screen = mixer_from;

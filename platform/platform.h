@@ -32,7 +32,7 @@
 
 /* The 14 buttons by their printed label -- Felucca's panel.c order. */
 enum {
-    PB_FX, PB_SCL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO, PB_HOME, PB_SAVE,
+    PB_FX, PB_SEL, PB_ENV, PB_LFO, PB_EDIT, PB_GLO, PB_HOME, PB_SAVE,
     PB_ARP, PB_SEQ, PB_PLAY, PB_REC, PB_OCTDN, PB_OCTUP, PLAT_BTNS
 };
 

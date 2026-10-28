@@ -42,12 +42,12 @@
 </div>
 <div><button id="start">START</button> <label>song <input type="file" id="song" accept=".trk" disabled></label> <span id="msg"></span></div>
 <div class="row" id="keys"></div>
-<p>By place on a US keyboard. Buttons: 1–6 are FX SCL ENV LFO EDIT GLO and Q W E R T Y are HOME SAVE ARP SEQ
+<p>By place on a US keyboard. Buttons: 1–6 are FX SEL ENV LFO EDIT GLO and Q W E R T Y are HOME SAVE ARP SEQ
    PLAY REC, two rows of six as on the machine; A and ' are OCT− and OCT+; space is PLAY too.
    Notes: Z S X D C F V B H N J M , L . ; / then 7 U I 9 O 0 P [ = ].
    Encoders: wheel over a knob; the arrows are SELECT (up, down) and ALGORITHM (left, right).</p>
 <script type="module">
-const BTNS = ["FX", "SCL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC", "OCT-", "OCT+"];
+const BTNS = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC", "OCT-", "OCT+"];
 const KNOBS = ["SEL", "ALG", "PRE", "K1", "K2", "K3", "K4", "VOL"];
 // By place, not by letter (KeyboardEvent.code): an AZERTY keyboard works the same way.
 const NOTE_CODES = ["KeyZ", "KeyS", "KeyX", "KeyD", "KeyC", "KeyF", "KeyV", "KeyB", "KeyH", "KeyN", "KeyJ", "KeyM",
