@@ -821,6 +821,22 @@ spell them.
   without checking the build's exit status put the mockup back on the
   device.
 
+## 2026-10-28 — colours, and SONG on block numbers
+
+- **The palette is in `app/theme.h`**, every colour named by what it
+  means; no screen writes a colour value (the type specimen aside).
+- **Black background and pure white text**, chosen on the panel: the
+  blue-black and the green-grey text of 10/10 made the type stand out
+  less. The other colours keep their meaning: green the cursor, cyan
+  what is open or plays, amber what is not saved, grey what is secondary.
+- **SONG opens a project** (Jaeger: on opening he wants the structure,
+  and to listen, not the last block edited). The cursor starts on the
+  first phrase. One row a phrase, its number fixed at the left; **the
+  block each track plays, `--` when silent** (chosen over one square a
+  track: it says more), six tracks a screen with their numbers small
+  above, **KNOB 1 scrolls the tracks sideways**. Phrase numbers in hex as
+  in the files. Mocked up, not yet settled as a whole.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

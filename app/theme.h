@@ -7,8 +7,10 @@
 
 #include "gfx.h"
 
-#define C_BG     GFX_RGB(0x10, 0x14, 0x1C) /* the screen */
-#define C_TEXT   GFX_RGB(0xC8, 0xD0, 0xC8)
+/* Black and pure white: the most contrast the panel has, chosen on it on 28/10 over
+ * the blue-black of the 10/10 screens, which made the type stand out less. */
+#define C_BG     GFX_RGB(0x00, 0x00, 0x00) /* the screen */
+#define C_TEXT   GFX_RGB(0xFF, 0xFF, 0xFF)
 #define C_DIM    GFX_RGB(0x5A, 0x64, 0x70) /* what is there but not the point: + NEW, empty */
 #define C_ACCENT GFX_RGB(0x7F, 0xD9, 0x62) /* the cursor, and what plays */
 #define C_ON_ACC GFX_RGB(0x0B, 0x14, 0x09) /* anything drawn on the cursor */
@@ -19,7 +21,7 @@
 #define C_PLAY   GFX_RGB(0x24, 0x3A, 0x28)
 #define C_SEL    GFX_RGB(0x6E, 0x55, 0x18)
 #define C_WHITE  GFX_RGB(0xFF, 0xFF, 0xFF)
-#define C_TRACK  GFX_RGB(0x24, 0x2A, 0x34) /* a scroll bar's groove */
+#define C_TRACK  GFX_RGB(0x28, 0x28, 0x28) /* a scroll bar's groove */
 #define C_POP    GFX_RGB(0x1A, 0x20, 0x29) /* a panel opened over the screen */
 
 #endif
