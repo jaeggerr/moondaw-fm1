@@ -38,8 +38,10 @@
  *   0E LENGTH  track, block, steps u16
  *   0F SAVE
  *   10 PLAY    mode (0 stop, 1 the song from `phrase`, 2 `phrase` round), phrase
- *   11 CANVAS  op, then its bytes (app/canvas.c): the computer draws on a
- *              screen of its own, GLO leaves it
+ *   11 CANVAS  drawing orders, each op, length, bytes (app/canvas.c): the
+ *              computer draws on a screen of its own, GLO leaves it
+ *   12 EVENTS  -> the gestures on the CANVAS since the last EVENTS
+ *              (tail, 27 bytes: canvas.h); extra 1 while it is in front
  *
  * What arrives is written straight to a slot of the store, a piece at a
  * time: it is never whole in memory and never parsed here. The host
@@ -59,7 +61,7 @@
 enum { LINK_CMD_BEGIN = 1, LINK_CMD_DATA, LINK_CMD_END, LINK_CMD_CANCEL, LINK_CMD_PING,
        LINK_CMD_INFO, LINK_CMD_READ,
        LINK_CMD_STATUS, LINK_CMD_INPUT, LINK_CMD_OPEN, LINK_CMD_NEW, LINK_CMD_STEP, LINK_CMD_CELL,
-       LINK_CMD_LENGTH, LINK_CMD_SAVE, LINK_CMD_PLAY, LINK_CMD_CANVAS,
+       LINK_CMD_LENGTH, LINK_CMD_SAVE, LINK_CMD_PLAY, LINK_CMD_CANVAS, LINK_CMD_EVENTS,
        LINK_CMD_ANSWER = 0x7F };
 enum {
     LINK_OK,

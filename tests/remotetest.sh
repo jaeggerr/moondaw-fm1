@@ -43,6 +43,24 @@ $CTL status | grep -q 'screen=CANVAS' || fail "the canvas in front"
 $CTL press GLO
 sleep 0.1
 $CTL status | grep -q 'screen=HOME' || fail "GLO back to where it was"
+# alive: GLO kept by the script, the gestures collected, HOME leaves
+python3 - <<PY || fail "the live canvas"
+import subprocess, sys, time
+sys.path.insert(0, "tools")
+from fm1_proto import Canvas
+c = Canvas(udp=$MOONDAW_LINK_PORT)
+c.keep_glo().clear("black").fill(0, 0, 240, 28, "green").text(10, 22, "LIVE", "black").show()
+c.events()
+ctl = ["python3", "tools/fm1_ctl.py", "--udp", "$MOONDAW_LINK_PORT"]
+subprocess.run(ctl + ["press", "GLO"], check=True)
+subprocess.run(ctl + ["turn", "K2", "3"], check=True)
+time.sleep(0.15)
+ev = c.events()
+assert ev.shown and "GLO" in ev.pressed and ev.turns.get("K2") == 3, ev
+subprocess.run(ctl + ["press", "HOME"], check=True)
+time.sleep(0.15)
+assert not c.events().shown
+PY
 $CTL save > /dev/null || fail "save"
 python3 tools/fm1_send.py --get kids -o build/remote_back.trk --force $P > /dev/null || fail "get"
 grep -q '^pat t0 05 len 8$' build/remote_back.trk || fail "the block's length in the file"

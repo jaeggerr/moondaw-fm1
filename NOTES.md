@@ -1209,6 +1209,32 @@ chorus crackles were worked on main, then merged.
   headless over UDP (`tests/remote_dev.c`) and checks what lands in the
   file.
 
+## 2026-10-29 — the canvas alive (branch `canvas-live`)
+
+Prototypes that answer the hands, still without a firmware: the script on
+the computer draws, the machine keeps the gestures made on the canvas,
+the script collects them and draws again.
+
+- **EVENTS** (link command 12): buttons pressed and released, keys
+  down, up and held, the seven knobs' turns, since the last EVENTS (27
+  bytes); extra says whether the canvas is still in front.
+- **CANVAS carries several orders a message** (`op, length, bytes` each):
+  a redraw of a screen is one or two messages, not one a rectangle (a
+  message is answered once a frame).
+- **KEEP**: GLO goes to the script instead of leaving; HOME always
+  leaves. `fm1_proto.Canvas.keep_glo()` sends it at once -- queued, the
+  first `clear()` dropped it.
+- Only the bands that changed go down the SPI, unless raw pixels were
+  drawn behind gfx's back.
+- `tools/fm1_proto.py`: `Canvas` (clear, fill, text, line, image,
+  keep_glo, show, events, run). `tools/protos/list_demo.py` is a
+  prototype to copy: a list SELECT walks, SEL marks, KNOB 2 changes,
+  GLO answered. `fm1_ctl.py canvas` uses the same library.
+- Trap: the event block is 27 bytes, five u32 and seven i8; counted 23
+  at first, which cut the last four knobs off the answer.
+- Checked headless over UDP (`tests/remotetest.sh`, and the demo driven
+  by `fm1_ctl.py`); not yet on the panel.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens

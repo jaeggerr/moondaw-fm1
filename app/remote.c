@@ -32,6 +32,13 @@ void remote_input(PlatInput *in)
 }
 
 /* ----------------------------------------------------------- answers --- */
+static bool same(const char *a, const char *b)
+{
+    while (*a && *a == *b)
+        a++, b++;
+    return *a == *b;
+}
+
 static uint8_t *put(uint8_t *t, uint8_t *end, const char *s)
 {
     while (*s && t < end)
@@ -201,7 +208,12 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
         if (n < 1)
             return LINK_BADMSG;
         app_show_canvas();
-        return canvas_draw(p[0], p + 1, n - 1) ? LINK_OK : LINK_BADMSG;
+        return canvas_orders(p, n) ? LINK_OK : LINK_BADMSG;
+    case LINK_CMD_EVENTS:
+        canvas_events(tail);
+        *tail_n = CANVAS_EVENTS;
+        *extra = same(app_screen(), "CANVAS"); /* still in front, or the hand left it */
+        return LINK_OK;
     default:
         return LINK_BADMSG;
     }
