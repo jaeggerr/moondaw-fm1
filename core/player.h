@@ -44,11 +44,19 @@ void player_render(int16_t *out, int frames);
  * chorus of DAFT-PUNK-EN overran its block). The platform sets the clock,
  * microseconds; unset, nothing is measured. player_profile() gives the
  * breakdown of the worst block since the last reset: PROF_* microseconds,
- * then the block's whole. */
-enum { PROF_TICK, PROF_OSC, PROF_VOX, PROF_CHAIN, PROF_REV, PROF_ECHO, PROF_N };
+ * then the block's whole. The stages are the first core's; PROF_WAIT is
+ * what it waited for the second core's share. */
+enum { PROF_TICK, PROF_OSC, PROF_VOX, PROF_CHAIN, PROF_REV, PROF_ECHO, PROF_WAIT, PROF_N };
 extern uint32_t (*player_clock)(void);
 void player_profile(uint32_t out[PROF_N + 1]);
 void player_profile_reset(void);
+
+/* A second core, where the platform has one (the FM-1's CPU1): run(fn, arg)
+ * hands fn(arg) over and returns 1, or 0 (do it yourself); wait() returns 0
+ * once it is done, -1 if it was given up (do it yourself). Unset: one core.
+ * The player hands it every other sounding track of each render. */
+extern int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg);
+extern int (*player_wait_other)(void);
 
 /* Offline only: the same, the sum before the clamp and the MASTER pot. */
 void player_render_raw(int32_t *out, int frames);

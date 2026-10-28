@@ -131,9 +131,10 @@ static void draw(void)
     }
     if (player_playing() && player_clock) {
         /* the worst block's time, stage by stage, in microseconds: O the oscillators,
-         * V the voice, C the filters and mix, R the reverb, E the delay, T the tick */
-        static const char tag[PROF_N] = { 'T', 'O', 'V', 'C', 'R', 'E' };
-        static const uint8_t order[PROF_N] = { PROF_OSC, PROF_VOX, PROF_CHAIN, PROF_REV, PROF_ECHO, PROF_TICK };
+         * V the voice, C the filters and mix, R the reverb, E the delay, T the tick, W the
+         * wait for the second core's share */
+        static const char tag[PROF_N] = { 'T', 'O', 'V', 'C', 'R', 'E', 'W' };
+        static const uint8_t order[PROF_N] = { PROF_OSC, PROF_VOX, PROF_CHAIN, PROF_REV, PROF_ECHO, PROF_TICK, PROF_WAIT };
         uint32_t p[PROF_N + 1];
         char t[8];
         int x = 4;
@@ -141,7 +142,7 @@ static void draw(void)
         for (int i = 0; i < PROF_N; i++) {
             t[0] = tag[order[i]];
             ui_dec(t + 1, (int)p[order[i]]);
-            x = gfx_text(F_COND12, x, PLAT_H - 4, t, C_TEXT) + 5;
+            x = gfx_text(F_COND12, x, PLAT_H - 4, t, C_TEXT) + 4;
         }
     } else {
         gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);

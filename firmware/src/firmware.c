@@ -24,6 +24,15 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 
+/* The second core renders half of the tracks (felucca-bsp's worker, fm1_cpu1.h; 28/10: one core did not hold the
+ * chorus of DAFT-PUNK-EN). A failure -- a misread, a fault, a job late -- holds it until power-off and the first
+ * core renders everything, as before: never a restart for it. MOONDAW_CPU1=0 builds with one core. */
+#ifndef MOONDAW_CPU1
+#define MOONDAW_CPU1 1
+#endif
+#define FM1_CPU1 MOONDAW_CPU1
+#define FM1_CPU1_FALLBACK 1
+
 #define HALF_FRAMES 128          /* I2S half buffer: 2.9 ms */
 #define FS 44100
 #define RING_PUBLISH() __asm__ volatile("" ::: "memory")   /* slot store before the index update */
@@ -39,6 +48,9 @@
 #include "fm1_audio.h"
 #include "fm1_adc.h"
 #include "fm1_lcd_hw.h"
+#if FM1_CPU1
+#include "fm1_cpu1.h"
+#endif
 
 static volatile uint32_t fm1_ms;  /* milliseconds since boot (TIMER4-based, TIMER5 ISR below) */
 #define BOOTGUARD_MAGIC 0x42475244u
@@ -178,8 +190,23 @@ static void input_read(PlatInput *in)
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
 extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
 extern uint32_t _ra_start[], _ra_end[], _ra_load[];
-/* the player's stopwatch (core/player.h), absent from the bring-up build */
+/* the player's stopwatch and its second core (core/player.h), absent from the bring-up build */
 extern uint32_t (*player_clock)(void) __attribute__((weak));
+extern int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg) __attribute__((weak));
+extern int (*player_wait_other)(void) __attribute__((weak));
+#if FM1_CPU1
+static int cpu1_run(void (*fn)(uint32_t), uint32_t arg) { return fm1_cpu1_run(fn, arg); }
+static int cpu1_wait(void) { return fm1_cpu1_wait(); }
+/* a number for this build: a bar set by another build's failure is lifted (fm1_cpu1_bar_build) */
+static uint32_t build_id(void)
+{
+    const char *s = __DATE__ __TIME__;
+    uint32_t h = 2166136261u;
+    while (*s)
+        h = (h ^ (uint8_t)*s++) * 16777619u;
+    return h;
+}
+#endif
 static uint32_t fm1_us(void) { return fm1_ticks() / FM1_TICKS_PER_US; }
 
 /* TIMER5, 10 kHz, above ALNK0: the key scan keeps its pace while a half
@@ -288,6 +315,22 @@ static void fm1_main(void)
     panel_init();
     if (&player_clock)
         player_clock = fm1_us;
+#if FM1_CPU1
+    /* The rails as M-VAVE's firmware sets them (under load at the boot loader's, some units misread the flash
+     * and the SRAM), then the second core: at power-on, before the audio and the timers, interrupts off. */
+    fm1_vdc14_raise(7);
+    fm1_sysvdd_raise(15);
+    fm1_cpu1_bar_build(build_id());
+    {
+        uint32_t f = irq_save();
+        int ok = fm1_cpu1_start() == 0;
+        irq_restore(f);
+        if (ok && &player_run_other) {
+            player_run_other = cpu1_run;
+            player_wait_other = cpu1_wait;
+        }
+    }
+#endif
     app_init();
     (void)fm1_adc_read(FM1_ADC_MASTER);         /* the first conversion after the pin setup: dropped */
     {

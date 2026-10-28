@@ -5,7 +5,8 @@
  * RAMTEXT holds .ram_text (code that must run while the flash is busy: the
  * flash driver), then .ram_audio (MOONDAW, 28/10: the audio core -- synth,
  * player, fx -- run from RAM: from XIP the cache misses cost the audio
- * interrupt most of its block). It sits at the TOP of the SRAM, under the
+ * interrupt most of its block), and the second core's idle loop (.c1_text, so
+ * that an idle CPU1 never fetches from the flash). It sits at the TOP of the SRAM, under the
  * stacks: a direct call reaches +-4 MiB, and 0x01C00000 is just over 4 MiB
  * from the XIP code -- from here the whole image is in reach both ways.
  * (Until 28/10 RAMTEXT was 0x01C00000..0x01C06000 and the 8 KiB after it was
@@ -31,6 +32,7 @@ SECTIONS
     .ram_text : { _rt_start = .; KEEP(*(.ram_text*)) . = ALIGN(4); _rt_end = .; } > RAMTEXT AT > XIP
     _rt_load = LOADADDR(.ram_text);
     .ram_audio : { _ra_start = .; *core_synth.o(.text*) *core_player.o(.text*) *core_fx.o(.text*)
+                   _c1_start = .; KEEP(*(.c1_text*)) _c1_end = .;  /* the second core's loop (fm1_cpu1.h) */
                    . = ALIGN(4); _ra_end = .; } > RAMTEXT AT > XIP
     _ra_load = LOADADDR(.ram_audio);
     .data : { . = ALIGN(4); _data_start = .; *(.data*) *(.sdata*) . = ALIGN(4); _data_end = .; } > RAM AT > XIP

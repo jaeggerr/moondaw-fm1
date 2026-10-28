@@ -42,3 +42,16 @@ Not Felucca's:
 
 To compare with a later Felucca: `diff -ru Felucca/firmware/hal firmware/hal`,
 and the same for each verbatim file.
+
+## felucca-bsp (28/10/2026)
+
+The second core, from **felucca-bsp** (<https://github.com/hugelton/felucca-bsp>, MPL-2.0), at commit
+`5942e68b89ab9ccd23f2c541d712ca38fe635f11`. Its own credits, kept in the files: Melodee by Kerem Kilic (keremimo),
+MPL-2.0 by agreement (felucca-bsp issue 5); Charles Vestal; Leo Kuroshita.
+
+| Here | From felucca-bsp | State |
+| --- | --- | --- |
+| `firmware/hal/fm1_cpu1.h`, `fm1_cpu1.S`, `fm1_cpu1_stop.h` | `chip/` | verbatim |
+| `firmware/hal/fm1_irq.h`, `fm1_vec.S` | `chip/` | the CPU1 fault hook, its resume, `fm1_cnum`, `fm1_uptime_ms`, `FM1_DBG_C0/C1` added |
+| `firmware/hal/fm1_sys.h` | `chip/fm1_sys.h` | `fm1_cpu1_stop` before the resets, `fm1_vdc14_raise`, `fm1_sysvdd_raise` added |
+| `LICENSES/MPL-2.0.txt` | `LICENSE` | verbatim |

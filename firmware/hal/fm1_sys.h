@@ -19,6 +19,8 @@
 #pragma once
 #include <stdint.h>
 #include "fm1_cc.h"
+#include "fm1_time.h"
+#include "fm1_cpu1_stop.h"                           /* MOONDAW: the second core is held before any reset */
 
 #define FM1_P33_CON (*(volatile uint32_t *)0x13E08u)
 #define FM1_P33_DAT (*(volatile uint32_t *)0x13E0Cu)
@@ -93,6 +95,32 @@ static void fm1_wdt_arm(uint8_t t)
 static void fm1_wdt_feed(void) { fm1_p33_or(FM1_P3_WDT_CON, 0x40); }
 static void fm1_wdt_stop(void) { fm1_p33_write(FM1_P3_WDT_CON, 0); }
 
+/* VDC14 and SYSVDD (the core and SRAM rail), from felucca-bsp's chip/fm1_sys.h (MPL-2.0, Charles Vestal):
+ * VDC14 (P3_ANA_CON6 [2:0]) 1.25 V + 50 mV a level; SYSVDD (P3_ANA_CON9 [3:0]) 0.93 V + 30 mV a level. The boot
+ * loader leaves 3 and 11; M-VAVE's own firmware (V15) raises them to 7 and 15 as it starts, at the same 360 MHz.
+ * At the boot loader's, under load (both cores), some units read flash and SRAM wrong. Up only, a level per
+ * 100 us, VDC14 first: SYSVDD is regulated from it. MOONDAW raises them before it starts the second core. */
+#define FM1_P3_ANA_CON6 0x06u
+#define FM1_P3_ANA_CON9 0x09u
+static void fm1_vdc14_raise(uint32_t level)
+{
+    uint32_t v = fm1_p33_read(FM1_P3_ANA_CON6) & 7u;
+    while (v < level && v < 7u) {
+        v++;
+        fm1_p33_write(FM1_P3_ANA_CON6, (uint8_t)((fm1_p33_read(FM1_P3_ANA_CON6) & ~7u) | v));
+        fm1_delay_us(100);
+    }
+}
+static void fm1_sysvdd_raise(uint32_t level)
+{
+    uint32_t v = fm1_p33_read(FM1_P3_ANA_CON9) & 15u;
+    while (v < level && v < 15u) {
+        v++;
+        fm1_p33_write(FM1_P3_ANA_CON9, (uint8_t)((fm1_p33_read(FM1_P3_ANA_CON9) & ~15u) | v));
+        fm1_delay_us(100);
+    }
+}
+
 /* ---------------------------------------------------- reset and reboot --- */
 static struct {
     uint8_t p3_rst;      /* bit0 power-on, 1 VDDIO low, 2 WDT, 3 VCM, 4 long press, 5 1.2 V, 6 soft (P33) */
@@ -110,6 +138,7 @@ static void fm1_reset_reason(void)
 static void fm1_reboot(void)
 {
     __asm__ volatile("cli");
+    fm1_cpu1_stop();                                    /* the second core held (fm1_cpu1_stop.h) */
     fm1_p33_or(FM1_P3_PR_PWR, 0x10);
     for (;;)
         ;
@@ -120,6 +149,7 @@ static void fm1_enter_uboot(void)
     static const char k[16] = "usb_update_mode";
     uint32_t i;
     __asm__ volatile("cli");
+    fm1_cpu1_stop();
     /* CPU0 write limits (fm1_guard.h) may cover the mailbox: drop them all */
     if (!(*(volatile uint32_t *)0x1EEE240u & 1u))
         *(volatile uint32_t *)0x1EEE240u = 0xE7u;
@@ -133,6 +163,7 @@ static void fm1_enter_uboot(void)
 
 FM1_INLINE void fm1_core_reset(void)
 {
+    fm1_cpu1_stop();
     FM1_PWR_CON |= 0x10u;
     for (;;)
         ;
@@ -142,6 +173,7 @@ FM1_INLINE void fm1_enter_update(const uint8_t *parm)
 {
     uint32_t i;
     __asm__ volatile("cli");
+    fm1_cpu1_stop();                                    /* before writing the boot loader's update record */
     if (!(*(volatile uint32_t *)0x1EEE240u & 1u))       /* drop CPU0 write limits, as fm1_enter_uboot */
         *(volatile uint32_t *)0x1EEE240u = 0xE7u;
     *(volatile uint32_t *)0x1EEE348u = 0;

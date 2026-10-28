@@ -28,6 +28,12 @@
 #define FM1_ETM_PC(i) (*(volatile uint32_t *)(0x1EEF1C4u + 4u * (i)))
 #define FM1_DBG_WR_EN (*(volatile uint32_t *)0x1EEE240u)
 #define FM1_DBG_MSG (*(volatile uint32_t *)0x1EEE244u)
+/* MOONDAW, from felucca-bsp's chip/fm1_irq.h (MPL-2.0; Melodee's reading): DBG_MSG's bits by core, CPU1's PC
+ * limit, bus and write errors, then CPU0's; which core runs; the uptime as fm1_fault_c reads it */
+#define FM1_DBG_C1 ((1u << 6) | (1u << 8) | (1u << 10) | (1u << 11) | (7u << 16))
+#define FM1_DBG_C0 ((1u << 7) | (1u << 9) | (1u << 12) | (1u << 13) | (7u << 19))
+static inline uint32_t fm1_cnum(void) { uint32_t v; __asm__ volatile("%0 = cnum" : "=r"(v)); return v; }   /* 0 / 1 */
+static inline uint32_t fm1_uptime_ms(void) { return *(volatile uint32_t *)0x10804u / 24000u; }
 #define FM1_DBG_MSG_CLR (*(volatile uint32_t *)0x1EEE248u)
 #define FM1_DBG_EN (*(volatile uint32_t *)0x1EEE340u)
 
@@ -91,11 +97,20 @@ static void fm1_irq_enable_all(void)
 /* called from fm1_fatal_common (fm1_vec.S) with the saved frame:
  * f[0..15] r0..r15, f[16] reti, f[17] rete, f[18] retx, f[19] stub+6,
  * f[20] psr, f[21] icfg, f[22] usp, f[23] ssp, f[24] sp, f[25] interrupted rets */
+#if FM1_CPU1
+static int fm1_cpu1_fault_c(const uint32_t *f);   /* fm1_cpu1.h: 1 = the second core's fault, handled */
+#endif
+
+/* Returns only to resume CPU0 after a fault of the second core's (FM1_CPU1; fm1_vec.S) */
 void fm1_fault_c(uint32_t *f)
 {
     static volatile uint32_t in_fault;
     uint32_t i, count = fm1_crash.magic == FM1_CRASH_MAGIC ? fm1_crash.count : 0;
     uint32_t early = fm1_crash.magic == FM1_CRASH_MAGIC ? fm1_crash.early : 0;
+#if FM1_CPU1
+    if (fm1_cpu1_fault_c(f))
+        return;
+#endif
     fm1_irq_off();
     if (in_fault++)                           /* fault while reporting: reset at once */
         *(volatile uint32_t *)0x10000u |= 1u << 4;
