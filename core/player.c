@@ -278,6 +278,7 @@ typedef struct {
     bool active;   /* note held: what a note-off ends */
     bool sounding; /* still drawing: it outlives the hold by the release */
     uint8_t wave;  /* 0 = the note itself, 1.. = its layers */
+    int8_t vox;    /* the VOX voice it sings through, -1 none (below) */
     int16_t detune;
 } Voice;
 
@@ -315,6 +316,9 @@ typedef struct {
     int32_t bend;
     uint16_t vib_phase, trem_phase;
     uint8_t last_note;
+    char syl[VOX_SYL_LEN]; /* what the next VOX note sings: a setter */
+    bool syl_written;      /* the step being played wrote it in a cell */
+    bool anticipated;      /* the next row's note was fired early */
 } TrackFx;
 
 typedef struct {
@@ -338,6 +342,21 @@ static Track tracks[SONG_MAX_TRACKS + 1]
 #endif
     ;
 static Song *song;
+
+/* The VOX voices. moondaw gives each of a track's 20 voices a voice
+ * state of its own; here eight are shared by every track and lent to a
+ * voice when it sings, ~1 KB each. A voice keeps the one it was lent
+ * after its note -- the syllable runs to its end, the coda included, as
+ * moondaw's does -- until another voice needs it: a free one first,
+ * then one that has finished singing, then one whose note is no longer
+ * held. A ninth note held at once is not sung. */
+#define VOX_VOICES 8
+static Vox vox_pool[VOX_VOICES]
+#ifdef PLAT_FM1
+    __attribute__((section(".pool")))
+#endif
+    ;
+static int16_t vox_owner[VOX_VOICES]; /* track * TRACK_MAX_VOICES + voice, -1 */
 
 static bool playing, song_mode, song_once;
 static uint16_t arr_pos, arr_play, ref_nth, entry_step;
@@ -376,11 +395,63 @@ static int instr_waves(const InstrumentDef *in)
     return 1 + (in->nlayers > INSTR_MAX_LAYERS ? INSTR_MAX_LAYERS : in->nlayers);
 }
 
-static void voice_stop(Track *tr, Voice *v)
+static void vox_unbind(Voice *v)
+{
+    if (v->vox < 0)
+        return;
+    vox_reset(&vox_pool[v->vox]);
+    vox_owner[v->vox] = -1;
+    v->vox = -1;
+}
+
+static Vox *vox_bind(int t, int vi)
+{
+    Voice *v = &tracks[t].voices[vi];
+    int16_t id = (int16_t)(t * TRACK_MAX_VOICES + vi);
+    int pick = -1;
+
+    if (v->vox >= 0)
+        return &vox_pool[v->vox];
+    for (int k = 0; k < VOX_VOICES && pick < 0; k++)
+        if (vox_owner[k] < 0)
+            pick = k;
+    for (int k = 0; k < VOX_VOICES && pick < 0; k++)
+        if (!vox_pool[k].playing)
+            pick = k;
+    for (int k = 0; k < VOX_VOICES && pick < 0; k++)
+        if (!tracks[vox_owner[k] / TRACK_MAX_VOICES].voices[vox_owner[k] % TRACK_MAX_VOICES].active)
+            pick = k;
+    if (pick < 0)
+        return 0;
+    if (vox_owner[pick] >= 0)
+        tracks[vox_owner[pick] / TRACK_MAX_VOICES].voices[vox_owner[pick] % TRACK_MAX_VOICES].vox = -1;
+    vox_owner[pick] = id;
+    v->vox = (int8_t)pick;
+    vox_reset(&vox_pool[pick]);
+    return &vox_pool[pick];
+}
+
+/* A note-off: a VOX voice closes its syllable and runs on to its end. */
+static void voice_off(Track *tr, Voice *v)
 {
     osc_note_off(&v->osc, &tr->blep);
+    if (v->vox >= 0)
+        vox_note_off(&vox_pool[v->vox]);
+}
+
+static void voice_stop(Track *tr, Voice *v)
+{
+    voice_off(tr, v);
     v->active = false;
     v->sounding = false;
+}
+
+/* Changing engine leaves the VOX voice behind, put away clean. */
+static void voice_select(Track *tr, Voice *v, uint8_t engine)
+{
+    if (engine != ENGINE_VOX)
+        vox_unbind(v);
+    osc_select(&v->osc, &tr->blep, engine);
 }
 
 static void track_release(Track *tr)
@@ -422,18 +493,31 @@ static uint8_t voice_timbre(const Track *tr, const InstrumentDef *in)
     return in->timbre;
 }
 
+/* `tied` is SLI's tie, the chain's own expression: reached by a glide,
+ * a VOX vowel carries on instead of striking again. */
 static void voice_start(Track *tr, const InstrumentDef *in, uint8_t timbre,
-                        int i, uint8_t note)
+                        int i, uint8_t note, bool tied)
 {
     int waves = instr_waves(in);
     Voice *v = &tr->voices[i * waves];
 
-    osc_select(&v->osc, &tr->blep, in->engine);
+    voice_select(tr, v, in->engine);
     v->wave = 0;
     v->detune = 0;
     v->osc.gain = 4096;
     osc_set_timbre(&v->osc, timbre);
     osc_note_on(&v->osc, note);
+    if (in->engine == ENGINE_VOX) {
+        /* The syllable and the voice cannot travel with the note, so
+         * they are handed over beside it, as moondaw does. */
+        Vox *x = vox_bind((int)(tr - tracks), i * waves);
+        if (x) {
+            vox_set_syllable(x, tr->fx.syl, tied, tr->fx.syl_written);
+            vox_set_voice(x, in->tract, in->accent, tr->fx.vib == 0);
+            vox_set_timbre(x, timbre);
+            vox_note_on(x, note);
+        }
+    }
     v->active = v->sounding = true;
     for (int l = 0; l < waves - 1; l++) {
         const Layer *ly = &in->layers[l];
@@ -441,7 +525,7 @@ static void voice_start(Track *tr, const InstrumentDef *in, uint8_t timbre,
         int n = (int)note + ly->transpose;
         uint32_t g = db_gain(ly->gain) >> 4;
         n = n < 0 ? 0 : n > 127 ? 127 : n;
-        osc_select(&lv->osc, &tr->blep, ly->engine);
+        voice_select(tr, lv, ly->engine);
         lv->wave = (uint8_t)(1 + l);
         lv->detune = ly->detune;
         /* Four times unity at most: the steps of a whole track share one
@@ -460,7 +544,9 @@ static void trigger_step(int t, const Step *st)
     const InstrumentDef *in = &song->instruments[inst % SONG_MAX_INSTR];
     uint8_t timbre, first, semis;
     int waves = instr_waves(in), maxn = TRACK_MAX_VOICES / waves, first_idx = -1;
-    bool started[TRACK_MAX_VOICES] = { false }, sounded = false, tied;
+    bool started[TRACK_MAX_VOICES] = { false }, sounded = false;
+    /* SLI's tie, computed as the chain's below: the two must agree. */
+    bool tied = (tr->fx.scoop & 0x0F) == 0 && tr->fx.glide > 0 && tr->used;
 
     tr->last_inst = inst;
     timbre = voice_timbre(tr, in);
@@ -470,7 +556,7 @@ static void trigger_step(int t, const Step *st)
          * the others in their turn. */
         bool want = n <= 127 && i < maxn && (tr->fx.arp == 0 || !sounded);
         if (want && !(sounded && tr->fx.strum > 0)) {
-            voice_start(tr, in, timbre, i, n);
+            voice_start(tr, in, timbre, i, n, tied);
             for (int w = 0; w < waves; w++)
                 started[i * waves + w] = true;
             if (!sounded)
@@ -534,7 +620,7 @@ static void retrigger_step(int t)
     Track *tr = &tracks[t];
     for (int i = 0; i < TRACK_MAX_VOICES; i++)
         if (tr->voices[i].sounding)
-            osc_note_off(&tr->voices[i].osc, &tr->blep);
+            voice_off(tr, &tr->voices[i]);
     chain_retrigger(&tr->chain);
     trigger_step(t, &tr->fx.held);
 }
@@ -554,7 +640,7 @@ static void strum_advance(int t)
     if (fx->strum_next >= maxn)
         return;
     i = fx->strum_next++;
-    voice_start(tr, in, voice_timbre(tr, in), i, fx->held.notes[i]);
+    voice_start(tr, in, voice_timbre(tr, in), i, fx->held.notes[i], false);
     for (int j = fx->strum_next; j < STEP_MAX_NOTES; j++)
         if (fx->held.notes[j] <= 127) {
             fx->strum_left = fx->strum_gap;
@@ -607,8 +693,11 @@ static void apply_pitch(Track *tr)
     }
     cents = clamp_pitch(fx->transpose + (int)fx->glide_off + (int)fx->bend +
                         vibrato + arp);
-    for (int v = 0; v < TRACK_MAX_VOICES; v++)
+    for (int v = 0; v < TRACK_MAX_VOICES; v++) {
         osc_set_cents(&tr->voices[v].osc, clamp_pitch(cents + tr->voices[v].detune));
+        if (tr->voices[v].vox >= 0)
+            vox_set_cents(&vox_pool[tr->voices[v].vox], clamp_pitch(cents + tr->voices[v].detune));
+    }
 }
 
 /* The lopsided throb of a bias tremolo: a quick rounded dip, then the
@@ -782,6 +871,14 @@ static uint8_t block_instrument(int t, int pat, int row)
     return INSTR_NONE;
 }
 
+static void syl_copy(char *dst, const char *src)
+{
+    int i = 0;
+    for (; i < VOX_SYL_LEN - 1 && src[i]; i++)
+        dst[i] = src[i];
+    dst[i] = '\0';
+}
+
 static void process_row(const SongEntry *e)
 {
     for (int t = 0; t < song->num_tracks; t++) {
@@ -799,6 +896,7 @@ static void process_row(const SongEntry *e)
         tr->fx.strum = 0;
         tr->fx.scoop = 0;
         if (pat >= TRACK_MAX_PATTERNS || song->patterns[t][pat].length == 0) {
+            tr->fx.anticipated = false;
             tr->fx.has_held = false;
             tr->fx.strum_left = 0;
             continue;
@@ -806,8 +904,16 @@ static void process_row(const SongEntry *e)
         len = song->patterns[t][pat].length;
         row = entry_step % len;
         st = song_step(song, t, pat, row);
+        /* The syllable, copied: the table may be edited while this plays. */
+        tr->fx.syl_written = false;
+        for (int i = 0; i < STEP_MAX_FX; i++)
+            if (st->fx[i].cmd == FX_SYL && song_syl(song, st->fx[i].val)[0]) {
+                syl_copy(tr->fx.syl, song_syl(song, st->fx[i].val));
+                tr->fx.syl_written = true;
+            }
         apply_fx(t, st);
         if (st->notes[0] == NOTE_OFF) {
+            tr->fx.anticipated = false;
             track_release(tr);
             tr->fx.has_held = false;
             tr->fx.strum_left = 0;
@@ -815,8 +921,17 @@ static void process_row(const SongEntry *e)
         }
         for (int i = 0; i < STEP_MAX_NOTES; i++)
             any |= st->notes[i] <= 127;
-        if (!any)
+        if (!any) {
+            tr->fx.anticipated = false; /* the note it aimed at is gone */
             continue; /* empty step: the previous note carries on */
+        }
+        if (tr->fx.anticipated) {
+            /* Fired early so the vowel lands here: the strike is done,
+             * the row keeps its fx, applied above. */
+            tr->fx.anticipated = false;
+            tr->fx.strum_left = 0;
+            continue;
+        }
         tr->fx.held = *st;
         tr->fx.held.instrument = block_instrument(t, pat, row);
         tr->fx.has_held = true;
@@ -848,6 +963,230 @@ static void track_follow_mixer(Track *tr, const TrackInit *ti)
         tr->fx.ramp[RAMP_ECH].left = 0;
         tr->fx.echo = ti->echo;
     }
+}
+
+/* ========================================================== singing ===
+ * moondaw's two look-aheads for the voice, decided several steps out:
+ * the mouth closes what it sings before the next row takes the voice
+ * (close_syllable), and a consonant is formed BEFORE the beat so the
+ * vowel lands on it (anticipate_vox). Both are quantized to the tick,
+ * an fDLY on the row is the hand taking the timing back, and a phrase
+ * boundary is not crossed in song mode. */
+#define VOX_BEAT_LEAD_MS 50
+
+static int32_t tick_samples(void);
+static bool loop_bounds(uint16_t cycle, uint16_t *lo, uint16_t *hi);
+
+/* ms in ticks, rounded: (int)(ms * FS / tick + .5) for ms >= 0. */
+static int ms_ticks(int ms, int32_t tick)
+{
+    return (int)(((int32_t)ms * 441 + 5 * tick) / (10 * tick));
+}
+
+static int track_block(const SongEntry *e, int t)
+{
+    int pat = e->pattern[t];
+    return pat < TRACK_MAX_PATTERNS && song->patterns[t][pat].length > 0 ? pat : -1;
+}
+
+/* The row d steps ahead, NULL past the end of what plays. A loop's seam
+ * is crossed, as moondaw's step_ahead does it. */
+static const Step *step_ahead(const SongEntry *e, int t, int pat, int d, int *row)
+{
+    uint16_t cycle = song_entry_cycle(song, e), lo, hi;
+    uint32_t next = (uint32_t)entry_step + (uint32_t)d;
+    if (song_mode) {
+        if (next >= song_play_steps(song, arr_pos, arr_play))
+            return 0;
+    } else if (loop_bounds(cycle, &lo, &hi)) {
+        uint16_t len = hi > lo ? (uint16_t)(hi - lo) : 1;
+        if (next >= hi || next < lo)
+            next = lo + (next - lo) % len;
+    } else if (next >= cycle) {
+        next = 0;
+    }
+    *row = (int)(next % song->patterns[t][pat].length);
+    return song_step(song, t, pat, *row);
+}
+
+/* The row one step ahead, as moondaw's peek_next: a loop goes back to
+ * its first row. */
+static const Step *peek_next(const SongEntry *e, int t, int pat, int *row)
+{
+    uint16_t cycle = song_entry_cycle(song, e), lo, hi;
+    uint32_t next = (uint32_t)entry_step + 1;
+    if (song_mode) {
+        if (next >= song_play_steps(song, arr_pos, arr_play))
+            return 0;
+    } else if (loop_bounds(cycle, &lo, &hi)) {
+        if (next >= hi || next < lo)
+            next = lo;
+    } else if (next >= cycle) {
+        next = 0;
+    }
+    *row = (int)(next % song->patterns[t][pat].length);
+    return song_step(song, t, pat, *row);
+}
+
+/* What a row ahead will sing: its own cell, else the track's setter. */
+static const char *row_syl(const Track *tr, const Step *st)
+{
+    const char *syl = tr->fx.syl;
+    for (int i = 0; i < STEP_MAX_FX; i++)
+        if (st->fx[i].cmd == FX_SYL && song_syl(song, st->fx[i].val)[0])
+            syl = song_syl(song, st->fx[i].val);
+    return syl;
+}
+
+static bool row_has(const Step *st, uint8_t cmd)
+{
+    for (int i = 0; i < STEP_MAX_FX; i++)
+        if (st->fx[i].cmd == cmd)
+            return true;
+    return false;
+}
+
+static bool row_has_note(const Step *st)
+{
+    for (int i = 0; i < STEP_MAX_NOTES; i++)
+        if (st->notes[i] <= 127)
+            return true;
+    return false;
+}
+
+/* Whether that row will be TIED: a glide reaches it, its own SLI and SCP
+ * winning over the track's, since its fx have not been applied yet. */
+static bool row_tied(const Track *tr, const Step *st, uint16_t *glide, uint8_t *scoop)
+{
+    *glide = tr->fx.glide;
+    *scoop = 0;
+    for (int i = 0; i < STEP_MAX_FX; i++) {
+        if (st->fx[i].cmd == FX_SLI)
+            *glide = (uint16_t)(fx_clamp_val(FX_SLI, song->ticks_per_step, st->fx[i].val) * 16);
+        if (st->fx[i].cmd == FX_SCP)
+            *scoop = fx_clamp_val(FX_SCP, song->ticks_per_step, st->fx[i].val);
+    }
+    return (*scoop & 0x0F) == 0 && *glide > 0 && tr->used;
+}
+
+/* Ends the syllable being sung without touching the envelope. */
+static void release_vox_engines(Track *tr)
+{
+    for (int v = 0; v < TRACK_MAX_VOICES; v++)
+        if (tr->voices[v].active && tr->voices[v].vox >= 0)
+            vox_note_off(&vox_pool[tr->voices[v].vox]);
+}
+
+/* A coda sings at the END of its note: the voice is released early by
+ * the coda's length, plus the onset of a next note that will itself be
+ * fired early, and the wait may span several steps. */
+static void close_syllable(int t)
+{
+    Track *tr = &tracks[t];
+    const SongEntry *e = &song->arrangement[arr_play];
+    int32_t tick;
+    int coda, pat, nc, span;
+
+    if (tr->fx.anticipated || tr->fx.pending)
+        return;
+    coda = vox_coda_ms(tr->fx.syl);
+    if (coda <= 0 || (pat = track_block(e, t)) < 0)
+        return;
+    tick = tick_samples();
+    nc = ms_ticks(coda, tick);
+    span = nc / song->ticks_per_step + 2;
+    for (int d = 1; d <= span; d++) {
+        int row;
+        const Step *st = step_ahead(e, t, pat, d, &row);
+        bool note;
+        if (!st)
+            return;
+        note = row_has_note(st);
+        if (st->notes[0] != NOTE_OFF && !note)
+            continue;
+        if (row_has(st, FX_DLY))
+            return;
+        if (note) {
+            uint16_t glide;
+            uint8_t scoop, inst = block_instrument(t, pat, row);
+            int lead;
+            if (row_tied(tr, st, &glide, &scoop) && row_syl(tr, st) == tr->fx.syl)
+                return; /* a melisma: the vowel runs on, no coda */
+            if (inst == INSTR_NONE)
+                inst = tr->last_inst;
+            lead = vox_onset_ms(row_syl(tr, st), song->instruments[inst % SONG_MAX_INSTR].accent) -
+                   VOX_BEAT_LEAD_MS;
+            if (lead > 0)
+                nc += ms_ticks(lead, tick);
+        }
+        if (d * song->ticks_per_step - (int)tick_in_step <= nc)
+            release_vox_engines(tr);
+        return;
+    }
+}
+
+/* The singer's anticipation: when the next row will be sung, its note is
+ * fired early by the length of its unvoiced head less 50 ms, so the
+ * note WRITTEN on the tick is the vowel HEARD on it. */
+static void anticipate_vox(int t)
+{
+    Track *tr = &tracks[t];
+    const SongEntry *e = &song->arrangement[arr_play];
+    const Step *st;
+    const char *syl;
+    const InstrumentDef *in;
+    uint16_t glide;
+    uint8_t scoop, inst;
+    int pat, row, lead, n;
+    bool wrote, tied;
+
+    if (tr->fx.anticipated || tr->fx.pending || (pat = track_block(e, t)) < 0)
+        return;
+    st = peek_next(e, t, pat, &row);
+    if (!st || st->notes[0] == NOTE_OFF || !row_has_note(st))
+        return;
+    inst = block_instrument(t, pat, row);
+    if (inst == INSTR_NONE)
+        inst = tr->last_inst;
+    in = &song->instruments[inst % SONG_MAX_INSTR];
+    if (in->engine != ENGINE_VOX || row_has(st, FX_DLY))
+        return;
+    syl = row_syl(tr, st);
+    wrote = syl != tr->fx.syl;
+    tied = row_tied(tr, st, &glide, &scoop);
+    if (tied && !wrote)
+        return; /* a melisma forms nothing to be early for */
+    lead = vox_onset_ms(syl, in->accent) - VOX_BEAT_LEAD_MS;
+    if (lead <= 0)
+        return;
+    n = ms_ticks(lead, tick_samples());
+    if (n <= 0)
+        return;
+    if (n > song->ticks_per_step)
+        n = song->ticks_per_step;
+    if ((int)tick_in_step != (int)song->ticks_per_step - n)
+        return;
+
+    /* Fired as process_row would have, with what comes along early: the
+     * syllable, VEL and GAT, and the pitch fx the note-on reads. */
+    tr->fx.syl_written = wrote;
+    if (wrote)
+        syl_copy(tr->fx.syl, syl);
+    tr->fx.glide = glide;
+    tr->fx.scoop = scoop;
+    for (int i = 0; i < STEP_MAX_FX; i++) {
+        uint8_t v = fx_clamp_val(st->fx[i].cmd, song->ticks_per_step, st->fx[i].val);
+        if (st->fx[i].cmd == FX_VEL)
+            tr->fx.velocity = v;
+        if (st->fx[i].cmd == FX_GAT)
+            tr->fx.gate = v;
+    }
+    tr->fx.held = *st;
+    tr->fx.held.instrument = inst;
+    tr->fx.has_held = true;
+    tr->fx.strum_left = 0;
+    trigger_step(t, &tr->fx.held);
+    tr->fx.anticipated = true;
 }
 
 static void process_fx_tick(void)
@@ -882,6 +1221,8 @@ static void process_fx_tick(void)
             trigger_step(t, &fx->held);
             fx->pending = false;
         }
+        close_syllable(t);
+        anticipate_vox(t);
         if (fx->retrig > 0 && fx->has_held && tick_in_step > 0 &&
             tick_in_step % fx->retrig == 0)
             retrigger_step(t);
@@ -958,6 +1299,7 @@ static void start_play(bool as_song, int entry)
         fx->cutoff = -1;
         fx->reso = -1;
         fx->cut_tick = -1;
+        fx->syl[0] = 'A'; /* a VOX track that never wrote a syllable sings */
         chain_set_crush(&tr->chain, 0, 0);
     }
     tick_parity = 0;
@@ -998,7 +1340,7 @@ static void handle_cmds(void)
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
-            voice_start(tr, in, in->timbre, 0, b);
+            voice_start(tr, in, in->timbre, 0, b, false);
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 osc_set_cents(&tr->voices[v].osc, tr->voices[v].detune);
             tr->chain.pan = 0;
@@ -1112,6 +1454,14 @@ static int32_t tick_samples(void);
  * does not move with the size of the audio buffer. */
 static bool reap_due;
 
+/* The VOX voices a track has lent, added to what its oscillators drew. */
+static void track_sing(Track *tr, int frames)
+{
+    for (int v = 0; v < TRACK_MAX_VOICES; v++)
+        if (tr->voices[v].vox >= 0)
+            vox_render(&vox_pool[tr->voices[v].vox], tmono, frames);
+}
+
 static void render_tracks(int32_t *out, int frames)
 {
     bool fed = false, fed_echo = false;
@@ -1124,6 +1474,8 @@ static void render_tracks(int32_t *out, int frames)
         if (muted) {
             if (!tr->silent) {
                 track_silence(tr);
+                for (int v = 0; v < TRACK_MAX_VOICES; v++)
+                    vox_unbind(&tr->voices[v]); /* not rendered: put away */
                 tr->silent = true;
             }
             continue;
@@ -1137,6 +1489,7 @@ static void render_tracks(int32_t *out, int frames)
         for (int v = 0; v < TRACK_MAX_VOICES; v++)
             osc_draw(&tr->voices[v].osc, &tr->blep);
         blep_read(&tr->blep, tmono, frames);
+        track_sing(tr, frames);
         if (tr->fx.send == 0 && tr->fx.echo == 0) {
             chain_process(&tr->chain, tmono, out, frames);
             continue;
@@ -1184,14 +1537,17 @@ static void render_tracks(int32_t *out, int frames)
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 osc_draw(&tr->voices[v].osc, &tr->blep);
             blep_read(&tr->blep, tmono, frames);
+            track_sing(tr, frames);
             chain_process(&tr->chain, tmono, out, frames);
             /* Once it has closed it is put away CLEAN. A song's track
              * keeps running between notes and its filters settle; this
              * one stops being rendered, and what its DC block and its
              * filter still held would come out under the next key. */
             if (tr->chain.stage == ENV_IDLE && tr->chain.env == 0) {
-                for (int v = 0; v < TRACK_MAX_VOICES; v++)
+                for (int v = 0; v < TRACK_MAX_VOICES; v++) {
                     voice_stop(tr, &tr->voices[v]);
+                    vox_unbind(&tr->voices[v]);
+                }
                 blep_reset(&tr->blep);
                 tr->chain.dc_x1 = tr->chain.dc_y1 = tr->chain.ic1 = tr->chain.ic2 = 0;
                 tr->used = false;
@@ -1259,11 +1615,18 @@ void player_init(Song *s)
             osc_init(&tr->voices[v].osc);
             tr->voices[v].active = tr->voices[v].sounding = false;
             tr->voices[v].wave = 0;
+            tr->voices[v].vox = -1;
             tr->voices[v].detune = 0;
         }
         tr->used = false;
         tr->silent = false;
     }
+    for (int k = 0; k < VOX_VOICES; k++) {
+        vox_init(&vox_pool[k]);
+        vox_owner[k] = -1;
+    }
+    tracks[AUDITION].fx.syl[0] = 'A';
+    tracks[AUDITION].fx.syl[1] = '\0';
     bpm = s->bpm;
     playing = false;
     to_next_tick = 0;

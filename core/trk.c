@@ -152,6 +152,8 @@ static void parse_inst(const char *t, InstrumentDef *in, TrkReport *rep)
     in->filt_vel = FILTER_ENV_NONE;
     in->gain = 0;
     in->vib_phase = 0;
+    in->tract = 0;
+    in->accent = VOX_ACCENT_FR;
     in->nlayers = 0;
 
     if ((p = find(t, "engine ")) != 0) {
@@ -203,14 +205,16 @@ static void parse_inst(const char *t, InstrumentDef *in, TrkReport *rep)
         else if (field(p, "vibphase ", &v))
             in->vib_phase = (int16_t)clampi(v, 0, 255);
     }
+    if (field(t, "tract ", &v))
+        in->tract = (uint8_t)clampi(v, VOX_TRACT_MIN, VOX_TRACT_MAX);
+    if ((p = find(t, "accent ")) != 0)
+        in->accent = starts(p + 7, "EN") ? VOX_ACCENT_EN : VOX_ACCENT_FR;
     if ((p = find(t, "name ")) != 0)
         copy_name(in->name, p + 5, INSTR_NAME_LEN);
 
     if (rep) {
-        rep->silent_instr += !engine_sounds(in->engine);
-        rep->shaping += find(t, "drive ") || find(t, "amp ") ||
-                        find(t, "tone ") || find(t, "tract ") ||
-                        find(t, "accent ");
+        rep->silent_instr += !engine_sounds(in->engine) && in->engine != ENGINE_VOX;
+        rep->shaping += find(t, "drive ") || find(t, "amp ") || find(t, "tone ");
     }
 }
 
@@ -241,7 +245,7 @@ static bool parse_layer(const char *rest, Layer *l)
 
 /* One step line into *st; returns its row, or -1. The row is the whole
  * truth of its line: what the line does not say is empty. */
-static int parse_step(char *line, Step *st, TrkReport *rep)
+static int parse_step(char *line, Step *st, Song *song, TrkReport *rep)
 {
     char *tok = line, *end;
     int row, nfx = 0, len = 0;
@@ -269,8 +273,24 @@ static int parse_step(char *line, Step *st, TrkReport *rep)
             if (v >= 0 && v < SONG_MAX_INSTR)
                 st->instrument = (uint8_t)v;
         } else if (tok[0] == '\'') {
-            if (rep)
+            /* 'L2: the text goes into the song's table, the slot holds
+             * its index. Refused like any duplicate, and counted when
+             * the table has no room. */
+            char syl[SONG_SYL_LEN];
+            int k = 0, idx;
+            while (k < SONG_SYL_LEN - 1 && k + 1 < len) {
+                syl[k] = tok[k + 1];
+                k++;
+            }
+            syl[k] = '\0';
+            idx = song_syl_intern(song, syl);
+            if (idx < 0 && syl[0] && rep)
                 rep->syllables++;
+            if (idx >= 0 && nfx < STEP_MAX_FX && !fx_conflicts(st, nfx, FX_SYL)) {
+                st->fx[nfx].cmd = FX_SYL;
+                st->fx[nfx].val = (uint8_t)idx;
+                nfx++;
+            }
         } else if (tok[0] == 'f' && len >= 6) {
             int cmd = fx_from_name(tok + 1), val = hex2(tok + 4);
             if (cmd == FX_SMP && rep)
@@ -524,7 +544,7 @@ static void take_line(void)
         ld.rep->steps_cut++;
     } else if (ld.ctx == CTX_PAT && hexval(t[0]) >= 0) {
         Step st;
-        int row = parse_step(t, &st, ld.rep);
+        int row = parse_step(t, &st, tmp, ld.rep);
         if (row >= 0 && !step_is_empty(&st)) {
             Step *w = song_step_w(tmp, ld.cur_t, ld.cur_p, row);
             if (w)
@@ -680,7 +700,7 @@ static bool pattern_kept(const Song *s, int t, int p)
     return pattern_used(s, t, p) || !song_pattern_blank(s, t, p);
 }
 
-static void write_step(W *w, int row, const Step *st)
+static void write_step(W *w, const Song *s, int row, const Step *st)
 {
     char nn[4];
     int written = 0;
@@ -705,7 +725,17 @@ static void write_step(W *w, int row, const Step *st)
         wx2(w, st->instrument);
     }
     for (int i = 0; i < STEP_MAX_FX; i++) {
-        if (st->fx[i].cmd == FX_NONE || st->fx[i].cmd >= FX_SYL)
+        if (st->fx[i].cmd == FX_SYL) {
+            /* In clear, quoted: lyrics are meant to be read, and the
+             * index means nothing outside this table. */
+            const char *syl = song_syl(s, st->fx[i].val);
+            if (syl[0]) {
+                ws(w, " '");
+                ws(w, syl);
+            }
+            continue;
+        }
+        if (st->fx[i].cmd == FX_NONE || st->fx[i].cmd > FX_SYL)
             continue;
         ws(w, " f");
         ws(w, fx_name(st->fx[i].cmd));
@@ -739,6 +769,10 @@ static void write_inst(W *w, const InstrumentDef *in)
         ws(w, " vibphase free");
     else if (in->vib_phase)
         wkv(w, " vibphase ", in->vib_phase);
+    if (in->tract != 0 && in->tract != 100)
+        wkv(w, " tract ", in->tract);
+    if (in->accent == VOX_ACCENT_EN)
+        ws(w, " accent EN");
     if (in->name[0]) {
         ws(w, " name ");
         ws(w, in->name);
@@ -828,7 +862,7 @@ int32_t trk_write(const Song *s, TrkSink sink, void *ctx)
             for (int r = 0; r < s->patterns[t][p].length; r++) {
                 const Step *st = song_step(s, t, p, r);
                 if (!step_is_empty(st))
-                    write_step(&w, r, st);
+                    write_step(&w, s, r, st);
             }
         }
     for (int i = 0; i < s->arrange_len; i++) {

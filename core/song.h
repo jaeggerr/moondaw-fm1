@@ -8,9 +8,11 @@
  *
  *   tracks        8, not 16
  *   steps         a shared pool instead of a fixed grid (below)
- *   engines       PULSE, NOISE and WAVE sound; SMPL, VOX and PLUCK keep
+ *   engines       PULSE, NOISE, WAVE and VOX sound; SMPL and PLUCK keep
  *                 their name in the file and are silent
- *   not carried   samples and zones, the reference record, syllables,
+ *   syllables     one table for the whole song instead of one per block
+ *                 (below)
+ *   not carried   samples and zones, the reference record,
  *                 drive / amp / tone, preview tunes
  *
  * Freestanding: no libc, no allocation, no float. */
@@ -48,6 +50,20 @@
 #define PATTERN_CHUNKS  (PATTERN_MAX_STEPS / CHUNK_STEPS)
 #define CHUNK_NONE      0xFFFF
 
+/* The syllables VOX sings. moondaw gives every block a pool of 128
+ * entries of 6 bytes, a third of its grid (186 KB). Here one table
+ * serves the whole song and a syllable is stored once however often it
+ * is sung: an FX_SYL step's value is its index. The four songs that
+ * sing use 10 to 30 distinct syllables; 255 entries are 1.5 KB.
+ * Entry 255 is never handed out, so a value read off a step always
+ * names a real entry or an empty one. */
+#define SONG_SYL_LEN 6 /* 5 phoneme characters + NUL, the slot's width */
+#define SONG_SYL_MAX 255
+
+#define VOX_TRACT_MIN 50
+#define VOX_TRACT_MAX 150
+enum { VOX_ACCENT_FR = 0, VOX_ACCENT_EN };
+
 #define SWING_MIN 50
 #define SWING_MAX 75
 #define BPM_MIN   20
@@ -72,14 +88,14 @@ enum {
     FX_ECH, FX_DUT, FX_BPM,
     FX_TSP, FX_SLI, FX_VIB, FX_SWP, FX_SCP, FX_ARP, FX_TRM, FX_FLT, FX_RES,
     FX_WAV, FX_RMP, FX_CRS, FX_RAT,
-    FX_SYL, /* never stored here: a syllable is text, and VOX is absent */
+    FX_SYL, /* value: an index into the song's syllable table */
     FX_SMP, /* never stored here: there is no sample table */
     FX_COUNT
 };
 
 enum {
     ENGINE_PULSE = 0, ENGINE_NOISE, ENGINE_WAVE,
-    ENGINE_SAMPLE, ENGINE_VOX, ENGINE_PLUCK, /* named, silent */
+    ENGINE_SAMPLE, ENGINE_VOX, ENGINE_PLUCK, /* SMPL and PLUCK: named, silent */
     ENGINE_COUNT
 };
 
@@ -118,6 +134,8 @@ typedef struct {
     uint8_t cutoff, reso, filt_env, filt_vel;
     int8_t gain, level; /* dB, before and after the instrument's stages */
     int16_t vib_phase;  /* 0..255, or VIB_PHASE_FREE */
+    uint8_t tract;      /* VOX: tract size in percent, 0 = 100 = as tuned */
+    uint8_t accent;     /* VOX: VOX_ACCENT_* */
     uint8_t nlayers;
     Layer layers[INSTR_MAX_LAYERS];
     char name[INSTR_NAME_LEN];
@@ -150,6 +168,7 @@ typedef struct {
     Pattern patterns[SONG_MAX_TRACKS][TRACK_MAX_PATTERNS];
     Step pool[POOL_CHUNKS][CHUNK_STEPS];
     uint8_t pool_used[(POOL_CHUNKS + 7) / 8];
+    char syl[SONG_SYL_MAX][SONG_SYL_LEN]; /* "" = free */
 } Song;
 
 void song_init(Song *s);
@@ -179,6 +198,16 @@ void *song_scratch(void);
 
 void song_sections_normalize(Song *s);
 
+/* The syllable table. Interning finds the text first, so a lyric full
+ * of repeats costs one entry per distinct syllable; when the table is
+ * full, entries no step names any more are taken back (an erased
+ * syllable is reclaimed lazily, as moondaw does per block). Returns the
+ * index, or -1 when the text is empty or the table holds 255 syllables
+ * that are all in use. Text past 5 characters is cut, as moondaw cuts. */
+int song_syl_intern(Song *s, const char *text);
+/* "" for an index that names nothing. */
+const char *song_syl(const Song *s, uint8_t idx);
+
 /* How long things last, in steps. A phrase's cycle is the LCM of the
  * blocks it names; a reference lasts what it plays. As moondaw's. */
 uint16_t song_entry_cycle(const Song *s, const SongEntry *e);
@@ -198,7 +227,7 @@ bool fx_conflicts(const Step *st, int slot, uint8_t cmd);
 const char *engine_name(uint8_t engine);
 int engine_from_name(const char *s);    /* -1 if unknown */
 uint8_t engine_timbre_max(uint8_t engine);
-bool engine_sounds(uint8_t engine);     /* false for the named-only ones */
+bool engine_sounds(uint8_t engine);     /* the three chip engines; VOX sings by its own path */
 char *note_name(uint8_t note, char buf[4]);
 int note_from_name(const char *t);      /* NOTE_OFF, a note, or -1 */
 

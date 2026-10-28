@@ -968,9 +968,101 @@ back to whichever opened them.
 - The song's line is reachable again (PROJECT), so it leaves the list
   of what the old screens took with them.
 
+## 2026-10-28 — the voice sounds
+
+moondaw's VOX is in `core/synth.c`, all five styles (GLIDE, HARD, SOFT,
+MELO, SINGR), integers only, with the player's two look-aheads for it
+(`core/player.c`: consonants fired early, codas closed before the next
+note). The words are still written on the computer; nothing on the
+screens changed.
+
+**Memory.**
+
+- **Syllables: one table for the song, not a pool per block.** An
+  `FX_SYL` step holds an index into `Song.syl`, 255 entries of 6 bytes
+  (1,530 B). A syllable is stored once however often it is sung; the
+  four singing songs use 10 to 30 distinct ones. moondaw's per-block
+  pools were 128 x 6 B x 256 blocks = 186 KB, a third of its grid.
+  When the table is full, entries no step names any more are taken
+  back (moondaw's lazy reclaim). `sizeof(Song)` 77,486 -> 79,144 B
+  (+1,658: the table, and `tract` / `accent` on each instrument), so
+  +3.3 KB with the load's working copy, which still fits the 128 KB
+  scratch.
+- **Voices: eight `Vox` of 980 B shared by every track** (7,840 B in
+  `.pool`). moondaw gives each of a track's 20 voices a state of its own:
+  160 + the audition would be 160 KB here. A voice keeps the one it was
+  lent after its note so the syllable runs to its end; another voice
+  takes a free one first, then one that has finished, then one whose
+  note is no longer held. A ninth note held at once is not sung.
+- In all, **+9.6 KB of RAM**: the song +1,658 B, the tracks +72 (the
+  syllable setter and two flags), the voices 7,856. The tables are
+  17.6 KB of flash (sinc 8 KB, the phase steps 4.8, the cosine 4.1).
+- `./build.sh`: image 129,556 B; .data+.bss 51,464 B of 73,728; pool
+  261,016 B of 368,640; package 610,086 B. No call to a float or 64-bit
+  division helper anywhere in the image. Not installed.
+
+**What the file carries now**: the syllables (`'J2` after the note),
+read, written back in slot order and kept through `trkdump`, so
+`fm1_send.py` sends the words and `--get` brings them back. The trap of
+the section above is gone. `tract` and `accent` are carried too and no
+longer counted under "shaping". `fm1_send.py` rebuilds its `trkdump`
+when the reader's sources are newer: a stale one would still drop the
+words.
+
+**The engine in integers.** Signals Q28 (Q24 in the cascade),
+coefficients Q30, every length a whole millisecond (all of moondaw's
+are). New tables in `tools/gen_tables.c`: a quarter cosine of 1025
+steps (resonator tuning), the 128 x 32 Blackman sinc (Q14, 8 KB), the
+voice's phase step a cent apart, the burst's exp(-3t), and the lag and
+tilt constants. Bandwidths go through exp(-x)'s series, gains through an
+integer square root, the anti-resonator's 1 / a through a bit-by-bit
+division once every 64 samples: no 64-bit division helper. One trap:
+**a lag that floors settles under its target.** The pitch lag of the
+cascade sat 0.004 Hz flat and SINGR drifted to -27 dB against moondaw
+in half a second. Rounded, it stays at -58 dB.
+
+**Measured** (`make difftest`, now with VOX in the reference and
+`tests/vox-styles.trk`, a song for the three styles no song uses):
+
+- Level identical to 0.1 dB on every VOX track, over 180 s: robot-demo
+  t0 -20.6, LEOMOTEUR t5 -15.0, DAFT-PUNK t6 -12.1 / t7 -26.6,
+  DAFT-PUNK-EN t6 -18.2 / t7 -27.4 dB, both engines.
+- Short-time spectra over 180 s: DAFT-PUNK -39.6 / -34.7, DAFT-PUNK-EN
+  -37.1 / -34.6, robot-demo -23.9, LEOMOTEUR -22.4 dB. The five styles
+  over 20 s: -38 to -40, SINGR -34 dB.
+- **Sample for sample** the voice matches at -40 to -50 dB, until two
+  things it does not own decorrelate the phases. (1) After an OFF the
+  voice holds until the track's envelope is reaped, and its pulse
+  phase stops there. moondaw reaps every 1024-frame buffer, the core
+  once a tick (the rule of 10/10). The next note then starts some
+  samples apart: robot-demo goes from -37 dB to -26 dB at its first OFF.
+  Reaping on moondaw's grid in a throwaway build brought it back to
+  -33 dB. Not changed: the device must not depend on a buffer size.
+  (2) An fVIB, from LEOMOTEUR's 11 s on: the vibrato in cents is the
+  chip engines' own and drifts the same way. moondaw's float phase
+  also gains ~1e-4 cycle a second on the exact one, which moves a naive
+  pulse by a sample now and then.
+- `tests/vox_test.c` (in `make test`): each singing song reduced as
+  `fm1_send` does, written to flash, opened by the app, played with only
+  its voice tracks, saved. All 11 / 30 / 76 / 118 syllables arrive and
+  are written back; the voice plays at -11 to -21 dBFS.
+- The chip engines are bit for bit what they were: the eight songs
+  without a voice render identically before and after.
+- KIDS t2 is at -20.2 dB, not -28 as on 10/10, and was so before this
+  change (same figure from HEAD): moondaw has moved since.
+- CPU: not measured on hardware. On the Mac a sung track costs about as
+  much as two chip tracks (robot-demo, 600 s: 2.34 s without the voice,
+  2.70 s with it).
+
+**Not done**: writing syllables on the device. Until then the screens
+do not know the voice. INSTRUMENT still says SILENT HERE on a VOX
+instrument, and a turn of its ENGINE knob sends it to PULSE. PATTERN
+and PHRASE show a syllable's slot as `SYL` and its table index.
+
 ## Open
 
-- The voice (VOX): sound, then writing syllables (above).
+- The voice (VOX): writing syllables on the device, and the screens
+  that do not know it sounds (above).
 - LOOP, the PATTERN selection, cell levels: gone with the old screens,
   to be redesigned.
 - INSTRUMENT: still the 10/10 look.
