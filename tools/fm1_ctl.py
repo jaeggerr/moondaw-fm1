@@ -15,10 +15,18 @@ its buttons, turn its knobs, play its keys, and write into the song in memory.
     tools/fm1_ctl.py cell PHRASE T BLOCK|--    which block track T plays in a phrase (made if new)
     tools/fm1_ctl.py length T BLOCK STEPS
     tools/fm1_ctl.py save
+    tools/fm1_ctl.py canvas clear [COLOUR]     a screen of the computer's own, GLO leaves it
+    tools/fm1_ctl.py canvas fill X Y W H COLOUR
+    tools/fm1_ctl.py canvas text X Y 'WORDS' [--font 20|14|12|mono] [--colour COLOUR]
+    tools/fm1_ctl.py canvas line X0 Y0 X1 Y1 COLOUR
+    tools/fm1_ctl.py canvas image FILE.png     a picture, 240 x 240, sent a row at a time
 
 Tracks are counted from 1 as on the screens; phrases, blocks, rows,
 instruments and effect values are hex, as on the screens and in .trk
-files; STEPS and the knob's turn are decimal. A step is written as a
+files; STEPS and the knob's turn are decimal. A colour is #RRGGBB or one of the
+theme's words: black white grey green cyan amber red. On the canvas, y
+of a text is its baseline; a picture's pixels are drawn as they arrive
+and do not survive a later fill, text or line. A step is written as a
 .trk line writes it, without its row: notes joined by +, OFF, i<hex>,
 f<EFFECT><hex>. Whole songs go with tools/fm1_send.py, then `open`.
 
@@ -36,7 +44,25 @@ import time
 
 import fm1_send as link
 
-STATUS, INPUT, OPEN, NEW, STEP, CELL, LENGTH, SAVE, PLAY = range(8, 17)
+STATUS, INPUT, OPEN, NEW, STEP, CELL, LENGTH, SAVE, PLAY, CANVAS = range(8, 18)
+CLEAR, FILL, TEXT, LINE, PIXELS = range(5)
+COLOURS = {"black": 0x000000, "white": 0xFFFFFF, "grey": 0x5A6470, "green": 0x7FD962, "cyan": 0x62C8D9,
+           "amber": 0xF0BE5A, "red": 0x9E5555}  # app/theme.h
+FONTS = {"20": 0, "14": 1, "12": 2, "mono": 3}
+
+
+def rgb565(c):
+    v = COLOURS.get(c.lower()) if not c.startswith("#") else int(c[1:], 16)
+    if v is None:
+        sys.exit(f"no colour {c}: #RRGGBB or {' '.join(COLOURS)}")
+    r, g, b = v >> 16, v >> 8 & 0xFF, v & 0xFF
+    return ((r & 0xF8) << 8 | (g & 0xFC) << 3 | b >> 3).to_bytes(2, "little")
+
+
+def xy(*v):
+    if any(not 0 <= int(n) <= 255 for n in v):
+        sys.exit("positions and sizes are 0 to 240")
+    return bytes(int(n) for n in v)
 BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC",
            "OCT-", "OCT+"]
 KNOBS = ["SELECT", "ALGO", "PRESETS", "K1", "K2", "K3", "K4"]
@@ -123,6 +149,9 @@ def main():
     p = sub.add_parser("cell"); p.add_argument("phrase"); p.add_argument("track"); p.add_argument("block")
     p = sub.add_parser("length"); p.add_argument("track"); p.add_argument("block"); p.add_argument("steps", type=int)
     sub.add_parser("save")
+    p = sub.add_parser("canvas"); p.add_argument("op", choices=["clear", "fill", "text", "line", "image"])
+    p.add_argument("args", nargs="*"); p.add_argument("--font", default="20", choices=list(FONTS))
+    p.add_argument("--colour", "--color", default="white")
     a = ap.parse_args()
 
     port = link.Udp(a.udp) if a.udp else link.Midi(a.port)
@@ -175,6 +204,37 @@ def main():
                 "1 to 128 steps")
     elif a.cmd == "save":
         print(f"saved in slot {checked(link.ask(port, SAVE))[2]}")
+    elif a.cmd == "canvas":
+        need = {"clear": (0, 1), "fill": (5, 5), "text": (3, 3), "line": (5, 5), "image": (1, 1)}[a.op]
+        if not need[0] <= len(a.args) <= need[1]:
+            sys.exit(f"canvas {a.op}: see --help")
+        if a.op == "clear":
+            body = bytes([CLEAR]) + rgb565(a.args[0] if a.args else "black")
+        elif a.op == "fill":
+            body = bytes([FILL]) + xy(*a.args[:4]) + rgb565(a.args[4])
+        elif a.op == "line":
+            body = bytes([LINE]) + xy(*a.args[:4]) + rgb565(a.args[4])
+        elif a.op == "text":
+            words = a.args[2].encode("ascii", "replace")[:63]
+            body = bytes([TEXT]) + xy(*a.args[:2]) + bytes([FONTS[a.font]]) + rgb565(a.colour) + words
+        if a.op != "image":
+            checked(link.ask(port, CANVAS, body), "the canvas's list is full, or the order is malformed")
+            return
+        try:
+            from PIL import Image
+        except ImportError:
+            sys.exit("a picture needs Pillow:  pip install pillow")
+        im = Image.open(a.args[0]).convert("RGB")
+        if im.size != (240, 240):
+            im = im.resize((240, 240))
+        checked(link.ask(port, CANVAS, bytes([CLEAR]) + rgb565("black")))
+        px = im.load()
+        for y in range(240):
+            for x0 in (0, 120):  # a message holds 120 pixels
+                row = b"".join(rgb565("#%02X%02X%02X" % px[x, y]) for x in range(x0, x0 + 120))
+                checked(link.ask(port, CANVAS, bytes([PIXELS, x0, y, 120]) + row))
+            print(f"\r{(y + 1) * 100 // 240} %", end="", flush=True)
+        print()
 
 
 if __name__ == "__main__":

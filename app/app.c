@@ -30,6 +30,7 @@
 #include "undo.h"
 #include "pattern.h"
 #include "project.h"
+#include "canvas.h"
 #include "remote.h"
 #include "songview.h"
 
@@ -45,15 +46,44 @@ int app_cpu, app_block, app_worst;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT } screen;
-static int mixer_from, project_from, pattern_from; /* the screen GLO leads back to */
+static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS } screen;
+static int mixer_from, project_from, pattern_from, canvas_from; /* the screen GLO leads back to */
 
 void app_mark_dirty(void) { app_dirty = true; }
 
 const char *app_screen(void)
 {
-    static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT" };
+    static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
+                                        "CANVAS" };
     return name[screen];
+}
+
+void app_show_canvas(void)
+{
+    if (screen == AT_CANVAS)
+        return;
+    canvas_from = screen;
+    screen = AT_CANVAS;
+    canvas_open();
+}
+
+/* GLO on the CANVAS: back to what was there, as it was where the screen
+ * can be resumed, from its start where it cannot. */
+static void leave_canvas(void)
+{
+    screen = canvas_from;
+    if (screen == AT_MENU)
+        menu_open();
+    else if (screen == AT_PHRASE)
+        phrase_resume();
+    else if (screen == AT_PATTERN || screen == AT_INSTRUMENT)
+        screen = AT_PATTERN, pattern_resume();
+    else if (screen == AT_MIXER)
+        mixer_open("", songview_entry());
+    else if (screen == AT_PROJECT)
+        project_open();
+    else
+        songview_open(false);
 }
 
 int app_not_carried(void)
@@ -324,7 +354,10 @@ void app_frame(const PlatInput *real)
         }
     }
 
-    if (screen == AT_MIXER) {
+    if (screen == AT_CANVAS) {
+        if (!canvas_frame(in))
+            leave_canvas();
+    } else if (screen == AT_MIXER) {
         if (!mixer_frame(in))
             back_to(mixer_from);
     } else if (screen == AT_PROJECT) {

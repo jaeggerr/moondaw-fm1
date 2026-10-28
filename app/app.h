@@ -22,8 +22,10 @@ int app_open_slot(int slot); /* 0 when loaded; the song in memory is untouched o
 void app_new(void);          /* an empty song, named SONG nn, not yet in flash */
 /* Lines and tokens the song's file had that this machine does not carry. */
 int app_not_carried(void);
-/* Where the hand is: HOME, SONG, SECTION, PATTERN, INSTRUMENT, MIXER, PROJECT. */
+/* Where the hand is: HOME, SONG, SECTION, PATTERN, INSTRUMENT, MIXER, PROJECT, CANVAS. */
 const char *app_screen(void);
+/* The computer's CANVAS in front, over whatever was there (GLO goes back). */
+void app_show_canvas(void);
 /* The audio interrupt's share of its time, read once a frame: now, the
  * worst block of the last frame, and the worst since the computer's
  * STATUS set it back to 0. */

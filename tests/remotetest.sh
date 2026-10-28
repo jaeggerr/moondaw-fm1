@@ -35,6 +35,14 @@ $CTL status | grep -q 'screen=SONG' || fail "SEL opened SONG"
 $CTL turn K2 1 || fail "turn"
 $CTL press HOME
 sleep 0.1
+$CTL canvas clear '#102030' || fail "canvas clear"
+$CTL canvas fill 10 20 100 28 green || fail "canvas fill"
+$CTL canvas text 14 42 'HELLO' --colour black || fail "canvas text"
+$CTL canvas line 0 0 239 239 amber || fail "canvas line"
+$CTL status | grep -q 'screen=CANVAS' || fail "the canvas in front"
+$CTL press GLO
+sleep 0.1
+$CTL status | grep -q 'screen=HOME' || fail "GLO back to where it was"
 $CTL save > /dev/null || fail "save"
 python3 tools/fm1_send.py --get kids -o build/remote_back.trk --force $P > /dev/null || fail "get"
 grep -q '^pat t0 05 len 8$' build/remote_back.trk || fail "the block's length in the file"

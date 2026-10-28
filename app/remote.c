@@ -3,6 +3,7 @@
 
 #include "../core/player.h"
 #include "app.h"
+#include "canvas.h"
 #include "link.h"
 #include "ui.h"
 #include "undo.h"
@@ -196,6 +197,11 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
         else
             player_play_entry(p[1]);
         return LINK_OK;
+    case LINK_CMD_CANVAS:
+        if (n < 1)
+            return LINK_BADMSG;
+        app_show_canvas();
+        return canvas_draw(p[0], p + 1, n - 1) ? LINK_OK : LINK_BADMSG;
     default:
         return LINK_BADMSG;
     }

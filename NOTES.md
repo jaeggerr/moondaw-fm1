@@ -1096,6 +1096,39 @@ main for the chorus crackles; to be merged after it. Not installed.
 - The name editor is shared now (`app/namer.c`): PROJECT and INSTRUMENT
   (seven letters there, the file's limit).
 
+## 2026-10-28 — the remote and the canvas (branch `link-control`)
+
+Jaeger: a model working on this machine should not have to ask him to
+read figures off the screen, and should be able to compose on it. Built
+on its own branch (from `instrument-grid`) while the chorus crackles were
+worked on main; to merge. Not installed.
+
+- **Link version 2** (`app/link.h`): from STATUS on, the commands go to
+  `link_control`, a hook the app sets (`app/remote.c`), so `link.c` and
+  its test stay without the app. Nothing runs until a message arrives;
+  they work on any screen, except while a song is being sent or fetched.
+- STATUS answers one line of words (screen, song, dirty, playing,
+  phrase, step, cpu, the worst block since the last reset, bpm, phrases,
+  tracks, pool chunks free). INPUT presses, holds and turns as the hands
+  do, merged into the next frames' input (a repeated seq is not done
+  twice). OPEN, NEW, STEP, CELL, LENGTH, SAVE, PLAY write into the song
+  in memory and play it, each in UNDO; a CELL past the last phrase makes
+  the phrases between, a STEP past a block's end lengthens it.
+- **The CANVAS** (`app/canvas.c`, command 11): the computer draws on a
+  screen of its own -- rectangles, text in the machine's fonts, lines,
+  kept as a 4 KB list and redrawn band by band; raw pixels straight to
+  the panel (no frame buffer to keep them), 120 a message. GLO goes back
+  to the screen it covered. For trying a screen on the panel without a
+  firmware: `fm1_ctl.py canvas image mock.png` sends a picture in about
+  10 s (a message a frame).
+- `app_cpu`, `app_block`, `app_worst` are read once a frame in `app.c`:
+  HOME's MAX and STATUS no longer take turns resetting the same counter.
+- `tools/fm1_ctl.py` is the other end (status, press, turn, key, play,
+  loop, stop, open, new, step, cell, length, save, canvas ...), on
+  `fm1_send.py`'s transport. `tests/remotetest.sh` drives the whole app
+  headless over UDP (`tests/remote_dev.c`) and checks what lands in the
+  file.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
