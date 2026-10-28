@@ -178,7 +178,7 @@ def build_app():
     # bring-up app (keys, knobs, a square wave) instead of the player.
     app = os.environ.get("MOONDAW_APP", "app")
     units = [SRC / "app" / f"{app}.c", SRC / "app" / "term.c"]
-    if app == "type":                            # the type specimen: gfx and its own fonts
+    if app in ("type", "mock"):                  # the specimen and the mockups: gfx and the specimen fonts
         units.append(SRC / "app" / "gfx.c")
         flags.append("-DGFX_SPECIMEN=1")
     elif app != "hello":                           # the bring-up build stays as small as it can be
