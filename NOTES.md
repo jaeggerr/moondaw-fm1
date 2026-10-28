@@ -864,6 +864,29 @@ the step, KNOB 1 the track; the section's number small at the top
 left. No role for KNOB 2 yet (transposing the note is a candidate).
 **SECTION validated on the panel, 28/10.**
 
+**One grammar for every grid** (agreed 28/10): SELECT the row, KNOB 1
+the column, KNOB 2 the value under the cursor, SEL one level down, GLO
+one level up (or out of a panel), HOME home. Piano keys write notes,
+OCT-/OCT+ their octave. A knob per field was turned down: it would be a
+second grammar.
+
+**SEQ on a SONG cell opens its block straight away** (Jaeger's idea: it
+is a sequence); GLO then goes back to SONG.
+
+**PATTERN, proposed, in three views that FX turns through** (rendered
+off the device, `build/mock/pattern-views.png`):
+- NOTES: the four notes of a step, all on screen (4 x 38 px); KNOB 2 a
+  semitone, the keys write.
+- FX: the three effects (3 x 60 px; the widest, `WAV 88`, is 56).
+  KNOB 2 the value, **KNOB 3 the type**: the only knob with a meaning of
+  its own.
+- INS: one column, so the instrument's NAME fits; grey where the step
+  keeps the track's own. The instrument stays out of NOTES and FX: with
+  it, three effects no longer fit.
+- An instrument per track was weighed and kept only as the default: 7 of
+  the 13 songs change instrument inside a track (KIDS t1 and t7,
+  tremolo t4 with four), and KIDS has all 8 tracks taken.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.

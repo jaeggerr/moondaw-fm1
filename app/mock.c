@@ -26,13 +26,10 @@
  * drawn yet). GLO goes back to SONG, as it leaves the panel: GLO is "back" everywhere. KIDS
  * only: its blocks are in mock_kids.h.
  *
- * PATTERN (SEL on a SECTION cell), a proposal: the same grid once more. One row a step, its
- * number at the left; one column a field, in the order they are used most -- note, instrument,
- * first effect, then the chord's other notes and the two other effects, further right. KNOB 1
- * the field (the grid scrolls sideways), KNOB 2 would change it, the keys would write the
- * note. A dot after the first note for each other note of a chord hidden to the right. The
- * block is always the same here: the start of tremolo.trk's t0 06 (chords, three effects).
- * (HOME, the first mockup, is now app/menu.c.) */
+ * PATTERN (SEL on a SECTION cell, or SEQ on a SONG cell), a proposal: the block in three
+ * views that FX turns through -- NOTES, FX, INS -- each the same grid: SELECT the step,
+ * KNOB 1 the column, KNOB 2 would change it (KNOB 3 the effect's type), the keys would write
+ * the note. GLO goes back where it came from. The block is always the same here. */
 #include "../platform/platform.h"
 #include "theme.h"
 #include "mock_kids.h"
@@ -88,7 +85,8 @@ static int nblocks[8];        /* blocks each track has, from the song: one more 
 static int var, cursor, top, track, left;
 static int pop, pop_cur, pop_top, pop_plays; /* the panel; its rows: -- then 00.. then a new one */
 static int sec, sec_len, sec_cur, sec_top, sec_track, sec_left; /* the SECTION open, of `cursor` */
-static int pat, pat_cur, pat_top, pat_field, pat_left;            /* the PATTERN open */
+static int pat, pat_track, pat_view, pat_col, pat_cur, pat_top; /* PATTERN: 1 from SECTION, 2 from SONG */
+static uint32_t prev_btns;
 
 static void hex2(char *s, int v)
 {
@@ -249,49 +247,49 @@ static void draw_section(void)
 }
 
 /* ------------------------------------------------------------------ PATTERN --- */
-enum { F_N1, F_INS, F_FX1, F_N2, F_N3, F_N4, F_FX2, F_FX3, NFIELDS };
-static const struct { const char *head; int w; } fields[NFIELDS] = {
-    { "NOTE", 38 }, { "INS", 28 }, { "FX 1", 64 }, { "NOTE 2", 38 }, { "NOTE 3", 38 },
-    { "NOTE 4", 38 }, { "FX 2", 64 }, { "FX 3", 64 },
-};
-static const char *const fx_names[] = { "", "SLI", "VEL", "TRM", "GAT", "VOL" };
+/* Three views of the same steps, FX turning from one to the next: NOTES (the four notes of a
+ * chord), FX (the three effects: KNOB 2 the value, KNOB 3 the type), INS (the instrument of
+ * each step, by name; grey where the step keeps the track's own). */
+enum { V_NOTES, V_FX, V_INS, NVIEWS };
+static const char *const view_name[NVIEWS] = { "NOTES", "FX", "INS" };
+static const int view_cols[NVIEWS] = { 4, 3, 1 };
+static const int view_w[NVIEWS] = { 38, 60, 180 };
+static const char *const fx_names[] = { "", "SLI", "VEL", "TRM", "GAT", "VOL", "WAV" };
+static const char *const ins_names[] = { "GTRTREM", "GTRMUTE", "PBASS", "CLAVI" };
+#define TRACK_INS 0 /* the track's own instrument */
 typedef struct {
-    uint8_t n[4], ins, fx[3], val[3]; /* n: MIDI, 0 none; ins 0xFF none; fx: fx_names */
+    uint8_t n[4], ins, fx[3], val[3]; /* n: MIDI, 0 none; ins 0xFF: the track's; fx: fx_names */
 } MStep;
 #define A4 69
 #define CH1 { A4, A4 + 3, A4 + 7, 0 }      /* A-4 C-5 E-5 */
 #define CH2 { A4 + 2, A4 + 7, A4 + 10, 0 } /* B-4 E-5 G-5 */
 #define E_ { { 0 }, 0xFF, { 0 }, { 0 } }
-#define S1 { CH1, 0, { 0 }, { 0 } }
-#define S2 { CH2, 0, { 0 }, { 0 } }
+#define S1 { CH1, 0xFF, { 0 }, { 0 } }
+#define S2 { CH2, 0xFF, { 0 }, { 0 } }
+/* the start of tremolo.trk's t0 06, with a few effects and instrument changes added to show */
 static const MStep pat_steps[32] = {
-    { CH1, 0, { 1, 2, 3 }, { 0x00, 0x7F, 0x5A } }, E_, S1, S1, E_, S1, S1, E_,
-    S1, S1, E_, S1, S1, E_, E_, E_,
-    { CH2, 0, { 5, 0, 0 }, { 0x60, 0, 0 } }, E_, S2, S2, E_, S2, S2, E_,
-    { CH2, 0, { 3, 0, 0 }, { 0x40, 0, 0 } }, S2, E_, S2, S2, E_, E_, { { A4 }, 0, { 4, 0, 0 }, { 0x06, 0, 0 } },
+    { CH1, 0xFF, { 1, 2, 3 }, { 0x00, 0x7F, 0x5A } }, E_, S1, S1, E_, S1, S1, E_,
+    { CH1, 1, { 0 }, { 0 } }, S1, E_, S1, S1, E_, E_, E_,
+    { CH2, 0xFF, { 5, 0, 6 }, { 0x60, 0, 0x02 } }, E_, S2, S2, E_, S2, S2, E_,
+    { CH2, 3, { 3, 0, 0 }, { 0x40, 0, 0 } }, S2, E_, S2, S2, E_, E_, { { A4 }, 0xFF, { 4, 0, 0 }, { 0x06, 0, 0 } },
 };
-
-static int field_x(int f) /* -1 when scrolled out */
-{
-    int x = CELL_X;
-    if (f < pat_left)
-        return -1;
-    for (int k = pat_left; k < f; k++)
-        x += fields[k].w;
-    return x + fields[f].w <= PLAT_W - 6 ? x : -1;
-}
 
 static void draw_pattern(void)
 {
+    int cols = view_cols[pat_view], w = view_w[pat_view];
     char s[12];
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
-    gfx_text(F_COND_12, TEXT_X - 6, HEAD - 3, "T", C_DIM);
-    s[0] = (char)('1' + sec_track), s[1] = 0;
-    gfx_text(F_COND_12, TEXT_X + 2, HEAD - 3, s, C_TITLE);
-    for (int f = 0; f < NFIELDS; f++)
-        if (field_x(f) >= 0)
-            gfx_text_mid(F_COND_12, field_x(f), fields[f].w, HEAD - 3, fields[f].head,
-                         f == pat_field ? C_TEXT : C_DIM);
+    s[0] = 'T', s[1] = (char)('1' + pat_track), s[2] = 0;
+    gfx_text(F_COND_12, gfx_text(F_COND_12, 4, HEAD - 3, s, C_TITLE) + 4, HEAD - 3, view_name[pat_view], C_TEXT);
+    for (int c = 0; c < cols; c++) { /* the columns' names */
+        const char *h = pat_view == V_INS ? "INSTRUMENT" : 0;
+        if (!h) {
+            s[0] = pat_view == V_FX ? 'F' : (char)('1' + c), s[1] = pat_view == V_FX ? 'X' : 0;
+            s[2] = ' ', s[3] = (char)('1' + c), s[4] = 0;
+            h = s;
+        }
+        gfx_text_mid(F_COND_12, CELL_X + c * w, w, HEAD - 3, h, c == pat_col ? C_TEXT : C_DIM);
+    }
     for (int r = 0; r < ROWS && pat_top + r < 32; r++) {
         int i = pat_top + r, y = HEAD + r * ROW, base = y + 2 + FONTS[F_COND_20].ascent;
         int here = i == pat_cur;
@@ -300,44 +298,36 @@ static void draw_pattern(void)
             gfx_slab(2, y + 1, PLAT_W - 10, ROW - 2, C_ACCENT, 255);
         hex2(s, i);
         gfx_text(F_COND_20, TEXT_X, base, s, here ? C_ON_ACC : i % 4 ? C_DIM : C_TEXT);
-        for (int f = 0; f < NFIELDS; f++) {
-            int x = field_x(f), cell = here && f == pat_field, empty, n, k;
-            uint16_t ink, dim;
-            if (x < 0)
-                continue;
-            ink = cell ? C_ACCENT : here ? C_ON_ACC : C_TEXT;
-            dim = cell ? C_ACCENT : here ? C_ON_ACC : C_DIM;
+        for (int c = 0; c < cols; c++) {
+            int x = CELL_X + c * w, cell = here && c == pat_col;
+            uint16_t ink = cell ? C_ACCENT : here ? C_ON_ACC : C_TEXT;
+            uint16_t dim = cell ? C_ACCENT : here ? C_ON_ACC : C_DIM;
             if (cell)
-                gfx_slab(x + 1, y + 3, fields[f].w - 2, ROW - 6, C_BG, 255);
-            switch (f) {
-            case F_N1: case F_N2: case F_N3: case F_N4:
-                n = st->n[f == F_N1 ? 0 : f - F_N2 + 1];
-                if (n)
-                    note_name(s, n);
-                gfx_text_mid(F_COND_20, x, fields[f].w, base, n ? s : "---", n ? ink : dim);
-                if (f == F_N1 && pat_left <= F_N1) /* the chord's other notes, hidden right */
-                    for (k = 1; k < 4 && st->n[k]; k++)
-                        if (field_x(F_N2 + k - 1) < 0)
-                            gfx_fill(x + fields[f].w - 3, y + 6 + (k - 1) * 5, 3, 3,
-                                     here ? C_ON_ACC : C_TITLE, 255);
-                break;
-            case F_INS:
-                empty = st->ins == 0xFF;
-                if (!empty)
-                    hex2(s, st->ins);
-                gfx_text_mid(F_COND_20, x, fields[f].w, base, empty ? "--" : s, empty ? dim : ink);
-                break;
-            default:
-                k = f == F_FX1 ? 0 : f - F_FX2 + 1;
-                if (!st->fx[k]) {
-                    gfx_text_mid(F_COND_20, x, fields[f].w, base, "---", dim);
+                gfx_slab(x + 1, y + 3, w - 2, ROW - 6, C_BG, 255);
+            if (pat_view == V_NOTES) {
+                if (st->n[c])
+                    note_name(s, st->n[c]);
+                gfx_text_mid(F_COND_20, x, w, base, st->n[c] ? s : "---", st->n[c] ? ink : dim);
+            } else if (pat_view == V_FX) {
+                if (!st->fx[c]) {
+                    gfx_text_mid(F_COND_20, x, w, base, "---", dim);
                 } else {
-                    int w = gfx_text_w(F_COND_20, fx_names[st->fx[k]]) + 4 + gfx_text_w(F_COND_20, "00");
-                    int xx = x + (fields[f].w - w) / 2;
-                    xx = gfx_text(F_COND_20, xx, base, fx_names[st->fx[k]], here ? ink : cell ? ink : C_FX);
-                    hex2(s, st->val[k]);
+                    int tw = gfx_text_w(F_COND_20, fx_names[st->fx[c]]) + 4 + gfx_text_w(F_COND_20, "00");
+                    int xx = gfx_text(F_COND_20, x + (w - tw) / 2, base, fx_names[st->fx[c]],
+                                      cell || here ? ink : C_FX);
+                    hex2(s, st->val[c]);
                     gfx_text(F_COND_20, xx + 4, base, s, ink);
                 }
+            } else { /* the instrument, by name: grey where the step keeps the track's */
+                int k = st->ins == 0xFF ? TRACK_INS : st->ins, xx;
+                uint16_t c2 = st->ins == 0xFF ? dim : ink;
+                if (!st->n[0]) {
+                    gfx_text(F_COND_20, x + 10, base, "--", dim);
+                    continue;
+                }
+                hex2(s, k);
+                xx = gfx_text(F_COND_20, x + 10, base, s, c2);
+                gfx_text(F_COND_20, xx + 10, base, ins_names[k], c2);
             }
         }
     }
@@ -348,7 +338,13 @@ static void draw_pattern(void)
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
 }
-static uint32_t prev_btns;
+
+static void open_pattern(int from_song, int t)
+{
+    pat = from_song ? 2 : 1;
+    pat_track = t;
+    pat_view = pat_col = pat_cur = pat_top = 0;
+}
 
 static void enter(int v)
 {
@@ -395,15 +391,18 @@ void app_frame(const PlatInput *in)
     if (pat) {
         pat_cur += in->enc[PE_SELECT];
         clamp_scroll(&pat_cur, &pat_top, 32, ROWS);
-        pat_field += in->enc[PE_K1];
-        pat_field = pat_field < 0 ? 0 : pat_field >= NFIELDS ? NFIELDS - 1 : pat_field;
-        if (pat_field < pat_left)
-            pat_left = pat_field;
-        while (field_x(pat_field) < 0)
-            pat_left++;
-        if (press & 1u << PB_GLO)
+        if (press & 1u << PB_FX) { /* NOTES -> FX -> INS -> NOTES */
+            pat_view = (pat_view + 1) % NVIEWS;
+            pat_col = 0;
+        }
+        pat_col += in->enc[PE_K1];
+        pat_col = pat_col < 0 ? 0 : pat_col >= view_cols[pat_view] ? view_cols[pat_view] - 1 : pat_col;
+        if (press & 1u << PB_GLO) { /* back where it was opened from */
+            if (pat == 2)
+                sec = 0;
             pat = 0;
-        gfx_frame(pat ? draw_pattern : draw_section);
+        }
+        gfx_frame(pat ? draw_pattern : sec ? draw_section : draw_song);
         return;
     }
     if (sec) {
@@ -414,8 +413,7 @@ void app_frame(const PlatInput *in)
         if (press & 1u << PB_GLO)
             sec = 0;
         if (press & 1u << PB_SEL) {
-            pat = 1;
-            pat_cur = pat_top = pat_field = pat_left = 0;
+            open_pattern(0, sec_track);
             gfx_frame(draw_pattern);
             return;
         }
@@ -454,6 +452,11 @@ void app_frame(const PlatInput *in)
         b += in->enc[PE_K2];
         b = b < -1 ? -1 : b > nblocks[track] ? nblocks[track] : b;
         grid[cursor][track] = b < 0 ? NONE : (uint8_t)b;
+    }
+    if (press & 1u << PB_SEQ && track >= 0 && grid[cursor][track] != NONE) { /* straight to the block */
+        open_pattern(1, track);
+        gfx_frame(draw_pattern);
+        return;
     }
     if (press & 1u << PB_SEL && track < 0 && v->blocks == kids) { /* into the SECTION */
         sec = 1;
