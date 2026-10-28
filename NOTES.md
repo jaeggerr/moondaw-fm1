@@ -1,7 +1,7 @@
 # Notes
 
-Decisions and traps, newest section last. Nothing here has run on a real
-FM-1: the device is expected around 17 October 2026.
+Decisions and traps, newest section last. The FM-1 arrived on 28 October
+2026; everything before that date was written without it.
 
 ## Rules
 
@@ -916,9 +916,28 @@ they share. Installed on the FM-1 the same day; the tests pass.
   `tests/loop_test.c` and `tests/select_test.c` went with them.
 - INSTRUMENT and MIXER keep the 10/10 look until their turn.
 
+## 2026-10-28 — the voice will be supported
+
+Jaeger, hearing his songs on the FM-1: the voice synthesizer is needed.
+This reverses "VOX probably never" (10/10). Later, not now. Four songs
+use it: robot-demo, LEOMOTEUR, DAFT-PUNK, DAFT-PUNK-EN.
+
+- Two separate pieces: the SOUND (moondaw's VOX in fixed point, as the
+  other engines; Felucca runs a 4-voice formant engine on this chip, and
+  the CPU is under 1 % on the demo) and WRITING syllables on the device
+  (the interface; the original objection). The sound can come first,
+  with the words written on the computer.
+- Memory is the question: syllables were a third of moondaw's grid.
+- **Trap until then**: `fm1_send.py` reduces a song to what the FM-1
+  carries, so the copies on the device have no syllables (`'J2`,
+  `'LA`...). Fetching one back with `--get` over the original loses the
+  words. The originals on the computer are the only full copies.
+
 ## Open
 
-- The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
+- The voice (VOX): sound, then writing syllables (above).
+- The song's line (BPM, SWING, TICKS, TRACKS), LOOP, selection, mute,
+  cell levels: gone with the old screens, to be redesigned.
+- INSTRUMENT and MIXER: still the 10/10 look.
 - The limiter; redo (no button for it).
-- CPU cost on the real chip.
 - `web/installer/` is copied, not adapted, not run.
