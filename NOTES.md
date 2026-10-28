@@ -836,6 +836,15 @@ spell them.
   track: it says more), six tracks a screen with their numbers small
   above, **KNOB 1 scrolls the tracks sideways**. Phrase numbers in hex as
   in the files. Mocked up, not yet settled as a whole.
+- **Cells on SONG** (Jaeger's proposal, mocked up): SELECT the row,
+  **KNOB 1 a cell cursor** (the cell hollowed out of the green row, the
+  grid scrolling sideways to follow), **KNOB 2 the cell's block** (down
+  to `--`, up to one new block past the track's last). **SEL on a cell
+  opens the track's blocks in a panel** over the right three quarters
+  (the phrase numbers stay visible): SELECT walks it from the block in
+  place, PLAY plays the one under the cursor alone, looped, SEL takes it,
+  **GLO goes back** unchanged. The two buttons are written at the bottom,
+  each on the side of its button. HOME stays "home" even there.
 
 ## Open
 

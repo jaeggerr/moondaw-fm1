@@ -1,14 +1,21 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Screen mockups judged on the panel (MOONDAW_APP=mock, built with GFX_SPECIMEN): one screen
  * at a time, in CONDENSED 20, the size chosen on the FM-1 on 28/10. Nothing here touches a
- * song; the data is copied from real ones. PRESETS turns the variant, SELECT moves the cursor,
- * KNOB 1 scrolls the tracks sideways when they do not all fit.
+ * song, and nothing sounds; the data is copied from real songs and edited in RAM only.
+ * PRESETS turns the variant.
  *
  * SONG, what a project opens on: its structure. One row a phrase, in the song's order, its
  * number always at the left; then the block each track plays (-- when silent), six tracks a
- * screen, the track numbers small above them, KNOB 1 to see the others. (Numbers were chosen
- * over one square a track on 28/10: they say more.)
- * The cursor starts on the first phrase; the phrase playing is marked by a triangle.
+ * screen with their numbers small above. (Numbers were chosen over one square a track: they
+ * say more.) The phrase playing is marked by a triangle.
+ *
+ *   SELECT  the phrase (the green row)
+ *   KNOB 1  the track: a cell cursor inside the row, the grid scrolls sideways to follow it
+ *   KNOB 2  the cell's block, down to -- (silent), up to one past the track's last (a new one)
+ *   SEL     the list of the track's blocks, in a panel over the right three quarters:
+ *           SELECT walks it, starting on the block in place; PLAY would play the one under
+ *           the cursor alone, looped; SEL takes it; GLO goes back without changing anything.
+ *           The two buttons are written at the bottom, on the side their buttons are on.
  * (HOME, the first mockup, is now app/menu.c.) */
 #include "../platform/platform.h"
 #include "theme.h"
@@ -21,6 +28,11 @@
 #define CELL_W 31
 #define CELLS 6 /* tracks a screen */
 #define NONE 0xFF
+#define MAXP 32
+
+#define POP_X 46 /* the panel: the phrase numbers stay visible at its left */
+#define POP_ROWS 7
+#define POP_TOP 18
 
 typedef struct {
     const uint8_t (*blocks)[8]; /* per phrase, the block of each track, NONE when silent */
@@ -52,7 +64,11 @@ static const Variant variants[] = {
 };
 #define NVAR ((int)(sizeof variants / sizeof variants[0]))
 
-static int var, cursor, top, left; /* left: the first track shown */
+static uint8_t grid[MAXP][8]; /* the variant's blocks, edited here */
+static int nblocks[8];        /* blocks each track has, from the song: one more is "new" */
+static int var, cursor, top, track, left;
+static int pop, pop_cur, pop_top, pop_plays; /* the panel; its rows: -- then 00.. then a new one */
+static uint32_t prev_btns;
 
 static void hex2(char *s, int v)
 {
@@ -61,56 +77,131 @@ static void hex2(char *s, int v)
     s[2] = 0;
 }
 
+static void triangle(int x, int y, uint16_t c) /* pointing right: what plays */
+{
+    for (int k = 0; k < 6; k++)
+        gfx_fill(x + k, y + k, 1, 12 - 2 * k, c, 255);
+}
+
 static void draw_song(void)
 {
     const Variant *v = &variants[var];
-    int y0 = HEAD, rows = ROWS;
     char s[3];
 
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
     for (int c = 0; c < CELLS && left + c < v->tracks; c++) { /* which tracks these are */
         s[0] = (char)('1' + left + c), s[1] = 0;
-        gfx_text_mid(F_COND_12, CELL_X + c * CELL_W, CELL_W, HEAD - 3, s, C_DIM);
+        gfx_text_mid(F_COND_12, CELL_X + c * CELL_W, CELL_W, HEAD - 3, s,
+                     left + c == track ? C_TEXT : C_DIM);
     }
-    for (int r = 0; r < rows && top + r < v->n; r++) {
-        int i = top + r, y = y0 + r * ROW, base = y + 2 + FONTS[F_COND_20].ascent;
+    for (int r = 0; r < ROWS && top + r < v->n; r++) {
+        int i = top + r, y = HEAD + r * ROW, base = y + 2 + FONTS[F_COND_20].ascent;
         int here = i == cursor, plays = i == v->playing;
         uint16_t ink = here ? C_ON_ACC : plays ? C_TITLE : C_TEXT;
         if (here)
-            gfx_slab(2, y + 1, PLAT_W - 4 - (v->n > rows ? 6 : 0), ROW - 2, C_ACCENT, 255);
-        if (plays) /* a triangle pointing right: what plays */
-            for (int k = 0; k < 6; k++)
-                gfx_fill(4 + k, y + 8 + k, 1, 12 - 2 * k, here ? C_ON_ACC : C_TITLE, 255);
+            gfx_slab(2, y + 1, PLAT_W - 4 - (v->n > ROWS ? 6 : 0), ROW - 2, C_ACCENT, 255);
+        if (plays)
+            triangle(4, y + 8, here ? C_ON_ACC : C_TITLE);
         hex2(s, i);
         gfx_text(F_COND_20, TEXT_X, base, s, ink);
-        for (int t = 0; t < v->tracks; t++) {
-            int b = v->blocks[i][t];
-            if (t >= left && t < left + CELLS) {
-                int x = CELL_X + (t - left) * CELL_W;
-                if (b != NONE)
-                    hex2(s, b);
-                gfx_text_mid(F_COND_20, x, CELL_W, base, b != NONE ? s : "--",
-                             b != NONE ? ink : here ? C_ON_ACC : C_DIM);
-            }
+        for (int t = left; t < left + CELLS && t < v->tracks; t++) {
+            int b = grid[i][t], x = CELL_X + (t - left) * CELL_W, cell = here && t == track;
+            uint16_t c = cell ? C_ACCENT : b == NONE ? (here ? C_ON_ACC : C_DIM) : ink;
+            if (cell) /* the cell cursor: hollowed out of the row */
+                gfx_slab(x + 1, y + 3, CELL_W - 2, ROW - 6, C_BG, 255);
+            if (b != NONE)
+                hex2(s, b);
+            gfx_text_mid(F_COND_20, x, CELL_W, base, b != NONE ? s : "--", c);
         }
     }
-    gfx_fill(CELL_X - 3, y0, 1, rows * ROW, C_DIM, 255);
-    if (v->n > rows) { /* where the screen is in the song */
-        int h = rows * ROW * rows / v->n, y = y0 + rows * ROW * top / v->n;
-        gfx_fill(PLAT_W - 4, y0, 2, rows * ROW, C_TRACK, 255);
+    gfx_fill(CELL_X - 3, HEAD, 1, ROWS * ROW, C_DIM, 255);
+    if (v->n > ROWS) { /* where the screen is in the song */
+        int h = ROWS * ROW * ROWS / v->n, y = HEAD + ROWS * ROW * top / v->n;
+        gfx_fill(PLAT_W - 4, HEAD, 2, ROWS * ROW, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
+}
+
+/* Panel row k: -1 is --, then the blocks, then one new one. */
+static int pop_rows(void) { return nblocks[track] + 2; }
+static int pop_block(int k) { return k == 0 ? NONE : k - 1; }
+
+static void hint(int x, const char *key, const char *word, int right)
+{
+    int w = gfx_text_w(F_COND_14, key) + 5 + gfx_text_w(F_COND_14, word);
+    if (right)
+        x -= w;
+    x = gfx_text(F_COND_14, x, PLAT_H - 6, key, C_TEXT);
+    gfx_text(F_COND_14, x + 5, PLAT_H - 6, word, C_DIM);
+}
+
+static void draw_pop(void)
+{
+    int n = pop_rows(), now = grid[cursor][track];
+    char s[16];
+
+    draw_song();
+    gfx_fill(POP_X, 0, PLAT_W - POP_X, PLAT_H, C_BG, 255);
+    gfx_fill(POP_X, 0, 1, PLAT_H, C_TEXT, 255);         /* over the grid: its edge */
+    s[0] = 'T', s[1] = 'R', s[2] = 'A', s[3] = 'C', s[4] = 'K', s[5] = ' ';
+    s[6] = (char)('1' + track), s[7] = 0;
+    gfx_text(F_COND_12, POP_X + 10, 13, s, C_DIM);
+    for (int r = 0; r < POP_ROWS && pop_top + r < n; r++) {
+        int k = pop_top + r, b = pop_block(k), y = POP_TOP + r * ROW;
+        int base = y + 2 + FONTS[F_COND_20].ascent, here = k == pop_cur, x;
+        uint16_t ink = here ? C_ON_ACC : b == NONE || k == n - 1 ? C_DIM : C_TEXT;
+        if (here)
+            gfx_slab(POP_X + 4, y + 1, PLAT_W - POP_X - 8 - (n > POP_ROWS ? 6 : 0), ROW - 2, C_ACCENT, 255);
+        if (b == now) /* the block in place, as HOME marks the open project */
+            gfx_fill(POP_X + 6, y + 6, 3, ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        if (k == pop_plays)
+            triangle(PLAT_W - 24, y + 8, here ? C_ON_ACC : C_TITLE);
+        if (b == NONE) {
+            x = gfx_text(F_COND_20, POP_X + 14, base, "--", ink);
+            gfx_text(F_COND_14, x + 8, base, "silent", ink);
+        } else {
+            hex2(s, b);
+            x = gfx_text(F_COND_20, POP_X + 14, base, s, ink);
+            if (k == n - 1)
+                gfx_text(F_COND_14, x + 8, base, "new", ink);
+        }
+    }
+    if (n > POP_ROWS) {
+        int h = POP_ROWS * ROW * POP_ROWS / n, y = POP_TOP + POP_ROWS * ROW * pop_top / n;
+        gfx_fill(PLAT_W - 4, POP_TOP, 2, POP_ROWS * ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
+    }
+    hint(POP_X + 10, "SEL", "OK", 0);
+    hint(PLAT_W - 8, "GLO", "BACK", 1);
 }
 
 static void enter(int v)
 {
     var = v;
-    cursor = top = left = 0;
+    cursor = top = track = left = pop = 0;
+    for (int t = 0; t < 8; t++)
+        nblocks[t] = 0;
+    for (int i = 0; i < variants[v].n; i++)
+        for (int t = 0; t < 8; t++) {
+            grid[i][t] = t < variants[v].tracks ? variants[v].blocks[i][t] : NONE;
+            if (grid[i][t] != NONE && grid[i][t] + 1 > nblocks[t])
+                nblocks[t] = grid[i][t] + 1;
+        }
+}
+
+static void clamp_scroll(int *cur, int *first, int n, int shown)
+{
+    *cur = *cur < 0 ? 0 : *cur >= n ? n - 1 : *cur;
+    if (*cur < *first)
+        *first = *cur;
+    if (*cur >= *first + shown)
+        *first = *cur - shown + 1;
 }
 
 void app_init(void)
 {
     enter(0);
+    prev_btns = 0xFFFFFFFFu;
     gfx_invalidate();
 }
 
@@ -123,20 +214,47 @@ int app_load(const char *trk, uint32_t len, const char *name)
 void app_frame(const PlatInput *in)
 {
     const Variant *v;
-    int last;
+    uint32_t press = in->btns & ~prev_btns;
+    prev_btns = in->btns;
+
+    if (pop) {
+        pop_cur += in->enc[PE_SELECT];
+        clamp_scroll(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
+        if (press & 1u << PB_PLAY)
+            pop_plays = pop_plays == pop_cur ? -1 : pop_cur;
+        if (press & 1u << PB_SEL) {
+            int b = pop_block(pop_cur);
+            grid[cursor][track] = (uint8_t)b;
+            pop = 0;
+        }
+        if (press & 1u << PB_GLO)
+            pop = 0;
+        gfx_frame(pop ? draw_pop : draw_song);
+        return;
+    }
+
     if (in->enc[PE_PRESET])
         enter(((var + in->enc[PE_PRESET]) % NVAR + NVAR) % NVAR);
     v = &variants[var];
     cursor += in->enc[PE_SELECT];
-    cursor = cursor < 0 ? 0 : cursor >= v->n ? v->n - 1 : cursor;
-    if (cursor < top)
-        top = cursor;
-    if (cursor >= top + ROWS)
-        top = cursor - ROWS + 1;
-    last = v->tracks > CELLS ? v->tracks - CELLS : 0;
-    left += in->enc[PE_K1];
-    left = left < 0 ? 0 : left > last ? last : left;
-    gfx_frame(draw_song);
+    clamp_scroll(&cursor, &top, v->n, ROWS);
+    track += in->enc[PE_K1];
+    clamp_scroll(&track, &left, v->tracks, CELLS);
+    if (in->enc[PE_K2]) { /* -- below 00, one new block above the last */
+        int b = grid[cursor][track] == NONE ? -1 : grid[cursor][track];
+        b += in->enc[PE_K2];
+        b = b < -1 ? -1 : b > nblocks[track] ? nblocks[track] : b;
+        grid[cursor][track] = b < 0 ? NONE : (uint8_t)b;
+    }
+    if (press & 1u << PB_SEL) {
+        int now = grid[cursor][track];
+        pop = 1;
+        pop_cur = now == NONE ? 0 : now + 1;
+        pop_top = 0;
+        pop_plays = -1;
+        clamp_scroll(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
+    }
+    gfx_frame(pop ? draw_pop : draw_song);
 }
 
 void app_audio(int16_t *out, int frames)
