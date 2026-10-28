@@ -1253,7 +1253,9 @@ the script collects them and draws again.
 - Trap: the event block is 27 bytes, five u32 and seven i8; counted 23
   at first, which cut the last four knobs off the answer.
 - Checked headless over UDP (`tests/remotetest.sh`, and the demo driven
-  by `fm1_ctl.py`); not yet on the panel.
+  by `fm1_ctl.py`), then **on the FM-1 over USB, 29/10**: `fm1_ctl.py
+  status` answered through the real cable, and `list_demo.py` ran on the
+  panel -- Jaeger: "parfait, rien à redire" (fast enough, drawn clean).
 
 ## Open
 
