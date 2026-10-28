@@ -173,103 +173,139 @@ static void update_coefs(Chain *c)
     c->a3 = mul_q(g, c->a2, 20);
 }
 
+/* In 32 bits with the carry, not in 64: the same sums, and on the FM-1 a
+ * fifth of the instructions -- it runs twice a sample on every track. */
 static int32_t sat_add(int32_t a, int32_t b)
 {
-    int64_t s = (int64_t)a + b;
-    return s > 0x7FFFFFFF ? 0x7FFFFFFF : s < -0x7FFFFFFF - 1 ? -0x7FFFFFFF - 1 : (int32_t)s;
+    int32_t s;
+    if (__builtin_add_overflow(a, b, &s))
+        return a < 0 ? -0x7FFFFFFF - 1 : 0x7FFFFFFF;
+    return s;
 }
 
-/* mono: Q15, one track's voices summed. out: stereo, Q15, accumulated. */
+/* p x a pan gain (0..64), >> 10: in 32 bits while the product fits, which
+ * is always but for a sample past 2^25; the same result either way. */
+static int32_t pan_q(int32_t p, int32_t g)
+{
+    if (p < (1 << 25) && p > -(1 << 25))
+        return (p * g) >> 10;
+    return mul_q(p, g, 6 + CH_SHIFT);
+}
+
+/* mono: Q15, one track's voices summed. out: stereo, Q15, accumulated.
+ *
+ * The state that changes every sample is held in locals for the block and
+ * written back after it: through `c` the compiler had to reload and store
+ * each field around every write to `out`, which might have been one of
+ * them. The same arithmetic in the same order: the same samples (28/10). */
 static void chain_process(Chain *c, const int32_t *mono, int32_t *out, int frames)
 {
     int32_t lg = c->pan <= 0 ? 64 : 64 - c->pan;
     int32_t rg = c->pan >= 0 ? 64 : 64 + c->pan;
     int chunk = 0;
+    uint8_t stage = c->stage;
+    int32_t env = c->env, trem = c->trem, dc_x1 = c->dc_x1, dc_y1 = c->dc_y1;
+    int32_t ic1 = c->ic1, ic2 = c->ic2, a1 = c->a1, a2 = c->a2, a3 = c->a3;
+    const int32_t sustain = c->sustain, atk_inc = c->atk_inc, dec_inc = c->dec_inc, rel_inc = c->rel_inc;
+    const int32_t trem_target = c->trem_target, play = (int32_t)c->play;
+    const uint32_t vol = c->vol, out_gain = c->out_gain;
+    const uint32_t crush_levels = c->crush_levels, crush_step = c->crush_step, crush_hold = c->crush_hold;
+    uint32_t crush_phase = c->crush_phase;
+    int32_t crush_held = c->crush_held;
+    const bool filtering = c->filtering;
 
     for (int i = 0; i < frames; i++) {
         int32_t x, y, p, post;
 
-        switch (c->stage) {
+        switch (stage) {
         case ENV_PUNCH:
-            c->env -= ENV_ONE / MIN_RAMP_SAMPLES;
-            if (c->env <= 0) {
-                c->env = 0;
-                c->stage = ENV_ATTACK;
+            env -= ENV_ONE / MIN_RAMP_SAMPLES;
+            if (env <= 0) {
+                env = 0;
+                stage = ENV_ATTACK;
             }
             break;
         case ENV_ATTACK:
-            c->env += c->atk_inc;
-            if (c->env >= ENV_ONE) {
-                c->env = ENV_ONE;
-                c->stage = ENV_DECAY;
+            env += atk_inc;
+            if (env >= ENV_ONE) {
+                env = ENV_ONE;
+                stage = ENV_DECAY;
             }
             break;
         case ENV_DECAY:
-            c->env -= c->dec_inc;
-            if (c->env <= c->sustain) {
-                c->env = c->sustain;
-                c->stage = c->sustain > 0 ? ENV_SUSTAIN : ENV_IDLE;
+            env -= dec_inc;
+            if (env <= sustain) {
+                env = sustain;
+                stage = sustain > 0 ? ENV_SUSTAIN : ENV_IDLE;
             }
             break;
         case ENV_RELEASE:
-            c->env -= c->rel_inc;
-            if (c->env <= 0) {
-                c->env = 0;
-                c->stage = ENV_IDLE;
+            env -= rel_inc;
+            if (env <= 0) {
+                env = 0;
+                stage = ENV_IDLE;
             }
             break;
         default:
             break;
         }
         /* The tremolo's gain is slewed over 4 ms: it is set once a tick. */
-        c->trem += (((c->trem_target - c->trem) >> 8) * 185) >> 7;
+        trem += (((trem_target - trem) >> 8) * 185) >> 7;
 
         x = mono[i] * (1 << CH_SHIFT);
         {   /* The DC block. Its leak is at least one unit while anything
              * is left: a shift alone stalls under 1024 and a positive
              * offset would stand there, 64 steps of DC behind every note. */
-            int32_t leak = c->dc_y1 >> 10;
-            if (leak == 0 && c->dc_y1 > 0)
+            int32_t leak = dc_y1 >> 10;
+            if (leak == 0 && dc_y1 > 0)
                 leak = 1;
-            y = x - c->dc_x1 + c->dc_y1 - leak;
+            y = x - dc_x1 + dc_y1 - leak;
         }
-        c->dc_x1 = x;
-        c->dc_y1 = y;
-        if (c->filtering) {
+        dc_x1 = x;
+        dc_y1 = y;
+        if (filtering) {
             int32_t v1, v2, v3;
-            if (chunk == 0) {
+            if (chunk == 0) { /* the coefficients follow the envelope: c sees it as it is now */
+                c->env = env;
                 update_coefs(c);
+                a1 = c->a1, a2 = c->a2, a3 = c->a3;
                 chunk = COEF_CHUNK;
             }
             chunk--;
-            v3 = y - c->ic2;
-            v1 = (int32_t)(((int64_t)c->a1 * c->ic1 + (int64_t)c->a2 * v3) >> 20);
-            v2 = c->ic2 + (int32_t)(((int64_t)c->a2 * c->ic1 + (int64_t)c->a3 * v3) >> 20);
-            c->ic1 = 2 * v1 - c->ic1;
-            c->ic2 = 2 * v2 - c->ic2;
+            v3 = y - ic2;
+            v1 = (int32_t)(((int64_t)a1 * ic1 + (int64_t)a2 * v3) >> 20);
+            v2 = ic2 + (int32_t)(((int64_t)a2 * ic1 + (int64_t)a3 * v3) >> 20);
+            ic1 = 2 * v1 - ic1;
+            ic2 = 2 * v2 - ic2;
             y = v2;
         }
         /* The note as PLAYED: envelope, velocity, instrument gain. */
-        p = mul_q(mul_q(y, c->env >> 14, 16), (int32_t)c->play, 16);
-        if (c->crush_hold > 256) {
-            c->crush_phase += 256;
-            if (c->crush_phase >= c->crush_hold) {
-                c->crush_phase -= c->crush_hold;
-                c->crush_held = p;
+        p = mul_q(mul_q(y, env >> 14, 16), play, 16);
+        if (crush_hold > 256) {
+            crush_phase += 256;
+            if (crush_phase >= crush_hold) {
+                crush_phase -= crush_hold;
+                crush_held = p;
             }
-            p = c->crush_held;
+            p = crush_held;
         }
-        if (c->crush_levels) {
-            int32_t q = (int32_t)(((int64_t)p * c->crush_levels + (1 << 26)) >> 27);
-            p = (int32_t)(((int64_t)q * c->crush_step) >> (8 - CH_SHIFT));
+        if (crush_levels) {
+            int32_t q = (int32_t)(((int64_t)p * crush_levels + (1 << 26)) >> 27);
+            p = (int32_t)(((int64_t)q * crush_step) >> (8 - CH_SHIFT));
         }
         /* Then the fader, the tremolo and the instrument's own level. */
-        post = mul_q((int32_t)((c->vol * (uint32_t)(c->trem >> 9)) >> 15),
-                     (int32_t)c->out_gain, 15);
+        post = mul_q((int32_t)((vol * (uint32_t)(trem >> 9)) >> 15), (int32_t)out_gain, 15);
         p = mul_q(p, post, 16);
-        out[2 * i] = sat_add(out[2 * i], mul_q(p, lg, 6 + CH_SHIFT));
-        out[2 * i + 1] = sat_add(out[2 * i + 1], mul_q(p, rg, 6 + CH_SHIFT));
+        out[2 * i] = sat_add(out[2 * i], pan_q(p, lg));
+        out[2 * i + 1] = sat_add(out[2 * i + 1], pan_q(p, rg));
     }
+    c->stage = stage;
+    c->env = env;
+    c->trem = trem;
+    c->dc_x1 = dc_x1, c->dc_y1 = dc_y1;
+    c->ic1 = ic1, c->ic2 = ic2, c->a1 = a1, c->a2 = a2, c->a3 = a3;
+    c->crush_phase = crush_phase;
+    c->crush_held = crush_held;
 }
 
 /* ============================================================ state === */
@@ -1441,6 +1477,37 @@ static int32_t tick_samples(void)
 }
 
 /* =========================================================== render === */
+uint32_t (*player_clock)(void);
+static uint32_t prof_now[PROF_N], prof_worst[PROF_N + 1];
+static uint32_t prof_t;
+/* The time since the last mark goes to stage k. */
+static void prof(int k)
+{
+    uint32_t t;
+    if (!player_clock)
+        return;
+    t = player_clock();
+    prof_now[k] += t - prof_t;
+    prof_t = t;
+}
+static void prof_mark(void)
+{
+    if (player_clock)
+        prof_t = player_clock();
+}
+
+void player_profile(uint32_t out[PROF_N + 1])
+{
+    for (int k = 0; k <= PROF_N; k++)
+        out[k] = prof_worst[k];
+}
+
+void player_profile_reset(void)
+{
+    for (int k = 0; k <= PROF_N; k++)
+        prof_worst[k] = 0;
+}
+
 static int32_t tmono[SYNTH_MAX_FRAMES];
 static int32_t tstereo[SYNTH_MAX_FRAMES * 2];
 static int32_t sendbus[SYNTH_MAX_FRAMES], echobus[SYNTH_MAX_FRAMES];
@@ -1485,13 +1552,17 @@ static void render_tracks(int32_t *out, int frames)
             track_reap(tr);
         if (!tr->used && tr->chain.env == 0)
             continue;
+        prof_mark();
         blep_begin(&tr->blep, frames);
         for (int v = 0; v < TRACK_MAX_VOICES; v++)
             osc_draw(&tr->voices[v].osc, &tr->blep);
         blep_read(&tr->blep, tmono, frames);
+        prof(PROF_OSC);
         track_sing(tr, frames);
+        prof(PROF_VOX);
         if (tr->fx.send == 0 && tr->fx.echo == 0) {
             chain_process(&tr->chain, tmono, out, frames);
+            prof(PROF_CHAIN);
             continue;
         }
         /* A track that sends is mixed apart, so that what goes to the
@@ -1526,6 +1597,7 @@ static void render_tracks(int32_t *out, int frames)
                 if (ge)
                     echobus[i] += mul_q(mono, ge, 15);
             }
+            prof(PROF_CHAIN);
         }
     }
     {   /* the audition, dry */
@@ -1555,14 +1627,17 @@ static void render_tracks(int32_t *out, int frames)
         }
     }
     /* The returns run on after the last note: a tail is not a track. */
+    prof_mark();
     if (fed || reverb_ringing()) {
         reverb_set(song->reverb_size, song->reverb_damp);
         reverb_process(fed ? sendbus : 0, out, frames);
     }
+    prof(PROF_REV);
     if (fed_echo || echo_ringing()) {
         echo_set(song->delay_time, song->delay_fb, tick_samples());
         echo_process(fed_echo ? echobus : 0, out, frames);
     }
+    prof(PROF_ECHO);
 }
 
 void player_render_raw(int32_t *out, int frames)
@@ -1573,7 +1648,9 @@ void player_render_raw(int32_t *out, int frames)
     while (frames > 0) {
         int n;
         if (to_next_tick == 0) {
+            prof_mark();
             player_tick();
+            prof(PROF_TICK);
             to_next_tick = tick_samples();
             reap_due = true;
         }
@@ -1590,6 +1667,9 @@ void player_render_raw(int32_t *out, int frames)
 
 void player_render(int16_t *out, int frames)
 {
+    uint32_t t0 = player_clock ? player_clock() : 0, all = 0;
+    for (int k = 0; k < PROF_N; k++)
+        prof_now[k] = 0;
     while (frames > 0) {
         int n = frames < SYNTH_MAX_FRAMES ? frames : SYNTH_MAX_FRAMES;
         player_render_raw(mix, n);
@@ -1599,6 +1679,11 @@ void player_render(int16_t *out, int frames)
         }
         out += n * 2;
         frames -= n;
+    }
+    if (player_clock && (all = player_clock() - t0) > prof_worst[PROF_N]) {
+        for (int k = 0; k < PROF_N; k++)
+            prof_worst[k] = prof_now[k];
+        prof_worst[PROF_N] = all;
     }
 }
 

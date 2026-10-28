@@ -190,15 +190,19 @@ def build_app():
            ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
            ("cc", *flags, "-c", FW / "src" / "firmware.c", "-o", OUT / "moondaw.o"))
     for u, o in zip(units, objs):               # one at a time: six at once is what crashed qemu
-        tc("cc", *flags, "-std=gnu11", "-c", u, "-o", o)
+        # the audio core for speed, the rest for size: at -Os the chorus of DAFT-PUNK-EN overran
+        # its block (28/10). Same arithmetic either way, so the same samples.
+        speed = ["-O2"] if u.parent.name == "core" and u.stem in ("synth", "player", "fx") else []
+        tc("cc", *flags, *speed, "-std=gnu11", "-c", u, "-o", o)
     elf = OUT / "moondaw.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
        OUT / "moondaw.o", *objs, "-o", elf)
-    for sect in ("text.bin", "data.bin", "ramtext.bin"):
+    for sect in ("text.bin", "data.bin", "ramtext.bin", "ramaudio.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".data", elf, OUT / "data.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".ram_text", elf, OUT / "ramtext.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".ram_audio", elf, OUT / "ramaudio.bin"),
                                ("common/bin/objdump", "-t", elf),
                                ("common/bin/objdump", "-d", elf),
                                ("common/bin/objdump", "-d", "-j", ".ram_text", elf))
@@ -207,8 +211,9 @@ def build_app():
     def symv(name):
         return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)
     img = bytearray((OUT / "text.bin").read_bytes())
-    # .ram_text and .data follow .text at their load addresses; crt0 copies them by words
-    for sect, lname in (("ramtext.bin", "_rt_load"), ("data.bin", "_data_load")):
+    # .ram_text, .ram_audio and .data follow .text at their load addresses; the start
+    # code copies them by words
+    for sect, lname in (("ramtext.bin", "_rt_load"), ("ramaudio.bin", "_ra_load"), ("data.bin", "_data_load")):
         load = symv(lname)
         if load % 4:
             raise SystemExit(f"{lname} {load:#x} is not word aligned")
