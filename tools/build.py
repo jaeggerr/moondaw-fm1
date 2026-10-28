@@ -178,7 +178,10 @@ def build_app():
     # bring-up app (keys, knobs, a square wave) instead of the player.
     app = os.environ.get("MOONDAW_APP", "app")
     units = [SRC / "app" / f"{app}.c", SRC / "app" / "term.c"]
-    if app != "hello":                           # the bring-up build stays as small as it can be
+    if app == "type":                            # the type specimen: gfx and its own fonts
+        units.append(SRC / "app" / "gfx.c")
+        flags.append("-DGFX_SPECIMEN=1")
+    elif app != "hello":                           # the bring-up build stays as small as it can be
         units += [SRC / "app" / f for f in ("menu.c", "songview.c", "pattern.c", "instrument.c", "mixer.c", "phrase.c", "edit.c", "undo.c", "loop.c", "link.c", "ui.c", "gfx.c")]
         units += [ *sorted((SRC / "core").glob("*.c"))]
     objs = [OUT / f"{u.parent.name}_{u.stem}.o" for u in units]

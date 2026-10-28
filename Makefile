@@ -7,6 +7,7 @@
 #   make difftest   the engine against moondaw's own, on real songs (needs ../moondaw, built)
 #
 #   APP=hello       the bring-up app instead of the player (keys, knobs, a square wave)
+#   APP=type        the type specimen: a ruler, then one face and size a page
 CC      ?= cc
 CFLAGS  += -std=c11 -O2 -g -Wall -Wextra
 APP     ?= app
@@ -14,6 +15,9 @@ MOONDAW ?= ../moondaw
 CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c
 ifeq ($(APP),hello)
 SRCS    := app/hello.c app/term.c
+else ifeq ($(APP),type)
+SRCS    := app/type.c app/gfx.c app/term.c
+CFLAGS  += -DGFX_SPECIMEN=1
 else
 UI      := app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)

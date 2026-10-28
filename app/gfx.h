@@ -13,7 +13,11 @@
 
 #include <stdint.h>
 
+#ifdef GFX_SPECIMEN
+#include "fonts_spec.h" /* app/type.c: the sizes to weigh on the panel */
+#else
 #include "fonts.h"
+#endif
 
 #define GFX_RGB(r, g, b) \
     ((uint16_t)((((r) & 0xF8u) << 8) | (((g) & 0xFCu) << 3) | ((b) >> 3)))
