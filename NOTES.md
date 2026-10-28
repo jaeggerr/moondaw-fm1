@@ -845,6 +845,10 @@ spell them.
   place, PLAY plays the one under the cursor alone, looped, SEL takes it,
   **GLO goes back** unchanged. The two buttons are written at the bottom,
   each on the side of its button. HOME stays "home" even there.
+- **SONG validated on the panel, 28/10** ("c'est parfait"), as above.
+  No button to empty a cell: KNOB 2 stops at `--` and a flick to the
+  left gets there from any block (tried on the device: "ça va vite").
+  Piano keys are kept for notes on every screen, never for commands.
 
 ## Open
 
