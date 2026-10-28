@@ -21,6 +21,24 @@
  *              (PING: version, bytes free.  INFO: slots, size.
  *               READ: bytes in this piece, offset)
  *
+ * From version 2 the host can also drive the machine and write into the
+ * song in memory, on any screen (app/remote.c, tools/fm1_ctl.py): so that
+ * a computer -- or a model on it -- can play, measure and compose on the
+ * device. Nothing of it runs until a message arrives.
+ *
+ *   08 STATUS  flags (bit 0: start the worst block over)   -> text (tail)
+ *   09 INPUT   seq u16, pressed u32, keys u32, hold u8, enc[7] i8
+ *              the buttons pressed once, the keys held `hold` frames,
+ *              the knobs turned: as the hands would. A repeated seq is
+ *              not done twice.
+ *   0A OPEN    slot, flags (bit 0: over unsaved changes)
+ *   0B NEW     flags (bit 0: over unsaved changes)
+ *   0C STEP    track, block, row, notes[4], instrument, fx[3] {cmd, val}
+ *   0D CELL    phrase, track, block (FF: none); a phrase past the last is made
+ *   0E LENGTH  track, block, steps u16
+ *   0F SAVE
+ *   10 PLAY    mode (0 stop, 1 the song from `phrase`, 2 `phrase` round), phrase
+ *
  * What arrives is written straight to a slot of the store, a piece at a
  * time: it is never whole in memory and never parsed here. The host
  * sends the file as this machine would save it (tools/fm1_send.py runs
@@ -38,6 +56,8 @@
 
 enum { LINK_CMD_BEGIN = 1, LINK_CMD_DATA, LINK_CMD_END, LINK_CMD_CANCEL, LINK_CMD_PING,
        LINK_CMD_INFO, LINK_CMD_READ,
+       LINK_CMD_STATUS, LINK_CMD_INPUT, LINK_CMD_OPEN, LINK_CMD_NEW, LINK_CMD_STEP, LINK_CMD_CELL,
+       LINK_CMD_LENGTH, LINK_CMD_SAVE, LINK_CMD_PLAY,
        LINK_CMD_ANSWER = 0x7F };
 enum {
     LINK_OK,
@@ -51,13 +71,18 @@ enum {
     LINK_BADMSG,
     LINK_NONE,   /* nothing in that slot */
 };
-#define LINK_VERSION  1
+#define LINK_VERSION  2
 #define LINK_DATA_MAX 240 /* bytes of song in one DATA */
 #define LINK_READ_MAX 120 /* in one READ: an answer never has to wait for the USB queue to drain */
 
 enum { LINK_IDLE, LINK_RECEIVING, LINK_DONE, LINK_SENDING };
 
 void link_reset(void);
+/* The commands from STATUS on, answered by the app (app/remote.c): the
+ * status, `*extra`, and a tail of up to LINK_READ_MAX bytes. Unset, they
+ * are refused as LINK_BADMSG. */
+extern int (*link_control)(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail,
+                           uint32_t *tail_n);
 /* Once a frame, from the main loop. `may` is false where a transfer is
  * not welcome (anywhere but the MENU). LINK_DONE is returned once, for
  * the frame a song was committed in; link_slot() says where. While it

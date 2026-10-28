@@ -1,0 +1,204 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+#include "remote.h"
+
+#include "../core/player.h"
+#include "app.h"
+#include "link.h"
+#include "ui.h"
+#include "undo.h"
+
+#define song (&app_song)
+
+/* What the computer asked the hands to do, played in over the next frames. */
+static uint32_t pressed, keys;
+static int hold;
+static int8_t turns[PLAT_ENCS];
+static uint16_t last_seq = 0xFFFF;
+
+void remote_input(PlatInput *in)
+{
+    in->btns |= pressed; /* held one frame: a press, then the release */
+    pressed = 0;
+    if (hold > 0) {
+        in->keys |= keys;
+        hold--;
+    }
+    for (int e = 0; e < PLAT_ENCS; e++) {
+        int v = in->enc[e] + turns[e];
+        in->enc[e] = (int8_t)(v < -128 ? -128 : v > 127 ? 127 : v);
+        turns[e] = 0;
+    }
+}
+
+/* ----------------------------------------------------------- answers --- */
+static uint8_t *put(uint8_t *t, uint8_t *end, const char *s)
+{
+    while (*s && t < end)
+        *t++ = (uint8_t)*s++;
+    return t;
+}
+
+static uint8_t *put_num(uint8_t *t, uint8_t *end, const char *key, int v)
+{
+    char d[12];
+    t = put(t, end, key);
+    if (v < 0) {
+        t = put(t, end, "-");
+        v = -v;
+    }
+    return put(put(t, end, ui_dec(d, v)), end, " ");
+}
+
+/* One line of words a person -- or a model -- reads as it is. */
+static uint32_t status(uint8_t *tail, bool reset)
+{
+    uint8_t *t = tail, *end = tail + LINK_READ_MAX;
+    t = put(put(put(t, end, "screen="), end, app_screen()), end, " ");
+    t = put(put(put(t, end, "song="), end, app_name), end, " ");
+    t = put_num(t, end, "dirty=", app_dirty);
+    t = put_num(t, end, "slot=", app_slot);
+    t = put_num(t, end, "playing=", player_playing());
+    t = put_num(t, end, "phrase=", player_entry());
+    t = put_num(t, end, "step=", player_row());
+    t = put_num(t, end, "cpu=", app_cpu);
+    t = put_num(t, end, "max=", app_worst);
+    t = put_num(t, end, "bpm=", song->bpm);
+    t = put_num(t, end, "phrases=", song->arrange_len);
+    t = put_num(t, end, "tracks=", song->num_tracks);
+    t = put_num(t, end, "free=", song_pool_free(song));
+    if (reset)
+        app_worst = 0;
+    return (uint32_t)(t - tail);
+}
+
+/* ------------------------------------------------------------ writes --- */
+static bool track_ok(int t) { return t >= 0 && t < song->num_tracks; }
+static bool block_ok(int b) { return b >= 0 && b < TRACK_MAX_PATTERNS; }
+
+/* A step written whole, as the file has it: four notes, an instrument,
+ * three effects. UNDO takes it back like a hand's. */
+static int set_step(const uint8_t *p, uint32_t n)
+{
+    Step *st;
+    if (n != 3 + 11 || !track_ok(p[0]) || !block_ok(p[1]) || p[2] >= PATTERN_MAX_STEPS)
+        return LINK_BADMSG;
+    undo_step(p[0], p[1], p[2]);
+    if (!(st = song_step_w(song, p[0], p[1], p[2])))
+        return LINK_FULL;
+    for (int k = 0; k < STEP_MAX_NOTES; k++)
+        st->notes[k] = p[3 + k];
+    st->instrument = p[7];
+    for (int k = 0; k < STEP_MAX_FX; k++) {
+        st->fx[k].cmd = p[8 + 2 * k] < FX_SYL ? p[8 + 2 * k] : FX_NONE;
+        st->fx[k].val = st->fx[k].cmd ? fx_clamp_val(st->fx[k].cmd, song->ticks_per_step, p[9 + 2 * k]) : 0;
+    }
+    if (p[2] >= song->patterns[p[0]][p[1]].length) /* a step past the end makes the block longer */
+        song->patterns[p[0]][p[1]].length = (uint16_t)(p[2] + 1);
+    app_mark_dirty();
+    return LINK_OK;
+}
+
+/* A phrase's cell. A phrase past the last is made, empty, with the ones
+ * between. */
+static int set_cell(const uint8_t *p, uint32_t n)
+{
+    SongEntry *e;
+    if (n != 3 || p[0] >= SONG_ARRANGE_LEN || !track_ok(p[1]) || (p[2] != PATTERN_NONE && !block_ok(p[2])))
+        return LINK_BADMSG;
+    if (p[0] >= song->arrange_len) {
+        undo_bytes(&song->arrange_len, 1);
+        undo_bytes(&song->arrangement[song->arrange_len], (uint32_t)(p[0] + 1 - song->arrange_len) * sizeof(SongEntry));
+        while (song->arrange_len <= p[0]) {
+            SongEntry *f = &song->arrangement[song->arrange_len++];
+            for (int t = 0; t < SONG_MAX_TRACKS; t++)
+                f->pattern[t] = PATTERN_NONE, f->level[t] = VOL_FULL;
+            f->steps = 0;
+            f->name[0] = 0;
+            f->kind = ENTRY_PHRASE;
+            f->section = SECTION_NONE;
+        }
+    }
+    e = &song->arrangement[p[0]];
+    if (e->kind == ENTRY_REF)
+        return LINK_BADMSG;
+    undo_bytes(&e->pattern[p[1]], 1);
+    e->pattern[p[1]] = p[2];
+    app_mark_dirty();
+    return LINK_OK;
+}
+
+static int set_length(const uint8_t *p, uint32_t n)
+{
+    int len;
+    if (n != 4 || !track_ok(p[0]) || !block_ok(p[1]))
+        return LINK_BADMSG;
+    len = p[2] | p[3] << 8;
+    if (len < 1 || len > PATTERN_MAX_STEPS)
+        return LINK_BADMSG;
+    undo_bytes(&song->patterns[p[0]][p[1]].length, sizeof(uint16_t));
+    song->patterns[p[0]][p[1]].length = (uint16_t)len;
+    app_mark_dirty();
+    return LINK_OK;
+}
+
+/* ------------------------------------------------------------- the hook --- */
+static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail, uint32_t *tail_n)
+{
+    *tail_n = 0;
+    switch (cmd) {
+    case LINK_CMD_STATUS:
+        *tail_n = status(tail, n >= 1 && (p[0] & 1));
+        return LINK_OK;
+    case LINK_CMD_INPUT: {
+        uint16_t seq;
+        if (n != 2 + 4 + 4 + 1 + PLAT_ENCS)
+            return LINK_BADMSG;
+        seq = (uint16_t)(p[0] | p[1] << 8);
+        if (seq == last_seq)
+            return LINK_OK; /* the answer was lost and it came again: already done */
+        last_seq = seq;
+        pressed |= (uint32_t)p[2] | (uint32_t)p[3] << 8 | (uint32_t)p[4] << 16 | (uint32_t)p[5] << 24;
+        keys = (uint32_t)p[6] | (uint32_t)p[7] << 8 | (uint32_t)p[8] << 16 | (uint32_t)p[9] << 24;
+        hold = p[10];
+        for (int e = 0; e < PLAT_ENCS; e++)
+            turns[e] = (int8_t)(turns[e] + (int8_t)p[11 + e]);
+        return LINK_OK;
+    }
+    case LINK_CMD_OPEN:
+        if (n != 2 || p[0] >= APP_SONG_SLOTS)
+            return LINK_BADMSG;
+        if (app_dirty && !(p[1] & 1))
+            return LINK_DIRTY;
+        return app_open_slot(p[0]) == STORE_OK ? LINK_OK : LINK_NONE;
+    case LINK_CMD_NEW:
+        if (app_dirty && !(n >= 1 && (p[0] & 1)))
+            return LINK_DIRTY;
+        app_new();
+        return LINK_OK;
+    case LINK_CMD_STEP:
+        return set_step(p, n);
+    case LINK_CMD_CELL:
+        return set_cell(p, n);
+    case LINK_CMD_LENGTH:
+        return set_length(p, n);
+    case LINK_CMD_SAVE: /* extra: the slot it went to */
+        if (app_save() != 0)
+            return LINK_FULL;
+        *extra = (uint32_t)app_slot;
+        return LINK_OK;
+    case LINK_CMD_PLAY:
+        if (n != 2 || p[1] >= song->arrange_len)
+            return LINK_BADMSG;
+        if (p[0] == 0)
+            player_stop();
+        else if (p[0] == 1)
+            player_play_song(p[1], false);
+        else
+            player_play_entry(p[1]);
+        return LINK_OK;
+    default:
+        return LINK_BADMSG;
+    }
+}
+
+void remote_init(void) { link_control = control; }

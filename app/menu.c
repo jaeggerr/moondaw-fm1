@@ -29,7 +29,7 @@ static int nrows, open_row;
 static int cur, top, asking, pending; /* pending: the row the question is about */
 enum { ASK_NONE, ASK_OPEN, ASK_PLAY };   /* what the question leads to once answered */
 static uint32_t prev_btns;
-static int cpu, peak; /* the audio interrupt's share of its time, and its worst since PLAY */
+static int peak; /* the worst block since PLAY, held */
 
 static bool before(const char *a, const char *b)
 {
@@ -130,14 +130,14 @@ static void draw(void)
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
     gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);
-    if (cpu >= 0) { /* what the song costs the chip: the worst block held while it plays */
+    if (app_cpu >= 0) { /* what the song costs the chip: the worst block held while it plays */
         char a[8], b[8];
         int x = PLAT_W - 8 - gfx_text_w(F_COND12, ui_dec(b, peak));
         gfx_text(F_COND12, x, PLAT_H - 4, b, peak > 90 ? C_MUTE : C_TEXT);
         x -= gfx_text_w(F_COND12, "MAX ") + 8;
         gfx_text(F_COND12, x, PLAT_H - 4, "MAX", C_DIM);
-        x -= gfx_text_w(F_COND12, ui_dec(a, cpu)) + 8;
-        gfx_text(F_COND12, x, PLAT_H - 4, a, cpu > 70 ? C_MUTE : C_TEXT);
+        x -= gfx_text_w(F_COND12, ui_dec(a, app_cpu)) + 8;
+        gfx_text(F_COND12, x, PLAT_H - 4, a, app_cpu > 70 ? C_MUTE : C_TEXT);
         x -= gfx_text_w(F_COND12, "CPU ");
         gfx_text(F_COND12, x, PLAT_H - 4, "CPU", C_DIM);
     }
@@ -219,11 +219,7 @@ bool menu_frame(const PlatInput *in)
             play();
         }
     }
-    {
-        int worst;
-        cpu = plat_audio_load(&worst);
-        peak = !player_playing() ? 0 : worst > peak ? worst : peak;
-    }
+    peak = !player_playing() ? 0 : app_block > peak ? app_block : peak; /* the worst block, from PLAY on */
     plat_led_btn(PB_PLAY, player_playing());
     gfx_frame(draw);
     return open_it;

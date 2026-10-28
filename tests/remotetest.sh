@@ -1,0 +1,45 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# tools/fm1_ctl.py against the whole app, end to end, over UDP: a song sent,
+# opened, read, written into step by step, played, driven by buttons and
+# knobs, saved, and fetched back to check what landed in the file.
+set -e
+SONG=${1:-}
+[ -f "$SONG" ] || { echo "remote end-to-end: no song given, skipped"; exit 0; }
+export MOONDAW_LINK_PORT=19792
+P="--udp $MOONDAW_LINK_PORT"
+CTL="python3 tools/fm1_ctl.py $P"
+mkdir -p build
+cc -std=c11 -O2 -D_DARWIN_C_SOURCE -D_DEFAULT_SOURCE -Wall tests/remote_dev.c app/app.c $UI $CORE -o build/remote_dev -lm
+build/remote_dev > build/remote_dev.log &
+DEV=$!
+sleep 0.3
+fail() { echo "remote end-to-end: $1"; kill $DEV 2>/dev/null; exit 1; }
+python3 tools/fm1_send.py "$SONG" $P > /dev/null || fail "send"
+$CTL status | grep -q 'screen=HOME' || fail "status on HOME"
+$CTL open kids || fail "open"
+$CTL status | grep -q 'song=KIDS dirty=0' || fail "the song in memory"
+$CTL cell 13 1 05 || fail "a new phrase's cell"
+$CTL length 1 05 8 || fail "a block's length"
+$CTL step 1 05 00 'C-4+E-4+G-4 i09 fVOL40' || fail "a step"
+$CTL step 1 05 04 'OFF' || fail "an OFF"
+$CTL status | grep -q 'dirty=1 .*phrases=20' || fail "the edits counted"
+$CTL loop 13 || fail "play the phrase round"
+sleep 0.3
+$CTL status | grep -q 'playing=1 phrase=19' || fail "it plays phrase 13 (19)"
+$CTL stop
+$CTL status | grep -q 'cpu=3 max=12' || fail "cpu and the worst block"
+$CTL press SEL || fail "press"
+sleep 0.1
+$CTL status | grep -q 'screen=SONG' || fail "SEL opened SONG"
+$CTL turn K2 1 || fail "turn"
+$CTL press HOME
+sleep 0.1
+$CTL save > /dev/null || fail "save"
+python3 tools/fm1_send.py --get kids -o build/remote_back.trk --force $P > /dev/null || fail "get"
+grep -q '^pat t0 05 len 8$' build/remote_back.trk || fail "the block's length in the file"
+grep -q '^00 C-4+E-4+G-4 i09 fVOL40$' build/remote_back.trk || fail "the step in the file"
+grep -q '^04 OFF$' build/remote_back.trk || fail "the OFF in the file"
+grep -A2 '^arr 13 ' build/remote_back.trk | grep -q '^t0 05$' || fail "the cell in the file"
+wait $DEV
+echo "remote end-to-end: $(sed -n 's/^remote_dev: //p' build/remote_dev.log) -> ok"

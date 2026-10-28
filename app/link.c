@@ -5,6 +5,8 @@
 
 enum { TIMEOUT_MS = 5000 };
 
+int (*link_control)(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail,
+                    uint32_t *tail_n);
 static int state, slot;
 static char name[STORE_NAME + 1];
 static uint32_t size, got, crc, want_crc, last_ms;
@@ -269,6 +271,12 @@ int link_frame(uint32_t ms, bool may)
         } else if (cmd == LINK_CMD_CANCEL) {
             drop();
             status = LINK_OK;
+        } else if (cmd >= LINK_CMD_STATUS && cmd < LINK_CMD_ANSWER && link_control) {
+            /* the store is the transfer's while one runs */
+            static uint8_t text[LINK_READ_MAX];
+            status = state == LINK_RECEIVING || state == LINK_SENDING
+                         ? LINK_BUSY : link_control(cmd, raw, d, &extra, text, &tail_n);
+            tail = text;
         }
         answer(cmd, status, seq, extra, tail, tail_n);
         if (state == LINK_DONE)

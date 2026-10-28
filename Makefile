@@ -20,7 +20,7 @@ else ifneq ($(filter $(APP),type mock),)
 SRCS    := app/$(APP).c app/gfx.c app/term.c
 CFLAGS  += -DGFX_SPECIMEN=1
 else
-UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/project.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
+UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/project.c app/remote.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)
@@ -66,6 +66,7 @@ test: sim web
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c -o build/link_test
 	build/link_test
 	tests/linktest.sh $(MOONDAW)/songs/KIDS.trk
+	UI="$(UI)" CORE="$(CORE)" tests/remotetest.sh $(MOONDAW)/songs/KIDS.trk
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/vox_test.c app/app.c $(UI) $(CORE) -o build/vox_test -lm

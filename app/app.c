@@ -30,6 +30,7 @@
 #include "undo.h"
 #include "pattern.h"
 #include "project.h"
+#include "remote.h"
 #include "songview.h"
 
 Song app_song
@@ -40,6 +41,7 @@ Song app_song
 char app_name[STORE_NAME + 1] = "DEMO";
 int app_slot = -1;
 bool app_dirty;
+int app_cpu, app_block, app_worst;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
@@ -47,6 +49,12 @@ static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, 
 static int mixer_from, project_from, pattern_from; /* the screen GLO leads back to */
 
 void app_mark_dirty(void) { app_dirty = true; }
+
+const char *app_screen(void)
+{
+    static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT" };
+    return name[screen];
+}
 
 int app_not_carried(void)
 {
@@ -215,6 +223,7 @@ void app_init(void)
     char last;
     int slot = -1;
 
+    remote_init();
     store_mount();
     if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(&last, 1) == 1)
         slot = last;
@@ -267,10 +276,18 @@ static void back_to(int from)
         loop_clear(), songview_open(false); /* the loop was a phrase's */
 }
 
-void app_frame(const PlatInput *in)
+void app_frame(const PlatInput *real)
 {
+    PlatInput mine = *real; /* the hands, and what the computer adds to them */
+    const PlatInput *in = &mine;
+    int entry, track, worst;
+
+    remote_input(&mine);
     player_set_master(in->master);
-    int entry, track;
+    app_cpu = plat_audio_load(&worst);
+    app_block = worst;
+    if (worst > app_worst)
+        app_worst = worst;
 
     int link_state;
 

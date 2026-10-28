@@ -22,6 +22,12 @@ int app_open_slot(int slot); /* 0 when loaded; the song in memory is untouched o
 void app_new(void);          /* an empty song, named SONG nn, not yet in flash */
 /* Lines and tokens the song's file had that this machine does not carry. */
 int app_not_carried(void);
+/* Where the hand is: HOME, SONG, SECTION, PATTERN, INSTRUMENT, MIXER, PROJECT. */
+const char *app_screen(void);
+/* The audio interrupt's share of its time, read once a frame: now, the
+ * worst block of the last frame, and the worst since the computer's
+ * STATUS set it back to 0. */
+extern int app_cpu, app_block, app_worst;
 
 
 /* The twelve buttons in the two rows of six they sit in under the
