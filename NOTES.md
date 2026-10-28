@@ -1059,6 +1059,24 @@ do not know the voice. INSTRUMENT still says SILENT HERE on a VOX
 instrument, and a turn of its ENGINE knob sends it to PULSE. PATTERN
 and PHRASE show a syllable's slot as `SYL` and its table index.
 
+## 2026-10-28 — INSTRUMENT agreed
+
+Jaeger's order: the instrument's NAME first, then hearing it -- **PLAY on
+INSTRUMENT is a preview of the instrument, not the song** -- then its
+settings by importance. Agreed on the images (`build/mock/
+instrument-proposal.png`), not yet on the panel: the FM-1 was busy with
+the chorus measurements.
+
+- The settings that go together share a row of up to four columns, and
+  **the column names at the top change with the row** (the MIXER's
+  returns row, generalised): NAME; SOUND (ENGINE, TIMBRE); ENV (ATK DEC
+  SUS REL); FILTER (CUT RES ENV VEL); LEVEL (GAIN, LEVEL); one row a
+  layer, LYR n (SOUND, SEMI, FINE, GAIN); `+ LYR` to add one. A VOICE
+  row (tract, accent) for a VOX instrument.
+- Five cells of 33 px a row; a column takes one or two (an engine's name).
+- A layer shows its timbre alone: each timbre belongs to one engine
+  (SAW is WAVE, 25% is PULSE).
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
