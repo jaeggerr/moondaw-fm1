@@ -1257,6 +1257,37 @@ the script collects them and draws again.
   status` answered through the real cable, and `list_demo.py` ran on the
   panel -- Jaeger: "parfait, rien à redire" (fast enough, drawn clean).
 
+## 2026-10-29 — an idea for later: the band on stage
+
+Jaeger, "inutile mais rigolo": a little cartoon engine in the manner of
+Animaconda (his project, `~/Documents/Animaconda`), minimal, in C. You
+build a band -- one musician per track -- with a simple face editor
+(hair, eyes, mouth, skin, clothes), give each an instrument, pick a stage
+set, and the song is played as a clip on the panel, the musicians moving
+in time. Not started; only weighed for resources (no implementation
+research asked for):
+
+- Flash: characters as vector shapes, 2-4 KB each (Ginette as a
+  bitmap: 85 KB raw, 11-19 KB as 8-16 colours run-length, 6.7 KB as PNG);
+  a library of ~50 face parts 10-15 KB; instruments and sets a few KB;
+  the drawing engine 10-20 KB of code. **40-60 KB in all**, against ~440
+  KB free in the program's area (the songs' store is separate).
+- RAM: no frame buffer needed (the screen is drawn in bands already); a
+  scene's state is a few hundred bytes; a musician saved as ~10 bytes of
+  part numbers.
+- CPU: the audio interrupt keeps priority, so a heavy song slows the
+  animation, never the sound; two cores, 57 % at worst on DAFT-PUNK-EN's
+  chorus.
+- **The real limit is the panel's bandwidth**: moving figures change many
+  bands a frame; 10-20 frames a second is a guess (the SPI's speed is not
+  measured) and enough for a cartoon.
+- Animations predefined in code: two or three poses an instrument,
+  triggered by its track's notes (a stick hit, a strum, a mouth for VOX),
+  heads on the beat (the player already says which step plays).
+- On a 240 px wide stage 4-5 musicians fit; 8 tracks would be crowded.
+- Where the band is kept: with the song (check that moondaw keeps lines
+  it does not know in a .trk) or apart in the device's flash.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
