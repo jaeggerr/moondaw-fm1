@@ -850,6 +850,19 @@ spell them.
   left gets there from any block (tried on the device: "ça va vite").
   Piano keys are kept for notes on every screen, never for commands.
 
+**The road down, agreed 28/10: HOME → SONG → SECTION → block.** A block
+is never edited from SONG: KNOB 1 goes left of the first track onto the
+phrase's number, SEL there opens its SECTION, SEL on a track there opens
+its block. **GLO is "back" everywhere** (one level up, or out of a
+panel); HOME is "home". ("Section" is Jaeger's word for a phrase.)
+
+**SECTION, mocked up**: SONG's grid turned to steps. One row a step, its
+number at the left, white on the beat (every 4) and grey between; one
+column a track with the note it plays on that step, `--` when none.
+Five tracks a screen, not six: at six, `A-3C#3` ran together. SELECT
+the step, KNOB 1 the track; the section's number small at the top
+left. No role for KNOB 2 yet (transposing the note is a candidate).
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
