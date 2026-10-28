@@ -11,13 +11,6 @@
  * small at the bottom. SELECT moves, SEL opens. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
-#define H_BG     GFX_RGB(0, 0, 0)
-#define H_TEXT   GFX_RGB(235, 235, 235)
-#define H_DIM    GFX_RGB(120, 120, 120)
-#define H_OPEN   GFX_RGB(0, 200, 230)
-#define H_DIRTY  GFX_RGB(255, 170, 0)
-#define H_CURSOR GFX_RGB(80, 220, 120)
-
 #ifndef MOONDAW_VERSION
 #define MOONDAW_VERSION "dev"
 #endif
@@ -94,20 +87,20 @@ static void draw_question(void)
 {
     const char *name = pending < nrows ? rows[pending].name : "a new project";
     int y = 34;
-    gfx_text(F_COND20, TEXT_X, y, app_name, H_DIRTY);
-    gfx_text(F_COND20, TEXT_X, y += ROW, "is not saved.", H_TEXT);
-    gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", H_TEXT);
-    gfx_text(F_COND20, TEXT_X, y += ROW, "SEL  lose them", H_TEXT);
-    gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", H_DIM);
-    gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then opens ", H_DIM);
-    gfx_text(F_COND12, TEXT_X + gfx_text_w(F_COND12, "then opens "), y, name, H_DIM);
+    gfx_text(F_COND20, TEXT_X, y, app_name, C_FX);
+    gfx_text(F_COND20, TEXT_X, y += ROW, "is not saved.", C_TEXT);
+    gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", C_TEXT);
+    gfx_text(F_COND20, TEXT_X, y += ROW, "SEL  lose them", C_TEXT);
+    gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", C_DIM);
+    gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then opens ", C_DIM);
+    gfx_text(F_COND12, TEXT_X + gfx_text_w(F_COND12, "then opens "), y, name, C_DIM);
 }
 
 static void draw(void)
 {
     int count = nrows + 1; /* + NEW */
 
-    gfx_fill(0, 0, PLAT_W, PLAT_H, H_BG, 255);
+    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
     if (asking) {
         draw_question();
         return;
@@ -115,21 +108,21 @@ static void draw(void)
     for (int r = 0; r < ROWS && top + r < count; r++) {
         int i = top + r, y = r * ROW, base = y + 2 + FONTS[F_COND20].ascent, x;
         bool here = i == cur;
-        uint16_t c = here ? H_BG : i < nrows ? H_TEXT : H_DIM;
+        uint16_t c = here ? C_ON_ACC : i < nrows ? C_TEXT : C_DIM;
         if (here)
-            gfx_slab(2, y + 1, PLAT_W - 4 - (count > ROWS ? 6 : 0), ROW - 2, H_CURSOR, 255);
+            gfx_slab(2, y + 1, PLAT_W - 4 - (count > ROWS ? 6 : 0), ROW - 2, C_ACCENT, 255);
         if (i == open_row)
-            gfx_fill(4, y + 6, 3, ROW - 12, here ? H_BG : H_OPEN, 255);
+            gfx_fill(4, y + 6, 3, ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
         x = gfx_text(F_COND20, TEXT_X, base, i < nrows ? rows[i].name : "+ NEW", c);
         if (i == open_row && app_dirty)
-            gfx_fill(x + 6, base - 9, 7, 7, here ? H_BG : H_DIRTY, 255);
+            gfx_fill(x + 6, base - 9, 7, 7, here ? C_ON_ACC : C_FX, 255);
     }
     if (count > ROWS) { /* where the screen is in the list */
         int h = ROWS * ROW * ROWS / count, y = ROWS * ROW * top / count;
-        gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, GFX_RGB(40, 40, 40), 255);
-        gfx_fill(PLAT_W - 4, y, 2, h, H_DIM, 255);
+        gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
-    gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, H_DIM);
+    gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);
 }
 
 /* -------------------------------------------------------------- api --- */

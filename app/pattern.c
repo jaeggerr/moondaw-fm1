@@ -348,7 +348,7 @@ static void draw_pop(void)
     y = y < HEAD_Y ? HEAD_Y : y + h > BTN_Y - 2 ? BTN_Y - 2 - h : y;
 
     gfx_fill(x - 1, y - 1, POP_W + 2, h + 2, C_BG, 255);
-    gfx_slab(x, y, POP_W, h, GFX_RGB(0x1A, 0x20, 0x29), 255);
+    gfx_slab(x, y, POP_W, h, C_POP, 255);
     gfx_frame_rect(x, y, POP_W, h, C_DIM, 115);
     gfx_text(F_MONO8, gfx_text(F_MONO8, x + 4, y + 9, "K1", C_ACCENT) + 3, y + 9, "EFFECT", C_DIM);
     gfx_text(F_MONO8, x + POP_W - 4 - gfx_text_w(F_MONO8, slot_name[k]), y + 9, slot_name[k], C_DIM);
