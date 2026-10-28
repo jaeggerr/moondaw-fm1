@@ -786,6 +786,23 @@ distance: readable "sans trop d'effort" from 18, **read at a glance at
   is to be put on the panel at that size before being chosen.
 - The 100 px square has not been measured yet (the panel's pixel pitch).
 
+## 2026-10-28 — the new interface, one screen at a time
+
+Jaeger's rule from now on: one screen at a time, few decisions put to
+him, each judged on the panel (`MOONDAW_APP=mock`, `app/mock.c`). A
+screen is settled when he has looked at it on the FM-1 and said so; that
+is what "validated" means from here, unlike 10/10.
+
+**HOME — validated on the panel, 28/10.** The projects by name only
+(no tempo, no counts: they do not help to choose), one a row, CONDENSED
+20 on rows of 28 px, eight to a screen; the open project marked by a
+bar at its left, an amber dot after its name while it has unsaved
+changes; `+ NEW` last; the cursor starts on the open project; a thin
+scroll bar on the right only when the list is longer than a screen; the
+firmware version small (CONDENSED 12) at the bottom. Names as the files
+spell them. Not yet written into the app: `app/menu.c` is still the
+10/10 screen.
+
 ## Open
 
 - The interface: 30x30 cells, 27 keys, 14 buttons, 7 encoders.
