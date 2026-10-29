@@ -26,8 +26,9 @@ int ui_loop_slot(int x, int y);
  * `usable` is a PB_* mask; the screens that have none yet give 0. On
  * until a SETTINGS screen can turn it off. */
 extern bool ui_guide;
-/* Lit rather than glowing (29/10, a trial): the glow did not read on the
- * white LEDs. PLAY is then left out: lit is its state. */
+/* Lit rather than glowing (29/10): the glow is worse than dark on the white
+ * LEDs, the labels drown in it; mid would do, lit reads best. PLAY (and
+ * REC, later) are apart: they light only for their state, playing. */
 extern bool ui_guide_lit;
 void ui_led_guide(uint32_t usable);
 /* The LEDs were written behind the guide's back (the link's LED): the

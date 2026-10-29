@@ -1419,7 +1419,9 @@ screens put the glow out.
 
 The glow did not read on the white LEDs (his words: the labels drown, it
 mixes with the keyboard's cyan): the guide lights the usable buttons fully
-for now (`ui_guide_lit`), PLAY left out of it -- lit is its state.
+(`ui_guide_lit`). Weighed on the panel with the link's LED: the glow is
+worse than dark, mid acceptable, lit best -- kept. PLAY (and REC, later)
+are apart: they light only for their state, never as "usable".
 
 ## 2026-10-29 — LED on the link
 
