@@ -349,6 +349,8 @@ static void banner(const char *s)
 static void fm1_main(void)
 {
     static PlatInput in;
+    uint32_t splash_t0 = 0;
+    int splash_done = 0;
     uint32_t f = irq_save();
     flash_ok = FL_FAR(fl_jedec_ram)() == 0x856014u;     /* the expected 1 MiB part, else no flash access at all */
     irq_restore(f);
@@ -362,6 +364,7 @@ static void fm1_main(void)
      * It holds nothing up, and it is the only sign at power-on that this is
      * MOONDAW on the machine and not what came on it (app/splash.h). */
     splash_show();
+    splash_t0 = fm1_ticks();                    /* held to SPLASH_HOLD_MS from here, in the loop below */
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;
@@ -487,7 +490,14 @@ static void fm1_main(void)
         felucca_dbg.stage = 4;
         input_read(&in);
         felucca_dbg.stage = 5;
-        app_frame(&in);
+        /* The mark stays its second. Everything above has already run this
+         * time round -- the watchdog, USB, the link, the way into UBOOT --
+         * so only the first frame waits, and only for what is left of it. */
+        if (!splash_done &&
+            (uint32_t)(fm1_ticks() - splash_t0) >= SPLASH_HOLD_MS * 1000u * FM1_TICKS_PER_US)
+            splash_done = 1;
+        if (splash_done)
+            app_frame(&in);
         felucca_dbg.stage = 6;
         while (fm1_ms - m < 15u)
             ;                                   /* ~60 frames/s at most */

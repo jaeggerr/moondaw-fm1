@@ -10,10 +10,19 @@
  * frame. The mark is drawn into that window and left there; the app's
  * first frame overwrites it band by band, as any other screen change.
  *
- * So: no hold, no delay, nothing waits on it. An instrument is playable
- * the moment it can be. */
+ * That window is not quite a second, and the mark is worth looking at,
+ * so it is held to one: SPLASH_HOLD_MS counts from the moment it is
+ * drawn, not from the end of the boot, so the time already spent coming
+ * up is time served -- what is added is only the remainder, and only to
+ * the first frame. firmware.c keeps that clock (the machine's business,
+ * not this file's) and goes on running its loop while it ticks: the
+ * audio, USB, the link and the OCT- + OCT+ way into UBOOT are all live
+ * behind the picture. Nothing is blocked; the app's first frame waits,
+ * and that is all. */
 #ifndef SPLASH_H
 #define SPLASH_H
+
+#define SPLASH_HOLD_MS 1000
 
 void splash_show(void);
 
