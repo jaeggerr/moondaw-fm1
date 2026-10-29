@@ -448,7 +448,7 @@ uint8_t fx_clamp_val(uint8_t cmd, uint8_t ticks_per_step, int v)
         hi = ticks_per_step > 0 ? ticks_per_step : 1;
         break;
     case FX_VOL: case FX_VEL: case FX_PAN: case FX_REV: case FX_ECH:
-    case FX_TSP: case FX_SLI: case FX_SWP:
+    case FX_TSP: case FX_SLI: case FX_SWP: case FX_PRB:
         hi = 127;
         break;
     case FX_DUT:
@@ -478,11 +478,12 @@ uint8_t fx_clamp_val(uint8_t cmd, uint8_t ticks_per_step, int v)
 static const char *const fx_names[FX_COUNT] = {
     "---", "DLY", "CUT", "GAT", "RET", "STR", "VOL", "VEL", "PAN", "REV",
     "ECH", "DUT", "BPM", "TSP", "SLI", "VIB", "SWP", "SCP", "ARP", "TRM",
-    "FLT", "RES", "WAV", "RMP", "CRS", "RAT", "SYL", "SMP",
+    "FLT", "RES", "WAV", "RMP", "CRS", "RAT", "SYL", "SMP", "PRB",
 };
 
 /* moondaw's own lines (src/sequencer/song.c), word for word: each was
- * weighed there against its neighbours in the list. */
+ * weighed there against its neighbours in the list. PRB's is this
+ * firmware's -- moondaw has no such effect. */
 static const char *const fx_descs[FX_COUNT] = {
     "empty slot",         /* --- */
     "hold to tick N",     /* DLY */
@@ -512,6 +513,7 @@ static const char *const fx_descs[FX_COUNT] = {
     "downsample 00=off",  /* RAT */
     "syllable VOX sings", /* SYL */
     "sample NN of table", /* SMP */
+    "chance, 7F always",  /* PRB */
 };
 
 const char *fx_desc(uint8_t cmd)

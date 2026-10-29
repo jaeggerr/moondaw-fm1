@@ -16,6 +16,10 @@
  *   samples       the table and the zones are carried whole; a name
  *                 plays the bank's sample of the same name, `begin` and
  *                 `loop` are kept for the file and not played
+ *   effects       one of its own at the end of the list, PRB, the
+ *                 chance a step's notes play at all: moondaw writes 27
+ *                 commands, this reads and writes 28. A file carrying
+ *                 one comes back from moondaw without it.
  *   not carried   the reference record,
  *                 drive / amp / tone, preview tunes
  *
@@ -117,6 +121,7 @@ enum {
     FX_WAV, FX_RMP, FX_CRS, FX_RAT,
     FX_SYL, /* value: an index into the song's syllable table */
     FX_SMP, /* value: an entry of the sample table, for this step's notes */
+    FX_PRB, /* the chance this step's notes play, 00..7F; the FM-1's own */
     FX_COUNT
 };
 

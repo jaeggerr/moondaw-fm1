@@ -3,7 +3,9 @@
 """Writes app/fx_help.c: each effect's whole page, copied from moondaw's
 src/sequencer/song.c (fx_helps), so HELP > EFFECTS on the FM-1 says what the
 other MOONDAW apps say, word for word. Run it again when moondaw's pages
-change; the two lists of effects must be the same, in the same order.
+change; moondaw's list of effects must be the START of the FM-1's, which
+may carry its own at the end -- their pages are written below, there being
+nothing upstream to copy them from.
 
     python3 tools/gen_fx_help.py [../moondaw]
 """
@@ -13,14 +15,20 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "protos"))
 from effects import c_table  # noqa: E402
 
+# The effects moondaw does not have. Their pages are the FM-1's own text.
+EXTRA = {
+    "PRB": ("The chance this step's notes play at all. 00 never, 40 one time in two, 7F always. The roll is made when the row comes, once, and nothing remembers it.\\nOnly the NOTES are at stake. The other fx of the row are read on time, as they are under a DLY: a VOL beside it moves the fader whether the note happens or not, and a CUT beside it ends what is sounding either way. A setter that fired at random would leave the track in a state the page does not show.\\nA failed roll is an empty step, not a rest: nothing is struck and nothing is released, so a long note under it carries on. Write the rest with a CUT if the hole is to be heard.\\nA one-shot: it dies with its step. There is no PRB in force over a passage, and 7F is only ever written to say out loud that this step is the certain one.\\nThe roll is taken back at every PLAY, so a take from the top plays the same twice and a passage can be judged, edited and judged again. Within the take the loop does vary, pass by pass.\\nThis command is the FM-1's own: the other MOONDAW apps do not have it, and a .trk that writes it comes back from them with the cell gone."),
+}
+
 root = pathlib.Path(__file__).resolve().parent.parent
 moondaw = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else root.parent / "moondaw")
 src = (moondaw / "src/sequencer/song.c").read_text()
 theirs, mine = c_table(src, "fx_names["), c_table((root / "core/song.c").read_text(), "fx_names[")
-if theirs != mine:
+if mine[:len(theirs)] != theirs:
     sys.exit(f"the effects differ: moondaw {theirs}, FM-1 {mine}")
 helps = c_table(src, "fx_helps[")
 helps += [None] * (len(mine) - len(helps))  # the table is FX_COUNT long: what is not written is NULL
+helps = [h if h is not None else EXTRA.get(name) for name, h in zip(mine, helps)]
 
 
 def literal(s):
