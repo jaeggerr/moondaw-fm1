@@ -19,7 +19,7 @@ else ifneq ($(filter $(APP),type),)
 SRCS    := app/$(APP).c app/gfx.c app/term.c
 CFLAGS  += -DGFX_SPECIMEN=1
 else
-UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/project.c app/remote.c app/canvas.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
+UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/syllable.c app/project.c app/remote.c app/canvas.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)
@@ -44,7 +44,7 @@ core/tables.h: tools/gen_tables.c
 test: sim web
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy build/sim/moondaw-fm1 --selftest build/sim/selftest.bmp $(SELFTEST_SONG)
 	node platform/web/test.mjs
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
 	build/pattern_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/store_test.c core/store.c -o build/store_test
 	build/store_test
@@ -60,7 +60,7 @@ test: sim web
 	build/project_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/phrase_test
 	build/phrase_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/undo_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/undo_test
 	build/undo_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c -o build/link_test
 	build/link_test

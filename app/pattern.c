@@ -6,6 +6,7 @@
 #include "edit.h"
 #include "gfx.h"
 #include "grid.h"
+#include "syllable.h"
 #include "ui.h"
 #include "undo.h"
 
@@ -22,6 +23,7 @@
  *                        block's length)
  *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
+ *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
  *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
  *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
  *   GLO   back where it was opened from     ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
@@ -47,6 +49,8 @@ static int play_row = -1;
  * note, struck again every AGAIN frames. */
 enum { CH_TOP = 24, CH_ROWS = 7, CH_N = SONG_MAX_INSTR + 1, SETTLE = 12, AGAIN = 45 };
 static bool choosing, listening;
+static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
+static int syl_slot;
 static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
 
 /* ----------------------------------------------------------- data --- */
@@ -107,7 +111,8 @@ static void turn_fx_cmd(int row, int slot, int d)
 
 static void turn_fx_val(int row, int slot, int d)
 {
-    Step *st = step_at(row)->fx[slot].cmd != FX_NONE ? step_w(row) : 0;
+    uint8_t cmd = step_at(row)->fx[slot].cmd;
+    Step *st = cmd != FX_NONE && cmd != FX_SYL ? step_w(row) : 0; /* a syllable is written, not turned */
     if (st)
         st->fx[slot].val = fx_clamp_val(st->fx[slot].cmd, song->ticks_per_step, st->fx[slot].val + d);
 }
@@ -145,6 +150,15 @@ static void draw_cell(int v, int r, int c, bool band)
         }
         if (on)
             grid_hollow(v, x, w);
+        if (f.cmd == FX_SYL) { /* the syllable itself, as the file writes it */
+            char q[SONG_SYL_LEN + 1] = "'";
+            const char *t = song_syl(song, f.val);
+            for (int i = 0; t[i] && i < SONG_SYL_LEN - 1; i++)
+                q[i + 1] = t[i], q[i + 2] = 0;
+            gfx_text_mid(gfx_text_w(F_COND20, q) > w - 4 ? F_COND14 : F_COND20, x, w, grid_base(v), q,
+                         grid_ink(band, on, C_TEXT));
+            return;
+        }
         tw = gfx_text_w(F_COND20, fx_name(f.cmd)) + 4 + gfx_text_w(F_COND20, grid_hex2(s, f.val));
         tx = gfx_text(F_COND20, x + (w - tw) / 2, grid_base(v), fx_name(f.cmd), grid_ink(band, on, C_FX));
         gfx_text(F_COND20, tx + 4, grid_base(v), s, grid_ink(band, on, C_TEXT));
@@ -162,6 +176,42 @@ static void draw_cell(int v, int r, int c, bool band)
             gfx_text(F_COND20, x + 42 > tx + 10 ? x + 42 : tx + 10, grid_base(v),
                      song->instruments[k % SONG_MAX_INSTR].name, grid_ink(band, on, named ? C_TEXT : C_DIM));
     }
+}
+
+/* ---------------------------------------------------------- syllable --- */
+/* SEL on an effect slot: the row's syllable, in its own slot if it has
+ * one, else in this one when it is empty. Another effect is left alone. */
+static void syl_open(void)
+{
+    const Step *st = step_at(cur_row);
+    syl_slot = cur_col;
+    for (int i = 0; i < STEP_MAX_FX; i++)
+        if (st->fx[i].cmd == FX_SYL)
+            syl_slot = i;
+    if (st->fx[syl_slot].cmd != FX_NONE && st->fx[syl_slot].cmd != FX_SYL)
+        return;
+    syllable_open(st->fx[syl_slot].cmd == FX_SYL ? song_syl(song, st->fx[syl_slot].val) : "",
+                  edit_instr_at(song, track, pat, cur_row), st->notes[0] <= NOTE_MAX ? st->notes[0] : 60, track,
+                  cur_row);
+    writing_syl = true;
+}
+
+static void write_syl(void)
+{
+    const char *t = syllable_text();
+    const Step *rd = step_at(cur_row);
+    int idx = t[0] ? song_syl_intern(song, t) : -1;
+    Step *st;
+    if (t[0] && idx < 0) {
+        said = "SYL FULL";
+        return;
+    }
+    if (!t[0] && rd->fx[syl_slot].cmd != FX_SYL)
+        return; /* nothing was there, nothing is */
+    if ((st = step_w(cur_row)) == 0)
+        return;
+    st->fx[syl_slot].cmd = t[0] ? FX_SYL : FX_NONE;
+    st->fx[syl_slot].val = t[0] ? (uint8_t)idx : 0;
 }
 
 /* ------------------------------------------------- choose instrument --- */
@@ -328,7 +378,7 @@ bool pattern_open(Song *s, int e, int t)
     cur_row = top = cur_col = 0;
     view = V_NOTES;
     said = 0;
-    choosing = listening = false;
+    choosing = listening = writing_syl = false;
     sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* KNOB 3's order: alphabetical, the empty slot first. */
@@ -385,6 +435,17 @@ int pattern_frame(const PlatInput *in)
         gfx_frame(choosing ? ch_draw : draw);
         return PATTERN_STAY;
     }
+    if (writing_syl) {
+        int r = syllable_frame(in, btns, keys);
+        if (r == SYLLABLE_KEPT)
+            write_syl();
+        if (r != SYLLABLE_TYPING) {
+            writing_syl = false;
+            gfx_invalidate();
+        }
+        gfx_frame(writing_syl ? syllable_draw : draw);
+        return PATTERN_STAY;
+    }
     if (PRESSED(PB_ENV) && view == V_INS) { /* ENV twice: from the column into the instrument */
         player_note_off();
         return PATTERN_INSTR;
@@ -396,6 +457,8 @@ int pattern_frame(const PlatInput *in)
     }
     if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0)
         ch_open();
+    if (PRESSED(PB_SEL) && view == V_FX && cur_col >= 0)
+        syl_open();
     cur_row += in->enc[PE_SELECT];
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
     cur_col += in->enc[PE_K1];

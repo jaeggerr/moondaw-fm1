@@ -25,6 +25,8 @@ void player_set_loop(int from, int len);
  * does on the INSTRUMENT screen, and the note PATTERN just wrote. One
  * at a time; the next one replaces it. */
 void player_note_on(int instr, uint8_t note);
+/* The same, a VOX instrument singing `syl` (the SYLLABLE screen). */
+void player_note_sing(int instr, uint8_t note, const char *syl);
 void player_note_off(void);
 void player_toggle_mute(int track);
 void player_set_master(int pot);   /* 0..1023 */

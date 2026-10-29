@@ -23,5 +23,14 @@
 #define C_WHITE  GFX_RGB(0xFF, 0xFF, 0xFF)
 #define C_TRACK  GFX_RGB(0x28, 0x28, 0x28) /* a scroll bar's groove */
 #define C_POP    GFX_RGB(0x1A, 0x20, 0x29) /* a panel opened over the screen */
+/* The SYLLABLE screen's keyboard, drawn as the keys lie under the hand. */
+#define C_KEY      GFX_RGB(0xD8, 0xD8, 0xD8) /* a white key that types */
+#define C_KEY_ON   GFX_RGB(0x00, 0x00, 0x00) /* its sign */
+#define C_KEY_NONE GFX_RGB(0x3A, 0x3A, 0x3A) /* a white key that types nothing on this layer */
+#define C_KEY_B    GFX_RGB(0x2C, 0x6E, 0x7A) /* a black key: a vowel */
+#define C_KEY_BOFF GFX_RGB(0x14, 0x14, 0x14) /* a black key that types nothing */
+#define C_WELL     GFX_RGB(0x10, 0x18, 0x20) /* the frame the syllable is shown in */
+#define C_WHEEL    GFX_RGB(0x1F, 0x3A, 0x12) /* under the wheel's sign */
+#define C_SLOT     GFX_RGB(0x1A, 0x1A, 0x1A) /* a slot without the cursor */
 
 #endif

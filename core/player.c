@@ -408,7 +408,9 @@ static volatile uint8_t mute_mask, solo_mask;
 static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio side never sees half of it */
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
-enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF };
+enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL };
+/* What a CMD_NOTE_SYL sings: written before the command is queued. */
+static char audition_syl[VOX_SYL_LEN];
 static volatile struct { uint8_t type, a, b; } cmd_q[8];
 static volatile uint8_t cmd_w, cmd_r;
 
@@ -1368,10 +1370,14 @@ static void handle_cmds(void)
             song_once = false;
         } else if (type == CMD_STOP) {
             stop_play();
-        } else if (type == CMD_NOTE_ON) {
+        } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL) {
             /* The audition: one note and its layers, at the level moondaw
              * previews at, outside the song and its sends. */
             Track *tr = &tracks[AUDITION];
+            if (type == CMD_NOTE_SYL) { /* a VOX instrument sings this syllable */
+                syl_copy(tr->fx.syl, audition_syl);
+                tr->fx.syl_written = true;
+            }
             const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
@@ -1812,6 +1818,11 @@ void player_set_loop(int from, int len)
 }
 void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
 void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }
+void player_note_sing(int instr, uint8_t note, const char *syl)
+{
+    syl_copy(audition_syl, syl);
+    cmd_push(CMD_NOTE_SYL, (uint8_t)instr, note);
+}
 void player_toggle_mute(int track)
 {
     if (track >= 0 && track < SONG_MAX_TRACKS)

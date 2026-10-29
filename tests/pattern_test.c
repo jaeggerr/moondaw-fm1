@@ -96,6 +96,41 @@ int main(void)
     enc(PE_K2, 50);
     CHECK("GAT cannot outlast its step", st(0)->fx[0].val == song.ticks_per_step);
 
+    /* SEL on an effect: the step's SYLLABLE (KEYS: G5 is M, F#3 is A) */
+    press(PB_SEL);            /* on GAT: another effect is left alone */
+    keys(1u << 26);
+    keys(0);
+    CHECK("SEL on GAT opens nothing: G5 writes a note", st(0)->notes[0] == 79);
+    enc(PE_K1, 2);            /* the third slot, empty (the second holds VOL) */
+    press(PB_SEL);
+    keys(1u << 26);
+    keys(0);
+    keys(1u << 1);
+    keys(0);
+    press(PB_SEL);
+    CHECK("the keys type the syllable, SEL writes it in the empty slot",
+          st(0)->fx[2].cmd == FX_SYL && !strcmp(song_syl(&song, st(0)->fx[2].val), "MA") && st(0)->notes[0] == 79);
+    enc(PE_K1, -1);
+    press(PB_SEL);            /* from VOL's slot: the row's syllable, where it is */
+    enc(PE_PRESET, 1);        /* WHEEL */
+    enc(PE_K1, 2);
+    enc(PE_K2, 14);           /* - then A..N */
+    press(PB_SEL);
+    CHECK("the wheel adds a sign to the same syllable",
+          st(0)->fx[1].cmd == FX_VOL && !strcmp(song_syl(&song, st(0)->fx[2].val), "MAN"));
+    press(PB_SEL);
+    press(PB_LFO);            /* the wheel's slot emptied */
+    press(PB_GLO);
+    CHECK("GLO leaves it as it was", !strcmp(song_syl(&song, st(0)->fx[2].val), "MAN"));
+    press(PB_SEL);
+    enc(PE_PRESET, 1);        /* KEYS: LFO rubs the last out */
+    press(PB_LFO);
+    press(PB_LFO);
+    press(PB_LFO);
+    press(PB_SEL);
+    CHECK("an empty syllable empties the slot", st(0)->fx[2].cmd == FX_NONE);
+    enc(PE_K1, -1);
+
     /* INS */
     press(PB_ENV);
     enc(PE_SELECT, 2);

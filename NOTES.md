@@ -1381,10 +1381,32 @@ the journal's, so the records keep what the undo replaced, and doing it
 again swaps them back. The next edit forgets what could be done again.
 No memory added.
 
+## 2026-10-29 — the SYLLABLE screen
+
+Writing a VOX syllable on the device (`app/syllable.c`), from three
+prototypes tried by hand (`tools/protos/syllables.py`): Jaeger kept two
+and set the third aside (onset / vowel / coda on three knobs). PRESETS
+turns from one to the other on the same syllable, as the hand is at ease:
+
+- KEYS: a sign a key -- consonants on the white keys in QWERTY's order
+  (R T P, S D F G J K L, Z C V B N M), vowels on the black; OCT+/- the
+  other layer (Q H X +, and 0 5 1 4 8); LFO rubs out, ARP marks it weak.
+  Quick once learnt; no room to say what a sign sounds like.
+- WHEEL: five slots, KNOB 1 the slot, KNOB 2 the sign in alphabetical
+  order (letters, digits, + .), the sign's sound written below.
+
+Each change is sung on the step's note by its instrument
+(`player_note_sing`, the audition singing a given syllable), PLAY sings it
+again; SEL writes it, GLO leaves it. Reached by SEL on an FX slot in
+PATTERN: the row's syllable where it is, else in an empty slot; another
+effect is left alone. An emptied syllable empties its slot. The FX view
+now shows a syllable as the file writes it, `'AQ`, not `SYL 03`; KNOB 2
+no longer turns its index.
+
 ## Open
 
-- The voice (VOX): writing syllables on the device, and the screens
-  that do not know it sounds (above).
+- The voice (VOX): the screens that do not know it sounds (above);
+  syllables are written on the device since 29/10.
 - LOOP, the PATTERN selection, cell levels: gone with the old screens,
   to be redesigned.
 - The limiter.
