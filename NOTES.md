@@ -1313,6 +1313,13 @@ titled CHOOSE PATTERN with PHR nn / TRK n, a play sign on every block,
 filled green on the one PLAY plays, and SEL TAKE / PLAY LISTEN / GLO BACK
 at the foot.
 
+PLAY there is a listening switch (his question: automatic or not?). Off,
+moving the cursor is silent -- passing through the list on stage starts
+nothing. On, the block the cursor rests on for 200 ms (12 frames) plays
+by itself; `--` is silence, the switch still on. PLAY again, SEL or GLO
+turn it off; the PLAY light says it is on. The blocks have no names, so
+one is found by ear: this spares the press on each.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens

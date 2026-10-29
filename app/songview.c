@@ -15,8 +15,9 @@
  *   SELECT  the phrase          KNOB 1  the track; left of the first, the phrase's number
  *   KNOB 2  on a cell its block, -- below 00 and one new block past the last;
  *           on the number the phrase's length (AUTO, then steps)
- *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY plays
- *           one alone, SEL takes it, GLO goes back); on the number: the SECTION
+ *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY listens:
+ *           the block the cursor rests on plays alone; SEL takes it, GLO goes
+ *           back); on the number: the SECTION
  *   SEQ     on a cell: its block, to edit; on the number: a copy of the phrase below
  *   LFO     on the number: delete the phrase (twice)
  *   FX      the MIXER      EDIT  the PROJECT
@@ -37,6 +38,12 @@ static int play_row = -1;
  * for real, the track soloed; GLO or HOME puts back what was there. */
 static bool pop;
 static int pop_cur, pop_top, pop_orig, pop_preview = -1;
+/* PLAY turns the listening on: from then on the block the cursor rests on
+ * plays by itself, once it has rested SETTLE frames (a quick turn of SELECT
+ * starts nothing on the way); PLAY again, SEL or GLO turn it off (29/10). */
+enum { SETTLE = 12 }; /* frames: 200 ms */
+static bool listening;
+static int settle;
 
 static SongEntry *entry_at(int r) { return &song->arrangement[r]; }
 static bool is_ref(int r) { return entry_at(r)->kind == ENTRY_REF; }
@@ -177,8 +184,22 @@ static void preview_end(void)
     pop_preview = -1;
 }
 
+/* The block under the cursor, alone, round and round; -- is silence. */
+static void preview_here(void)
+{
+    preview_end();
+    if (pop_block(pop_cur) == PATTERN_NONE)
+        return;
+    entry_at(row)->pattern[col] = pop_block(pop_cur);
+    if (!player_soloed(col))
+        player_toggle_solo(col);
+    player_play_entry(row);
+    pop_preview = pop_cur;
+}
+
 static void pop_close(bool take)
 {
+    listening = false;
     preview_end();
     if (take && pop_block(pop_cur) != pop_orig)
         set_block(row, col, pop_block(pop_cur));
@@ -335,26 +356,23 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     if (pop) {
         pop_cur += in->enc[PE_SELECT];
         grid_follow(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
+        if (in->enc[PE_SELECT])
+            settle = SETTLE;
         if (PRESSED(PB_PLAY)) {
-            if (pop_preview == pop_cur) {
+            listening = !listening;
+            if (listening)
+                preview_here();
+            else
                 preview_end();
-            } else {
-                preview_end();
-                if (pop_block(pop_cur) != PATTERN_NONE) { /* the block alone, round and round */
-                    entry_at(row)->pattern[col] = pop_block(pop_cur);
-                    if (!player_soloed(col))
-                        player_toggle_solo(col);
-                    player_play_entry(row);
-                    pop_preview = pop_cur;
-                }
-            }
+        } else if (listening && settle > 0 && --settle == 0 && pop_cur != pop_preview) {
+            preview_here();
         }
         if (PRESSED(PB_SEL))
             pop_close(true);
         else if (PRESSED(PB_GLO))
             pop_close(false);
         play_row = -1;
-        plat_led_btn(PB_PLAY, pop_preview >= 0);
+        plat_led_btn(PB_PLAY, listening);
         gfx_frame(draw);
         return SONGVIEW_STAY;
     }
@@ -385,7 +403,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             pop_orig = entry_at(row)->pattern[col];
             pop_cur = pop_orig < TRACK_MAX_PATTERNS ? pop_orig + 1 : 0;
             pop_top = 0;
-            pop_preview = -1;
+            pop_preview = -1, listening = false, settle = 0;
             grid_follow(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
         }
     }

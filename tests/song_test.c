@@ -69,6 +69,26 @@ int main(void)
           E(0).pattern[0] == 1 && player_soloed(0));
     press(PB_GLO);
     CHECK("and GLO puts back what was there", E(0).pattern[0] == 0 && !player_soloed(0));
+    press(PB_SEL);            /* listening: the cursor's block plays once it rests */
+    press(PB_PLAY);
+    CHECK("PLAY listens from the block under the cursor", E(0).pattern[0] == 0 && player_soloed(0));
+    enc(PE_SELECT, 1);
+    for (int i = 0; i < 5; i++)
+        go();
+    CHECK("passing over a block starts nothing yet", E(0).pattern[0] == 0);
+    for (int i = 0; i < 12; i++)
+        go();
+    CHECK("resting on it plays it", E(0).pattern[0] == 1 && player_soloed(0));
+    enc(PE_SELECT, -2);
+    for (int i = 0; i < 12; i++)
+        go();
+    CHECK("-- is silence, the listening still on", E(0).pattern[0] == 0 && !player_soloed(0));
+    press(PB_PLAY);
+    enc(PE_SELECT, 2);
+    for (int i = 0; i < 12; i++)
+        go();
+    CHECK("PLAY again: the cursor plays nothing", E(0).pattern[0] == 0 && !player_soloed(0));
+    press(PB_GLO);
     press(PB_SEL);
     enc(PE_SELECT, -1);
     press(PB_SEL);
