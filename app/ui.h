@@ -22,7 +22,8 @@ void ui_cards_rule(void); /* the green line under them */
 int ui_loop_slot(int x, int y);
 
 /* The guide (29/10): the buttons that do something on the screen in
- * front glow faintly, a lit LED still meaning a state (PLAY playing).
+ * front light, a lit LED still meaning a state (PLAY playing). HOME,
+ * SAVE and SEL never do: the same on every screen, or a way through them.
  * `usable` is a PB_* mask; the screens that have none yet give 0. On
  * until a SETTINGS screen can turn it off. */
 extern bool ui_guide;

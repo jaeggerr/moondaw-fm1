@@ -93,6 +93,9 @@ void ui_led_guide(uint32_t usable)
         usable = 0;
     if (ui_guide_lit) /* PLAY stays the screen's: lit is its state, playing */
         usable &= ~(1u << PB_PLAY);
+    /* HOME, SAVE: the same everywhere; SEL: a way through the screens, not
+     * a feature of this one. Nothing to learn from them here. */
+    usable &= ~(1u << PB_HOME | 1u << PB_SAVE | 1u << PB_SEL);
     if (usable == shown)
         return;
     for (int b = 0; b < PLAT_BTNS; b++) {

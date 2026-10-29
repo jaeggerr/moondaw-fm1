@@ -1436,6 +1436,9 @@ brightness: `fm1_led_duty` in hal/fm1_input.h (MOONDAW's addition to
 Felucca's scan), set k lit on 4 + k frames of 8 -- 50, 62.5, 75, 87.5 % --
 in step, ~114 Hz at the slowest. `led ENV 50 LFO 62 EDIT 75 ARP 87 SEQ 100`.
 He saw little difference between the five: the guide lights at 50 %.
+HOME and SAVE left out of it: they do the same on every screen, nothing
+to learn from them; SEL too, a way through the screens rather than a
+feature (his words). GLO stays, it means something else on SONG.
 
 ## Open
 
