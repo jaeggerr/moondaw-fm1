@@ -34,6 +34,10 @@ void player_set_master(int pot);   /* 0..1023 */
 /* What the audio side last did, for the screen. */
 bool player_playing(void);
 uint16_t player_row(void);
+/* The tick inside player_row()'s step, 0 .. ticks_per_step - 1. */
+uint8_t player_tick_in_step(void);
+/* A click beside the song (the count-in of REC): `first`, the higher one. */
+void player_click(bool first);
 uint16_t player_entry(void);
 bool player_muted(int track);
 /* Monitoring, like the mutes: never in the file, cleared by player_init. */

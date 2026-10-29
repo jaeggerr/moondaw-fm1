@@ -163,11 +163,11 @@ void ui_led_guide(uint32_t usable)
         usable = 0;
     /* PLAY is the screen's: lit is its state, playing. HOME, SAVE: the same
      * everywhere; SEL: a way through the screens, not a feature of this one. */
-    usable &= ~(1u << PB_PLAY | 1u << PB_HOME | 1u << PB_SAVE | 1u << PB_SEL);
+    usable &= ~(1u << PB_PLAY | 1u << PB_REC | 1u << PB_HOME | 1u << PB_SAVE | 1u << PB_SEL);
     if (usable == shown && ui_light == lit_at)
         return;
     for (int b = 0; b < PLAT_BTNS; b++)
-        if (b != PB_PLAY)
+        if (b != PB_PLAY && b != PB_REC) /* the screens' states */
             plat_led_level(b, (usable >> b) & 1u ? ui_light : PLAT_LED_OFF);
     shown = usable;
     lit_at = ui_light;

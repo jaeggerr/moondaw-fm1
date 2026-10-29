@@ -38,6 +38,7 @@ static void go(void) { pattern_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
+static int pat_len_of(void) { return song.patterns[0][song.arrangement[0].pattern[0]].length; }
 static const Step *st(int row) { return song_step(&song, 0, song.arrangement[0].pattern[0], row); }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 
@@ -246,6 +247,37 @@ int main(void)
     CHECK("SELECT puts the cursor on the step's number: the keys only play",
           (keys(1u << 1), keys(0), st(1)->notes[0] == NOTE_NONE || st(1)->notes[0] != 54));
     enc(PE_SELECT, -1);
+
+    /* REC: armed, a bar counted in, the keys written where the playhead is */
+    {
+        static int16_t audio[4096 * 2];
+        int found = -1, off = -1;
+        press(PB_SEQ);
+        press(PB_REC);
+        in.ms = 1000;
+        press(PB_PLAY);       /* the count starts */
+        for (int i = 0; i < 6; i++) {
+            in.ms += 600;     /* past a beat at 120 bpm each time */
+            go();
+        }
+        player_render(audio, 4096);
+        go();
+        keys(1u << 10);       /* D#4 */
+        player_render(audio, 4096);
+        keys(0);              /* let go: an OFF */
+        for (int r = 0; r < pat_len_of(); r++) {
+            if (st(r)->notes[0] == 63)
+                found = r;
+            if (st(r)->notes[0] == NOTE_OFF)
+                off = r;
+        }
+        CHECK("REC writes the key where the playhead is", found >= 0);
+        CHECK("and an OFF where it was let go, after it", off >= 0 && off != found);
+        press(PB_PLAY);       /* stop */
+        press(PB_REC);
+        for (int i = 0; i < 4; i++)
+            enc(PE_ALGO, -1); /* the recording taken back */
+    }
 
     /* the step's number */
     enc(PE_K2, -1);

@@ -404,6 +404,12 @@ static int32_t master = 1024; /* Q10 */
 /* For the screen: single words, written by the audio side only. */
 static volatile uint8_t ui_playing;
 static volatile uint16_t ui_row, ui_entry;
+static volatile uint8_t ui_tick; /* the tick inside ui_row's step: REC rounds to the nearest step with it */
+/* The count-in's click (player_click): a short square that dies away, beside
+ * the song, never in it. */
+enum { CLICK_N = FS / 30 };
+static volatile uint8_t click_req;
+static int click_left, click_half, click_phase;
 static volatile uint8_t mute_mask, solo_mask;
 static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio side never sees half of it */
 
@@ -1428,6 +1434,7 @@ static void player_tick(void)
     if (tick_in_step == 0 && loop_bounds(cycle, &lo, &hi) && (entry_step < lo || entry_step >= hi))
         entry_step = lo; /* PLAY with a loop starts in it; a loop set while playing takes at once */
     tick_parity = (uint8_t)(entry_step & 1);
+    ui_tick = tick_in_step;
     if (tick_in_step == 0) {
         process_row(e);
         ui_row = (uint16_t)(entry_step % cycle);
@@ -1760,6 +1767,16 @@ void player_render(int16_t *out, int frames)
     while (frames > 0) {
         int n = frames < SYNTH_MAX_FRAMES ? frames : SYNTH_MAX_FRAMES;
         player_render_raw(mix, n);
+        if (click_req) { /* a beat of the count-in: higher on the first */
+            click_half = FS / (click_req == 2 ? 3000 : 2000);
+            click_left = CLICK_N;
+            click_phase = 0;
+            click_req = 0;
+        }
+        for (int i = 0; click_left > 0 && i < n; i++, click_left--) {
+            int32_t c = (++click_phase / click_half & 1 ? 6000 : -6000) * click_left / CLICK_N;
+            mix[2 * i] += c, mix[2 * i + 1] += c;
+        }
         for (int i = 0; i < n * 2; i++) {
             int32_t s = mul_q(mix[i], master, 10);
             out[i] = (int16_t)(s > 32767 ? 32767 : s < -32768 ? -32768 : s);
@@ -1834,6 +1851,8 @@ void player_set_master(int pot)
 }
 bool player_playing(void) { return ui_playing != 0; }
 uint16_t player_row(void) { return ui_row; }
+uint8_t player_tick_in_step(void) { return ui_tick; }
+void player_click(bool first) { click_req = first ? 2 : 1; }
 uint16_t player_entry(void) { return ui_entry; }
 bool player_muted(int track) { return (mute_mask >> track) & 1u; }
 void player_toggle_solo(int track)

@@ -1628,6 +1628,19 @@ word, copied by `tools/gen_fx_help.py` into `app/fx_help.c` (12 KB, SMP
 has no page there yet) -- wrapped to the panel in CONDENSED 20 by measured
 width, read a line at a time; KNOB 2 the effect before or after it.
 
+## 2026-10-29 — REC
+
+PATTERN records what the keys play (his choices, asked one by one):
+REC arms (its LED lit, REC ARMED in the corner; armed and stopped, the
+keys only play); PLAY then counts a bar in -- the meter's beats, a click
+each, the first higher (`player_click`, a short square beside the song)
+-- and plays the phrase; a key is written on the step NEAREST the
+playhead (`player_tick_in_step`: past the middle of a step, the next),
+REPLACING what was there, a chord held together filling the slots; when
+the last key is let go an OFF goes where that falls (the next step when
+let go within the note's own), so the lengths played are kept. REC again,
+or STOP, ends it; ALGO takes a recording back, step by step.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

@@ -35,6 +35,11 @@
  *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
  *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
  *   HOME  back where it was opened from (out of the SELECTION first)   GLO  the PROJECT
+ *   REC   armed, or not: PLAY then counts a bar in and records what the keys play
+ *         on the nearest step (replacing it), an OFF where the last key is let go
+ *   REC   armed, or not: PLAY then counts a bar in and records what the keys play
+ *         on the nearest step (replacing it), an OFF where the last key is let go;
+ *         armed and stopped, the keys only play
  *   ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
  * FX is a view here, not the MIXER: FX shows the effects of where one is. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
@@ -72,6 +77,14 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = UI_KEY_MONO };
 static bool selecting, anchored;
 static UiShift shift; /* EDIT held: the keys are commands (ui.h) */
+/* REC (29/10): armed, PLAY counts a bar in, then what the keys play is
+ * written where the playhead is -- the nearest step, replacing what was
+ * there -- and an OFF where the last key is let go. */
+static bool rec_armed, counting, recording, rec_live; /* rec_live: the player has started */
+static int count_beat;
+static uint32_t count_t0;
+static int rec_row = -1; /* the step the keys held now were written on */
+static int rec_slot;     /* the next slot of that step's chord */
 static int an_row, an_col, clip_cols;
 static int syl_slot;
 static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
@@ -198,6 +211,49 @@ static void draw_cell(int v, int r, int c, bool band)
         if (named || sounds)
             gfx_text(F_COND20, x + 42 > tx + 10 ? x + 42 : tx + 10, grid_base(v),
                      song->instruments[k % SONG_MAX_INSTR].name, grid_ink(band, on, named ? C_TEXT : C_DIM));
+    }
+}
+
+/* --------------------------------------------------------------- REC --- */
+/* The step nearest to the playhead: the one playing, or the next when it
+ * is past its middle. */
+static int rec_nearest(void)
+{
+    int len = pat_len(), tps = song->ticks_per_step ? song->ticks_per_step : 1;
+    int r = player_row() % len;
+    return player_tick_in_step() * 2 >= tps ? (r + 1) % len : r;
+}
+
+static void rec_keys(const PlatInput *in, uint32_t keys)
+{
+    for (int k = 0; k < PLAT_KEYS; k++) {
+        int n = 53 + kbd_oct * 12 + k;
+        Step *st;
+        if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX)
+            continue;
+        if (rec_row < 0) { /* the chord's first key: the step is replaced */
+            rec_row = rec_nearest();
+            rec_slot = 0;
+            if ((st = step_w(rec_row)) != 0)
+                for (int i = 0; i < STEP_MAX_NOTES; i++)
+                    st->notes[i] = NOTE_NONE;
+        }
+        if (rec_slot < STEP_MAX_NOTES && !edit_write_note(song, track, pat, rec_row, rec_slot++, (uint8_t)n))
+            said = "POOL FULL";
+        player_note_on(edit_instr_at(song, track, pat, rec_row), (uint8_t)n); /* heard as played */
+    }
+    if (!in->keys && rec_row >= 0) { /* the last key let go: an OFF there, the note's length */
+        int off = rec_nearest();
+        Step *st;
+        if (off == rec_row) /* let go within its own step: the OFF on the next */
+            off = (off + 1) % pat_len();
+        if ((st = step_w(off)) != 0) {
+            for (int i = 0; i < STEP_MAX_NOTES; i++)
+                st->notes[i] = NOTE_NONE;
+            st->notes[0] = NOTE_OFF;
+        }
+        player_note_off();
+        rec_row = -1;
     }
 }
 
@@ -434,6 +490,11 @@ static void draw(void)
     s[0] = 'T', s[1] = (char)('1' + track), s[2] = 0;
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (counting) { /* the count-in's beat */
+        char b[2] = { (char)('0' + count_beat), 0 };
+        grid_corner("REC", C_MUTE, b, C_TEXT);
+    } else if (rec_armed)
+        grid_corner(recording ? "REC" : "REC ARMED", C_MUTE, 0, 0);
     else if (selecting) /* the mode, in place of where one is */
         grid_corner("SELECT", C_FX, 0, 0);
     else if (loop_state() == LOOP_SET) { /* the loop, in place of where one is: LOOP 02-05 */
@@ -506,6 +567,8 @@ bool pattern_open(Song *s, int e, int t)
     view = V_NOTES;
     said = 0;
     choosing = listening = writing_syl = selecting = trying = false;
+    rec_armed = counting = recording = false;
+    rec_row = -1;
     shift = (UiShift){ 0 };
     sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
@@ -636,6 +699,38 @@ int pattern_frame(const PlatInput *in)
     if ((d = in->enc[PE_K4]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
         turn_fx_cmd(cur_row, cur_col, d);
 
+    if (PRESSED(PB_REC)) { /* armed, or not; stopping it stops the count */
+        rec_armed = !rec_armed;
+        recording = rec_armed && playing;
+        rec_live = recording;
+        counting = false;
+        rec_row = -1;
+        said = rec_armed ? "REC" : "REC OFF";
+    }
+    if (counting) { /* a bar of clicks, the meter's beats, then the phrase from the top */
+        uint32_t beat = 60000u / (song->bpm ? song->bpm : 120);
+        int beats = song->beats_per_bar ? song->beats_per_bar : 4;
+        if (in->ms - count_t0 >= (uint32_t)count_beat * beat) {
+            if (count_beat == beats) {
+                counting = false;
+                recording = true;
+                rec_live = false;
+                player_play_entry(entry);
+            } else {
+                player_click(count_beat == 0);
+                count_beat++;
+            }
+        }
+    }
+    if (recording && playing)
+        rec_live = true;
+    if (recording && rec_live && !playing) /* STOP ends it -- not the frames before PLAY is taken up */
+        recording = rec_live = false, rec_armed = false;
+    if (recording) {
+        rec_keys(in, keys);
+        keys = 0;
+    }
+
     /* The keys write notes in a note column of NOTES: the first one in the
      * slot under the cursor, the ones pressed while it is held in the slots
      * after it. Anywhere else -- the step's number, FX, INS -- they only
@@ -651,7 +746,7 @@ int pattern_frame(const PlatInput *in)
         int n = 53 + kbd_oct * 12 + k, slot;
         if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX)
             continue;
-        if (view != V_NOTES || cur_col < 0) {
+        if (view != V_NOTES || cur_col < 0 || rec_armed) {
             player_note_on(edit_instr_at(song, track, pat, cur_row), (uint8_t)n);
             trying = true;
             continue;
@@ -677,11 +772,18 @@ int pattern_frame(const PlatInput *in)
         }
     }
     if (PRESSED(PB_PLAY)) {
-        if (playing)
+        if (playing || counting) {
             player_stop();
-        else
+            counting = recording = false;
+        } else if (rec_armed) { /* armed: a bar counted in first */
+            counting = true;
+            count_beat = 0;
+            count_t0 = in->ms;
+        } else {
             player_play_entry(entry);
+        }
     }
+    ui_led_state(PB_REC, rec_armed);
 
     len = pat_len();
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
