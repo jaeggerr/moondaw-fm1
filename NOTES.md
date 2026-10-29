@@ -1836,8 +1836,10 @@ Mac, then installed and played on the device (below).
 - **Two restarts** while KIDS looped, after ~2.5 and ~3.5 min (P33 0x04
   then 0x40, no crash recorded); a third play of 3.5 min ran clean. Not
   explained; DAFT-PUNK-EN restarted the same way before the sampler
-  (29/10, above). Not yet compared with KIDS-DRUM on this firmware, which
-  is what would tell whether the samples have a part in it.
+  (29/10, above). KIDS-DRUM on this firmware, 4 min looped: no restart.
+  One clean run against two of three is a hint, not a proof, that the
+  samples have a part in it: to chase (the XIP reads from the audio
+  interrupt, the main loop starved by the heavier CPU0 share).
 - **Still to measure on the FM-1**: what a voice costs from the audio
   interrupt alone (V above holds it, with DRUM's), and the balance after
   normalising, by ear.
