@@ -53,6 +53,7 @@ static uint32_t prev_btns, prev_keys;
 static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
 static int fx_count;
 static int play_row = -1;
+static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_IDLE the view follows PLAY */
 /* CHOOSE INSTRUMENT: its rows are --, then the instruments. While it
  * listens, the one the cursor rests on SETTLE frames sounds the step's
  * note, struck again every AGAIN frames. */
@@ -691,8 +692,15 @@ int pattern_frame(const PlatInput *in)
     }
 
     len = pat_len();
-    grid_follow(&cur_row, &top, len, GRID_ROWS);
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
+    still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] ||
+                    in->enc[PE_K4]
+                ? 0
+                : still < GRID_FOLLOW_IDLE ? still + 1 : still;
+    if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with what plays */
+        grid_follow_play(&top, play_row, len, GRID_ROWS);
+    else
+        grid_follow(&cur_row, &top, len, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |

@@ -55,6 +55,11 @@ void grid_frame(int top, int n);
 
 /* A play sign, 10 x 12 from its top left corner: drawn round, filled while it plays. */
 void grid_play_sign(int x, int y, uint16_t c, bool filled);
+/* While a song plays and the hand is still: *first so that row `play` is
+ * shown, a page at a time (the playhead at the top of the new page). The
+ * hand moving gives the view back to the cursor (grid_follow). */
+enum { GRID_FOLLOW_IDLE = 90 }; /* frames the hand is still before the view follows: 1.5 s */
+void grid_follow_play(int *first, int play, int n, int shown);
 /* Keeps *cur in [0, n) and *first so that *cur is one of `shown`. */
 void grid_follow(int *cur, int *first, int n, int shown);
 /* As hex, two digits. */

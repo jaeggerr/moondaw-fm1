@@ -108,3 +108,12 @@ void grid_play_sign(int x, int y, uint16_t c, bool filled)
         gfx_fill(x + i, y + (12 - h) / 2, 1, h, c, 255);
     }
 }
+
+void grid_follow_play(int *first, int play, int n, int shown)
+{
+    if (play < 0 || (play >= *first && play < *first + shown))
+        return;
+    *first = play;
+    if (*first > (n > shown ? n - shown : 0))
+        *first = n > shown ? n - shown : 0;
+}

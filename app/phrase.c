@@ -28,6 +28,7 @@ static const char *said;
 static uint32_t prev_btns, prev_keys;
 static bool playing;
 static int play_row = -1;
+static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_IDLE the view follows PLAY */
 
 /* ------------------------------------------------------------- data --- */
 static int blk(int t) { return song->arrangement[entry].pattern[t]; }
@@ -186,9 +187,15 @@ int phrase_frame(const PlatInput *in)
     }
 
     measure();
-    grid_follow(&row, &top, steps, GRID_ROWS);
     grid_follow(&col, &left, song->num_tracks, CELLS);
     play_row = playing && player_entry() == entry ? player_row() % steps : -1;
+    still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]
+                ? 0
+                : still < GRID_FOLLOW_IDLE ? still + 1 : still;
+    if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with what plays */
+        grid_follow_play(&top, play_row, steps, GRID_ROWS);
+    else
+        grid_follow(&row, &top, steps, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(1u << PB_FX | 1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
     ui_led_keys(0, player_soloed(col) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */

@@ -1581,6 +1581,14 @@ now (`menu_reload`).
   the row's in the MIXER (his ask). A CHOOSE PATTERN preview's solo is
   not MONO's: it stays dark then. `ui_led_keys(usable, lit)`.
 
+## 2026-10-29 — autoscroll
+
+PATTERN and SECTION follow what plays (his ask): while the phrase plays
+and the hand has been still 1.5 s (GRID_FOLLOW_IDLE), the view goes with
+the playhead a page at a time, the playhead at the top of the new page;
+the hand moving anything gives the view back to the cursor at once, the
+cursor never moved by it. `grid_follow_play`.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
