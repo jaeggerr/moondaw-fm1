@@ -92,6 +92,19 @@ int main(void)
         CHECK("an effect already on the row is stepped over", !saw_gat);
         CHECK("the list ends on WAV", st(0)->fx[1].cmd == FX_WAV);
     }
+    { /* PRB, the one effect of this firmware's own */
+        bool found = false;
+        for (int i = 0; i < 40 && !found; i++) {
+            enc(PE_K4, -1);
+            found = st(0)->fx[1].cmd == FX_PRB;
+        }
+        CHECK("PRB is in KNOB 4's list", found);
+        enc(PE_K3, 100); /* the knob is an int8_t: 7F in two turns */
+        enc(PE_K3, 100);
+        CHECK("PRB stops at 7F", st(0)->fx[1].val == 0x7F);
+        enc(PE_K4, 40); /* back to the end of the list */
+        CHECK("SYL and SMP are not in the list", st(0)->fx[1].cmd == FX_WAV);
+    }
     enc(PE_K4, -1);
     CHECK("before WAV: VOL", st(0)->fx[1].cmd == FX_VOL);
     enc(PE_K3, 100);

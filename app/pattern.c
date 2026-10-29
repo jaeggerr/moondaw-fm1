@@ -56,7 +56,8 @@ static bool trying;                     /* a key plays without writing (the curs
 static int chord_next;                  /* the note slot the next held key fills, 0 = none held */
 static const char *said;
 static uint32_t prev_btns, prev_keys;
-static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
+static uint8_t fx_order[FX_COUNT]; /* alphabetical, --- first; SYL and SMP
+                                    * are written elsewhere and left out */
 static int fx_count;
 static int play_row = -1;
 static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_IDLE the view follows PLAY */
@@ -577,8 +578,11 @@ bool pattern_open(Song *s, int e, int t)
     /* KNOB 4's order: alphabetical, the empty slot first. */
     fx_count = 0;
     fx_order[fx_count++] = FX_NONE;
-    for (int c = 1; c < FX_SYL; c++) {
-        int i = fx_count++;
+    for (int c = 1; c < FX_COUNT; c++) {
+        int i;
+        if (c == FX_SYL || c == FX_SMP) /* the SYLLABLE screen, the sample table */
+            continue;
+        i = fx_count++;
         while (i > 1) {
             const char *a = fx_name(fx_order[i - 1]), *b = fx_name((uint8_t)c);
             int k = 0;

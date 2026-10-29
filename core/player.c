@@ -874,6 +874,34 @@ static bool ramp_start(Track *tr, int which, uint8_t to, int steps)
 }
 
 /* ====================================================== rows and fx === */
+/* PRB: the roll. One stream for the whole song, drawn ONLY where a step
+ * carries the command, so a song that never writes one renders sample
+ * for sample as it did before the command existed -- which is what
+ * keeps the differential test against moondaw honest.
+ *
+ * The seed is fixed and taken back at every PLAY: a take from the top
+ * plays the same twice, so a passage can be judged, edited and judged
+ * again. Inside the take the stream runs on, so the loop does vary from
+ * one pass to the next. A machine for writing, not for surprises.
+ *
+ * The chance is v/127: 00 never plays, 7F always does. Only the notes
+ * are at stake -- the other fx of the row are read on time, as under a
+ * DLY, because a setter that fired at random would leave the track in a
+ * state the page does not show. */
+static uint32_t prb_rng;
+
+static bool prb_rolls(const Step *st)
+{
+    for (int i = 0; i < STEP_MAX_FX; i++) {
+        if (st->fx[i].cmd != FX_PRB)
+            continue;
+        uint8_t v = fx_clamp_val(FX_PRB, song->ticks_per_step, st->fx[i].val);
+        prb_rng = prb_rng * 1664525u + 1013904223u;
+        return (prb_rng >> 8) % 127u < v; /* the low bits of an LCG are weak */
+    }
+    return true;
+}
+
 static void apply_fx(int t, const Step *st)
 {
     Track *tr = &tracks[t];
@@ -988,6 +1016,12 @@ static void process_row(const SongEntry *e)
                 tr->fx.syl_written = true;
             }
         apply_fx(t, st);
+        if (!prb_rolls(st)) {
+            /* The roll failed: an empty step. Nothing is struck and
+             * nothing is released, so what sounds carries on. */
+            tr->fx.anticipated = false;
+            continue;
+        }
         if (st->notes[0] == NOTE_OFF) {
             tr->fx.anticipated = false;
             track_release(tr);
@@ -1225,7 +1259,10 @@ static void anticipate_vox(int t)
     if (inst == INSTR_NONE)
         inst = tr->last_inst;
     in = &song->instruments[inst % SONG_MAX_INSTR];
-    if (in->engine != ENGINE_VOX || row_has(st, FX_DLY))
+    /* PRB is rolled when the row comes, once: a step whose note may not
+     * happen is not formed early. The syllable strikes on the beat
+     * instead, which is what it does on every other engine. */
+    if (in->engine != ENGINE_VOX || row_has(st, FX_DLY) || row_has(st, FX_PRB))
         return;
     syl = row_syl(tr, st);
     wrote = syl != tr->fx.syl;
@@ -1351,6 +1388,7 @@ static void start_play(bool as_song, int entry)
 {
     bpm = song->bpm;
     song_mode = as_song;
+    prb_rng = 1; /* every take rolls the same way (above) */
     arr_pos = (uint16_t)(entry >= 0 && entry < song->arrange_len ? entry : 0);
     entry_step = 0;
     entry_enter(0);

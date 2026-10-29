@@ -1865,6 +1865,46 @@ play restarted the machine (4 of 4, KIDS and KIDS-DRUM alike); plain
   the firmware kept and never reported (here DBG bit 4: a write to
   unmapped space). The record survives an install.
 
+## 2026-10-29 — PRB, the chance a step plays
+
+The one effect this firmware has that moondaw does not, and the first
+divergence in the list: `FX_PRB`, appended after `FX_SMP` so no saved
+song moves, written in the file as `fPRB40` like any other cell. A .trk
+that carries it loses the cell when the other MOONDAW apps read it
+(`fx_from_name` does not know the name) -- that is the price, and it is
+why nothing else was taken from BEETLE's groove page.
+
+What it does: the chance this step's NOTES play, v/127, 00 never and 7F
+always. Only the notes. The other fx of the row are read on time, as
+they are under a DLY, because a setter firing at random would leave the
+track in a state the page does not show -- a VOL beside it still moves
+the fader, a CUT beside it still ends what sounds. A failed roll is an
+empty step and not a rest: nothing struck, nothing released, so a long
+note under it carries on.
+
+The roll is one LCG for the song, drawn ONLY where a step carries the
+command, so a song that never writes one renders sample for sample as
+before: KIDS at 10 s is byte for byte what it was (`fm_render` against
+the same build from HEAD). The seed is taken back at every PLAY, so a
+take from the top plays the same twice -- a passage can be judged,
+edited and judged again -- while inside the take the loop does vary,
+pass by pass. Both checked by rendering: PRB7F is byte for byte the
+song without it, PRB00 is silence, PRB40 differs between its two passes.
+
+VOX: a PRB step is not anticipated (`anticipate_vox` bails on it as it
+bails on a DLY). The roll happens when the row comes, once, and a
+consonant cannot be formed early for a note that may not happen; the
+syllable strikes on the beat instead.
+
+HELP: `tools/gen_fx_help.py` refused a list of effects that was not
+moondaw's, word for word. Now moondaw's list must be the START of ours,
+and the pages of the effects we add on the end live in the tool
+(`EXTRA`), so the file stays generated.
+
+PATTERN's KNOB 4 used to walk `1 .. FX_SYL`, which is why nothing after
+SYL could be reached; it walks the whole list now and leaves out the two
+that are written elsewhere (SYL on its screen, SMP in the sample table).
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

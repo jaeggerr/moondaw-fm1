@@ -3,7 +3,7 @@
 MOONDAW is a tracker groovebox. This is MOONDAW as a firmware for the
 **M-VAVE FM-1** pocket synth: write songs step by step on the device, with
 the same `.trk` files, the same steps and effects as the other MOONDAW
-apps, on a machine with 512 KB of RAM and no floating point.
+apps (and one of its own, PRB), on a machine with 512 KB of RAM and no floating point.
 
 It is an independent project, built on the open
 [Felucca](https://github.com/hugelton/Felucca) firmware. M-VAVE has nothing
@@ -92,7 +92,7 @@ GPL-3.0-only (`LICENSE`).
   `UPSTREAM.md` lists every file taken and what was changed.
 - The band-limited step table in `core/synth.c` is from blip_buf by Shay
   Green (LGPL-2.1-or-later), rewritten in 32 bits.
-- The effects' help pages (`app/fx_help.c`) are MOONDAW's own text.
+- The effects' help pages (`app/fx_help.c`) are MOONDAW's own text, PRB's apart.
 - Fonts: Barlow Condensed and JetBrains Mono (SIL Open Font License),
   font8x8 (public domain).
 - Three Apache-2.0 files from JieLi's AC79 SDK are in the package.
