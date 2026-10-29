@@ -61,6 +61,7 @@ struct { uint32_t magic, failed, pending; } bootguard __attribute__((section(".n
 #include "lcd.c"
 #include "../../platform/platform.h"
 #include "../../app/term.h"      /* the crash and update screens draw with the app's text cells */
+#include "../../app/splash.h"    /* and the mark, into the window the panel's wake-up already costs */
 
 /* ------------------------------------------------- USB, audio, panel --- */
 #include "usb.c"
@@ -336,6 +337,11 @@ static void fm1_main(void)
         ota_boot_cleanup();                             /* staging area left by an update */
     }
     lcd_init();
+    /* The panel is lit and empty from here until the app's first frame: the
+     * mark goes in now and is overwritten when there is something to show.
+     * It holds nothing up, and it is the only sign at power-on that this is
+     * MOONDAW on the machine and not what came on it (app/splash.h). */
+    splash_show();
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;

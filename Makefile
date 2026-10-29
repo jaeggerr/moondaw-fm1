@@ -19,7 +19,7 @@ else ifneq ($(filter $(APP),type),)
 SRCS    := app/$(APP).c app/gfx.c app/term.c
 CFLAGS  += -DGFX_SPECIMEN=1
 else
-UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/syllable.c app/settings.c app/system.c app/help.c app/fx_help.c app/project.c app/remote.c app/canvas.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c
+UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/syllable.c app/settings.c app/system.c app/help.c app/fx_help.c app/project.c app/remote.c app/canvas.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c app/splash.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)

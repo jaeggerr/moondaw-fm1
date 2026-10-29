@@ -36,6 +36,7 @@
 #include "../platform.h"
 #include "../udp_sysex.h"
 #include "../../app/font/font8x8_basic.h"
+#include "../../app/splash.h"
 
 #define CV_W 600
 #define CV_H 312
@@ -539,6 +540,7 @@ int main(int argc, char **argv)
         SDL_Log("no sound: %s", SDL_GetError());
 
     nor_open(SDL_getenv("MOONDAW_FLASH") ? SDL_getenv("MOONDAW_FLASH") : "moondaw-fm1.flash");
+    splash_show(); /* a frame long here: the FM-1 is the one that waits on its panel */
     app_init();
     udp_sysex_open(); /* songs from tools/fm1_send.py --udp */
     if (argc == 2 && !load_song(argv[1], dev))

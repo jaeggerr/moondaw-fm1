@@ -10,6 +10,7 @@
  *
  * No libc: built freestanding (zig cc) or with emcc --no-entry. */
 #include "../platform.h"
+#include "../../app/splash.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -136,6 +137,7 @@ static void run_frame(void)
 WEB_EXPORT void web_boot(void)
 {
     in.master = 700;
+    splash_show(); /* a frame long here: the FM-1 is the one that waits on its panel */
     app_init();
     run_frame();
 }
