@@ -176,7 +176,7 @@ int syllable_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
         if (PRESSED(PB_ARP))
             changed = weak();
     } else {
-        at += in->enc[PE_K1];
+        at += in->enc[PE_K2];
         at = at < 0 ? 0 : at >= MAX ? MAX - 1 : at;
         if ((d = in->enc[PE_K3]) != 0) {
             int i = 0;
@@ -279,7 +279,7 @@ static void draw_wheel(void)
         gfx_text_mid(F_COND14, 111 + d * 19, 18, 146, c, d == 0 ? C_ACCENT : d == 1 || d == -1 ? C_TEXT : C_DIM);
     }
     sign_said(slots[at], 176);
-    gfx_text(F_COND12, 12, 204, "KNOB 1 the slot   KNOB 3 its sign   LFO empty", C_DIM);
+    gfx_text(F_COND12, 12, 204, "KNOB 2 the slot   KNOB 3 its sign   LFO empty", C_DIM);
 }
 
 void syllable_draw(void)

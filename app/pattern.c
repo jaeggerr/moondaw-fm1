@@ -19,11 +19,11 @@
  *   INS    the instrument the step names, or --, then the name of the one that plays:
  *          white where the step names it, grey where it keeps the one in force (29/10)
  *
- *   SELECT, KNOB 2  the step   KNOB 1  the column; left of the first, the step's number (KNOB 3 the
+ *   SELECT, KNOB 1  the step   KNOB 2  the column; left of the first, the step's number (KNOB 3 the
  *                        block's length)
  *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
- *   EDIT  the SELECTION, in and out: SELECT and KNOB 1 stretch it from where EDIT
+ *   EDIT  the SELECTION, in and out: SELECT and KNOB 2 stretch it from where EDIT
  *         was pressed (left of the first column: whole steps); the black keys
  *         OP1 copy, OP2 paste at the cursor, OP3 cut, OP4 clear
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
@@ -53,7 +53,7 @@ enum { CH_TOP = 24, CH_ROWS = 7, CH_N = SONG_MAX_INSTR + 1, SETTLE = 12, AGAIN =
 static bool choosing, listening;
 static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 /* SELECTION (29/10): EDIT in and out; the rectangle from the anchor to the
- * cursor, KNOB 1 left of the first column taking whole steps; the black
+ * cursor, KNOB 2 left of the first column taking whole steps; the black
  * keys OP1-4 copy, paste, cut, clear. A copy lets the anchor go: the cursor
  * is free again, the clipboard's outline following it to show where OP2
  * puts it. */
@@ -332,9 +332,9 @@ static void ch_open(void)
 static void ch_frame(const PlatInput *in, uint32_t btns)
 {
 #define PRESSED(b) ((btns >> (b)) & 1u)
-    ch_cur += in->enc[PE_SELECT];
+    ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1];
     grid_follow(&ch_cur, &ch_top, CH_N, CH_ROWS);
-    if (in->enc[PE_SELECT])
+    if (in->enc[PE_SELECT] || in->enc[PE_K1])
         settle = SETTLE;
     if (PRESSED(PB_PLAY)) {
         listening = !listening;
@@ -521,7 +521,7 @@ int pattern_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     prev_keys = in->keys;
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] || in->enc[PE_K4])
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] || in->enc[PE_K4])
         said = 0;
 
     if (choosing) {
@@ -572,9 +572,9 @@ int pattern_frame(const PlatInput *in)
         ch_open();
     if (PRESSED(PB_SEL) && view == V_FX && cur_col >= 0 && !selecting)
         syl_open();
-    cur_row += in->enc[PE_SELECT] + in->enc[PE_K2]; /* KNOB 2 beside KNOB 1: one hand (29/10) */
+    cur_row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
-    cur_col += in->enc[PE_K1];
+    cur_col += in->enc[PE_K2];
     cur_col = cur_col < -1 ? -1 : cur_col >= view_cols[view] ? view_cols[view] - 1 : cur_col;
     if (btns & (1u << PB_OCTDN) && kbd_oct > -3)
         kbd_oct--;

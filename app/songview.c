@@ -12,7 +12,7 @@
  * its number fixed at the left, then the block each track plays, six
  * tracks a screen.
  *
- *   SELECT, KNOB 2  the phrase   KNOB 1  the track; left of the first, the phrase's number
+ *   SELECT, KNOB 1  the phrase   KNOB 2  the track; left of the first, the phrase's number
  *   KNOB 3  on a cell its block, -- below 00 and one new block past the last;
  *           on the number the phrase's length (AUTO, then steps)
  *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY listens:
@@ -344,7 +344,7 @@ static uint32_t usable(void)
 int songview_frame(const PlatInput *in, int *entry, int *track)
 {
     uint32_t btns = in->btns & ~prev_btns;
-    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3];
+    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3];
     int out = SONGVIEW_STAY;
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
@@ -354,9 +354,9 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         said = 0;
 
     if (pop) {
-        pop_cur += in->enc[PE_SELECT];
+        pop_cur += in->enc[PE_SELECT] + in->enc[PE_K1];
         grid_follow(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
-        if (in->enc[PE_SELECT])
+        if (in->enc[PE_SELECT] || in->enc[PE_K1])
             settle = SETTLE;
         if (PRESSED(PB_PLAY)) {
             listening = !listening;
@@ -379,13 +379,13 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
 
     /* DELETE asks; only a second LFO answers yes. */
-    if (ask_delete && (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] ||
+    if (ask_delete && (in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
                        (btns && !PRESSED(PB_LFO))))
         ask_delete = false;
 
-    row += in->enc[PE_SELECT] + in->enc[PE_K2]; /* KNOB 2 beside KNOB 1: one hand (29/10) */
+    row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     row = row < 0 ? 0 : row >= song->arrange_len ? song->arrange_len - 1 : row;
-    col += in->enc[PE_K1];
+    col += in->enc[PE_K2];
     col = col < -1 ? -1 : col >= song->num_tracks ? song->num_tracks - 1 : col;
 
     if (in->enc[PE_K3] && !is_ref(row)) {

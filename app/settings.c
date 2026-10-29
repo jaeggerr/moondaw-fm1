@@ -59,7 +59,7 @@ bool settings_frame(const PlatInput *in)
     int d = in->enc[PE_K3];
 
     prev_btns = in->btns;
-    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K2], 0, ROWS - 1);
+    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], 0, ROWS - 1);
     if (d && row == S_LEDS)
         ui_leds = clampi(ui_leds + d, UI_LEDS_OFF, UI_LEDS_GUIDE);
     else if (d)

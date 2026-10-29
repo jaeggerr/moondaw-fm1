@@ -72,21 +72,21 @@ int main(void)
 
     enc(PE_SELECT, -10);       /* NAME */
     press(PB_SEL);
-    enc(PE_K1, 4);
+    enc(PE_K2, 4);
     enc(PE_K3, 2);             /* space -> A -> B */
     CHECK("GLO leaves the name as it was", press(PB_GLO) && !strcmp(app_name, "KIDS"));
     press(PB_SEL);
-    enc(PE_K1, 4);
+    enc(PE_K2, 4);
     enc(PE_K3, 2);
     press(PB_SEL);
     CHECK("SEL keeps it", !strcmp(app_name, "KIDSB"));
     press(PB_SEL);
-    enc(PE_K1, 6);
+    enc(PE_K2, 6);
     enc(PE_K3, 1);             /* an A two places past the end: the gap becomes spaces */
     press(PB_SEL);
     CHECK("a letter past the end pulls spaces in", !strcmp(app_name, "KIDSB A"));
     press(PB_SEL);
-    enc(PE_K1, 6);
+    enc(PE_K2, 6);
     enc(PE_K3, -1);            /* the A back to a space: trailing spaces are not kept */
     press(PB_SEL);
     CHECK("the spaces at the end are not kept", !strcmp(app_name, "KIDSB"));

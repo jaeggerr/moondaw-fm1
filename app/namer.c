@@ -49,7 +49,7 @@ static void take(void)
 int namer_frame(const PlatInput *in, uint32_t pressed)
 {
     int n = (int)sizeof letters - 1;
-    at = clampi(at + in->enc[PE_K1], 0, len - 1);
+    at = clampi(at + in->enc[PE_K2], 0, len - 1);
     if (in->enc[PE_K3]) {
         int i = (letter_index(draft[at] ? draft[at] : ' ') + in->enc[PE_K3]) % n;
         for (int j = 0; j < at; j++) /* a letter after the end pulls spaces in before it */

@@ -8,7 +8,7 @@
 
 /* HOME, the root menu since 29/10 (as the other MOONDAW apps): CONTINUE,
  * the open project's name at its right; PROJECTS, how many; SETTINGS; HELP,
- * grey until it is written. SELECT or KNOB 2 moves, SEL goes; PLAY on
+ * grey until it is written. SELECT or KNOB 1 moves, SEL goes; PLAY on
  * CONTINUE plays the open project.
  *
  * PROJECTS, as HOME was validated on the panel on 28/10 (NOTES.md): the
@@ -244,7 +244,7 @@ int menu_frame(const PlatInput *in)
     }
 
     if (!listing) { /* the root */
-        item += in->enc[PE_SELECT] + in->enc[PE_K2];
+        item += in->enc[PE_SELECT] + in->enc[PE_K1];
         item = item < 0 ? 0 : item >= MENU_ITEMS ? MENU_ITEMS - 1 : item;
         if (btns & 1u << PB_SEL) {
             if (item == MENU_CONTINUE)
@@ -267,8 +267,8 @@ int menu_frame(const PlatInput *in)
             listing = false;
             item = MENU_PROJECTS;
         }
-        scroll_to(cur + in->enc[PE_SELECT] < 0 ? 0 : cur + in->enc[PE_SELECT] > nrows ? nrows
-                  : cur + in->enc[PE_SELECT], false);
+        int d = in->enc[PE_SELECT] + in->enc[PE_K1];
+        scroll_to(cur + d < 0 ? 0 : cur + d > nrows ? nrows : cur + d, false);
         if (btns & 1u << PB_SEL) {
             if (cur == open_row) {
                 open_it = true;

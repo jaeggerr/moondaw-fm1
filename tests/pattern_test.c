@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* PATTERN's hands, without a screen: inputs go in as the panel would
- * send them (three views, SEQ FX ENV, KNOB 1 the column, KNOB 3
+ * send them (three views, SEQ FX ENV, KNOB 2 the column, KNOB 3
  * the value) and the song is read back. */
 #include <stdio.h>
 #include <string.h>
@@ -61,10 +61,10 @@ int main(void)
     press(PB_OCTDN);
     enc(PE_K3, -2);
     CHECK("KNOB 3 on a note is semitones", st(2)->notes[0] == 79);
-    enc(PE_K1, 3);
+    enc(PE_K2, 3);
     keys(1u << 0); keys(0);
-    CHECK("KNOB 1 picks the note: a key writes into slot 4", st(2)->notes[3] == 53);
-    enc(PE_K1, -3);
+    CHECK("KNOB 2 picks the note: a key writes into slot 4", st(2)->notes[3] == 53);
+    enc(PE_K2, -3);
     enc(PE_SELECT, 1);
     enc(PE_K3, 1);
     CHECK("an empty slot starts from the note above", st(3)->notes[0] == 79);
@@ -76,7 +76,7 @@ int main(void)
     enc(PE_SELECT, -3);
     press(PB_FX);
     CHECK("the effect GAT is in place", st(0)->fx[0].cmd == FX_GAT);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K4, 1);
     CHECK("KNOB 4 on an effect: the first after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
     enc(PE_K4, -1);
@@ -94,7 +94,7 @@ int main(void)
     enc(PE_K3, 100);
     enc(PE_K3, 100);
     CHECK("KNOB 3 is the value: VOL stops at 7F", st(0)->fx[1].val == 0x7F);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     enc(PE_K3, 50);
     CHECK("GAT cannot outlast its step", st(0)->fx[0].val == song.ticks_per_step);
 
@@ -103,7 +103,7 @@ int main(void)
     keys(1u << 26);
     keys(0);
     CHECK("SEL on GAT opens nothing: G5 writes a note", st(0)->notes[0] == 79);
-    enc(PE_K1, 2);            /* the third slot, empty (the second holds VOL) */
+    enc(PE_K2, 2);            /* the third slot, empty (the second holds VOL) */
     press(PB_SEL);
     keys(1u << 26);
     keys(0);
@@ -117,10 +117,10 @@ int main(void)
     press(PB_SEL);
     CHECK("the keys type the syllable, SEL writes it in the empty slot",
           st(0)->fx[2].cmd == FX_SYL && !strcmp(song_syl(&song, st(0)->fx[2].val), "MA") && st(0)->notes[0] == 79);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     press(PB_SEL);            /* from VOL's slot: the row's syllable, where it is */
     enc(PE_PRESET, 1);        /* WHEEL */
-    enc(PE_K1, 2);
+    enc(PE_K2, 2);
     enc(PE_K3, 14);           /* - then A..N */
     press(PB_SEL);
     CHECK("the wheel adds a sign to the same syllable",
@@ -136,7 +136,7 @@ int main(void)
     press(PB_LFO);
     press(PB_SEL);
     CHECK("an empty syllable empties the slot", st(0)->fx[2].cmd == FX_NONE);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
 
     /* INS */
     press(PB_ENV);
@@ -161,8 +161,8 @@ int main(void)
 
     /* SELECTION: EDIT in, SELECT stretches, the black keys OP1-4 */
     press(PB_SEQ);            /* NOTES, the cursor on row 2 */
-    enc(PE_K1, -10);
-    enc(PE_K1, 1);            /* the first note */
+    enc(PE_K2, -10);
+    enc(PE_K2, 1);            /* the first note */
     enc(PE_SELECT, -2);
     {
         uint8_t n0 = st(0)->notes[0], n1 = st(1)->notes[0];
@@ -183,7 +183,7 @@ int main(void)
         CHECK("and no key wrote a note meanwhile", st(0)->notes[0] == n0);
         press(PB_EDIT);
         press(PB_EDIT);
-        enc(PE_K1, -1);       /* whole steps */
+        enc(PE_K2, -1);       /* whole steps */
         keys(1u << 5);        /* OP3: cut row 6 */
         keys(0);
         CHECK("OP3 cuts whole steps", step_is_empty(st(6)));
@@ -193,7 +193,7 @@ int main(void)
     }
 
     /* the step's number */
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     enc(PE_K3, -4);
     CHECK("KNOB 3 on the step's number is the block's length", song.patterns[0][0].length == 12);
 

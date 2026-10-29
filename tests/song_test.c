@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SONG's hands, without a screen: the arrangement is edited as the
- * panel would (the grid of 28/10: SELECT the phrase, KNOB 1 the track or
+ * panel would (the grid of 28/10: SELECT the phrase, KNOB 2 the track or
  * the number, KNOB 3 the value, SEL the panel or the section, SEQ the
  * block) and read back. */
 #include <stdio.h>
@@ -51,9 +51,9 @@ int main(void)
     go();
 
     /* the cursor starts on phrase 00, track 1 */
-    enc(PE_K2, 1);
-    CHECK("KNOB 2 moves to the next phrase, as SELECT does", songview_entry() == 1 && E(0).pattern[0] == 0);
-    enc(PE_K2, -1);
+    enc(PE_K1, 1);
+    CHECK("KNOB 1 moves to the next phrase, as SELECT does", songview_entry() == 1 && E(0).pattern[0] == 0);
+    enc(PE_K1, -1);
     enc(PE_K3, 1);
     CHECK("KNOB 3 on a cell steps to the track's next block", E(0).pattern[0] == 1);
     enc(PE_K3, 5);
@@ -108,7 +108,7 @@ int main(void)
     press(PB_EDIT);
     CHECK("EDIT on a block asks for it, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
     go();
-    enc(PE_K1, -1);           /* the phrase's number */
+    enc(PE_K2, -1);           /* the phrase's number */
     press(PB_SEQ);
     CHECK("SEQ on the number copies the phrase right below, without its name",
           app_song.arrange_len == 4 && E(1).pattern[0] == 0 && !E(1).name[0] && songview_entry() == 1);

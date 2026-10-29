@@ -19,7 +19,7 @@
  *   VOICE   TRACT ACCENT (a VOX instrument only)
  *   LYR n   SOUND SEMI FINE GAIN, one row a layer; + LYR makes one (KNOB 3 up)
  *
- *   SELECT, KNOB 2  the row     KNOB 1  the column     KNOB 3  the value
+ *   SELECT, KNOB 1  the row     KNOB 2  the column     KNOB 3  the value
  *   PLAY    the preview: a few notes up, round and round, until PLAY again
  *   the keys  play the sound, OCT-/OCT+ their octave     PRESETS  the next instrument
  *   GLO     back to PATTERN     ALGO  UNDO left, REDO right     SAVE  as printed
@@ -327,7 +327,7 @@ bool instrument_frame(const PlatInput *in)
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3])
         said = 0;
 
     if (naming) {
@@ -343,8 +343,8 @@ bool instrument_frame(const PlatInput *in)
         inst = clampi(inst + in->enc[PE_PRESET], 0, SONG_MAX_INSTR - 1);
         row = row >= nrows() ? nrows() - 1 : row;
     }
-    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K2], 0, nrows() - 1);
-    col = clampi(col + in->enc[PE_K1], 0, ncols(row) ? ncols(row) - 1 : 0);
+    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], 0, nrows() - 1);
+    col = clampi(col + in->enc[PE_K2], 0, ncols(row) ? ncols(row) - 1 : 0);
     if (in->enc[PE_K3] && kind(row) != L_NAME) {
         turn(in->enc[PE_K3]);
         row = row >= nrows() ? nrows() - 1 : row; /* a layer gone, or VOICE */

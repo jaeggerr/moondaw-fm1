@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* MIXER's hands without a screen (the grid of 28/10: SELECT the track, KNOB 1 the
+/* MIXER's hands without a screen (the grid of 28/10: SELECT the track, KNOB 2 the
  * column or the number, KNOB 3 the value), and what MUTE and SOLO do to the sound. */
 #include <stdio.h>
 #include <string.h>
@@ -59,30 +59,30 @@ int main(void)
     go();                       /* the cursor starts on track 1, VOL */
 
     enc(PE_K3, -30);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 10);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 40);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 25);
     CHECK("on a track the columns are volume, pan, reverb, delay",
           T(0).volume == 70 && T(0).pan == -54 && T(0).send == 40 && T(0).echo == 25);
-    enc(PE_K1, -2);
+    enc(PE_K2, -2);
     enc(PE_K3, -100);
     CHECK("pan stops at hard left", T(0).pan == -64);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, -100);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, -100);
 
     enc(PE_SELECT, -1);         /* the returns' row, above track 1 */
-    enc(PE_K1, -3);
+    enc(PE_K2, -3);
     enc(PE_K3, 10);
-    enc(PE_K1, 2);
+    enc(PE_K2, 2);
     enc(PE_K3, 100);
     CHECK("on the returns: the room, and the delay stops at 96 ticks",
           app_song.reverb_size == 74 && app_song.delay_time == 96);
-    enc(PE_K1, -5);
+    enc(PE_K2, -5);
     enc(PE_K3, 1);
     CHECK("the returns' number is not a track: nothing to mute", !player_muted(0));
 

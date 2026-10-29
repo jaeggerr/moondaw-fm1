@@ -13,7 +13,7 @@
  * 1, out of sight until SELECT goes up, the row of the two returns, ROOM
  * DAMP TIME FB -- the column names change with the row.
  *
- *   SELECT, KNOB 2  the row     KNOB 1  the column; left of the first, the track's number
+ *   SELECT, KNOB 1  the row     KNOB 2  the column; left of the first, the track's number
  *   KNOB 3  the value; on a track's number: normal -> MUTE -> SOLO (monitoring,
  *           never in the file)
  *   GLO     back where it was opened from     EDIT  the PROJECT
@@ -142,11 +142,11 @@ int mixer_frame(const PlatInput *in)
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
+    if (btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3])
         said = 0;
 
-    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K2], -1, song->num_tracks - 1);
-    col = clampi(col + in->enc[PE_K1], -1, COLS - 1);
+    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], -1, song->num_tracks - 1);
+    col = clampi(col + in->enc[PE_K2], -1, COLS - 1);
     if ((d = in->enc[PE_K3]) != 0) {
         if (col >= 0)
             turn(col, d);

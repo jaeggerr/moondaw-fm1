@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* INSTRUMENT's hands, without a screen (rows of settings, KNOB 1 the
+/* INSTRUMENT's hands, without a screen (rows of settings, KNOB 2 the
  * column, KNOB 3 the value), the name, the preview on PLAY, and the
  * audition they rely on: a key must make a sound outside the song, and stop. */
 #include <stdio.h>
@@ -59,34 +59,34 @@ int main(void)
     /* rows: NAME, SOUND, ENV, FILTER, LEVEL, then the layers */
     enc(PE_SELECT, 2);
     enc(PE_K3, 2);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, -10);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 100);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 5);
     CHECK("on ENV the columns are attack, decay, sustain, release",
           I3.attack == 10 && I3.decay == 50 && I3.sustain == 255 && I3.release == 45);
     enc(PE_SELECT, 1);
-    enc(PE_K1, -3);
+    enc(PE_K2, -3);
     enc(PE_K3, -8);
-    enc(PE_K1, 2);
+    enc(PE_K2, 2);
     enc(PE_K3, 100);
     CHECK("on FILTER: cutoff, and the env share stops at its top", I3.cutoff == 160 && I3.filt_env == 127);
     enc(PE_SELECT, 1);
-    enc(PE_K1, 1);            /* LEVEL has three: GAIN LEVEL VIB */
+    enc(PE_K2, 1);            /* LEVEL has three: GAIN LEVEL VIB */
     enc(PE_K3, -1);
     CHECK("under vibphase 0: FREE", I3.vib_phase == VIB_PHASE_FREE);
-    enc(PE_K1, -2);
+    enc(PE_K2, -2);
     enc(PE_K3, -100);
     CHECK("gain stops at -64 dB", I3.gain == GAIN_MIN_DB);
     enc(PE_K3, 64);
 
     enc(PE_SELECT, -3);       /* SOUND */
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 9);
     CHECK("a pulse has four duties", I3.engine == ENGINE_PULSE && I3.timbre == 3);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     enc(PE_K3, 1);
     CHECK("changing the engine brings the timbre into its range", I3.engine == ENGINE_NOISE && I3.timbre == 1);
     enc(PE_K3, 1);
@@ -95,11 +95,11 @@ int main(void)
     CHECK("then the voice", I3.engine == ENGINE_VOX);
     enc(PE_SELECT, 4);
     CHECK("a voice has its VOICE row: tract and accent", I3.engine == ENGINE_VOX);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 1);
     CHECK("the accent goes to EN", I3.accent == VOX_ACCENT_EN);
     enc(PE_SELECT, -4);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     enc(PE_K3, -1);
     CHECK("and back to WAVE", I3.engine == ENGINE_WAVE);
 
@@ -108,11 +108,11 @@ int main(void)
     enc(PE_K3, 2);
     CHECK("KNOB 3 up on + LYR makes a layer", I3.nlayers == 1 && I3.layers[0].engine == ENGINE_PULSE &&
           I3.layers[0].timbre == 1);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, -12);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, 7);
-    enc(PE_K1, 1);
+    enc(PE_K2, 1);
     enc(PE_K3, -6);
     CHECK("its columns are semitones, fine tune, gain",
           I3.layers[0].transpose == -12 && I3.layers[0].detune == 7 && I3.layers[0].gain == -6);
@@ -121,7 +121,7 @@ int main(void)
     CHECK("the next + LYR makes a second, one knob for engine and timbre",
           I3.nlayers == 2 && I3.layers[1].engine == ENGINE_WAVE && I3.layers[1].timbre == 2);
     enc(PE_SELECT, -1);
-    enc(PE_K1, -3);
+    enc(PE_K2, -3);
     enc(PE_K3, -20);
     CHECK("all the way down removes the layer, and the one under it moves up",
           I3.nlayers == 1 && I3.layers[0].engine == ENGINE_WAVE);
@@ -129,7 +129,7 @@ int main(void)
     /* the name */
     enc(PE_SELECT, -20);
     press(PB_SEL);
-    enc(PE_K1, 6);
+    enc(PE_K2, 6);
     enc(PE_K3, 2);            /* a B after CHORDS */
     press(PB_SEL);
     CHECK("SEL on NAME types it; seven letters at most", !strcmp(I3.name, "CHORDSB"));
@@ -163,7 +163,7 @@ int main(void)
     go();
     enc(PE_SELECT, -9);
     enc(PE_SELECT, 1);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     enc(PE_K3, 1);
     CHECK("and one turn of ENGINE gives it one of ours", app_song.instruments[4].engine == ENGINE_PULSE);
 

@@ -146,7 +146,7 @@ int main(void)
     go();
     memcpy(before, app_song.arrangement, sizeof before);
     enc(PE_SELECT, 1);
-    enc(PE_K1, -1);
+    enc(PE_K2, -1);
     press(PB_LFO);
     press(PB_LFO);
     CHECK("LFO, twice, removed phrase 01",

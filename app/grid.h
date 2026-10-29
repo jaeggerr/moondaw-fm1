@@ -5,11 +5,12 @@
  * the columns to the right of a rule; the cursor's row a green band, the
  * cursor's cell hollowed out of it.
  *
- * One grammar goes with it: SELECT the row, KNOB 1 the column (left of
+ * One grammar goes with it: SELECT the row, KNOB 2 the column (left of
  * the first one, the row's number), KNOB 3 the value under the cursor,
- * SEL one level down, GLO one level up, HOME home. And KNOB 2 the row as
- * well (29/10): KNOB 1 and 2 move, KNOB 3 and 4 change, the right hand
- * alone moving the cursor; SELECT stays, for long runs. */
+ * SEL one level down, GLO one level up, HOME home. And KNOB 1 the row as
+ * well (29/10): KNOB 1 and 2 move -- the row first, every screen has rows,
+ * only the grids have columns -- KNOB 3 and 4 change, the right hand alone
+ * moving the cursor; SELECT stays, for long runs. */
 #ifndef GRID_H
 #define GRID_H
 

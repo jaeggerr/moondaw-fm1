@@ -1485,6 +1485,13 @@ and 2 move, KNOB 3 and 4 change -- on SONG, SECTION, PATTERN, MIXER,
 PROJECT, INSTRUMENT, the namer and SYLLABLE's wheel (KNOB 1 the slot,
 KNOB 3 the sign). HOME and the CHOOSE lists keep SELECT alone: no value.
 
+Then KNOB 1 and 2 swapped (his question, agreed): every screen has rows,
+only the grids have columns, so the first knob takes the move every
+screen has. KNOB 1 the row (with SELECT), KNOB 2 the column -- the
+namer's and SYLLABLE's wheel's slots too -- KNOB 3 the value, KNOB 4 the
+effect's type. KNOB 1 now walks HOME, PROJECTS and the CHOOSE lists as
+well.
+
 ## 2026-10-29 — SETTINGS
 
 What holds for the machine rather than the song (`app/settings.c`),

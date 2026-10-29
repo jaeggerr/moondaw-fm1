@@ -50,10 +50,10 @@ int main(void)
     phrase_open(0, 0);
     go();
 
-    enc(PE_K1, 1);
-    CHECK("KNOB 1 goes to the next track, even one the phrase leaves out", phrase_track() == 1);
+    enc(PE_K2, 1);
+    CHECK("KNOB 2 goes to the next track, even one the phrase leaves out", phrase_track() == 1);
     CHECK("SEL there opens nothing", press(PB_SEL) == PHRASE_STAY);
-    enc(PE_K1, -5);
+    enc(PE_K2, -5);
     CHECK("and stops at the first track", phrase_track() == 0);
     enc(PE_SELECT, 5);
     CHECK("a short block repeats: row 5 of the phrase is its step 1", phrase_row() == 1);

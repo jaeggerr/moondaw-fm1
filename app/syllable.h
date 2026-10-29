@@ -7,7 +7,7 @@
  *          their QWERTY order, vowels on the black; OCT+ or OCT- the other
  *          layer (Q H X +, and the rarer vowels); LFO rubs the last sign out,
  *          ARP marks the syllable weak (.)
- *   WHEEL  five slots: KNOB 1 the slot, KNOB 3 turns its sign through the
+ *   WHEEL  five slots: KNOB 2 the slot, KNOB 3 turns its sign through the
  *          alphabet's order (letters, digits, + .), its sound written below;
  *          LFO empties the slot
  * In both, ALGO takes the last change back (left) or does it again

@@ -77,14 +77,14 @@ int main(void)
 
     /* SETTINGS: from HOME's root menu, KNOB 3 the value, kept across a restart */
     press(PB_HOME);
-    in.enc[PE_K2] = 2;          /* CONTINUE, PROJECTS, SETTINGS */
+    in.enc[PE_K1] = 2;          /* CONTINUE, PROJECTS, SETTINGS */
     go();
     press(PB_SEL);
     {
         bool there = !strcmp(app_screen(), "SETTINGS"), kept;
         in.enc[PE_K3] = -1;     /* LEDS: GUIDE -> STATE */
         go();
-        in.enc[PE_K2] = 1;      /* LIGHT */
+        in.enc[PE_K1] = 1;      /* LIGHT */
         go();
         in.enc[PE_K3] = 2;      /* 50 -> 75 % */
         go();
