@@ -31,6 +31,12 @@ int grid_base(int vis); /* its baseline */
 /* A column's name, small, in the line above the rows; white when the
  * cursor is in that column. */
 void grid_head(int x, int w, const char *s, bool on);
+/* A track's number as a column's name: green while it plays alone (solo),
+ * red while it is muted. */
+void grid_track_head(int x, int w, int track, bool on);
+/* Whether a track is heard: not muted, and no other alone. Its cells grey
+ * when it is not. */
+bool grid_heard(int track);
 /* The small words at the top left, over the numbers: where one is, or
  * what just happened (SAVED, POOL FULL). */
 void grid_corner(const char *a, uint16_t ca, const char *b, uint16_t cb);

@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "grid.h"
 
+#include "../core/player.h"
+
 #include "../platform/platform.h"
 #include "theme.h"
 
@@ -11,6 +13,21 @@ int grid_base(int vis) { return grid_y(vis) + 2 + FONTS[F_COND20].ascent; }
 void grid_head(int x, int w, const char *s, bool on)
 {
     gfx_text_mid(F_COND12, x, w, GRID_HEAD - 3, s, on ? C_TEXT : C_DIM);
+}
+
+void grid_track_head(int x, int w, int track, bool on)
+{
+    char s[3] = { (char)('1' + track), 0, 0 };
+    gfx_text_mid(F_COND12, x, w, GRID_HEAD - 3, s,
+                 player_soloed(track) ? C_ACCENT : player_muted(track) ? C_MUTE : on ? C_TEXT : C_DIM);
+}
+
+bool grid_heard(int track)
+{
+    bool any = false;
+    for (int t = 0; t < SONG_MAX_TRACKS; t++)
+        any |= player_soloed(t);
+    return !player_muted(track) && (!any || player_soloed(track));
 }
 
 void grid_corner(const char *a, uint16_t ca, const char *b, uint16_t cb)

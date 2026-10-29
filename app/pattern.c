@@ -27,8 +27,8 @@
  *   SELECT also brings the cursor to the step's number: the step as a whole
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
  *   EDIT  tapped, the SELECTION, in and out; held, a shift: the black keys
- *         are commands while it is down (EDIT + MONO: the track alone, again:
- *         among the others). The SELECTION: SELECT and KNOB 2 stretch it from where EDIT
+ *         are commands while it is down (EDIT + MONO tapped: the track alone, or
+ *         back to normal; held: muted). The SELECTION: SELECT and KNOB 2 stretch it from where EDIT
  *         was pressed (left of the first column: whole steps); the black keys
  *         OP1 copy, OP2 paste at the cursor, OP3 cut, OP4 clear
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
@@ -71,7 +71,7 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
  * three, clearing in the two after (OP5 free), listening in the next three. */
 enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = UI_KEY_MONO };
 static bool selecting, anchored;
-static bool edit_held, edit_used; /* EDIT down; a key used as a command while it is */
+static UiShift shift; /* EDIT held: the keys are commands (ui.h) */
 static int an_row, an_col, clip_cols;
 static int syl_slot;
 static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
@@ -444,8 +444,9 @@ static void draw(void)
     }
     else if (cur_col < 0) /* the block's length, while the cursor is on a number */
         grid_corner("LEN", C_DIM, ui_dec(s + 3, len), C_TEXT);
-    else /* the track, green while it plays alone (MONO) */
-        grid_corner(s, player_soloed(track) ? C_ACCENT : C_TITLE, view_name[view], C_TEXT);
+    else /* the track, green while it plays alone, red while muted (MONO) */
+        grid_corner(s, player_soloed(track) ? C_ACCENT : player_muted(track) ? C_MUTE : C_TITLE, view_name[view],
+                    C_TEXT);
     for (int c = 0; c < cols; c++) {
         char h[6] = { 0 };
         if (view == V_NOTES)
@@ -504,7 +505,8 @@ bool pattern_open(Song *s, int e, int t)
     cur_row = top = cur_col = 0;
     view = V_NOTES;
     said = 0;
-    choosing = listening = writing_syl = selecting = edit_held = trying = false;
+    choosing = listening = writing_syl = selecting = trying = false;
+    shift = (UiShift){ 0 };
     sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* KNOB 4's order: alphabetical, the empty slot first. */
@@ -586,24 +588,13 @@ int pattern_frame(const PlatInput *in)
     }
     /* EDIT: a tap takes the SELECTION in or out (at the release); held, it
      * is a shift -- the keys are commands while it is down, the SELECTION
-     * left as it was: EDIT + MONO, the track alone, in one gesture. */
-    if (PRESSED(PB_EDIT))
-        edit_held = true, edit_used = false;
-    if (edit_held && !(in->btns & 1u << PB_EDIT)) {
-        edit_held = false;
-        if (!edit_used) {
-            selecting = !selecting;
-            anchored = selecting;
-            an_row = cur_row, an_col = cur_col;
-        }
+     * left as it was. MONO, in either: the track alone, or muted (ui.h). */
+    if (ui_shift(&shift, in, btns, keys, selecting, track, &said)) {
+        selecting = !selecting;
+        anchored = selecting;
+        an_row = cur_row, an_col = cur_col;
     }
-    if (edit_held && keys)
-        edit_used = true;
-    if (selecting || edit_held) {
-        if (keys & 1u << OP_MONO) { /* the track alone, or back among the others */
-            player_toggle_solo(track);
-            said = player_soloed(track) ? "SOLO" : "NO SOLO";
-        }
+    if (selecting || shift.held) {
         if (keys & 1u << OP_COPY)
             sel_op(OP_COPY);
         if (keys & 1u << OP_PASTE)
@@ -706,10 +697,10 @@ int pattern_frame(const PlatInput *in)
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
                  1u << PB_EDIT | 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
-    ui_led_keys(!selecting && !edit_held ? 0u
-                                         : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
-                                               1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
-                player_soloed(track) ? 1u << OP_MONO : 0u); /* MONO lit: this track alone */
+    ui_led_mono(track, !selecting && !shift.held ? 0u
+                                                 : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
+                                                       1u << OP_LOOP | 1u << OP_MONO |
+                                                       (edit_clip_len() ? 1u << OP_PASTE : 0u));
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */
         selecting = false;

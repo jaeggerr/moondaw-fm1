@@ -24,7 +24,8 @@ enum { CELL_W = 45, COLS = 4 };
 
 static int row, col, top, entry; /* row -1: the returns; col -1: the number */
 static const char *said;
-static uint32_t prev_btns;
+static uint32_t prev_btns, prev_keys;
+static UiShift shift;
 
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 static int nrows(void) { return song->num_tracks + 1; }
@@ -131,19 +132,23 @@ void mixer_open(const char *back, int e)
     row = col = 0;
     top = 1; /* the returns' row is above, out of sight */
     said = 0;
-    prev_btns = 0xFFFFFFFFu; /* what is held on the way in is not a press */
+    prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     gfx_invalidate();
 }
 
 int mixer_frame(const PlatInput *in)
 {
-    uint32_t btns = in->btns & ~prev_btns;
+    uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
     int d, vis;
+    bool edit_tap;
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
+    prev_keys = in->keys;
     if (btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3])
         said = 0;
+    /* EDIT tapped: the PROJECT (at the release); held + MONO: the row's track (ui.h) */
+    edit_tap = ui_shift(&shift, in, btns, keys, false, row, &said);
 
     row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], -1, song->num_tracks - 1);
     if (in->enc[PE_SELECT]) /* SELECT: the track as a whole, the cursor on its number (29/10) */
@@ -169,8 +174,8 @@ int mixer_frame(const PlatInput *in)
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_EDIT | 1u << PB_GLO); /* the PROJECT */
-    ui_led_keys(0, row >= 0 && player_soloed(row) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */
+    ui_led_mono(row, shift.held ? 1u << UI_KEY_MONO : 0u); /* MONO: lit alone, half muted */
     gfx_frame(draw);
-    return PRESSED(PB_HOME) ? MIXER_BACK : PRESSED(PB_EDIT) || PRESSED(PB_GLO) ? MIXER_PROJECT : MIXER_STAY;
+    return PRESSED(PB_HOME) ? MIXER_BACK : edit_tap || PRESSED(PB_GLO) ? MIXER_PROJECT : MIXER_STAY;
 #undef PRESSED
 }

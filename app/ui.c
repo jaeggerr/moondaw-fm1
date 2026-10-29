@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "ui.h"
 
+#include "../core/player.h"
+
 #include "app.h"
 #include "gfx.h"
 #include "loop.h"
@@ -91,19 +93,67 @@ void ui_led_guide_again(void) { shown = keys_shown = ~0u; }
 
 void ui_led_state(int btn, bool on) { plat_led_btn(btn, on && ui_leds != UI_LEDS_OFF); }
 
-void ui_led_keys(uint32_t usable, uint32_t lit)
+void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half)
 {
-    static uint32_t lit_shown = ~0u;
+    static uint32_t lit_shown = ~0u, half_shown = ~0u;
     if (ui_leds != UI_LEDS_GUIDE)
         usable = 0;
     if (ui_leds == UI_LEDS_OFF)
-        lit = 0;
-    if (usable == keys_shown && lit == lit_shown)
+        lit = half = 0;
+    if (usable == keys_shown && lit == lit_shown && half == half_shown)
         return;
     for (int k = 0; k < PLAT_KEYS; k++)
-        plat_led_level(PLAT_BTNS + k, (lit >> k) & 1u ? PLAT_LED_LIT : (usable >> k) & 1u ? ui_light : PLAT_LED_OFF);
+        plat_led_level(PLAT_BTNS + k, (lit >> k) & 1u    ? PLAT_LED_LIT
+                                      : (half >> k) & 1u ? PLAT_LED_50
+                                      : (usable >> k) & 1u ? ui_light
+                                                           : PLAT_LED_OFF);
     keys_shown = usable;
-    lit_shown = lit;
+    lit_shown = lit, half_shown = half;
+}
+
+void ui_led_mono(int track, uint32_t usable)
+{
+    bool alone = track >= 0 && player_soloed(track), muted = track >= 0 && player_muted(track);
+    ui_led_keys(usable, alone ? 1u << UI_KEY_MONO : 0u, muted ? 1u << UI_KEY_MONO : 0u);
+}
+
+bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, bool ops, int track,
+              const char **said)
+{
+    bool tapped = false;
+    if (pressed & 1u << PB_EDIT)
+        s->held = true, s->used = false;
+    if (s->held && keys)
+        s->used = true;
+    if (track >= 0 && (s->held || ops || s->mono) && (keys >> UI_KEY_MONO & 1u))
+        s->mono = 1, s->muted = false;
+    else if (s->mono && (in->keys >> UI_KEY_MONO & 1u) && ++s->mono == MONO_HOLD && track >= 0) {
+        if (player_soloed(track)) /* held: muted, whatever it was */
+            player_toggle_solo(track);
+        if (!player_muted(track))
+            player_toggle_mute(track);
+        s->muted = true;
+        *said = "MUTE";
+    } else if (s->mono && !(in->keys >> UI_KEY_MONO & 1u)) {
+        if (!s->muted && track >= 0) { /* tapped: alone, or back to normal */
+            if (player_soloed(track) || player_muted(track)) {
+                if (player_soloed(track))
+                    player_toggle_solo(track);
+                if (player_muted(track))
+                    player_toggle_mute(track);
+                *said = "NORMAL";
+            } else {
+                player_toggle_solo(track);
+                *said = "SOLO";
+            }
+        }
+        s->mono = 0;
+    }
+    if (s->held && !(in->btns & 1u << PB_EDIT)) {
+        s->held = false;
+        tapped = !s->used;
+    }
+    return tapped;
 }
 
 void ui_led_guide(uint32_t usable)

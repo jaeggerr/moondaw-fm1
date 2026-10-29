@@ -40,6 +40,8 @@ static void go(void) { last = songview_frame(&in, &entry, &track); memset(in.enc
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 /* `last` is what the press itself answered, not the release after it */
 static void press(int b) { int r; in.btns = 1u << b; go(); r = last; in.btns = 0; go(); last = r; }
+/* EDIT is also a shift: it answers at the release */
+static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 #define E(i) (app_song.arrangement[i])
 
@@ -118,7 +120,7 @@ int main(void)
 
     press(PB_SEQ);
     CHECK("SEQ on a block does nothing", last == SONGVIEW_STAY);
-    press(PB_EDIT);
+    tap_edit();
     CHECK("EDIT on a block asks for it, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
     go();
     enc(PE_K2, -1);           /* the phrase's number */
@@ -157,7 +159,7 @@ int main(void)
     press(PB_HOME);
     CHECK("HOME, the panel closed, goes back to HOME's root", last == SONGVIEW_BACK);
     go();
-    press(PB_EDIT);
+    tap_edit();
     CHECK("EDIT on the number asks for the SECTION", last == SONGVIEW_PHRASE);
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");

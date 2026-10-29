@@ -108,6 +108,8 @@ int main(void)
     CHECK("and both are back when it is lifted", !player_soloed(1) && left > 100000 && right > 100000);
 
     in.btns = 1u << PB_EDIT;
+    mixer_frame(&in);
+    in.btns = 0;              /* EDIT is also a shift: it answers at the release */
     CHECK("EDIT goes to the PROJECT", mixer_frame(&in) == MIXER_PROJECT);
     in.btns = 0;
     go();

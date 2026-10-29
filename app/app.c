@@ -526,7 +526,7 @@ void app_frame(const PlatInput *real)
     if (screen == AT_MENU || screen == AT_CANVAS)
         ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
     if (screen != AT_PATTERN && screen != AT_SONG && screen != AT_PHRASE && screen != AT_MIXER)
-        ui_led_keys(0, 0); /* the keys light for PATTERN's ops, and MONO where a track is in front */
+        ui_led_keys(0, 0, 0); /* the keys light for PATTERN's ops, and MONO where a track is in front */
     remote_leds();
 }
 

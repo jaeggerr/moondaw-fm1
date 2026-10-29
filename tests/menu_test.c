@@ -37,7 +37,7 @@ static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
 /* HOME's root -> PROJECTS, the list; its cursor on the open project. */
 static void projects(void) { sel(-10); sel(1); press(PB_SEL); }
 /* HOME -> SONG on the open project, then the block of its first cell. */
-static void into(void) { press(PB_SEL); press(PB_EDIT); }
+static void into(void) { press(PB_SEL); press(PB_EDIT); go(); }
 static int songs_in_flash(void)
 {
     int n = 0;
@@ -68,7 +68,8 @@ int main(void)
     press(PB_SEL);
     CHECK("an unsaved new song has its row, and SEL on it goes back in",
           !strcmp(app_name, "SONG 01") && app_slot == -1);
-    press(PB_EDIT);
+    press(PB_EDIT);           /* PATTERN opens at EDIT's release: a frame for it */
+    go();
     key(16);                  /* A4 on its first step */
     CHECK("writing marks the song as changed", app_dirty);
     press(PB_SAVE);
@@ -80,7 +81,8 @@ int main(void)
     press(PB_SEL);
     CHECK("SEL on another row opens it", !strcmp(app_name, "DEMO"));
 
-    press(PB_EDIT);
+    press(PB_EDIT);           /* PATTERN opens at EDIT's release: a frame for it */
+    go();
     key(3);
     home();
     projects();
@@ -95,7 +97,8 @@ int main(void)
           !strcmp(app_name, "SONG 01") && !app_dirty &&
           song_step(&app_song, 0, 0, 0)->notes[0] == 69);
 
-    press(PB_EDIT);
+    press(PB_EDIT);           /* PATTERN opens at EDIT's release: a frame for it */
+    go();
     key(20);
     home();
     projects();
@@ -124,7 +127,8 @@ int main(void)
     press(PB_SEQ);            /* still HOME: SEQ does nothing here */
     CHECK("and the hand stays on HOME", !strcmp(app_name, "DEMO"));
     press(PB_SEL);
-    press(PB_EDIT);
+    press(PB_EDIT);           /* PATTERN opens at EDIT's release: a frame for it */
+    go();
     key(5);
     home();
     projects();

@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "../platform/platform.h"
+
 enum { UI_CARDS_Y = 22, UI_CARDS_H = 22 };
 
 char *ui_hex2(char *b, int v);
@@ -45,8 +47,28 @@ void ui_led_guide_again(void);
  * something else than notes: PATTERN's OP keys while EDIT has them.
  * `lit`: a key's state, lit as PLAY's is (MONO while the track in front
  * plays alone), unless LEDS is OFF. */
-void ui_led_keys(uint32_t usable, uint32_t lit);
+void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half);
 enum { UI_KEY_MONO = 20 }; /* the black keys read OP1-6, PIT, GLO, MONO, POLY */
+
+/* EDIT as a shift (29/10), shared by the screens where a track is in front
+ * (PATTERN, SONG, SECTION, MIXER): while EDIT is down the black keys are
+ * commands; MONO tapped puts the track alone (solo, cumulative), or back to
+ * normal from solo or mute; MONO held MONO_HOLD frames mutes it. A tap of
+ * EDIT with no key meanwhile is the screen's own EDIT, given at the
+ * release. `track` -1: none in front. */
+typedef struct {
+    bool held, used;  /* EDIT down; a key used while it was */
+    int mono;         /* frames MONO has been down, 0 when up */
+    bool muted;       /* this MONO press already muted */
+} UiShift;
+enum { MONO_HOLD = 30 }; /* 0.5 s */
+/* One frame, with the buttons and keys pressed this frame; `ops` true
+ * where the keys are commands anyway (PATTERN's SELECTION). True when
+ * EDIT was tapped. `*said` the corner's word when MONO acted. */
+bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, bool ops, int track,
+              const char **said);
+/* MONO's LED for the track in front: lit alone, half muted. */
+void ui_led_mono(int track, uint32_t usable);
 
 /* What a button of the map is, this frame. */
 enum {

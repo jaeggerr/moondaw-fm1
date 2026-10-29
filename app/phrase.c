@@ -26,6 +26,7 @@ static int kbd_oct;    /* octaves the keyboard is moved by */
 static int chord_next; /* the note slot the next held key fills, 0 = none held */
 static const char *said;
 static uint32_t prev_btns, prev_keys;
+static UiShift shift; /* EDIT held + MONO: the track under the cursor alone, or muted */
 static bool playing;
 static int play_row = -1;
 static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_IDLE the view follows PLAY */
@@ -69,7 +70,8 @@ static void draw_cell(int v, int t, int r, bool band)
     st = cell(t, r);
     for (int k = 0; k < STEP_MAX_NOTES; k++)
         if (st->notes[k] <= NOTE_MAX) {
-            grid_cell(v, x, CELL_W, note_name(st->notes[k], n), band, on, r == play_row ? C_TITLE : C_TEXT);
+            grid_cell(v, x, CELL_W, note_name(st->notes[k], n), band, on,
+                      !grid_heard(t) ? C_DIM : r == play_row ? C_TITLE : C_TEXT); /* grey: not heard */
             return;
         }
     if (st->notes[0] == NOTE_OFF) {
@@ -93,10 +95,8 @@ static void draw(void)
         grid_corner(said, grid_said_ink(said), 0, 0);
     else
         grid_corner("SEC", C_DIM, grid_hex2(s, entry), C_TITLE);
-    for (int c = 0; c < CELLS && left + c < song->num_tracks; c++) {
-        s[0] = (char)('1' + left + c), s[1] = 0;
-        grid_head(GRID_CELL_X + c * CELL_W, CELL_W, s, left + c == col);
-    }
+    for (int c = 0; c < CELLS && left + c < song->num_tracks; c++) /* green alone, red muted */
+        grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, left + c, left + c == col);
     for (int v = 0; v < GRID_ROWS && top + v < steps; v++) {
         int r = top + v;
         bool band = r == row;
@@ -136,6 +136,7 @@ void phrase_open(int e, int track)
 int phrase_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
+    bool edit_tap;
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
@@ -143,6 +144,11 @@ int phrase_frame(const PlatInput *in)
     playing = player_playing();
     if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1])
         said = 0;
+    /* EDIT tapped opens the block (at the release); held, the keys are its
+     * commands and write nothing -- MONO, the track under the cursor (ui.h) */
+    edit_tap = ui_shift(&shift, in, btns, keys, false, col, &said);
+    if (shift.held || shift.mono)
+        keys = 0;
 
     row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     col += in->enc[PE_K2];
@@ -198,7 +204,7 @@ int phrase_frame(const PlatInput *in)
         grid_follow(&row, &top, steps, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(1u << PB_FX | 1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
-    ui_led_keys(0, player_soloed(col) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */
+    ui_led_mono(col, shift.held ? 1u << UI_KEY_MONO : 0u); /* MONO: lit alone, half muted */
     gfx_frame(draw);
 
     if (PRESSED(PB_HOME)) {
@@ -210,7 +216,7 @@ int phrase_frame(const PlatInput *in)
         player_note_off();
         return PHRASE_PROJECT;
     }
-    if ((PRESSED(PB_SEL) || PRESSED(PB_EDIT)) && has(col)) { /* EDIT: what is under the cursor */
+    if ((PRESSED(PB_SEL) || edit_tap) && has(col)) { /* EDIT tapped: what is under the cursor */
         player_note_off();
         return PHRASE_PATTERN;
     }

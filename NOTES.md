@@ -1589,6 +1589,22 @@ the playhead a page at a time, the playhead at the top of the new page;
 the hand moving anything gives the view back to the cursor at once, the
 cursor never moved by it. `grid_follow_play`.
 
+## 2026-10-29 — mute and solo, on MONO
+
+One gesture wherever a track is in front (PATTERN's track, the track
+under the cursor in SONG and SECTION, the MIXER's row): EDIT held + MONO.
+Tapped: the track alone (solo, cumulative), or back to normal from solo
+or mute; held 0.5 s: muted (his design, over a MONO cycle normal/MUTE/SOLO
+and over OP5, too far from MONO; POLY was too much of a lie). EDIT is a
+shared shift now (`ui_shift`, `UiShift`): a tap of it is the screen's own
+EDIT, given at the release; held, the black keys are commands. SECTION's
+keys write nothing while it is down.
+
+Seen at once: a track's number at the top of its column green alone, red
+muted, in SONG and SECTION (`grid_track_head`); the cells of a track one
+does not hear grey (`grid_heard`); PATTERN's corner as well. MONO's LED
+lit alone, half muted. The MIXER keeps KNOB 3 on a track's number.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

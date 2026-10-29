@@ -225,6 +225,23 @@ int main(void)
     in.btns = 0;
     go();
     CHECK("again: among the others", !player_soloed(0));
+    in.btns = 1u << PB_EDIT;  /* MONO held: muted */
+    go();
+    in.keys = 1u << 20;
+    for (int i = 0; i < 31; i++)
+        go();
+    in.keys = 0;
+    go();
+    in.btns = 0;
+    go();
+    CHECK("EDIT + MONO held: the track muted", player_muted(0) && !player_soloed(0));
+    in.btns = 1u << PB_EDIT;
+    go();
+    keys(1u << 20);
+    keys(0);
+    in.btns = 0;
+    go();
+    CHECK("and a tap: back to normal", !player_muted(0) && !player_soloed(0));
     enc(PE_SELECT, 1);
     CHECK("SELECT puts the cursor on the step's number: the keys only play",
           (keys(1u << 1), keys(0), st(1)->notes[0] == NOTE_NONE || st(1)->notes[0] != 54));

@@ -72,7 +72,11 @@ int main(void)
     CHECK("FX for the mixer", press(PB_FX) == PHRASE_MIXER);
     phrase_resume();
     go();
-    CHECK("EDIT, as SEL, asks for PATTERN", press(PB_EDIT) == PHRASE_PATTERN);
+    in.btns = 1u << PB_EDIT;  /* EDIT is also a shift: it answers at the release */
+    go();
+    in.btns = 0;
+    go();
+    CHECK("EDIT, as SEL, asks for PATTERN", last == PHRASE_PATTERN);
     phrase_resume();
     go();
     CHECK("GLO asks for the PROJECT", press(PB_GLO) == PHRASE_PROJECT);

@@ -32,7 +32,8 @@ enum { POP_TOP = 24, POP_ROWS = 7 };
 static int row, col, top, left; /* col -1: the phrase's number */
 static bool ask_delete;
 static const char *said;        /* SAVED, NOT SAVED: until the hand does something else */
-static uint32_t prev_btns;
+static uint32_t prev_btns, prev_keys;
+static UiShift shift; /* EDIT held + MONO: the track under the cursor alone, or muted */
 static bool playing;
 static int play_row = -1;
 /* The panel of a track's blocks. While PLAY previews one, the cell holds it
@@ -271,10 +272,8 @@ static void draw(void)
         grid_corner(said, grid_said_ink(said), 0, 0);
     else if (col < 0 && !is_ref(row)) /* the phrase's length, while the cursor is on it */
         grid_corner(entry_at(row)->steps ? ui_dec(s, entry_at(row)->steps) : "AUTO", C_TEXT, 0, 0);
-    for (int c = 0; c < CELLS && left + c < tracks; c++) {
-        s[0] = (char)('1' + left + c), s[1] = 0;
-        grid_head(GRID_CELL_X + c * CELL_W, CELL_W, s, left + c == col);
-    }
+    for (int c = 0; c < CELLS && left + c < tracks; c++) /* green alone, red muted */
+        grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, left + c, left + c == col);
     for (int v = 0; v < GRID_ROWS && top + v < n; v++) {
         int r = top + v;
         const SongEntry *e = entry_at(r);
@@ -294,7 +293,7 @@ static void draw(void)
         for (int t = left; t < left + CELLS && t < tracks; t++) {
             uint8_t p = e->pattern[t];
             bool on = band && t == col;
-            uint16_t ink = p < TRACK_MAX_PATTERNS ? (r == play_row ? C_TITLE : C_TEXT) : C_DIM;
+            uint16_t ink = p < TRACK_MAX_PATTERNS && grid_heard(t) ? (r == play_row ? C_TITLE : C_TEXT) : C_DIM;
             grid_cell(v, GRID_CELL_X + (t - left) * CELL_W, CELL_W,
                       p < TRACK_MAX_PATTERNS ? grid_hex2(s, p) : p == PATTERN_HOLD ? "ON" : "--",
                       band, on, ink);
@@ -345,12 +344,14 @@ static uint32_t usable(void)
 
 int songview_frame(const PlatInput *in, int *entry, int *track)
 {
+    uint32_t keys;
     uint32_t btns = in->btns & ~prev_btns;
     bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3];
     int out = SONGVIEW_STAY;
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
+    keys = in->keys & ~prev_keys, prev_keys = in->keys;
     playing = player_playing();
     if (acted)
         said = 0;
@@ -376,7 +377,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         play_row = -1;
         ui_led_state(PB_PLAY, listening);
         ui_led_guide(0); /* SEL, HOME back, PLAY: nothing of its own */
-        ui_led_keys(0, player_soloed(col) && pop_preview < 0 ? 1u << UI_KEY_MONO : 0u); /* a preview's solo is not MONO's */
+        ui_led_keys(0, player_soloed(col) && pop_preview < 0 ? 1u << UI_KEY_MONO : 0u, 0); /* a preview's solo is not MONO's */
         gfx_frame(draw);
         return SONGVIEW_STAY;
     }
@@ -415,7 +416,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     if (PRESSED(PB_SEQ) && !is_ref(row) && col < 0)
         insert_phrase();
-    if (PRESSED(PB_EDIT) && !is_ref(row)) { /* what is under the cursor, to edit */
+    if (ui_shift(&shift, in, btns, keys, false, col, &said) && !is_ref(row)) {
+        /* EDIT tapped (at the release, as it is also a shift): what is under the cursor, to edit */
         *entry = row;
         *track = col < 0 ? 0 : col;
         if (col < 0)
@@ -457,7 +459,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     play_row = playing ? player_entry() : -1;
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(usable());
-    ui_led_keys(0, col >= 0 && player_soloed(col) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */
+    ui_led_mono(col, shift.held ? 1u << UI_KEY_MONO : 0u); /* MONO: lit alone, half muted */
     gfx_frame(draw);
     return out;
 #undef PRESSED
