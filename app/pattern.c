@@ -68,7 +68,7 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
  * puts it. */
 /* The black keys by their groups under the hand: the clipboard in the first
  * three, clearing in the two after (OP5 free), listening in the next three. */
-enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = 20 };
+enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = UI_KEY_MONO };
 static bool selecting, anchored;
 static bool edit_held, edit_used; /* EDIT down; a key used as a command while it is */
 static int an_row, an_col, clip_cols;
@@ -700,7 +700,8 @@ int pattern_frame(const PlatInput *in)
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
     ui_led_keys(!selecting && !edit_held ? 0u
                                          : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
-                                               1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u));
+                                               1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
+                player_soloed(track) ? 1u << OP_MONO : 0u); /* MONO lit: this track alone */
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */
         selecting = false;

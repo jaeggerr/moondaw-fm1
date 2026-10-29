@@ -1576,6 +1576,10 @@ now (`menu_reload`).
   commands while it is down, the SELECTION left as it was; a tap of EDIT
   still takes the SELECTION in and out, at the release. The track's number
   in the corner is green while it plays alone.
+- MONO's LED lit (as PLAY's state, at full) while the track in front plays
+  alone: PATTERN's track, the track under the cursor in SONG and SECTION,
+  the row's in the MIXER (his ask). A CHOOSE PATTERN preview's solo is
+  not MONO's: it stays dark then. `ui_led_keys(usable, lit)`.
 
 ## Open
 

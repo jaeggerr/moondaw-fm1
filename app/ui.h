@@ -42,8 +42,11 @@ void ui_led_state(int btn, bool on);
  * next ui_led_guide writes them all again. */
 void ui_led_guide_again(void);
 /* The same for the keys (bit k = key k), where the keyboard does
- * something else than notes: PATTERN's OP1-4 while selecting. */
-void ui_led_keys(uint32_t usable);
+ * something else than notes: PATTERN's OP keys while EDIT has them.
+ * `lit`: a key's state, lit as PLAY's is (MONO while the track in front
+ * plays alone), unless LEDS is OFF. */
+void ui_led_keys(uint32_t usable, uint32_t lit);
+enum { UI_KEY_MONO = 20 }; /* the black keys read OP1-6, PIT, GLO, MONO, POLY */
 
 /* What a button of the map is, this frame. */
 enum {

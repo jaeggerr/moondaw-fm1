@@ -169,6 +169,7 @@ int mixer_frame(const PlatInput *in)
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_EDIT | 1u << PB_GLO); /* the PROJECT */
+    ui_led_keys(0, row >= 0 && player_soloed(row) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */
     gfx_frame(draw);
     return PRESSED(PB_HOME) ? MIXER_BACK : PRESSED(PB_EDIT) || PRESSED(PB_GLO) ? MIXER_PROJECT : MIXER_STAY;
 #undef PRESSED

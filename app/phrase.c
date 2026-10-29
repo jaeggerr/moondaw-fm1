@@ -191,6 +191,7 @@ int phrase_frame(const PlatInput *in)
     play_row = playing && player_entry() == entry ? player_row() % steps : -1;
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(1u << PB_FX | 1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
+    ui_led_keys(0, player_soloed(col) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */
     gfx_frame(draw);
 
     if (PRESSED(PB_HOME)) {

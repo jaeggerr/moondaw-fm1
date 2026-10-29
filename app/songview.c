@@ -376,6 +376,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         play_row = -1;
         ui_led_state(PB_PLAY, listening);
         ui_led_guide(0); /* SEL, HOME back, PLAY: nothing of its own */
+        ui_led_keys(0, player_soloed(col) && pop_preview < 0 ? 1u << UI_KEY_MONO : 0u); /* a preview's solo is not MONO's */
         gfx_frame(draw);
         return SONGVIEW_STAY;
     }
@@ -456,6 +457,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     play_row = playing ? player_entry() : -1;
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(usable());
+    ui_led_keys(0, col >= 0 && player_soloed(col) ? 1u << UI_KEY_MONO : 0u); /* MONO lit: that track alone */
     gfx_frame(draw);
     return out;
 #undef PRESSED

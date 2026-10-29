@@ -91,15 +91,19 @@ void ui_led_guide_again(void) { shown = keys_shown = ~0u; }
 
 void ui_led_state(int btn, bool on) { plat_led_btn(btn, on && ui_leds != UI_LEDS_OFF); }
 
-void ui_led_keys(uint32_t usable)
+void ui_led_keys(uint32_t usable, uint32_t lit)
 {
+    static uint32_t lit_shown = ~0u;
     if (ui_leds != UI_LEDS_GUIDE)
         usable = 0;
-    if (usable == keys_shown)
+    if (ui_leds == UI_LEDS_OFF)
+        lit = 0;
+    if (usable == keys_shown && lit == lit_shown)
         return;
     for (int k = 0; k < PLAT_KEYS; k++)
-        plat_led_level(PLAT_BTNS + k, (usable >> k) & 1u ? ui_light : PLAT_LED_OFF);
+        plat_led_level(PLAT_BTNS + k, (lit >> k) & 1u ? PLAT_LED_LIT : (usable >> k) & 1u ? ui_light : PLAT_LED_OFF);
     keys_shown = usable;
+    lit_shown = lit;
 }
 
 void ui_led_guide(uint32_t usable)
