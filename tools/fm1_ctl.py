@@ -129,24 +129,33 @@ def screen(port, path):
     from PIL import Image
     im = Image.new("RGB", (240, 240))
     for b in range(15):
-        coded, size = b"", None
-        while size is None or len(coded) < size:
-            _, _, size, tail = checked(link.ask(port, SCREEN, bytes([b]) + len(coded).to_bytes(2, "little")),
-                                       "install a MOONDAW with SCREEN (link version 3)")
-            if not tail:
+        for _ in range(3):  # the band may change between two of its pieces: then again
+            px = band(port, b)
+            if len(px) == 240 * 16:
                 break
-            coded += tail
-        px = []
-        for i in range(0, len(coded) - 2, 3):
-            v = coded[i + 1] | coded[i + 2] << 8
-            r, g, bl = v >> 11, v >> 5 & 63, v & 31
-            px += [(r * 255 // 31, g * 255 // 63, bl * 255 // 31)] * coded[i]
-        if len(px) != 240 * 16:
+        else:
             sys.exit(f"band {b}: {len(px)} pixels, not {240 * 16}")
         for i, c in enumerate(px):
             im.putpixel((i % 240, b * 16 + i // 240), c)
     im.save(path)
     return path
+
+
+def band(port, b):
+    """One band's pixels, its coded pieces asked one after the other."""
+    coded, size = b"", None
+    while size is None or len(coded) < size:
+        _, _, size, tail = checked(link.ask(port, SCREEN, bytes([b]) + len(coded).to_bytes(2, "little")),
+                                   "install a MOONDAW with SCREEN (link version 3)")
+        if not tail:
+            break
+        coded += tail
+    px = []
+    for i in range(0, len(coded) - 2, 3):
+        v = coded[i + 1] | coded[i + 2] << 8
+        r, g, bl = v >> 11, v >> 5 & 63, v & 31
+        px += [(r * 255 // 31, g * 255 // 63, bl * 255 // 31)] * coded[i]
+    return px
 
 
 def main():
