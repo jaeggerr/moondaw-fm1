@@ -39,6 +39,7 @@ static char slots[MAX], text[MAX + 1], last;
 enum { HIST = 32 };
 static char hist[HIST][MAX];
 static int now, top;
+static uint32_t held; /* the keys under the hand: lit on the drawing, to find one's place */
 static int mode, layer, at, instr, track, row, singing;
 static uint8_t note;
 
@@ -150,6 +151,7 @@ int syllable_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
     bool changed = false;
     int d;
 
+    held = in->keys;
     if (in->enc[PE_PRESET]) {
         mode = mode == KEYS ? WHEEL : KEYS;
         gfx_invalidate();
@@ -232,7 +234,8 @@ static void draw_keys(void)
     gfx_text(F_COND12, 64, 112, "OCT other layer   LFO rub out   ARP weak", C_DIM);
     for (int i = 0; i < 16; i++) {
         char c[2] = { on_white[layer][i], 0 };
-        gfx_fill(i * w + 1, top, w - 2, 98, c[0] != ' ' ? C_KEY : C_KEY_NONE, 255);
+        bool down = (held >> white[i]) & 1u;
+        gfx_fill(i * w + 1, top, w - 2, 98, down ? C_ACCENT : c[0] != ' ' ? C_KEY : C_KEY_NONE, 255);
         if (c[0] != ' ')
             gfx_text(F_COND14, i * w + 4, top + 92, c, C_KEY_ON);
     }
@@ -242,10 +245,11 @@ static void draw_keys(void)
         for (int j = 0; j < 16; j++)
             if (white[j] < black[i])
                 prev = j;
+        bool down = (held >> black[i]) & 1u;
         x = (prev + 1) * w - 5;
-        gfx_fill(x, top, 10, 56, c[0] != ' ' ? C_KEY_B : C_KEY_BOFF, 255);
+        gfx_fill(x, top, 10, 56, down ? C_ACCENT : c[0] != ' ' ? C_KEY_B : C_KEY_BOFF, 255);
         if (c[0] != ' ')
-            gfx_text(F_COND12, x + 2, top + 50, c, C_TEXT);
+            gfx_text(F_COND12, x + 2, top + 50, c, down ? C_ON_ACC : C_TEXT);
     }
 }
 
