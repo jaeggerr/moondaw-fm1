@@ -221,7 +221,7 @@ AMPTEST, piano-velocity and song03 have nothing the FM-1 can play.
   characters" came from the pasted brief. The panel is 240x240 RGB565 and
   Felucca paints antialiased type on it; a constraint of my first code is
   not a constraint of the machine. The same mistake was made once on the
-  console (moondaw, 24/08: "on dirait toujours un truc en DOS moche").
+  console (moondaw, 24/08: "it still looks like an ugly DOS thing").
   The design language is the iOS app's — slabs, nine slots a step, cyan
   where one is, green the cursor, the fixed palette — remeasured.
 - `proto/pattern.html` is the PATTERN mockup (three states and the panel
@@ -280,7 +280,7 @@ AMPTEST, piano-velocity and song03 have nothing the FM-1 can play.
   OCT pair, space is PLAY too; the notes moved to the bottom rows and
   to 7 U I 9 O 0 P [ = ]. By scancode, so AZERTY is the same hands.
 - **The simulator cannot say how the type looks.** Jaeger's first word
-  on PATTERN in the SDL window was "très flou". Part of it was macOS
+  on PATTERN in the SDL window was "very blurry". Part of it was macOS
   stretching a low-density window (fixed: high-DPI window, nearest
   scaling); the rest is real — antialiased glyphs of 6 to 12 pixels
   shown at twice their size are soft by nature. On the panel a pixel is
@@ -364,7 +364,7 @@ wiring, and whether the tool talks to this FM-1.
 
 ## 2026-10-10 — MENU proposed
 
-Jaeger on the player screen: "pourquoi l'écran d'accueil est moche ?" It
+Jaeger on the player screen: "why is the home screen ugly?" It
 is the provisional 8x8 screen from before the design direction was
 known; it goes. `proto/menu.html` is the screen that replaces it, and
 the list of songs the store already knows how to keep (32 slots) but
@@ -762,7 +762,7 @@ The day is in `docs/ARRIVEE.md`. What it changes here:
 - M-VAVE's FM1 Open (20/10) opens its app, not its engine (binary SDK,
   Windows build): not a base for MOONDAW, which has its own engine.
 
-**The interface, seen on the panel: "horrible, trop petit", to be
+**The interface, seen on the panel: "horrible, too small", to be
 rethought from A to Z.** Every screen above was drawn without the machine
 and, as said on 10/10, "validated" meant "not objected to". None of the
 layout decisions stand: type size, row height, what one screen shows,
@@ -773,7 +773,7 @@ tests prove (core, store, link, undo, the edit code under the screens).
 
 `MOONDAW_APP=type` (`app/type.c`): a ruler, then 17 pages of one face and
 size each, filled with tracker rows. Jaeger, with the FM-1 at playing
-distance: readable "sans trop d'effort" from 18, **read at a glance at
+distance: readable "without much effort" from 18, **read at a glance at
 20 -- CONDENSED 20 is the size, whatever it costs in layout.**
 
 - What it costs: **9 lines of 26 characters a screen**, against 15 to 20
@@ -848,9 +848,9 @@ spell them.
   place, PLAY plays the one under the cursor alone, looped, SEL takes it,
   **GLO goes back** unchanged. The two buttons are written at the bottom,
   each on the side of its button. HOME stays "home" even there.
-- **SONG validated on the panel, 28/10** ("c'est parfait"), as above.
+- **SONG validated on the panel, 28/10** ("it's perfect"), as above.
   No button to empty a cell: KNOB 2 stops at `--` and a flick to the
-  left gets there from any block (tried on the device: "ça va vite").
+  left gets there from any block (tried on the device: "that's quick").
   Piano keys are kept for notes on every screen, never for commands.
 
 **The road down, agreed 28/10: HOME → SONG → SECTION → block.** A block
@@ -950,7 +950,7 @@ VOL PAN REV ECH as the file writes them (pan `C`, `L18`, `R18`; a send
 at 0 in grey); KNOB 2 on a track's number goes normal, MUTE (`M`, red),
 SOLO (`S`, cyan; the others grey). Above track 1, out of sight until
 SELECT goes up, the `FX` row of the returns: ROOM DAMP TIME FB -- **the
-column names change with the row** (Jaeger: "très malin"). A trick to
+column names change with the row** (Jaeger: "very clever"). A trick to
 keep wherever a grid has a row of another kind.
 
 ## 2026-10-28 — MIXER and PROJECT written
@@ -1255,11 +1255,11 @@ the script collects them and draws again.
 - Checked headless over UDP (`tests/remotetest.sh`, and the demo driven
   by `fm1_ctl.py`), then **on the FM-1 over USB, 29/10**: `fm1_ctl.py
   status` answered through the real cable, and `list_demo.py` ran on the
-  panel -- Jaeger: "parfait, rien à redire" (fast enough, drawn clean).
+  panel -- Jaeger: "perfect, nothing to add" (fast enough, drawn clean).
 
 ## 2026-10-29 — an idea for later: the band on stage
 
-Jaeger, "inutile mais rigolo": a little cartoon engine in the manner of
+Jaeger, "useless but fun": a little cartoon engine in the manner of
 Animaconda (his project, `~/Documents/Animaconda`), minimal, in C. You
 build a band -- one musician per track -- with a simple face editor
 (hair, eyes, mouth, skin, clothes), give each an instrument, pick a stage
@@ -1655,8 +1655,8 @@ grid stays clean while all is full. KNOB 4 changes, as the rule says.
 ## 2026-10-29 — DRUM, Felucca's drum voices
 
 He did not like the drums made of WAVE and NOISE, heard four candidates
-(`docs/drums-demo/`, the listening board) and chose Felucca's: "felucca,
-tu peux carrément supprimer le mien". They are a new engine, DRUM
+(`docs/drums-demo/`, the listening board) and chose Felucca's: "Felucca;
+you can just delete mine". They are a new engine, DRUM
 (`core/drum.c`, `core/drum.h`; `UPSTREAM.md` lists what was taken):
 
 - **An instrument is a kit**: TIMBRE picks it (STD, ROUND -- STD with the
