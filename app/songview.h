@@ -15,7 +15,7 @@ int songview_entry(void); /* the phrase under the cursor */
 void songview_open(bool reset_cursor);
 /* Leaving by HOME: a block panel open is closed as by GLO. */
 void songview_cancel(void);
-/* One frame. SONGVIEW_PATTERN: SEQ opened a block; *entry and *track say
+/* One frame. SONGVIEW_PATTERN: EDIT opened a block; *entry and *track say
  * which. SONGVIEW_PHRASE: SEL opened a phrase by its number. */
 int songview_frame(const PlatInput *in, int *entry, int *track);
 

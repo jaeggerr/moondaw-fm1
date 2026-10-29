@@ -99,7 +99,9 @@ int main(void)
     CHECK("and a block", E(0).pattern[0] == 0);
 
     press(PB_SEQ);
-    CHECK("SEQ on a block asks for it, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
+    CHECK("SEQ on a block does nothing", last == SONGVIEW_STAY);
+    press(PB_EDIT);
+    CHECK("EDIT on a block asks for it, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
     go();
     enc(PE_K1, -1);           /* the phrase's number */
     press(PB_SEQ);
@@ -131,8 +133,11 @@ int main(void)
     press(PB_FX);
     CHECK("FX asks for the MIXER", last == SONGVIEW_MIXER);
     go();
+    press(PB_GLO);
+    CHECK("GLO asks for the PROJECT", last == SONGVIEW_PROJECT);
+    go();
     press(PB_EDIT);
-    CHECK("EDIT asks for the PROJECT", last == SONGVIEW_PROJECT);
+    CHECK("EDIT on the number asks for the SECTION", last == SONGVIEW_PHRASE);
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

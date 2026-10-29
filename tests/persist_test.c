@@ -54,7 +54,7 @@ int main(void)
     go();
     before = note_on_flash();   /* nothing saved yet */
     press(PB_SEL);              /* HOME: open it, SONG */
-    press(PB_SEQ);              /* PATTERN, phrase 0 track 1 */
+    press(PB_EDIT);             /* PATTERN, phrase 0 track 1 */
     in.enc[PE_SELECT] = 5;
     go();
     in.keys = 1u << 16;         /* A4 on step 05 */
@@ -67,7 +67,7 @@ int main(void)
     app_init();                 /* the machine switched off and on */
     go();
     press(PB_SEL);
-    press(PB_SEQ);
+    press(PB_EDIT);
     press(PB_SAVE);             /* saved again, untouched: still there */
     again = note_on_flash();
 

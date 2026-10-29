@@ -1339,6 +1339,17 @@ mine of -- everywhere and the one in force in the head; prototype
 step names it, grey where it keeps the one in force. A step with no note
 shows -- alone.
 
+## 2026-10-29 — SONG: EDIT edits, GLO is the global
+
+On SONG, EDIT edits what is under the cursor -- a cell's block in
+PATTERN, the number's phrase in SECTION (Jaeger: "intuitive"); SEQ on a
+cell is left free for later, rather than kept as a second way that hands
+would get used to; SEQ on the number still copies the phrase. PROJECT
+moved to GLO, the button's own word: GLObal, what holds for the whole
+song. GLO did nothing on SONG (HOME goes home), so nothing was taken
+away; on PROJECT, GLO goes back. Not on the device yet: changes are being
+gathered one by one, installed together.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens

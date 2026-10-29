@@ -18,9 +18,10 @@
  *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY listens:
  *           the block the cursor rests on plays alone; SEL takes it, GLO goes
  *           back); on the number: the SECTION
- *   SEQ     on a cell: its block, to edit; on the number: a copy of the phrase below
+ *   EDIT    on a cell: its block, in PATTERN; on the number: the SECTION
+ *   SEQ     on the number: a copy of the phrase below (on a cell: free, 29/10)
  *   LFO     on the number: delete the phrase (twice)
- *   FX      the MIXER      EDIT  the PROJECT
+ *   FX      the MIXER      GLO   the PROJECT: what is GLObal (HOME goes home)
  *   ARP     UNDO           SAVE  PLAY  as printed
  * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
 enum { CELL_W = 31, CELLS = 6 };
@@ -407,14 +408,15 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             grid_follow(&pop_cur, &pop_top, pop_rows(), POP_ROWS);
         }
     }
-    if (PRESSED(PB_SEQ) && !is_ref(row)) {
-        if (col < 0) {
-            insert_phrase();
-        } else if (entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS) {
-            *entry = row;
-            *track = col;
+    if (PRESSED(PB_SEQ) && !is_ref(row) && col < 0)
+        insert_phrase();
+    if (PRESSED(PB_EDIT) && !is_ref(row)) { /* what is under the cursor, to edit */
+        *entry = row;
+        *track = col < 0 ? 0 : col;
+        if (col < 0)
+            out = SONGVIEW_PHRASE;
+        else if (entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS)
             out = SONGVIEW_PATTERN;
-        }
     }
     if (PRESSED(PB_LFO) && col < 0) {
         if (ask_delete)
@@ -437,7 +439,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     if (PRESSED(PB_FX))
         out = SONGVIEW_MIXER;
-    if (PRESSED(PB_EDIT))
+    if (PRESSED(PB_GLO)) /* GLObal: what holds for the whole song */
         out = SONGVIEW_PROJECT;
 
     grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
