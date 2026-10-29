@@ -19,5 +19,7 @@ void menu_reload(void);
  * CONTINUE the open one -- the caller goes into it; MENU_TO_SETTINGS. */
 enum { MENU_STAY, MENU_SONG, MENU_TO_SETTINGS, MENU_TO_HELP };
 int menu_frame(const PlatInput *in);
+/* In PROJECTS' list, no panel or question open: where EDIT does something (the guide). */
+bool menu_in_list(void);
 
 #endif

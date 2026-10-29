@@ -1694,6 +1694,19 @@ tu peux carrément supprimer le mien". They are a new engine, DRUM
   its songs are left as they are until it does; `difftest.sh` silences
   DRUM on both sides.
 
+## 2026-10-29 — a project's panel: RENAME, DUPLICATE, DELETE
+
+EDIT on a project in PROJECTS (his idea; EDIT edits what is under the
+cursor) opens a panel: RENAME (the namer, the project kept in its place),
+DUPLICATE (a copy named KIDS 2, 3..., which becomes the open one -- his
+yes to my addition), DELETE (asked first, SEL delete, HOME keep: a flash
+erase has no UNDO; deleting the open one leaves its song in memory with
+no place, SAVE gives it one). The flash cannot read one file while it
+writes another (load and save share the sector buffer), so RENAME and
+DUPLICATE go through the song in memory, as SAVE does: the project is
+opened first when it is not the open one, and refused over unsaved
+changes ("SAVE THE OPEN ONE FIRST"). The guide lights EDIT in the list.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

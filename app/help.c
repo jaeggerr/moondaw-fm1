@@ -20,6 +20,7 @@ static const Item home_items[] = {
     { "PLAY on CONTINUE", "play the open project" },
     { "in PROJECTS: SEL", "open the project" },
     { "in PROJECTS: PLAY", "play it, staying here" },
+    { "in PROJECTS: EDIT", "rename, duplicate, delete" },
     { "HOME", "back to the menu" },
 };
 static const Item song_items[] = {

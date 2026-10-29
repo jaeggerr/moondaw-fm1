@@ -4,6 +4,8 @@
 #include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
+#include "namer.h"
+#include "theme.h"
 #include "ui.h"
 
 /* HOME, the root menu since 29/10 (as the other MOONDAW apps): CONTINUE,
@@ -15,7 +17,9 @@
  * projects by name only, CONDENSED 20, eight rows; the open one marked by
  * a bar at its left and an amber dot while it has unsaved changes; + NEW
  * last. SEL opens, PLAY plays the project under the cursor (opening it if
- * it is not the open one), HOME goes back to the root. The version small
+ * it is not the open one), HOME goes back to the root. EDIT on a project:
+ * a panel -- RENAME, DUPLICATE (KIDS 2, then the open one), DELETE (asked
+ * first: a flash erase has no UNDO). The version small
  * at the bottom of both. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
@@ -37,6 +41,13 @@ enum { ASK_NONE, ASK_OPEN, ASK_PLAY };   /* what the question leads to once answ
 static uint32_t prev_btns;
 static int peak; /* the worst block since PLAY, held */
 static bool listing; /* in PROJECTS, not the root */
+/* EDIT on a project (29/10): a panel of what can be done to it. */
+enum { OPT_RENAME, OPT_DUPLICATE, OPT_DELETE, OPTS };
+static const char *const opt_word[OPTS] = { "RENAME", "DUPLICATE", "DELETE" };
+static bool opts, deleting, naming;
+static int opt_cur, opt_row;    /* opt_row: the project the panel is about */
+static char new_name[STORE_NAME + 1];
+static const char *opt_said;
 static int item;     /* the root's cursor */
 static const char *const item_word[MENU_ITEMS] = { "CONTINUE", "PROJECTS", "SETTINGS", "HELP" };
 
@@ -88,6 +99,7 @@ static void scroll_to(int row, bool centre)
 
 void menu_open(int at)
 {
+    opts = deleting = naming = false;
     refresh();
     scroll_to(open_row >= 0 ? open_row : 0, true);
     listing = false;
@@ -102,6 +114,125 @@ void menu_reload(void)
     refresh();
     scroll_to(cur > nrows ? nrows : cur, false);
     gfx_invalidate();
+}
+
+/* ---------------------------------------------------- EDIT's panel --- */
+static bool name_taken(const char *n)
+{
+    for (int i = 0; i < nrows; i++) {
+        int k = 0;
+        while (n[k] && n[k] == rows[i].name[k])
+            k++;
+        if (n[k] == rows[i].name[k])
+            return true;
+    }
+    return false;
+}
+
+/* DUPLICATE's name: the project's, then 2, 3... while one is taken. */
+static void copy_name(const char *from)
+{
+    for (int k = 2; k < 100; k++) {
+        int n = 0;
+        char d[4];
+        const char *q = ui_dec(d, k);
+        int len = 0, tail;
+        while (q[len])
+            len++;
+        tail = STORE_NAME - len - 1;
+        while (from[n] && n < tail)
+            new_name[n] = from[n], n++;
+        new_name[n++] = ' ';
+        for (int i = 0; q[i]; i++)
+            new_name[n++] = q[i];
+        new_name[n] = 0;
+        if (!name_taken(new_name))
+            return;
+    }
+}
+
+/* RENAME and DUPLICATE go through the song in memory, as SAVE does (the
+ * flash cannot read one file while it writes another): the project is
+ * opened first when it is not the open one -- not over unsaved changes. */
+static bool take_in_hand(void)
+{
+    if (opt_row == open_row)
+        return true;
+    if (app_dirty) {
+        opt_said = "SAVE THE OPEN ONE FIRST";
+        return false;
+    }
+    return rows[opt_row].slot >= 0 && app_open_slot(rows[opt_row].slot) == 0;
+}
+
+static void opt_go(void)
+{
+    opt_said = 0;
+    if (opt_cur == OPT_DELETE) {
+        deleting = true;
+    } else if (take_in_hand()) {
+        int i = 0;
+        if (opt_cur == OPT_RENAME)
+            for (; (new_name[i] = app_name[i]) != 0; i++)
+                ;
+        else
+            copy_name(app_name);
+        namer_open(new_name, STORE_NAME);
+        naming = true;
+    }
+}
+
+/* The name kept: RENAME rewrites the project under it, in its place;
+ * DUPLICATE writes a new project, which is then the open one. */
+static void opt_named(void)
+{
+    int i = 0;
+    if (opt_cur == OPT_DUPLICATE)
+        app_slot = -1; /* a new place in flash */
+    else if (rows[opt_row].slot < 0)
+        app_slot = -1;
+    for (; (app_name[i] = new_name[i]) != 0; i++)
+        ;
+    opt_said = app_save() == 0 ? (opt_cur == OPT_RENAME ? "RENAMED" : "DUPLICATED") : "NOT SAVED: FLASH FULL";
+    refresh();
+    for (int r = 0; r < nrows; r++)
+        if (rows[r].slot == app_slot)
+            scroll_to(r, false);
+    opts = false;
+}
+
+static void opt_delete(void)
+{
+    int slot = rows[opt_row].slot;
+    if (slot >= 0 && store_delete(slot) == 0 && slot == app_slot) {
+        app_slot = -1; /* the song stays in memory, with no place in flash: SAVE gives it one */
+        app_dirty = true;
+    }
+    refresh();
+    scroll_to(cur > nrows ? nrows : cur, false);
+    opts = deleting = false;
+}
+
+static void draw_opts(void)
+{
+    gfx_text(F_COND12, TEXT_X, 14, "PROJECT", C_TITLE);
+    gfx_text(F_COND20, TEXT_X, 46, rows[opt_row].name, C_TEXT);
+    if (deleting) {
+        gfx_text(F_COND20, TEXT_X, 46 + 2 * ROW, "Delete it for good?", C_TEXT);
+        gfx_text(F_COND20, TEXT_X, 46 + 3 * ROW, "SEL  delete", C_MUTE);
+        gfx_text(F_COND20, TEXT_X, 46 + 4 * ROW, "HOME  keep it", C_DIM);
+        return;
+    }
+    for (int i = 0; i < OPTS; i++) {
+        int y = 60 + i * ROW, base = y + 2 + FONTS[F_COND20].ascent;
+        bool here = i == opt_cur;
+        if (here)
+            gfx_slab(2, y + 1, PLAT_W - 4, ROW - 2, i == OPT_DELETE ? C_MUTE : C_ACCENT, 255);
+        gfx_text(F_COND20, TEXT_X, base, opt_word[i], here ? C_ON_ACC : C_TEXT);
+    }
+    if (opt_said)
+        gfx_text(F_COND14, TEXT_X, PLAT_H - 30, opt_said, C_FX);
+    gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "SEL  do it     HOME  back", C_DIM);
 }
 
 /* ---------------------------------------------------------- drawing --- */
@@ -152,6 +283,14 @@ static void draw(void)
     if (!listing) {
         draw_root();
         draw_foot();
+        return;
+    }
+    if (naming) {
+        namer_draw();
+        return;
+    }
+    if (opts) {
+        draw_opts();
         return;
     }
     for (int r = 0; r < ROWS && top + r < count; r++) {
@@ -271,7 +410,37 @@ int menu_frame(const PlatInput *in)
             else
                 play();
         }
+    } else if (naming) {
+        int r = namer_frame(in, btns);
+        if (r == NAMER_KEPT)
+            opt_named();
+        if (r != NAMER_TYPING)
+            naming = false;
+        gfx_frame(draw);
+        return MENU_STAY;
+    } else if (opts) {
+        if (deleting) {
+            if (btns & 1u << PB_SEL)
+                opt_delete();
+            else if (btns & 1u << PB_HOME)
+                deleting = false;
+        } else {
+            opt_cur += in->enc[PE_SELECT] + in->enc[PE_K1];
+            opt_cur = opt_cur < 0 ? 0 : opt_cur >= OPTS ? OPTS - 1 : opt_cur;
+            if (btns & 1u << PB_SEL)
+                opt_go();
+            else if (btns & 1u << PB_HOME)
+                opts = false;
+        }
+        gfx_frame(draw);
+        return MENU_STAY;
     } else {
+        if (btns & 1u << PB_EDIT && cur < nrows) { /* EDIT: what can be done to the project */
+            opts = true, deleting = naming = false;
+            opt_cur = 0, opt_row = cur, opt_said = 0;
+            gfx_frame(draw);
+            return MENU_STAY;
+        }
         if (btns & 1u << PB_HOME) { /* back to the root, on PROJECTS */
             listing = false;
             item = MENU_PROJECTS;
@@ -314,3 +483,5 @@ int menu_frame(const PlatInput *in)
     gfx_frame(draw);
     return open_it ? MENU_SONG : to;
 }
+
+bool menu_in_list(void) { return listing && !opts && !naming && !asking; }

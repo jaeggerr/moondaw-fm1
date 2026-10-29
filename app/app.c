@@ -550,8 +550,10 @@ void app_frame(const PlatInput *real)
         if (worked && screen < (int)sizeof topic && topic[screen])
             help_topic = screen == AT_PATTERN && pattern_in_syllable() ? HELP_SYLLABLE : topic[screen];
     }
-    if (screen == AT_MENU || screen == AT_CANVAS || screen == AT_HELP)
-        ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
+    if (screen == AT_MENU)
+        ui_led_guide(menu_in_list() ? 1u << PB_EDIT : 0u); /* PROJECTS: EDIT, a project's panel */
+    if (screen == AT_CANVAS || screen == AT_HELP)
+        ui_led_guide(0); /* the canvas: the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_state(PB_REC, false); /* REC is PATTERN's */
     if (screen != AT_PATTERN && screen != AT_SONG && screen != AT_PHRASE && screen != AT_MIXER)

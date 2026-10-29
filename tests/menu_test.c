@@ -138,6 +138,31 @@ int main(void)
     press(PB_SEL);
     CHECK("SEL answers: the other one is opened, to play", !strcmp(app_name, "SONG 01") && !app_dirty);
 
+    /* EDIT on a project: RENAME, DUPLICATE, DELETE */
+    home();
+    projects();               /* the cursor on the open one, SONG 01 */
+    {
+        int n = songs_in_flash();
+        press(PB_EDIT);
+        sel(1);               /* DUPLICATE */
+        press(PB_SEL);
+        press(PB_SEL);        /* the name it offers, SONG 01 2, kept */
+        CHECK("DUPLICATE writes a copy, the open one now", songs_in_flash() == n + 1 && !strcmp(app_name, "SONG 01 2"));
+        press(PB_EDIT);
+        sel(2);               /* DELETE */
+        press(PB_SEL);
+        press(PB_HOME);       /* asked: kept */
+        CHECK("DELETE asks first, HOME keeps it", songs_in_flash() == n + 1);
+        press(PB_SEL);
+        press(PB_SEL);        /* yes */
+        CHECK("and SEL deletes it, the song kept in memory", songs_in_flash() == n && app_slot == -1);
+        sel(-10);             /* the panel closed by the delete: the list */
+        sel(1);               /* SONG 01 again: asked over the deleted copy, SEL lets it go */
+        press(PB_SEL);
+        press(PB_SEL);
+        CHECK("and SONG 01 opens again", !strcmp(app_name, "SONG 01") && app_slot >= 0);
+    }
+
     home();                   /* HELP, from the root: and back */
     sel(-10);
     sel(3);
