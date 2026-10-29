@@ -334,6 +334,7 @@ bool instrument_frame(const PlatInput *in)
         naming = namer_frame(in, btns) == NAMER_TYPING;
         if (!naming)
             app_mark_dirty();
+        ui_led_guide(0); /* the namer: SEL keeps, GLO goes back */
         gfx_frame(draw);
         return true;
     }
@@ -387,6 +388,7 @@ bool instrument_frame(const PlatInput *in)
 
     grid_follow(&row, &top, nrows(), GRID_ROWS);
     plat_led_btn(PB_PLAY, previewing);
+    ui_led_guide(1u << PB_OCTDN | 1u << PB_OCTUP); /* the keys' octave */
     gfx_frame(draw);
     if (PRESSED(PB_GLO)) {
         previewing = false;

@@ -456,8 +456,8 @@ void app_frame(const PlatInput *real)
         screen = AT_SONG;
         songview_open(true);
     }
-    if (screen != AT_SONG)
-        ui_led_guide(0); /* only SONG says what can be pressed, so far */
+    if (screen == AT_MENU || screen == AT_CANVAS)
+        ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
     remote_leds();
 }
 

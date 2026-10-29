@@ -23,7 +23,9 @@ int ui_loop_slot(int x, int y);
 
 /* The guide (29/10): the buttons that do something on the screen in
  * front light, a lit LED still meaning a state (PLAY playing). HOME,
- * SAVE and SEL never do: the same on every screen, or a way through them.
+ * SAVE and SEL never do: the same on every screen, or a way through them;
+ * nor GLO where it only goes back -- the screens leave it out then. Every
+ * screen gives its own once a frame; HOME and the canvas have none.
  * `usable` is a PB_* mask; the screens that have none yet give 0. On
  * until a SETTINGS screen can turn it off. */
 extern bool ui_guide;

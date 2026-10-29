@@ -373,7 +373,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             pop_close(false);
         play_row = -1;
         plat_led_btn(PB_PLAY, listening);
-        ui_led_guide(1u << PB_SEL | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY);
+        ui_led_guide(0); /* SEL, GLO back, PLAY: nothing of its own */
         gfx_frame(draw);
         return SONGVIEW_STAY;
     }

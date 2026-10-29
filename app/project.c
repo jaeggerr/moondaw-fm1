@@ -151,6 +151,7 @@ int project_frame(const PlatInput *in)
         if (r == NAMER_KEPT)
             app_mark_dirty(); /* the next SAVE writes it under this name, in its place */
         naming = r == NAMER_TYPING;
+        ui_led_guide(0); /* the namer */
         gfx_frame(draw);
         return PROJECT_STAY;
     }
@@ -172,6 +173,7 @@ int project_frame(const PlatInput *in)
             player_play_song(0, false);
     }
     plat_led_btn(PB_PLAY, player_playing());
+    ui_led_guide(1u << PB_FX); /* the MIXER */
     gfx_frame(draw);
     return PRESSED(PB_GLO) ? PROJECT_BACK : PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;
 #undef PRESSED

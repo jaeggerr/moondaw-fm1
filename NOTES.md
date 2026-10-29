@@ -1438,7 +1438,15 @@ in step, ~114 Hz at the slowest. `led ENV 50 LFO 62 EDIT 75 ARP 87 SEQ 100`.
 He saw little difference between the five: the guide lights at 50 %.
 HOME and SAVE left out of it: they do the same on every screen, nothing
 to learn from them; SEL too, a way through the screens rather than a
-feature (his words). GLO stays, it means something else on SONG.
+feature (his words). GLO only where it is not "back": on SONG (PROJECT).
+
+On every screen since (29/10, the rule settled): SONG FX GLO, EDIT where
+there is something under the cursor, SEQ LFO on the number; SECTION FX,
+EDIT on a track with a block, OCT-/+ (the keys write); PATTERN the two
+other views' buttons, ENV always (twice: the instrument), OCT-/+;
+SYLLABLE LFO, and in KEYS OCT (the layer) and ARP (weak); INSTRUMENT
+OCT-/+; MIXER EDIT; PROJECT FX; HOME, the choosers, the namer, the canvas
+none.
 
 ## Open
 

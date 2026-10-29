@@ -30,6 +30,9 @@ enum { SYLLABLE_TYPING, SYLLABLE_KEPT, SYLLABLE_LEFT };
 /* One frame, with the buttons and keys pressed this frame. */
 int syllable_frame(const PlatInput *in, uint32_t pressed, uint32_t keys);
 void syllable_draw(void);
+/* The buttons of its own, for the guide (ui.h): LFO, and in KEYS the
+ * layer (OCT) and the weak mark (ARP). */
+uint32_t syllable_buttons(void);
 /* After SYLLABLE_KEPT: the syllable ("" = none). */
 const char *syllable_text(void);
 

@@ -4,6 +4,7 @@
 #include "../core/player.h"
 #include "grid.h"
 #include "theme.h"
+#include "ui.h"
 
 enum { MAX = 5, SING = 36 /* frames a change is sung for: 600 ms */ };
 enum { KEYS, WHEEL };
@@ -100,6 +101,11 @@ void syllable_open(const char *t, int in, uint8_t n, int tr, int r)
 }
 
 const char *syllable_text(void) { return join(); }
+
+uint32_t syllable_buttons(void)
+{
+    return 1u << PB_LFO | (mode == KEYS ? 1u << PB_OCTDN | 1u << PB_OCTUP | 1u << PB_ARP : 0u);
+}
 
 /* --------------------------------------------------------- the hands --- */
 static bool keys_typed(uint32_t keys)

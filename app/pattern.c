@@ -432,6 +432,7 @@ int pattern_frame(const PlatInput *in)
 
     if (choosing) {
         ch_frame(in, btns);
+        ui_led_guide(0); /* CHOOSE INSTRUMENT: SEL, GLO back, PLAY */
         gfx_frame(choosing ? ch_draw : draw);
         return PATTERN_STAY;
     }
@@ -443,6 +444,7 @@ int pattern_frame(const PlatInput *in)
             writing_syl = false;
             gfx_invalidate();
         }
+        ui_led_guide(writing_syl ? syllable_buttons() : 0u);
         gfx_frame(writing_syl ? syllable_draw : draw);
         return PATTERN_STAY;
     }
@@ -523,6 +525,8 @@ int pattern_frame(const PlatInput *in)
     grid_follow(&cur_row, &top, len, GRID_ROWS);
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
     plat_led_btn(PB_PLAY, playing);
+    /* the other views, ENV always (twice: the instrument), the keyboard's octave */
+    ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV | 1u << PB_OCTDN | 1u << PB_OCTUP);
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_GLO)) {
         player_note_off();
