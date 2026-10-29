@@ -1485,6 +1485,18 @@ and 2 move, KNOB 3 and 4 change -- on SONG, SECTION, PATTERN, MIXER,
 PROJECT, INSTRUMENT, the namer and SYLLABLE's wheel (KNOB 1 the slot,
 KNOB 3 the sign). HOME and the CHOOSE lists keep SELECT alone: no value.
 
+## 2026-10-29 — SETTINGS
+
+What holds for the machine rather than the song (`app/settings.c`),
+reached by GLO from HOME -- GLO is what is global, as it opens PROJECT
+from SONG; the guide lights it on HOME. One setting a row, as PROJECT:
+LEDS (OFF: none, PLAY's state either; STATE: PLAY's alone; GUIDE, the
+default) and LIGHT, the guide's brightness (15, 50, 62, 75, 87, 100 %;
+50 by default), a few buttons lighting at it on its row to judge. Kept in
+the last slot beside which song was open (`.LAST`, three bytes since: a
+file of one is from before), written once when the screen is left, by
+GLO or HOME: an erase stops the audio for 50 ms.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

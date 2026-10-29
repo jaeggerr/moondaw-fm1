@@ -17,6 +17,8 @@ extern int app_slot;   /* its place in flash, -1 while it has none */
 extern bool app_dirty; /* edited since the last save or load */
 
 void app_mark_dirty(void);
+/* SETTINGS changed: into the flash, beside which song was open. */
+void app_keep_settings(void);
 int app_save(void);          /* 0 when written; stops the song first */
 int app_open_slot(int slot); /* 0 when loaded; the song in memory is untouched otherwise */
 void app_new(void);          /* an empty song, named SONG nn, not yet in flash */

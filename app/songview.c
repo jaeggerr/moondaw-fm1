@@ -372,7 +372,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         else if (PRESSED(PB_GLO))
             pop_close(false);
         play_row = -1;
-        plat_led_btn(PB_PLAY, listening);
+        ui_led_state(PB_PLAY, listening);
         ui_led_guide(0); /* SEL, GLO back, PLAY: nothing of its own */
         gfx_frame(draw);
         return SONGVIEW_STAY;
@@ -448,7 +448,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         grid_follow(&t, &left, song->num_tracks, CELLS);
     }
     play_row = playing ? player_entry() : -1;
-    plat_led_btn(PB_PLAY, playing);
+    ui_led_state(PB_PLAY, playing);
     ui_led_guide(usable());
     gfx_frame(draw);
     return out;

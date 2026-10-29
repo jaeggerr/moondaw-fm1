@@ -26,14 +26,18 @@ int ui_loop_slot(int x, int y);
  * SAVE and SEL never do: the same on every screen, or a way through them;
  * nor GLO where it only goes back -- the screens leave it out then. Every
  * screen gives its own once a frame; HOME and the canvas have none.
- * `usable` is a PB_* mask; the screens that have none yet give 0. On
- * until a SETTINGS screen can turn it off. */
-extern bool ui_guide;
-/* Lit rather than glowing (29/10): the glow is worse than dark on the white
- * LEDs, the labels drown in it; mid would do, lit reads best. PLAY (and
- * REC, later) are apart: they light only for their state, playing. */
-extern bool ui_guide_lit;
+ * `usable` is a PB_* mask.
+ *
+ * SETTINGS says how much of it: LEDS OFF (none, PLAY's state either),
+ * STATE (PLAY's alone), GUIDE (the default); and how bright the guide
+ * is, ui_light a PLAT_LED_* level -- 50 % by default: the glow is worse
+ * than dark on the white LEDs, the labels drown in it (29/10). PLAY (and
+ * REC, later) are apart: they light only for their state. */
+enum { UI_LEDS_OFF, UI_LEDS_STATE, UI_LEDS_GUIDE };
+extern int ui_leds, ui_light;
 void ui_led_guide(uint32_t usable);
+/* A state's LED (PLAY playing), unless LEDS is OFF. */
+void ui_led_state(int btn, bool on);
 /* The LEDs were written behind the guide's back (the link's LED): the
  * next ui_led_guide writes them all again. */
 void ui_led_guide_again(void);

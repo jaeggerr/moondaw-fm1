@@ -189,7 +189,7 @@ int phrase_frame(const PlatInput *in)
     grid_follow(&row, &top, steps, GRID_ROWS);
     grid_follow(&col, &left, song->num_tracks, CELLS);
     play_row = playing && player_entry() == entry ? player_row() % steps : -1;
-    plat_led_btn(PB_PLAY, playing);
+    ui_led_state(PB_PLAY, playing);
     ui_led_guide(1u << PB_FX | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
     gfx_frame(draw);
 

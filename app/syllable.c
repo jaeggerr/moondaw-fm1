@@ -204,7 +204,7 @@ int syllable_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
         sing();
     else if (singing > 0 && --singing == 0)
         player_note_off();
-    plat_led_btn(PB_PLAY, singing > 0);
+    ui_led_state(PB_PLAY, singing > 0);
     if (PRESSED(PB_SEL) || PRESSED(PB_GLO)) {
         player_note_off();
         return PRESSED(PB_SEL) ? SYLLABLE_KEPT : SYLLABLE_LEFT;

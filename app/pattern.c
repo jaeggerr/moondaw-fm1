@@ -351,7 +351,7 @@ static void ch_frame(const PlatInput *in, uint32_t btns)
         ch_close(true);
     else if (PRESSED(PB_GLO))
         ch_close(false);
-    plat_led_btn(PB_PLAY, listening);
+    ui_led_state(PB_PLAY, listening);
 #undef PRESSED
 }
 
@@ -635,7 +635,7 @@ int pattern_frame(const PlatInput *in)
     len = pat_len();
     grid_follow(&cur_row, &top, len, GRID_ROWS);
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
-    plat_led_btn(PB_PLAY, playing);
+    ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
                  1u << PB_EDIT | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));

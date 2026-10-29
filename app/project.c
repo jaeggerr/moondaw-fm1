@@ -172,7 +172,7 @@ int project_frame(const PlatInput *in)
         else
             player_play_song(0, false);
     }
-    plat_led_btn(PB_PLAY, player_playing());
+    ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_FX); /* the MIXER */
     gfx_frame(draw);
     return PRESSED(PB_GLO) ? PROJECT_BACK : PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;

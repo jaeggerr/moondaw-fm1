@@ -19,6 +19,7 @@
 #include "../core/trk.h"
 #include "demo_trk.h"
 #include "gfx.h"
+#include "settings.h"
 #include "ui.h"
 #include "instrument.h"
 #include "menu.h"
@@ -46,15 +47,16 @@ int app_cpu, app_block, app_worst;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS } screen;
+static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS } screen;
 static int mixer_from, project_from, pattern_from, canvas_from; /* the screen GLO leads back to */
+static uint32_t menu_prev_glo; /* HOME: GLO pressed, not held on the way in */
 
 void app_mark_dirty(void) { app_dirty = true; }
 
 const char *app_screen(void)
 {
     static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
-                                        "CANVAS" };
+                                        "CANVAS", "SETTINGS" };
     return name[screen];
 }
 
@@ -123,19 +125,30 @@ static void adopt(int slot, bool dirty)
 }
 
 /* ------------------------------------------------------------ flash --- */
-/* The last slot holds one byte: which song was open. So the machine
- * comes back on what was being worked on, not on the first of the list. */
+/* The last slot holds which song was open -- so the machine comes back on
+ * what was being worked on, not on the first of the list -- then, since
+ * 29/10, the SETTINGS: LEDS and LIGHT. A file of one byte is from before. */
 #define LAST_SLOT (STORE_SLOTS - 1)
+enum { LAST_BYTES = 3 };
+static char last_slot = -1;
+
+static void record(void)
+{
+    char b[LAST_BYTES] = { last_slot, (char)ui_leds, (char)ui_light }, was[LAST_BYTES];
+    if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(was, LAST_BYTES) == LAST_BYTES &&
+        was[0] == b[0] && was[1] == b[1] && was[2] == b[2])
+        return; /* already says so: an erase saved */
+    if (store_save_begin(LAST_SLOT, ".LAST") == STORE_OK && store_save_put(b, LAST_BYTES) == STORE_OK)
+        store_save_commit();
+}
 
 static void remember(int slot)
 {
-    char b = (char)slot;
-    char was;
-    if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(&was, 1) == 1 && was == b)
-        return; /* already says so: an erase saved */
-    if (store_save_begin(LAST_SLOT, ".LAST") == STORE_OK && store_save_put(&b, 1) == STORE_OK)
-        store_save_commit();
+    last_slot = (char)slot;
+    record();
 }
+
+void app_keep_settings(void) { record(); }
 
 static int flash_sink(void *ctx, const char *data, uint32_t n)
 {
@@ -250,13 +263,17 @@ int app_load(const char *trk, uint32_t len, const char *name)
 
 void app_init(void)
 {
-    char last;
-    int slot = -1;
+    char last[LAST_BYTES];
+    int slot = -1, n;
 
     remote_init();
     store_mount();
-    if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(&last, 1) == 1)
-        slot = last;
+    if (store_load_begin(LAST_SLOT) == STORE_OK && (n = store_load_get(last, LAST_BYTES)) >= 1) {
+        slot = last_slot = last[0];
+        if (n == LAST_BYTES && last[1] >= UI_LEDS_OFF && last[1] <= UI_LEDS_GUIDE && last[2] > PLAT_LED_OFF &&
+            last[2] < PLAT_LED_LEVELS)
+            ui_leds = last[1], ui_light = last[2];
+    }
     for (int s = 0; !store_has(slot) && s < APP_SONG_SLOTS; s++)
         if (store_has(s))
             slot = s;
@@ -344,6 +361,8 @@ void app_frame(const PlatInput *real)
         bool home = (in->btns & ~prev_btns) >> PB_HOME & 1u;
         prev_btns = in->btns;
         if (home && screen != AT_MENU) {
+            if (screen == AT_SETTINGS)
+                settings_close();
             if (screen == AT_SONG)
                 songview_cancel(); /* a block being previewed goes back to what it was */
             player_note_off();
@@ -357,6 +376,12 @@ void app_frame(const PlatInput *real)
     if (screen == AT_CANVAS) {
         if (!canvas_frame(in))
             leave_canvas();
+    } else if (screen == AT_SETTINGS) {
+        if (!settings_frame(in)) {
+            settings_close();
+            screen = AT_MENU;
+            menu_open();
+        }
     } else if (screen == AT_MIXER) {
         switch (mixer_frame(in)) {
         case MIXER_BACK:
@@ -455,9 +480,15 @@ void app_frame(const PlatInput *real)
     } else if (menu_frame(in)) {
         screen = AT_SONG;
         songview_open(true);
+    } else if (in->btns & ~menu_prev_glo & 1u << PB_GLO) { /* GLO: what is global, the machine's */
+        screen = AT_SETTINGS;
+        settings_open();
     }
-    if (screen == AT_MENU || screen == AT_CANVAS)
-        ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
+    menu_prev_glo = in->btns;
+    if (screen == AT_MENU)
+        ui_led_guide(1u << PB_GLO); /* SETTINGS */
+    if (screen == AT_CANVAS)
+        ui_led_guide(0); /* the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_keys(0); /* the keys light only for PATTERN's ops */
     remote_leds();

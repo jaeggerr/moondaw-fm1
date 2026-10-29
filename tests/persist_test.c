@@ -32,6 +32,8 @@ static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 
 /* What is in slot 0, read the way the app reads it. */
 #include "../core/store.h"
+#include "../app/app.h"
+#include "../app/ui.h"
 static Song probe;
 static int note_on_flash(void)
 {
@@ -73,7 +75,25 @@ int main(void)
     press(PB_SAVE);             /* saved again, untouched: still there */
     again = note_on_flash();
 
-    printf("persist test: before %d, after SAVE %d, after a restart and a second SAVE %d -> %s\n",
-           before, after, again, before < 0 && after == 69 && again == 69 ? "ok" : "FAIL");
-    return before < 0 && after == 69 && again == 69 ? 0 : 1;
+    /* SETTINGS: GLO from HOME, KNOB 3 the value, kept across a restart */
+    press(PB_HOME);
+    press(PB_GLO);
+    {
+        bool there = !strcmp(app_screen(), "SETTINGS"), kept;
+        in.enc[PE_K3] = -1;     /* LEDS: GUIDE -> STATE */
+        go();
+        in.enc[PE_K2] = 1;      /* LIGHT */
+        go();
+        in.enc[PE_K3] = 2;      /* 50 -> 75 % */
+        go();
+        press(PB_GLO);
+        there = there && !strcmp(app_screen(), "HOME");
+        ui_leds = UI_LEDS_GUIDE, ui_light = PLAT_LED_50;
+        app_init();             /* off and on */
+        kept = ui_leds == UI_LEDS_STATE && ui_light == PLAT_LED_75 && !strcmp(app_name, "DEMO");
+        printf("persist test: before %d, after SAVE %d, after a restart and a second SAVE %d; settings %s -> %s\n",
+               before, after, again, there && kept ? "kept" : "LOST",
+               before < 0 && after == 69 && again == 69 && there && kept ? "ok" : "FAIL");
+        return before < 0 && after == 69 && again == 69 && there && kept ? 0 : 1;
+    }
 }

@@ -165,7 +165,7 @@ int mixer_frame(const PlatInput *in)
 
     vis = row + 1; /* rows as drawn: the returns first */
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
-    plat_led_btn(PB_PLAY, player_playing());
+    ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_EDIT); /* the PROJECT */
     gfx_frame(draw);
     return PRESSED(PB_GLO) ? MIXER_BACK : PRESSED(PB_EDIT) ? MIXER_PROJECT : MIXER_STAY;

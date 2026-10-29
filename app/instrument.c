@@ -387,7 +387,7 @@ bool instrument_frame(const PlatInput *in)
         said = app_save() == 0 ? "SAVED" : "NOT SAVED";
 
     grid_follow(&row, &top, nrows(), GRID_ROWS);
-    plat_led_btn(PB_PLAY, previewing);
+    ui_led_state(PB_PLAY, previewing);
     ui_led_guide(1u << PB_OCTDN | 1u << PB_OCTUP); /* the keys' octave */
     gfx_frame(draw);
     if (PRESSED(PB_GLO)) {

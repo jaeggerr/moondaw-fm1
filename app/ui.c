@@ -82,42 +82,39 @@ void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t he
     }
 }
 
-bool ui_guide = true, ui_guide_lit = true;
+int ui_leds = UI_LEDS_GUIDE, ui_light = PLAT_LED_50;
 static uint32_t shown = ~0u; /* what the guide last wrote */
 
 static uint32_t keys_shown = ~0u;
 
 void ui_led_guide_again(void) { shown = keys_shown = ~0u; }
 
+void ui_led_state(int btn, bool on) { plat_led_btn(btn, on && ui_leds != UI_LEDS_OFF); }
+
 void ui_led_keys(uint32_t usable)
 {
-    if (!ui_guide)
+    if (ui_leds != UI_LEDS_GUIDE)
         usable = 0;
     if (usable == keys_shown)
         return;
     for (int k = 0; k < PLAT_KEYS; k++)
-        plat_led_level(PLAT_BTNS + k, (usable >> k) & 1u ? PLAT_LED_50 : PLAT_LED_OFF);
+        plat_led_level(PLAT_BTNS + k, (usable >> k) & 1u ? ui_light : PLAT_LED_OFF);
     keys_shown = usable;
 }
 
 void ui_led_guide(uint32_t usable)
 {
-    if (!ui_guide)
+    static int lit_at = -1;
+    if (ui_leds != UI_LEDS_GUIDE)
         usable = 0;
-    if (ui_guide_lit) /* PLAY stays the screen's: lit is its state, playing */
-        usable &= ~(1u << PB_PLAY);
-    /* HOME, SAVE: the same everywhere; SEL: a way through the screens, not
-     * a feature of this one. Nothing to learn from them here. */
-    usable &= ~(1u << PB_HOME | 1u << PB_SAVE | 1u << PB_SEL);
-    if (usable == shown)
+    /* PLAY is the screen's: lit is its state, playing. HOME, SAVE: the same
+     * everywhere; SEL: a way through the screens, not a feature of this one. */
+    usable &= ~(1u << PB_PLAY | 1u << PB_HOME | 1u << PB_SAVE | 1u << PB_SEL);
+    if (usable == shown && ui_light == lit_at)
         return;
-    for (int b = 0; b < PLAT_BTNS; b++) {
-        if (b == PB_PLAY && ui_guide_lit)
-            continue;
-        if (ui_guide_lit) /* half lit: as plain as lit on the panel (29/10), and kinder */
-            plat_led_level(b, (usable >> b) & 1u ? PLAT_LED_50 : PLAT_LED_OFF);
-        else
-            plat_led_glow(b, (usable >> b) & 1u);
-    }
+    for (int b = 0; b < PLAT_BTNS; b++)
+        if (b != PB_PLAY)
+            plat_led_level(b, (usable >> b) & 1u ? ui_light : PLAT_LED_OFF);
     shown = usable;
+    lit_at = ui_light;
 }

@@ -234,7 +234,7 @@ bool menu_frame(const PlatInput *in)
     peak = !player_playing() ? 0 : app_block > peak ? app_block : peak; /* the worst block, from PLAY on */
     if (!player_playing())
         player_profile_reset();
-    plat_led_btn(PB_PLAY, player_playing());
+    ui_led_state(PB_PLAY, player_playing());
     gfx_frame(draw);
     return open_it;
 }
