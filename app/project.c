@@ -14,11 +14,11 @@
  *
  *   SELECT, KNOB 1  the setting     KNOB 3  its value
  *   NAME    SEL opens it: one cell a letter, KNOB 2 the place, KNOB 3 the letter
- *           (space, A-Z, 0-9, -); SEL keeps it, GLO goes back without it
+ *           (space, A-Z, 0-9, -); SEL keeps it, HOME goes back without it
  *   METER   beats in a bar, written x/4 (the file's beats_per_bar)
  *   STEP    what a step is worth as a note: 1/16 at 4 steps a beat, 1/12 at 3
  *           (the file's steps_per_beat)
- *   GLO     back where it was opened from     FX  the MIXER
+ *   HOME    back where it was opened from     FX  the MIXER
  *   ALGO    UNDO left, REDO right     SAVE  as printed */
 enum { S_NAME, S_BPM, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
 enum { LABEL_X = 14, VALUE_X = 120 };
@@ -175,6 +175,6 @@ int project_frame(const PlatInput *in)
     ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_FX); /* the MIXER */
     gfx_frame(draw);
-    return PRESSED(PB_GLO) ? PROJECT_BACK : PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;
+    return PRESSED(PB_HOME) ? PROJECT_BACK : PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;
 #undef PRESSED
 }

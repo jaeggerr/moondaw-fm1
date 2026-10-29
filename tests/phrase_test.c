@@ -75,7 +75,10 @@ int main(void)
     CHECK("EDIT, as SEL, asks for PATTERN", press(PB_EDIT) == PHRASE_PATTERN);
     phrase_resume();
     go();
-    CHECK("GLO leaves", press(PB_GLO) == PHRASE_BACK);
+    CHECK("GLO asks for the PROJECT", press(PB_GLO) == PHRASE_PROJECT);
+    phrase_resume();
+    go();
+    CHECK("HOME leaves", press(PB_HOME) == PHRASE_BACK);
 
     printf("phrase test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

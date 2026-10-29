@@ -14,7 +14,7 @@
  * (right), as it does the song's on every screen.
  *
  * Each change is sung on the step's note by its instrument, PLAY sings it
- * again; SEL keeps it, GLO goes back without it. The alphabet is the
+ * again; SEL keeps it, HOME goes back without it. The alphabet is the
  * format's (moondaw's FORMAT.md, Syllables). */
 #ifndef SYLLABLE_H
 #define SYLLABLE_H

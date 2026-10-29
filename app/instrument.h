@@ -11,7 +11,10 @@
 
 /* `entry` is the phrase it was opened from (PLAY is the preview now). */
 void instrument_open(int instr, int entry);
-/* One frame. False once the hand asked to leave (GLO). */
-bool instrument_frame(const PlatInput *in);
+/* One frame: HOME goes back, GLO to the PROJECT. */
+enum { INSTRUMENT_STAY, INSTRUMENT_BACK, INSTRUMENT_PROJECT };
+int instrument_frame(const PlatInput *in);
+/* Back from PROJECT: the screen as it was left. */
+void instrument_resume(void);
 
 #endif

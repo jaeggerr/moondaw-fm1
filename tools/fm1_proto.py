@@ -4,7 +4,7 @@
 The machine shows a CANVAS (app/canvas.c): the script draws on it -- rectangles,
 text in the machine's fonts, lines, pictures -- and collects the gestures made
 on it (buttons, knobs, keys) to answer them and draw again. No firmware is
-built for it. HOME leaves the canvas; GLO too, unless the script keeps it.
+built for it. HOME leaves the canvas; GLO is the script's.
 
     from fm1_proto import Canvas
     c = Canvas(udp=None)            # the FM-1 on USB-MIDI; udp=19780 for the simulator

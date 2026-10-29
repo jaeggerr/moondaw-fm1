@@ -69,7 +69,7 @@ bool settings_frame(const PlatInput *in)
                                       1u << PB_ARP
                                 : 0u);
     gfx_frame(draw);
-    return !((btns >> PB_GLO) & 1u);
+    return !((btns >> PB_HOME) & 1u);
 }
 
 void settings_close(void)

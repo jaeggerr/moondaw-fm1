@@ -1516,6 +1516,27 @@ HOME leads to the root from anywhere (his call), the cursor on CONTINUE;
 back from SETTINGS it is on SETTINGS. GLO no longer opens SETTINGS.
 Prototype `tools/protos/home_root.py`.
 
+## 2026-10-29 — HOME is back, GLO is global
+
+GLO had become "back" because it was free, and its label says global (his
+words, as with ARP and LFO for the selection). Now:
+
+- HOME pressed: a step back, at once, on every screen -- what GLO did:
+  out of PATTERN, SECTION, MIXER, PROJECT, INSTRUMENT, SETTINGS,
+  PROJECTS, the CHOOSE lists, SYLLABLE and the namer (without keeping),
+  the SELECTION first while in it, the canvas; SONG's step is the root.
+- HOME held 0.6 s (36 frames): the root menu from anywhere -- the first
+  step taken at the press is not lost, the way is up anyway.
+- GLO: what is global where one is -- PROJECT from SONG, SECTION,
+  PATTERN, MIXER, INSTRUMENT; SETTINGS from the root. The guide lights it
+  there; HOME never.
+- The canvas: HOME leaves; GLO is always the script's (KEEP says nothing
+  now).
+
+And CHOOSE PATTERN's listening put the "new" row's empty block in the cell
+to play it -- which made it, and offered another past it: each notch down
+grew the list (his find). The empty block is silence now, as `--`.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

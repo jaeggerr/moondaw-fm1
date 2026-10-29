@@ -29,7 +29,8 @@
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
  *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
  *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
- *   GLO   back where it was opened from     ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
+ *   HOME  back where it was opened from (out of the SELECTION first)   GLO  the PROJECT
+ *   ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
  * FX is a view here, not the MIXER: FX shows the effects of where one is. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
 static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
@@ -349,7 +350,7 @@ static void ch_frame(const PlatInput *in, uint32_t btns)
     }
     if (PRESSED(PB_SEL))
         ch_close(true);
-    else if (PRESSED(PB_GLO))
+    else if (PRESSED(PB_HOME))
         ch_close(false);
     ui_led_state(PB_PLAY, listening);
 #undef PRESSED
@@ -400,7 +401,7 @@ static void ch_draw(void)
     }
     ch_hint(6, "SEL", "TAKE", false);
     ch_hint(96, "PLAY", "LISTEN", false);
-    ch_hint(PLAT_W - 6, "GLO", "BACK", true);
+    ch_hint(PLAT_W - 6, "HOME", "BACK", true);
 }
 
 static void draw(void)
@@ -638,16 +639,24 @@ int pattern_frame(const PlatInput *in)
     ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
-                 1u << PB_EDIT | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
+                 1u << PB_EDIT | 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
     ui_led_keys(!selecting ? 0u
                            : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
                                  (edit_clip_len() ? 1u << OP_PASTE : 0u));
     gfx_frame(choosing ? ch_draw : draw);
-    if (PRESSED(PB_GLO)) {
+    if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */
+        selecting = false;
+        return PATTERN_STAY;
+    }
+    if (PRESSED(PB_HOME)) {
         player_note_off();
         song_pool_compact(song);
         return PATTERN_BACK;
+    }
+    if (PRESSED(PB_GLO)) {
+        player_note_off();
+        return PATTERN_PROJECT;
     }
     return PATTERN_STAY;
 #undef PRESSED

@@ -30,6 +30,8 @@ static PlatInput in;
 static int fails;
 static void go(void) { app_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
+/* HOME held: the root menu from anywhere (a press is a step back). */
+static void home(void) { in.btns = 1u << PB_HOME; for (int i = 0; i < 40; i++) go(); in.btns = 0; go(); }
 static void sel(int d) { in.enc[PE_SELECT] = (int8_t)d; go(); }
 static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
 /* HOME's root -> PROJECTS, the list; its cursor on the open project. */
@@ -54,7 +56,7 @@ int main(void)
 
     press(PB_SEL);            /* the cursor starts on it: into SONG */
     press(PB_SAVE);
-    press(PB_HOME);
+    home();
     CHECK("SAVE gives it a place", app_slot >= 0 && songs_in_flash() == 1 && !app_dirty);
 
     projects();
@@ -62,7 +64,7 @@ int main(void)
     press(PB_SEL);
     CHECK("NEW makes SONG 01, in memory only",
           !strcmp(app_name, "SONG 01") && app_slot == -1 && songs_in_flash() == 1);
-    press(PB_HOME);
+    home();
     press(PB_SEL);
     CHECK("an unsaved new song has its row, and SEL on it goes back in",
           !strcmp(app_name, "SONG 01") && app_slot == -1);
@@ -70,7 +72,7 @@ int main(void)
     key(16);                  /* A4 on its first step */
     CHECK("writing marks the song as changed", app_dirty);
     press(PB_SAVE);
-    press(PB_HOME);           /* from PATTERN, straight home */
+    home();           /* from PATTERN, straight home */
     CHECK("a second song beside the first", songs_in_flash() == 2 && !app_dirty);
 
     projects();
@@ -80,7 +82,7 @@ int main(void)
 
     press(PB_EDIT);
     key(3);
-    press(PB_HOME);
+    home();
     projects();
     sel(1);
     press(PB_SEL);
@@ -95,19 +97,19 @@ int main(void)
 
     press(PB_EDIT);
     key(20);
-    press(PB_HOME);
+    home();
     projects();
     sel(-1);
     press(PB_SEL);
     press(PB_SAVE);           /* SAVE answers the other way */
     CHECK("SAVE writes the changes, then opens", !strcmp(app_name, "DEMO") && songs_in_flash() == 2);
-    press(PB_HOME);
+    home();
     projects();
     sel(1);
     press(PB_SEL);
     CHECK("and they were written", song_step(&app_song, 0, 0, 0)->notes[0] == 73);
 
-    press(PB_HOME);
+    home();
     projects();
     sel(-1);                  /* DEMO */
     press(PB_PLAY);
@@ -117,7 +119,7 @@ int main(void)
     press(PB_SEL);
     press(PB_EDIT);
     key(5);
-    press(PB_HOME);
+    home();
     projects();
     sel(1);
     press(PB_PLAY);

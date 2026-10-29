@@ -162,5 +162,6 @@ bool canvas_frame(const PlatInput *in)
         gfx_frame(draw);
         changed = pixels = false;
     }
-    return keep_glo || !(btns & 1u << PB_GLO);
+    (void)keep_glo; /* GLO is always the script's since HOME is the way back (29/10) */
+    return !(btns & 1u << PB_HOME);
 }

@@ -167,7 +167,10 @@ int main(void)
     enc(PE_K3, 1);
     CHECK("and one turn of ENGINE gives it one of ours", app_song.instruments[4].engine == ENGINE_PULSE);
 
-    CHECK("GLO leaves", !press(PB_GLO));
+    CHECK("GLO asks for the PROJECT", press(PB_GLO) == INSTRUMENT_PROJECT);
+    instrument_resume();
+    go();
+    CHECK("HOME leaves", press(PB_HOME) == INSTRUMENT_BACK);
     printf("instrument test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

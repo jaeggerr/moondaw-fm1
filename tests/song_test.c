@@ -65,15 +65,15 @@ int main(void)
 
     press(PB_SEL);            /* the panel of track 1's blocks, on 00 */
     enc(PE_SELECT, 1);
-    press(PB_GLO);
-    CHECK("GLO closes the panel and changes nothing", E(0).pattern[0] == 0);
+    press(PB_HOME);
+    CHECK("HOME closes the panel and changes nothing", E(0).pattern[0] == 0);
     press(PB_SEL);
     enc(PE_SELECT, 1);
     press(PB_PLAY);
     CHECK("PLAY in the panel plays that block alone, in the phrase",
           E(0).pattern[0] == 1 && player_soloed(0));
-    press(PB_GLO);
-    CHECK("and GLO puts back what was there", E(0).pattern[0] == 0 && !player_soloed(0));
+    press(PB_HOME);
+    CHECK("and HOME puts back what was there", E(0).pattern[0] == 0 && !player_soloed(0));
     press(PB_SEL);            /* listening: the cursor's block plays once it rests */
     press(PB_PLAY);
     CHECK("PLAY listens from the block under the cursor", E(0).pattern[0] == 0 && player_soloed(0));
@@ -93,7 +93,19 @@ int main(void)
     for (int i = 0; i < 12; i++)
         go();
     CHECK("PLAY again: the cursor plays nothing", E(0).pattern[0] == 0 && !player_soloed(0));
-    press(PB_GLO);
+    press(PB_PLAY);           /* listening, down past the new block */
+    for (int k = 0; k < 6; k++) {
+        enc(PE_SELECT, 1);
+        for (int i = 0; i < 12; i++)
+            go();
+    }
+    press(PB_SEL);            /* the list did not grow: its last row is the one new block, 02 */
+    CHECK("listening never makes a block", E(0).pattern[0] == 2);
+    press(PB_SEL);
+    enc(PE_SELECT, -10);
+    enc(PE_SELECT, 1);        /* 00 back in the cell */
+    press(PB_SEL);
+    press(PB_HOME);
     press(PB_SEL);
     enc(PE_SELECT, -1);
     press(PB_SEL);

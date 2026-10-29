@@ -48,7 +48,8 @@ int app_cpu, app_block, app_worst;
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
 static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS } screen;
-static int mixer_from, project_from, pattern_from, canvas_from; /* the screen GLO leads back to */
+static int mixer_from, project_from, pattern_from, canvas_from; /* the screen HOME leads back to */
+enum { HOME_HOLD = 36 }; /* frames HOME is held to go to the root: 0.6 s */
 
 void app_mark_dirty(void) { app_dirty = true; }
 
@@ -314,7 +315,9 @@ static void draw_receiving(void)
 static void back_to(int from)
 {
     screen = from;
-    if (screen == AT_PATTERN)
+    if (screen == AT_INSTRUMENT)
+        instrument_resume();
+    else if (screen == AT_PATTERN)
         pattern_resume();
     else if (screen == AT_PHRASE)
         phrase_resume();
@@ -355,15 +358,21 @@ void app_frame(const PlatInput *real)
         break;
     }
 
-    {   /* HOME leads home from every screen, whatever that screen was doing */
+    {   /* HOME (29/10): a press is a step back -- each screen takes its own, SONG's is
+         * the root menu -- and held HOME_HOLD frames, the root from anywhere. GLO was
+         * "back" before: its label says global, not back. */
         static uint32_t prev_btns;
-        bool home = (in->btns & ~prev_btns) >> PB_HOME & 1u;
+        static int held;
+        bool press = (in->btns & ~prev_btns) >> PB_HOME & 1u;
         prev_btns = in->btns;
-        if (home && screen != AT_MENU) {
+        held = in->btns >> PB_HOME & 1u ? held + 1 : 0;
+        if ((press && screen == AT_SONG) || held == HOME_HOLD) {
             if (screen == AT_SETTINGS)
                 settings_close();
             if (screen == AT_SONG)
                 songview_cancel(); /* a block being previewed goes back to what it was */
+            if (screen == AT_CANVAS)
+                canvas_frame(in); /* its last frame: the hand's gestures stay collected */
             player_note_off();
             song_pool_compact(&app_song);
             screen = AT_MENU;
@@ -386,7 +395,7 @@ void app_frame(const PlatInput *real)
         case MIXER_BACK:
             back_to(mixer_from);
             break;
-        case MIXER_PROJECT: /* across, and GLO still goes back where both came from */
+        case MIXER_PROJECT: /* across, and HOME still goes back where both came from */
             screen = AT_PROJECT;
             project_from = mixer_from;
             project_open();
@@ -423,13 +432,25 @@ void app_frame(const PlatInput *real)
             mixer_from = AT_PHRASE;
             mixer_open("PHR", phrase_entry());
             break;
+        case PHRASE_PROJECT:
+            screen = AT_PROJECT;
+            project_from = AT_PHRASE;
+            project_open();
+            break;
         default:
             break;
         }
     } else if (screen == AT_INSTRUMENT) {
-        if (!instrument_frame(in)) {
+        switch (instrument_frame(in)) {
+        case INSTRUMENT_BACK:
             screen = AT_PATTERN;
             pattern_resume();
+            break;
+        case INSTRUMENT_PROJECT:
+            screen = AT_PROJECT;
+            project_from = AT_INSTRUMENT;
+            project_open();
+            break;
         }
     } else if (screen == AT_PATTERN) {
         switch (pattern_frame(in)) {
@@ -447,6 +468,11 @@ void app_frame(const PlatInput *real)
         case PATTERN_INSTR:
             screen = AT_INSTRUMENT;
             instrument_open(pattern_instr(), pattern_entry());
+            break;
+        case PATTERN_PROJECT:
+            screen = AT_PROJECT;
+            project_from = AT_PATTERN;
+            project_open();
             break;
         default:
             break;
@@ -488,8 +514,10 @@ void app_frame(const PlatInput *real)
             break;
         }
     }
-    if (screen == AT_MENU || screen == AT_CANVAS)
-        ui_led_guide(0); /* HOME: SEL, PLAY, GLO back; the canvas: the script's own (LED) */
+    if (screen == AT_MENU)
+        ui_led_guide(menu_in_root() ? 1u << PB_GLO : 0u); /* SETTINGS */
+    if (screen == AT_CANVAS)
+        ui_led_guide(0); /* the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_keys(0); /* the keys light only for PATTERN's ops */
     remote_leds();

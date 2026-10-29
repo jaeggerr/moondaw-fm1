@@ -15,7 +15,7 @@
  * that step (-- when none), five tracks a screen.
  *
  *   SELECT, KNOB 1  the step   KNOB 2  the track     the keys  write notes, OCT-/OCT+ their octave
- *   SEL, EDIT  the block of that track, to edit   GLO  back to SONG
+ *   SEL, EDIT  the block of that track, to edit   HOME  back to SONG   GLO  the PROJECT
  *   FX      the MIXER    ALGO  UNDO left, REDO right     SAVE  PLAY  as printed */
 enum { CELL_W = 37, CELLS = 5 };
 
@@ -190,13 +190,17 @@ int phrase_frame(const PlatInput *in)
     grid_follow(&col, &left, song->num_tracks, CELLS);
     play_row = playing && player_entry() == entry ? player_row() % steps : -1;
     ui_led_state(PB_PLAY, playing);
-    ui_led_guide(1u << PB_FX | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
+    ui_led_guide(1u << PB_FX | 1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
     gfx_frame(draw);
 
-    if (PRESSED(PB_GLO)) {
+    if (PRESSED(PB_HOME)) {
         player_note_off();
         song_pool_compact(song);
         return PHRASE_BACK;
+    }
+    if (PRESSED(PB_GLO)) {
+        player_note_off();
+        return PHRASE_PROJECT;
     }
     if ((PRESSED(PB_SEL) || PRESSED(PB_EDIT)) && has(col)) { /* EDIT: what is under the cursor */
         player_note_off();

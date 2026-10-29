@@ -74,7 +74,7 @@ int main(void)
     press(PB_SEL);
     enc(PE_K2, 4);
     enc(PE_K3, 2);             /* space -> A -> B */
-    CHECK("GLO leaves the name as it was", press(PB_GLO) && !strcmp(app_name, "KIDS"));
+    CHECK("HOME leaves the name as it was", press(PB_HOME) && !strcmp(app_name, "KIDS"));
     press(PB_SEL);
     enc(PE_K2, 4);
     enc(PE_K3, 2);
@@ -94,7 +94,7 @@ int main(void)
     press(PB_SAVE);
     CHECK("SAVE saves", saves == 1);
     CHECK("FX goes to the MIXER", press(PB_FX) == PROJECT_MIXER);
-    CHECK("GLO leaves", press(PB_GLO) == PROJECT_BACK);
+    CHECK("HOME leaves", press(PB_HOME) == PROJECT_BACK);
     printf("project test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

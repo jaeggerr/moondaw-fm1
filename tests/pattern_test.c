@@ -127,8 +127,8 @@ int main(void)
           st(0)->fx[1].cmd == FX_VOL && !strcmp(song_syl(&song, st(0)->fx[2].val), "MAN"));
     press(PB_SEL);
     press(PB_LFO);            /* the wheel's slot emptied */
-    press(PB_GLO);
-    CHECK("GLO leaves it as it was", !strcmp(song_syl(&song, st(0)->fx[2].val), "MAN"));
+    press(PB_HOME);
+    CHECK("HOME leaves it as it was", !strcmp(song_syl(&song, st(0)->fx[2].val), "MAN"));
     press(PB_SEL);
     enc(PE_PRESET, 1);        /* KEYS: LFO rubs the last out */
     press(PB_LFO);
@@ -147,8 +147,8 @@ int main(void)
     CHECK("and under 00 there is none", st(2)->instrument == INSTR_NONE);
     press(PB_SEL);            /* CHOOSE INSTRUMENT, on -- */
     enc(PE_SELECT, 2);
-    press(PB_GLO);
-    CHECK("GLO leaves the list and changes nothing", st(2)->instrument == INSTR_NONE);
+    press(PB_HOME);
+    CHECK("HOME leaves the list and changes nothing", st(2)->instrument == INSTR_NONE);
     press(PB_SEL);
     enc(PE_SELECT, 2);
     press(PB_SEL);
@@ -207,7 +207,12 @@ int main(void)
     pattern_resume();
     go();
     in.btns = 1u << PB_GLO;
-    CHECK("GLO leaves", pattern_frame(&in) == PATTERN_BACK);
+    CHECK("GLO asks for the PROJECT", pattern_frame(&in) == PATTERN_PROJECT);
+    in.btns = 0;
+    pattern_resume();
+    go();
+    in.btns = 1u << PB_HOME;
+    CHECK("HOME leaves", pattern_frame(&in) == PATTERN_BACK);
 
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

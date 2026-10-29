@@ -61,7 +61,7 @@ int namer_frame(const PlatInput *in, uint32_t pressed)
         take();
         return NAMER_KEPT;
     }
-    return pressed & 1u << PB_GLO ? NAMER_LEFT : NAMER_TYPING;
+    return pressed & 1u << PB_HOME ? NAMER_LEFT : NAMER_TYPING;
 }
 
 static void hint(int x, const char *key, const char *word, bool right)
@@ -88,5 +88,5 @@ void namer_draw(void)
         gfx_text_mid(F_COND20, x, CELL, Y + 2 + FONTS[F_COND20].ascent, s, here ? C_ON_ACC : C_TEXT);
     }
     hint(14, "SEL", "OK", false);
-    hint(PLAT_W - 14, "GLO", "BACK", true);
+    hint(PLAT_W - 14, "HOME", "BACK", true);
 }

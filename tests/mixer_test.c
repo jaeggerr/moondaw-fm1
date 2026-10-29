@@ -111,8 +111,8 @@ int main(void)
     CHECK("EDIT goes to the PROJECT", mixer_frame(&in) == MIXER_PROJECT);
     in.btns = 0;
     go();
-    in.btns = 1u << PB_GLO;
-    CHECK("GLO leaves", mixer_frame(&in) == MIXER_BACK);
+    in.btns = 1u << PB_HOME;
+    CHECK("HOME leaves", mixer_frame(&in) == MIXER_BACK);
     printf("mixer test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

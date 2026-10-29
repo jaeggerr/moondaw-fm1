@@ -15,7 +15,8 @@
  * projects by name only, CONDENSED 20, eight rows; the open one marked by
  * a bar at its left and an amber dot while it has unsaved changes; + NEW
  * last. SEL opens, PLAY plays the project under the cursor (opening it if
- * it is not the open one), GLO goes back to the root. The version small
+ * it is not the open one), HOME goes back to the root. GLO on the root
+ * opens SETTINGS, as it opens PROJECT from the song's screens. The version small
  * at the bottom of both. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
@@ -256,6 +257,8 @@ int menu_frame(const PlatInput *in)
             } else if (item == MENU_SETTINGS)
                 to = MENU_TO_SETTINGS;
         }
+        if (btns & 1u << PB_GLO) /* GLO: what is global here, the machine's */
+            to = MENU_TO_SETTINGS;
         if (btns & 1u << PB_PLAY && item == MENU_CONTINUE) {
             if (player_playing())
                 player_stop();
@@ -263,7 +266,7 @@ int menu_frame(const PlatInput *in)
                 play();
         }
     } else {
-        if (btns & 1u << PB_GLO) { /* back to the root, on PROJECTS */
+        if (btns & 1u << PB_HOME) { /* back to the root, on PROJECTS */
             listing = false;
             item = MENU_PROJECTS;
         }
@@ -305,3 +308,5 @@ int menu_frame(const PlatInput *in)
     gfx_frame(draw);
     return open_it ? MENU_SONG : to;
 }
+
+bool menu_in_root(void) { return !listing && !asking; }

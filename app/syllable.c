@@ -205,7 +205,7 @@ int syllable_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
     else if (singing > 0 && --singing == 0)
         player_note_off();
     ui_led_state(PB_PLAY, singing > 0);
-    if (PRESSED(PB_SEL) || PRESSED(PB_GLO)) {
+    if (PRESSED(PB_SEL) || PRESSED(PB_HOME)) {
         player_note_off();
         return PRESSED(PB_SEL) ? SYLLABLE_KEPT : SYLLABLE_LEFT;
     }
@@ -309,5 +309,5 @@ void syllable_draw(void)
         draw_wheel();
     hint(6, "SEL", "TAKE", false);
     hint(82, "PRESET", mode == KEYS ? "WHEEL" : "KEYS", false);
-    hint(PLAT_W - 6, "GLO", "BACK", true);
+    hint(PLAT_W - 6, "HOME", "BACK", true);
 }

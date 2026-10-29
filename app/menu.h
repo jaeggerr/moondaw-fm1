@@ -16,5 +16,7 @@ void menu_open(int item);
  * CONTINUE the open one -- the caller goes into it; MENU_TO_SETTINGS. */
 enum { MENU_STAY, MENU_SONG, MENU_TO_SETTINGS };
 int menu_frame(const PlatInput *in);
+/* On the root, no question asked: where GLO opens SETTINGS (the guide). */
+bool menu_in_root(void);
 
 #endif

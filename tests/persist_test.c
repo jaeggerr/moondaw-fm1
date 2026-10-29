@@ -29,6 +29,8 @@ int plat_sysex_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; return -1;
 static PlatInput in;
 static void go(void) { app_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
+/* HOME held: the root menu from anywhere (a press is a step back). */
+static void home(void) { in.btns = 1u << PB_HOME; for (int i = 0; i < 40; i++) go(); in.btns = 0; go(); }
 
 /* What is in slot 0, read the way the app reads it. */
 #include "../core/store.h"
@@ -76,7 +78,7 @@ int main(void)
     again = note_on_flash();
 
     /* SETTINGS: from HOME's root menu, KNOB 3 the value, kept across a restart */
-    press(PB_HOME);
+    home();
     in.enc[PE_K1] = 2;          /* CONTINUE, PROJECTS, SETTINGS */
     go();
     press(PB_SEL);
@@ -88,7 +90,7 @@ int main(void)
         go();
         in.enc[PE_K3] = 2;      /* 50 -> 75 % */
         go();
-        press(PB_GLO);
+        press(PB_HOME);         /* a step back: HOME's root */
         there = there && !strcmp(app_screen(), "HOME");
         ui_leds = UI_LEDS_GUIDE, ui_light = PLAT_LED_50;
         app_init();             /* off and on */

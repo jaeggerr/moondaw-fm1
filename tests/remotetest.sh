@@ -52,8 +52,11 @@ $CTL canvas line 0 0 239 239 amber || fail "canvas line"
 $CTL status | grep -q 'screen=CANVAS' || fail "the canvas in front"
 $CTL press GLO
 sleep 0.1
-$CTL status | grep -q 'screen=HOME' || fail "GLO back to where it was"
-# alive: GLO kept by the script, the gestures collected, HOME leaves
+$CTL status | grep -q 'screen=CANVAS' || fail "GLO is the script's"
+$CTL press HOME
+sleep 0.1
+$CTL status | grep -q 'screen=HOME' || fail "HOME back to where it was"
+# alive: GLO the script's, the gestures collected, HOME leaves
 python3 - <<PY || fail "the live canvas"
 import subprocess, sys, time
 sys.path.insert(0, "tools")

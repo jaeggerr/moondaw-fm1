@@ -11,11 +11,11 @@
 /* False when the phrase plays nothing on that track: there is no block
  * to open. */
 bool pattern_open(Song *s, int entry, int track);
-enum { PATTERN_STAY, PATTERN_BACK, PATTERN_SONG, PATTERN_INSTR };
+enum { PATTERN_STAY, PATTERN_BACK, PATTERN_SONG, PATTERN_INSTR, PATTERN_PROJECT };
 /* Right after pattern_open, when the SECTION opened it: the cursor
  * starts on the step it was on. */
 void pattern_from_phrase(int row);
-/* One frame. PATTERN_BACK: the hand asked to leave by GLO, to where it
+/* One frame. PATTERN_BACK: the hand asked to leave by HOME, to where it
  * came from; PATTERN_SONG: an UNDO took the block away.
  * PATTERN_INSTR: it asked for the instrument of the step under the
  * cursor; pattern_instr() says which, pattern_entry() the phrase. */

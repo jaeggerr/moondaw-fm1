@@ -6,7 +6,7 @@
  *   LIGHT  how bright the guide is, 15 to 100 %; on its row a few buttons
  *          light at it, to judge
  *
- *   SELECT, KNOB 1  the setting     KNOB 3  its value     GLO  back to HOME
+ *   SELECT, KNOB 1  the setting     KNOB 3  its value     HOME  back
  * Kept in flash beside which song was open, when the screen is left. */
 #ifndef SETTINGS_H
 #define SETTINGS_H
@@ -16,9 +16,9 @@
 #include "../platform/platform.h"
 
 void settings_open(void);
-/* One frame. False once the hand asked to leave (GLO). */
+/* One frame. False once the hand asked to leave (HOME). */
 bool settings_frame(const PlatInput *in);
-/* Leaving, by GLO or HOME: what changed goes to the flash. */
+/* Leaving, by HOME pressed or held: what changed goes to the flash. */
 void settings_close(void);
 
 #endif

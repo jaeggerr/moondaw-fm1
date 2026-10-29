@@ -22,7 +22,7 @@
  *   SELECT, KNOB 1  the row     KNOB 2  the column     KNOB 3  the value
  *   PLAY    the preview: a few notes up, round and round, until PLAY again
  *   the keys  play the sound, OCT-/OCT+ their octave     PRESETS  the next instrument
- *   GLO     back to PATTERN     ALGO  UNDO left, REDO right     SAVE  as printed
+ *   HOME    back to PATTERN  GLO  the PROJECT     ALGO  UNDO left, REDO right     SAVE  as printed
  *
  * Five cells of 33 px a row; a column takes one or two (an engine's name). */
 enum { LABEL_X = 8, CELL_X = 66, CELL_W = 33 };
@@ -321,7 +321,13 @@ void instrument_open(int instr, int e)
     gfx_invalidate();
 }
 
-bool instrument_frame(const PlatInput *in)
+void instrument_resume(void)
+{
+    prev_btns = prev_keys = 0xFFFFFFFFu;
+    gfx_invalidate();
+}
+
+int instrument_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
 #define PRESSED(b) ((btns >> (b)) & 1u)
@@ -336,7 +342,7 @@ bool instrument_frame(const PlatInput *in)
             app_mark_dirty();
         ui_led_guide(0); /* the namer: SEL keeps, GLO goes back */
         gfx_frame(draw);
-        return true;
+        return INSTRUMENT_STAY;
     }
 
     if (in->enc[PE_PRESET]) {
@@ -388,13 +394,13 @@ bool instrument_frame(const PlatInput *in)
 
     grid_follow(&row, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, previewing);
-    ui_led_guide(1u << PB_OCTDN | 1u << PB_OCTUP); /* the keys' octave */
+    ui_led_guide(1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP); /* the PROJECT, the keys' octave */
     gfx_frame(draw);
-    if (PRESSED(PB_GLO)) {
+    if (PRESSED(PB_HOME) || PRESSED(PB_GLO)) {
         previewing = false;
         player_note_off();
-        return false;
+        return PRESSED(PB_HOME) ? INSTRUMENT_BACK : INSTRUMENT_PROJECT;
     }
-    return true;
+    return INSTRUMENT_STAY;
 #undef PRESSED
 }

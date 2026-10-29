@@ -185,11 +185,13 @@ static void preview_end(void)
     pop_preview = -1;
 }
 
-/* The block under the cursor, alone, round and round; -- is silence. */
+/* The block under the cursor, alone, round and round; -- is silence, and
+ * so is the new one: it is empty, and putting it in the cell to play it
+ * would make it -- and offer another past it, each notch a new block. */
 static void preview_here(void)
 {
     preview_end();
-    if (pop_block(pop_cur) == PATTERN_NONE)
+    if (pop_block(pop_cur) == PATTERN_NONE || song_pattern_blank(song, col, pop_block(pop_cur)))
         return;
     entry_at(row)->pattern[col] = pop_block(pop_cur);
     if (!player_soloed(col))
@@ -256,7 +258,7 @@ static void draw_pop(void)
     }
     hint(6, "SEL", "TAKE", false);
     hint(96, "PLAY", "LISTEN", false);
-    hint(PLAT_W - 6, "GLO", "BACK", true);
+    hint(PLAT_W - 6, "HOME", "BACK", true);
 }
 
 static void draw(void)
@@ -369,11 +371,11 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         }
         if (PRESSED(PB_SEL))
             pop_close(true);
-        else if (PRESSED(PB_GLO))
+        else if (PRESSED(PB_HOME))
             pop_close(false);
         play_row = -1;
         ui_led_state(PB_PLAY, listening);
-        ui_led_guide(0); /* SEL, GLO back, PLAY: nothing of its own */
+        ui_led_guide(0); /* SEL, HOME back, PLAY: nothing of its own */
         gfx_frame(draw);
         return SONGVIEW_STAY;
     }

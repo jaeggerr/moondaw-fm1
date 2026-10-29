@@ -16,7 +16,7 @@
  *   SELECT, KNOB 1  the row     KNOB 2  the column; left of the first, the track's number
  *   KNOB 3  the value; on a track's number: normal -> MUTE -> SOLO (monitoring,
  *           never in the file)
- *   GLO     back where it was opened from     EDIT  the PROJECT
+ *   HOME    back where it was opened from     EDIT, GLO  the PROJECT
  *   ALGO    UNDO left, REDO right     SAVE  PLAY  as printed */
 enum { CELL_W = 45, COLS = 4 };
 
@@ -166,8 +166,8 @@ int mixer_frame(const PlatInput *in)
     vis = row + 1; /* rows as drawn: the returns first */
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, player_playing());
-    ui_led_guide(1u << PB_EDIT); /* the PROJECT */
+    ui_led_guide(1u << PB_EDIT | 1u << PB_GLO); /* the PROJECT */
     gfx_frame(draw);
-    return PRESSED(PB_GLO) ? MIXER_BACK : PRESSED(PB_EDIT) ? MIXER_PROJECT : MIXER_STAY;
+    return PRESSED(PB_HOME) ? MIXER_BACK : PRESSED(PB_EDIT) || PRESSED(PB_GLO) ? MIXER_PROJECT : MIXER_STAY;
 #undef PRESSED
 }
