@@ -76,6 +76,8 @@ static const Item pattern_items[] = {
     { "MONO", "solo; held: mute" },
     { "ALGO", "undo left, redo right" },
     { "PLAY", "the phrase, round" },
+    { "REC", "armed: PLAY counts a bar" },
+    { "  then keys", "record; OFF when let go" },
     { "GLO", "the project" },
     { "HOME", "back" },
 };
