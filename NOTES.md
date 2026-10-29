@@ -1754,7 +1754,7 @@ limit, the sample bank to be one file of them.
 Decided with him: short one-shots only, one bank filled from the computer,
 the other apps' format unchanged. No screen yet (CHOOSE SAMPLE and a
 SAMPLES page are stage 2) but SYSTEM's line. Built and tested on the
-Mac, `./build.sh` builds; **not installed, nothing heard on the device**.
+Mac, then installed and played on the device (below).
 
 - **A sample**: mono, 22 050 Hz, IMA ADPCM (4 bits a frame), a second at
   most. Blocks of 255 bytes (a predictor, an index, 504 codes): 16 fill a
@@ -1824,11 +1824,23 @@ Mac, `./build.sh` builds; **not installed, nothing heard on the device**.
   held; the tool's decoder and this one agree to the frame; KIDS' first
   track plays its 909 kick); `link_test` (the bank through the link);
   `remotetest.sh` (add, list, remove, get against the whole app).
-- **To measure on the FM-1**: what a voice costs from the audio
-  interrupt (the XIP cache misses nobody has measured; estimated ~25 us
-  a block), KIDS with its 909 kit (`fm1_samples.py add
-  ../moondaw/instruments/tr909/*.wav`), how long 50 KB takes over the
-  cable, and the balance after normalising.
+- **On the FM-1** (later the same day, his yes): installed over the old
+  flash, which mounted as it was (CLAVIOLINE reopened from `.LAST`, 31).
+  The 909 kit sent in ~4.5 s for 50 KB (196 -> 144 KB free); KIDS (the
+  moondaw one, with `smp` and zones) sent and played through. CPU 48 to
+  68 % by phrase, **max 79** (KIDS with WAVE/NOISE 59, KIDS-DRUM 65). The
+  worst block: T179 O653 V187 C858 R384 E72, **W2**: the sample tracks
+  stay on CPU0 with their chains, and CPU1 waits on nothing -- the split
+  is lopsided, the voices themselves (V) are cheap. To win back: decode
+  into a buffer on CPU0 and let CPU1 run the chain.
+- **Two restarts** while KIDS looped, after ~2.5 and ~3.5 min (P33 0x04
+  then 0x40, no crash recorded); a third play of 3.5 min ran clean. Not
+  explained; DAFT-PUNK-EN restarted the same way before the sampler
+  (29/10, above). Not yet compared with KIDS-DRUM on this firmware, which
+  is what would tell whether the samples have a part in it.
+- **Still to measure on the FM-1**: what a voice costs from the audio
+  interrupt alone (V above holds it, with DRUM's), and the balance after
+  normalising, by ear.
 
 ## Open
 
