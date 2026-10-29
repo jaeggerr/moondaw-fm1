@@ -76,6 +76,8 @@ void plat_led_btn(int btn, int on)
     led_btns = on ? led_btns | 1u << btn : led_btns & ~(1u << btn);
 }
 
+void plat_led_glow(int btn, int on) { (void)btn, (void)on; } /* not drawn here */
+
 /* The flash: a file beside the program, read at start and rewritten on
  * every change. MOONDAW_FLASH names another; the selftest keeps it in
  * memory. Programming only clears bits, as on the chip. */

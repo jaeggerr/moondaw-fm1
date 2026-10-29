@@ -81,3 +81,17 @@ void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t he
                          : s == UI_BTN_BACK ? C_TITLE : C_TEXT);
     }
 }
+
+bool ui_guide = true;
+
+void ui_led_guide(uint32_t usable)
+{
+    static uint32_t shown = ~0u;
+    if (!ui_guide)
+        usable = 0;
+    if (usable == shown)
+        return;
+    for (int b = 0; b < PLAT_BTNS; b++)
+        plat_led_glow(b, (usable >> b) & 1u);
+    shown = usable;
+}

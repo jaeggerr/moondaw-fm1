@@ -120,6 +120,8 @@ void plat_led_btn(int btn, int on)
     led_btns = on ? led_btns | 1u << btn : led_btns & ~(1u << btn);
 }
 
+void plat_led_glow(int btn, int on) { (void)btn, (void)on; } /* not drawn here */
+
 static void run_frame(void)
 {
     for (int e = 0; e < PLAT_ENCS; e++) {

@@ -327,6 +327,20 @@ void songview_cancel(void)
         pop_close(false);
 }
 
+/* What can be pressed where the cursor is: the guide's glow (ui.h). */
+static uint32_t usable(void)
+{
+    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE;
+    if (is_ref(row))
+        return u | (col < 0 ? 1u << PB_LFO : 0u);
+    u |= 1u << PB_SEL;
+    if (col < 0)
+        u |= 1u << PB_EDIT | 1u << PB_SEQ | 1u << PB_LFO;
+    else if (entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS)
+        u |= 1u << PB_EDIT;
+    return u;
+}
+
 int songview_frame(const PlatInput *in, int *entry, int *track)
 {
     uint32_t btns = in->btns & ~prev_btns;
@@ -359,6 +373,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             pop_close(false);
         play_row = -1;
         plat_led_btn(PB_PLAY, listening);
+        ui_led_guide(1u << PB_SEL | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY);
         gfx_frame(draw);
         return SONGVIEW_STAY;
     }
@@ -434,6 +449,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     play_row = playing ? player_entry() : -1;
     plat_led_btn(PB_PLAY, playing);
+    ui_led_guide(usable());
     gfx_frame(draw);
     return out;
 #undef PRESSED

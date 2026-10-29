@@ -21,6 +21,7 @@ int app_not_carried(void) { return 0; }
 
 void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)y; (void)w; (void)h; (void)px; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
+void plat_led_glow(int b, int on) { (void)b; (void)on; }
 
 static const char trk[] = "version 3\nbpm 120\nticks 6\nmeter 4 4\ntracks 8\n"
                           "pat t0 00 len 16\n00 C-4\narr 00 steps auto\nt0 00\n";

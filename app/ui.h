@@ -5,6 +5,7 @@
 #ifndef UI_H
 #define UI_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 enum { UI_CARDS_Y = 22, UI_CARDS_H = 22 };
@@ -19,6 +20,13 @@ void ui_cards_rule(void); /* the green line under them */
 /* The loop's steps in the bar, `LOOP 03-08`, at x. Returns its width,
  * 0 when there is no loop to say. */
 int ui_loop_slot(int x, int y);
+
+/* The guide (29/10): the buttons that do something on the screen in
+ * front glow faintly, a lit LED still meaning a state (PLAY playing).
+ * `usable` is a PB_* mask; the screens that have none yet give 0. On
+ * until a SETTINGS screen can turn it off. */
+extern bool ui_guide;
+void ui_led_guide(uint32_t usable);
 
 /* What a button of the map is, this frame. */
 enum {

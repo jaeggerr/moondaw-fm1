@@ -54,6 +54,9 @@ typedef struct {
 void plat_blit(int x, int y, int w, int h, const uint16_t *px);
 void plat_led_key(int key, int on); /* 0..PLAT_KEYS-1 */
 void plat_led_btn(int btn, int on); /* PB_* */
+/* The faint glow (~1/30 of lit) under a button's LED: what can be pressed here
+ * (app/ui.h ui_led_guide). A lit LED shows lit over it. */
+void plat_led_glow(int btn, int on);
 
 /* Where songs are kept: 73 sectors of 4 KB, the 292 KB of the FM-1's
  * flash that Felucca uses for its own store (0x97000..0xE0000). Offsets

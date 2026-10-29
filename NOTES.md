@@ -1403,6 +1403,20 @@ effect is left alone. An emptied syllable empties its slot. The FX view
 now shows a syllable as the file writes it, `'AQ`, not `SYL 03`; KNOB 2
 no longer turns its index.
 
+## 2026-10-29 — the guide: what can be pressed glows
+
+Every button and key of the FM-1 has its LED, one colour, at several
+levels (hal/fm1_input.h: dark, the glow ~1/30 of lit, a mid level, lit,
+a breath). Jaeger's idea: light the buttons that do something on the
+screen in front. As there is no colour, the level says it -- the glow:
+can be pressed here; lit: a state (PLAY playing or listening); dark:
+nothing here. `plat_led_glow` (fm1_led_dim), `ui_led_guide(mask)` once a
+frame; `ui_guide`, on, until a SETTINGS screen (OFF / STATE / GUIDE) can
+turn it off. First on SONG only, as a trial, by where the cursor is: SEL,
+EDIT where there is something to edit, SEQ and LFO on the number, FX,
+GLO, HOME, PLAY, SAVE; in CHOOSE PATTERN SEL GLO HOME PLAY. The other
+screens put the glow out.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

@@ -12,6 +12,7 @@
 void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)y; (void)w; (void)h; (void)px; }
 void plat_led_key(int k, int on) { (void)k; (void)on; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
+void plat_led_glow(int b, int on) { (void)b; (void)on; }
 
 Song app_song;
 char app_name[STORE_NAME + 1] = "TEST";

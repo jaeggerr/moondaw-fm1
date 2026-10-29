@@ -16,6 +16,7 @@
 void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)y; (void)w; (void)h; (void)px; }
 void plat_led_key(int k, int on) { (void)k; (void)on; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
+void plat_led_glow(int b, int on) { (void)b; (void)on; }
 int plat_audio_load(int *worst) { *worst = 12; return 3; } /* figures to read back */
 
 static uint32_t now_ms(void)

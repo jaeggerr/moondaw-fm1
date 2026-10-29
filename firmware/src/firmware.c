@@ -165,6 +165,19 @@ int plat_audio_load(int *worst)
 void plat_led_key(int key, int on) { fm1_led_key(14u + (uint32_t)key, on); }
 void plat_led_btn(int btn, int on) { fm1_led_key(panel.btn[btn], on); }
 
+/* fm1_led_key's glow: the same LED, in fm1_led_dim (hal/fm1_input.h). */
+void plat_led_glow(int btn, int on)
+{
+    for (uint32_t p = 0; p < FM1_NCOL; p++)
+        for (uint32_t r = 1; r < 5u; r++)
+            if (FM1_KEYMAP[r][p] == (int8_t)panel.btn[btn]) {
+                if (on)
+                    fm1_led_dim[p] |= (uint8_t)(1u << r);
+                else
+                    fm1_led_dim[p] &= (uint8_t)~(1u << r);
+            }
+}
+
 static int32_t master_knob = 512 * 16;   /* the pot x16, smoothed per frame (Felucca's master.c) */
 
 static void input_read(PlatInput *in)
