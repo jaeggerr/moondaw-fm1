@@ -24,6 +24,11 @@
 
 void gfx_frame(void (*draw)(void));
 void gfx_invalidate(void); /* the panel shows something else: resend all */
+/* Band `b` (0..14) of what the last gfx_frame() drew, drawn again for
+ * the computer to look at (link.h's SCREEN), RGB565 as gfx paints it;
+ * it is good until the next gfx call. Raw pixels sent to the panel
+ * behind gfx's back are not in it. NULL before the first frame. */
+const uint16_t *gfx_band(int b);
 
 /* `a` is the coverage, 0..255: 255 replaces, less blends over. */
 void gfx_fill(int x, int y, int w, int h, uint16_t c, int a);

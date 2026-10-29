@@ -4,6 +4,7 @@
 #include "../core/player.h"
 #include "app.h"
 #include "canvas.h"
+#include "gfx.h"
 #include "link.h"
 #include "ui.h"
 #include "undo.h"
@@ -201,6 +202,30 @@ static int set_length(const uint8_t *p, uint32_t n)
     return LINK_OK;
 }
 
+/* A band of the screen, run-length coded, and the bytes of it from `offset`. */
+static int screen(const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail, uint32_t *tail_n)
+{
+    const uint16_t *px = n == 3 ? gfx_band(p[0]) : 0;
+    uint32_t offset, at = 0;
+    if (!px)
+        return LINK_BADMSG;
+    offset = (uint32_t)(p[1] | p[2] << 8);
+    for (int i = 0; i < PLAT_W * 16;) {
+        uint8_t run[3];
+        int k = 1;
+        while (i + k < PLAT_W * 16 && px[i + k] == px[i] && k < 255)
+            k++;
+        run[0] = (uint8_t)k, run[1] = (uint8_t)px[i], run[2] = (uint8_t)(px[i] >> 8);
+        for (int j = 0; j < 3; j++, at++)
+            if (at >= offset && at < offset + LINK_READ_MAX)
+                tail[at - offset] = run[j];
+        i += k;
+    }
+    *extra = at;
+    *tail_n = at > offset ? (at - offset < LINK_READ_MAX ? at - offset : LINK_READ_MAX) : 0;
+    return LINK_OK;
+}
+
 /* ------------------------------------------------------------- the hook --- */
 static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail, uint32_t *tail_n)
 {
@@ -268,6 +293,8 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
         *tail_n = CANVAS_EVENTS;
         *extra = same(app_screen(), "CANVAS"); /* still in front, or the hand left it */
         return LINK_OK;
+    case LINK_CMD_SCREEN:
+        return screen(p, n, extra, tail, tail_n);
     default:
         return LINK_BADMSG;
     }

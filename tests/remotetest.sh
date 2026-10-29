@@ -33,6 +33,13 @@ $CTL press SEL || fail "press"
 sleep 0.1
 $CTL status | grep -q 'screen=SONG' || fail "SEL opened SONG"
 $CTL turn K2 1 || fail "turn"
+$CTL screen -o build/remote_screen.png > /dev/null || fail "screen"
+python3 -c "
+from PIL import Image
+im = Image.open('build/remote_screen.png')
+assert im.size == (240, 240) and im.getpixel((0, 239)) == (0, 0, 0)
+assert (255, 255, 255) in [c for _, c in im.getcolors(65536)], 'no white text'
+" || fail "what the screen shows"
 $CTL press HOME
 sleep 0.1
 $CTL canvas clear '#102030' || fail "canvas clear"

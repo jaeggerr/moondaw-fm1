@@ -10,6 +10,7 @@ static uint16_t band[PLAT_W * BAND]; /* the DMA reads it: RAM, not stack */
 static uint32_t shown[NBANDS];
 static uint8_t force = 1;
 static int by; /* first line of the band being drawn */
+static void (*shown_draw)(void);
 
 void gfx_invalidate(void) { force = 1; }
 
@@ -135,6 +136,7 @@ void gfx_text_mid(int font, int x, int w, int y, const char *s, uint16_t c)
 
 void gfx_frame(void (*draw)(void))
 {
+    shown_draw = draw;
     for (int b = 0; b < NBANDS; b++) {
         uint32_t h = 2166136261u;
         by = b * BAND;
@@ -151,4 +153,13 @@ void gfx_frame(void (*draw)(void))
         plat_blit(0, by, PLAT_W, BAND, band);
     }
     force = 0;
+}
+
+const uint16_t *gfx_band(int b)
+{
+    if (!shown_draw || b < 0 || b >= NBANDS)
+        return 0;
+    by = b * BAND;
+    shown_draw();
+    return band;
 }

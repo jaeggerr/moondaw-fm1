@@ -17,6 +17,7 @@ its buttons, turn its knobs, play its keys, and write into the song in memory.
     tools/fm1_ctl.py cell PHRASE T BLOCK|--    which block track T plays in a phrase (made if new)
     tools/fm1_ctl.py length T BLOCK STEPS
     tools/fm1_ctl.py save
+    tools/fm1_ctl.py screen [-o FILE.png]      what the panel shows, as a picture (default build/screen.png)
     tools/fm1_ctl.py canvas clear [COLOUR]     a screen of the computer's own, GLO leaves it
     tools/fm1_ctl.py canvas fill X Y W H COLOUR
     tools/fm1_ctl.py canvas text X Y 'WORDS' [--font 20|14|12|mono] [--colour COLOUR]
@@ -39,7 +40,7 @@ in the flash until `save`. `open` and `new` refuse to drop unsaved
 changes unless --force is given.
 
 --udp drives a simulator on this computer (build/sim/moondaw-fm1). The
-protocol is in app/link.h (version 2). MIDI needs python-rtmidi.
+protocol is in app/link.h (version 3). MIDI needs python-rtmidi.
 """
 import argparse
 import re
@@ -50,6 +51,7 @@ import fm1_send as link
 from fm1_proto import FONTS
 
 STATUS, INPUT, OPEN, NEW, STEP, CELL, LENGTH, SAVE, PLAY, CANVAS = range(8, 18)
+SCREEN = 0x13
 BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC",
            "OCT-", "OCT+"]
 KNOBS = ["SELECT", "ALGO", "PRESETS", "K1", "K2", "K3", "K4"]
@@ -122,6 +124,31 @@ def track(t):
     return t - 1
 
 
+def screen(port, path):
+    """The panel as it is, band by band, each run-length coded (app/link.h)."""
+    from PIL import Image
+    im = Image.new("RGB", (240, 240))
+    for b in range(15):
+        coded, size = b"", None
+        while size is None or len(coded) < size:
+            _, _, size, tail = checked(link.ask(port, SCREEN, bytes([b]) + len(coded).to_bytes(2, "little")),
+                                       "install a MOONDAW with SCREEN (link version 3)")
+            if not tail:
+                break
+            coded += tail
+        px = []
+        for i in range(0, len(coded) - 2, 3):
+            v = coded[i + 1] | coded[i + 2] << 8
+            r, g, bl = v >> 11, v >> 5 & 63, v & 31
+            px += [(r * 255 // 31, g * 255 // 63, bl * 255 // 31)] * coded[i]
+        if len(px) != 240 * 16:
+            sys.exit(f"band {b}: {len(px)} pixels, not {240 * 16}")
+        for i, c in enumerate(px):
+            im.putpixel((i % 240, b * 16 + i // 240), c)
+    im.save(path)
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--port", help="part of the MIDI port's name")
@@ -144,6 +171,7 @@ def main():
     p = sub.add_parser("cell"); p.add_argument("phrase"); p.add_argument("track"); p.add_argument("block")
     p = sub.add_parser("length"); p.add_argument("track"); p.add_argument("block"); p.add_argument("steps", type=int)
     sub.add_parser("save")
+    p = sub.add_parser("screen"); p.add_argument("-o", "--out", default="build/screen.png")
     p = sub.add_parser("canvas"); p.add_argument("op", choices=["clear", "fill", "text", "line", "image", "events"])
     p.add_argument("args", nargs="*"); p.add_argument("--font", default="20", choices=list(FONTS))
     p.add_argument("--colour", "--color", default="white")
@@ -200,6 +228,8 @@ def main():
                 "1 to 128 steps")
     elif a.cmd == "save":
         print(f"saved in slot {checked(link.ask(port, SAVE))[2]}")
+    elif a.cmd == "screen":
+        print(screen(port, a.out))
     elif a.cmd == "canvas":
         from fm1_proto import Canvas
         need = {"clear": (0, 1), "fill": (5, 5), "text": (3, 3), "line": (5, 5), "image": (1, 1),
