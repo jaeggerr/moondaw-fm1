@@ -97,6 +97,13 @@ void menu_open(int at)
     gfx_invalidate();
 }
 
+void menu_reload(void)
+{
+    refresh();
+    scroll_to(cur > nrows ? nrows : cur, false);
+    gfx_invalidate();
+}
+
 /* ---------------------------------------------------------- drawing --- */
 static void draw_question(void)
 {

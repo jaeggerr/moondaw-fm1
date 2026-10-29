@@ -114,6 +114,13 @@ int main(void)
     sel(-1);                  /* DEMO */
     press(PB_PLAY);
     CHECK("PLAY on another project opens it, to play it", !strcmp(app_name, "DEMO") && !app_dirty);
+    sel(1);                   /* still in PROJECTS: the next row is SONG 01 (on the root it would be SETTINGS) */
+    press(PB_SEL);
+    CHECK("and the hand stays in PROJECTS", !strcmp(app_name, "SONG 01"));
+    home();
+    projects();
+    sel(-1);
+    press(PB_PLAY);           /* DEMO again, playing, the hand on it */
     press(PB_SEQ);            /* still HOME: SEQ does nothing here */
     CHECK("and the hand stays on HOME", !strcmp(app_name, "DEMO"));
     press(PB_SEL);

@@ -110,7 +110,8 @@ static bool same_name(const char *a, const char *b)
 }
 
 /* Whatever just became the song in memory: the player starts over on
- * it, and the hand is back at the MENU. */
+ * it, and the hand is back at the MENU -- where it was there, when it was
+ * there already (PLAY in PROJECTS opens what it plays, and stays). */
 static void adopt(int slot, bool dirty)
 {
     player_init(&app_song);
@@ -119,8 +120,12 @@ static void adopt(int slot, bool dirty)
     undo_reset(&app_song); /* another song: nothing of the last one to take back */
     app_slot = slot;
     app_dirty = dirty;
-    screen = AT_MENU;
     ready = 1;
+    if (screen == AT_MENU) {
+        menu_reload();
+        return;
+    }
+    screen = AT_MENU;
     menu_open(MENU_CONTINUE);
 }
 

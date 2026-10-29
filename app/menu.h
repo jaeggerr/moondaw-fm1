@@ -12,6 +12,9 @@
 /* The root's items, and where its cursor starts. */
 enum { MENU_CONTINUE, MENU_PROJECTS, MENU_SETTINGS, MENU_HELP, MENU_ITEMS };
 void menu_open(int item);
+/* The projects read again, the hand where it is: another song was loaded
+ * from HOME itself. */
+void menu_reload(void);
 /* One frame. MENU_SONG: SEL opened a project (now the song in memory), or
  * CONTINUE the open one -- the caller goes into it; MENU_TO_SETTINGS. */
 enum { MENU_STAY, MENU_SONG, MENU_TO_SETTINGS };

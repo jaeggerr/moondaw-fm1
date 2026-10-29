@@ -38,6 +38,19 @@ void loop_press(int entry, int row)
     }
 }
 
+void loop_set(int entry, int from, int to)
+{
+    loop_keep(entry);
+    if (state == LOOP_SET && a == from && b == to) {
+        loop_clear();
+        return;
+    }
+    of_entry = entry;
+    a = from, b = to;
+    state = LOOP_SET;
+    player_set_loop(a, b - a + 1);
+}
+
 int loop_state(void) { return state; }
 int loop_from(void) { return a; }
 int loop_to(void) { return b; }

@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../app/pattern.h"
+#include "../app/loop.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 
@@ -181,6 +182,20 @@ int main(void)
         keys(0);
         CHECK("OP4 clears the selection", st(5)->notes[0] == NOTE_NONE && st(6)->notes[0] == NOTE_NONE);
         CHECK("and no key wrote a note meanwhile", st(0)->notes[0] == n0);
+        press(PB_EDIT);       /* out, the cursor on row 6 */
+        enc(PE_K1, -1);
+        press(PB_EDIT);       /* a selection of rows 5-6 */
+        enc(PE_K1, 1);
+        keys(1u << 13);       /* OP6: the loop */
+        keys(0);
+        CHECK("OP6 makes the selection the loop", loop_state() == LOOP_SET && loop_from() == 5 && loop_to() == 6);
+        press(PB_EDIT);
+        enc(PE_K1, -1);
+        press(PB_EDIT);
+        enc(PE_K1, 1);
+        keys(1u << 13);       /* OP6 on the same steps: no loop */
+        keys(0);
+        CHECK("and OP6 on the same steps forgets it", loop_state() == LOOP_NONE);
         press(PB_EDIT);
         press(PB_EDIT);
         enc(PE_K2, -1);       /* whole steps */

@@ -15,6 +15,9 @@ void loop_clear(void);
 /* A screen says which phrase it shows: a loop set on another is gone. */
 void loop_keep(int entry);
 void loop_press(int entry, int row);
+/* Both ends at once (PATTERN's OP6 on a selection): steps from..to of the
+ * phrase `entry`. The same range again forgets it. */
+void loop_set(int entry, int from, int to);
 int loop_state(void);
 int loop_from(void); /* the first step, or the one end set so far */
 int loop_to(void);   /* the last step, inclusive */

@@ -6,6 +6,7 @@
 #include "edit.h"
 #include "gfx.h"
 #include "grid.h"
+#include "loop.h"
 #include "syllable.h"
 #include "ui.h"
 #include "undo.h"
@@ -55,10 +56,14 @@ static bool choosing, listening;
 static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 /* SELECTION (29/10): EDIT in and out; the rectangle from the anchor to the
  * cursor, KNOB 2 left of the first column taking whole steps; the black
- * keys OP1-4 copy, paste, cut, clear. A copy lets the anchor go: the cursor
+ * keys OP1-4 copy, paste, cut, clear, OP6 makes its steps the LOOP PLAY
+ * goes round (again on the same, or with no selection, forgets it). A copy
+ * lets the anchor go: the cursor
  * is free again, the clipboard's outline following it to show where OP2
  * puts it. */
-enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8 }; /* the first four black keys */
+/* The black keys by their groups under the hand: the clipboard in the first
+ * three, clearing in the two after (OP5 free), listening in the next three. */
+enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13 };
 static bool selecting, anchored;
 static int an_row, an_col, clip_cols;
 static int syl_slot;
@@ -219,6 +224,15 @@ static void sel_op(int op)
     int r0, r1, c0, c1, n, done;
     sel_rect(&r0, &r1, &c0, &c1);
     n = r1 - r0 + 1;
+    if (op == OP_LOOP) { /* the selection's steps, PLAY going round them */
+        if (anchored)
+            loop_set(entry, r0, r1);
+        else
+            loop_clear();
+        anchored = false;
+        said = loop_state() == LOOP_SET ? "LOOP" : "NO LOOP";
+        return;
+    }
     if (op == OP_PASTE) {
         if (!edit_clip_len())
             return;
@@ -415,6 +429,12 @@ static void draw(void)
         grid_corner(said, grid_said_ink(said), 0, 0);
     else if (selecting) /* the mode, in place of where one is */
         grid_corner("SELECT", C_FX, 0, 0);
+    else if (loop_state() == LOOP_SET) { /* the loop, in place of where one is: LOOP 02-05 */
+        char lo[3], hi[3], range[6];
+        grid_hex2(lo, loop_from()), grid_hex2(hi, loop_to());
+        range[0] = lo[0], range[1] = lo[1], range[2] = '-', range[3] = hi[0], range[4] = hi[1], range[5] = 0;
+        grid_corner("LOOP", C_TITLE, range, C_TITLE);
+    }
     else if (cur_col < 0) /* the block's length, while the cursor is on a number */
         grid_corner("LEN", C_DIM, ui_dec(s + 3, len), C_TEXT);
     else
@@ -441,7 +461,11 @@ static void draw(void)
                 gfx_fill(c0 < 0 ? 2 : GRID_CELL_X + c0 * w, grid_y(v),
                          c0 < 0 ? GRID_CELL_X + cols * w - 2 : (c1 - c0 + 1) * w, GRID_ROW, C_SEL, 255);
         }
-        grid_num(v, r, band, band && cur_col < 0, r == play_row ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
+        if (loop_has(r) && loop_state() == LOOP_SET) /* the loop: a cyan rule at the left edge */
+            gfx_fill(0, grid_y(v) + (r == loop_from() ? 3 : 0), 3,
+                     GRID_ROW - (r == loop_from() ? 3 : 0) - (r == loop_to() ? 3 : 0), C_TITLE, 255);
+        grid_num(v, r, band, band && cur_col < 0,
+                 r == play_row || (loop_has(r) && loop_state() == LOOP_SET) ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
         for (int c = 0; c < cols; c++)
             draw_cell(v, r, c, band);
     }
@@ -567,6 +591,8 @@ int pattern_frame(const PlatInput *in)
             sel_op(OP_CUT);
         if (keys & 1u << OP_CLEAR)
             sel_op(OP_CLEAR);
+        if (keys & 1u << OP_LOOP)
+            sel_op(OP_LOOP);
         keys = 0; /* the keyboard is the ops' here: no note is written */
     }
     if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0 && !selecting)
@@ -642,7 +668,7 @@ int pattern_frame(const PlatInput *in)
                  1u << PB_EDIT | 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
     ui_led_keys(!selecting ? 0u
-                           : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
+                           : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR | 1u << OP_LOOP |
                                  (edit_clip_len() ? 1u << OP_PASTE : 0u));
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */

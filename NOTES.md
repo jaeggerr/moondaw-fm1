@@ -1542,10 +1542,28 @@ HOME in CHOOSE PATTERN went to the root (his find): the app took SONG's
 step back before SONG could close its list. SONG takes HOME itself now
 (SONGVIEW_BACK), the list closed first.
 
+## 2026-10-29 — LOOP, from the SELECTION
+
+The loop PLAY goes round in PATTERN is set from the SELECTION, no mode
+and no button of its own (prototype `tools/protos/loop.py`): EDIT, stretch,
+then OP6 -- the first black key of the third group. The black keys are
+grouped by the hand, as a piano's: the clipboard in the first three (copy
+paste cut), clearing in the two after (OP4 clear, OP5 left free for a
+cousin of it), listening in the next three (OP6 the loop) -- his call
+against OP5, which sat by "clear" and had nothing to do with it. OP6 on
+the same steps, or with no selection, forgets the loop. It shows as a
+cyan rule at the left edge and cyan numbers, LOOP 02-05 in the corner.
+`loop_set` in loop.c; the player's `player_set_loop`, as before.
+
+And PLAY in PROJECTS on another project went back to the root (his
+find): loading a song put the hand at HOME's start. It stays where it is
+now (`menu_reload`).
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
-- LOOP, cell levels: gone with the old screens, to be redesigned.
+- Cell levels: gone with the old screens, to be redesigned. LOOP in
+  SECTION (PATTERN has it).
 - The limiter.
 - `web/installer/` is copied, not adapted, not run.
