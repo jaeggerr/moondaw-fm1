@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Three ways to write a VOX syllable on the FM-1, to try by hand (29/10).
-PRESETS turns from one to the other; each keeps its own syllable.
+"""Two ways to write a VOX syllable on the FM-1, one syllable between them:
+PRESETS turns from one to the other, as the hand is at ease (29/10).
 
-  A  KEYS    the keyboard types: a sign on each key, consonants on the white
-             keys, vowels on the black; OCT+ the second layer (the rarer signs),
-             LFO rubs the last sign out, ARP marks it weak (.)
+  A  KEYS    the keyboard types: consonants on the white keys in their QWERTY
+             order (R T P, S D F G J K L, Z C V B N M), vowels on the black;
+             OCT+ the second layer (Q H X +, and the rarer vowels), LFO rubs
+             the last sign out, ARP marks it weak (.)
   B  WHEEL   five slots: KNOB 1 the slot, KNOB 2 turns its sign through the
-             alphabet (vowels first), LFO empties the slot -- the namer's way
-  C  PARTS   a syllable is its onset, its vowel, its coda: KNOB 1, 2 and 3
-             each turn one of them, KNOB 4 marks it weak
+             alphabet in its order (letters, digits, + .), the sound of each
+             written beside it; LFO empties the slot -- the namer's way
+(A third, C, built the syllable from an onset, a vowel and a coda: set aside.)
 
 SEL takes it, GLO goes back (both only say so: nothing is written), HOME
 leaves. The real screen would sing each change on the step's note; the
@@ -41,23 +42,13 @@ for c in "PBTDKGFVSZMNL":
 WHITE = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26]
 BLACK = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25]
 LAYERS = [
-    (dict(zip(WHITE, "PBTDKGFVSZMNLRCJ")), dict(zip(BLACK, "AEIOUY72963"))),
-    (dict(zip(WHITE, "HXQ+")), dict(zip(BLACK, "05148"))),
+    (dict(zip(WHITE, "RTPSDFGJKLZCVBNM")), dict(zip(BLACK, "AEIOUY72963"))),
+    (dict(zip(WHITE, "QHX+")), dict(zip(BLACK, "05148"))),
 ]
-# B: the wheel's order -- empty, the vowels, the consonants, the weak mark
-WHEEL = ["-"] + list(VOWELS) + list(CONSONANTS) + ["."]
-# C: the three parts
-ONSETS = ["", "P", "B", "T", "D", "K", "G", "F", "V", "S", "Z", "M", "N", "L", "R", "H", "C", "J", "X", "Q",
-          "+", "PL", "PR", "BL", "BR", "TR", "DR", "KL", "KR", "GL", "GR", "FL", "FR", "SP", "ST", "SK", "SM",
-          "SN", "SL", "TS", "NY", "W", "Y"]
-NUCLEI = list(VOWELS) + ["AI", "AU", "OI", "EI", "OU"]
-CODAS = ["", "N", "M", "L", "R", "S", "Z", "T", "D", "K", "P", "F", "V", "G", "NZ", "NT", "ND", "ST", "TS",
-         "KS", "LZ", "RZ", "MZ", "NG", "Q", "QZ"]
-
-S = {"proto": 0, "said": "",
-     "a": {"text": "", "layer": 0, "last": ""},
-     "b": {"slots": ["M", "A", "-", "-", "-"], "at": 1},
-     "c": {"on": ONSETS.index("M"), "nu": 0, "co": 0, "weak": False}}
+# B: the wheel's order -- empty, then the alphabet's: letters, digits, + and .
+WHEEL = ["-"] + sorted(c for c in VOWELS + CONSONANTS if c.isalpha()) + sorted(c for c in VOWELS if c.isdigit()) \
+    + ["+", "."]
+S = {"proto": 0, "said": "", "slots": ["M", "A", "-", "-", "-"], "at": 1, "layer": 0, "last": ""}
 
 
 def key_index(name):
@@ -66,50 +57,40 @@ def key_index(name):
 
 
 def syllable():
-    p = S["proto"]
-    if p == 0:
-        return S["a"]["text"]
-    if p == 1:
-        return "".join(c for c in S["b"]["slots"] if c != "-")
-    c = S["c"]
-    return (("." if c["weak"] else "") + ONSETS[c["on"]] + NUCLEI[c["nu"]] + CODAS[c["co"]])[:MAX]
+    return "".join(c for c in S["slots"] if c != "-")
 
 
 # --------------------------------------------------------------- the hands
 def hands_a(ev):
-    a = S["a"]
+    slots = S["slots"]
     if "OCT+" in ev.pressed or "OCT-" in ev.pressed:
-        a["layer"] ^= 1
+        S["layer"] ^= 1
     for name in ev.keys_down:
         k = key_index(name)
-        white, black = LAYERS[a["layer"]]
+        white, black = LAYERS[S["layer"]]
         sign = white.get(k) or black.get(k)
-        if sign and len(a["text"]) < MAX:
-            a["text"] += sign
-            a["last"] = sign
+        free = [i for i in range(MAX) if slots[i] == "-" and all(c == "-" for c in slots[i:])]
+        if sign and free:
+            slots[free[0]] = sign
+            S["last"] = sign
     if "LFO" in ev.pressed:
-        a["text"] = a["text"][:-1]
-    if "ARP" in ev.pressed and len(a["text"]) < MAX:
-        a["text"] = a["text"].replace(".", "") if "." in a["text"] else "." + a["text"]
-        a["last"] = "."
+        used = [i for i in range(MAX) if slots[i] != "-"]
+        if used:
+            slots[used[-1]] = "-"
+    if "ARP" in ev.pressed:
+        text = syllable()
+        text = text.replace(".", "") if "." in text else ("." + text)[:MAX]
+        S["slots"] = list(text.ljust(MAX, "-"))
+        S["last"] = "."
 
 
 def hands_b(ev):
-    b = S["b"]
-    b["at"] = max(0, min(MAX - 1, b["at"] + ev.turns.get("K1", 0)))
+    S["at"] = max(0, min(MAX - 1, S["at"] + ev.turns.get("K1", 0)))
     if "K2" in ev.turns:
-        i = WHEEL.index(b["slots"][b["at"]])
-        b["slots"][b["at"]] = WHEEL[max(0, min(len(WHEEL) - 1, i + ev.turns["K2"]))]
+        i = WHEEL.index(S["slots"][S["at"]])
+        S["slots"][S["at"]] = WHEEL[max(0, min(len(WHEEL) - 1, i + ev.turns["K2"]))]
     if "LFO" in ev.pressed:
-        b["slots"][b["at"]] = "-"
-
-
-def hands_c(ev):
-    c = S["c"]
-    for knob, part, n in (("K1", "on", len(ONSETS)), ("K2", "nu", len(NUCLEI)), ("K3", "co", len(CODAS))):
-        c[part] = max(0, min(n - 1, c[part] + ev.turns.get(knob, 0)))
-    if "K4" in ev.turns:
-        c["weak"] = ev.turns["K4"] > 0
+        S["slots"][S["at"]] = "-"
 
 
 # ------------------------------------------------------------- the drawing
@@ -144,14 +125,13 @@ def foot(c, extra=""):
 
 
 def draw_a(c):
-    a = S["a"]
     head(c, "A  KEYS")
-    big(c, a["text"])
-    c.text(206, 56, f"{len(a['text'])}/{MAX}", "grey", "12")
-    hint(c, a["last"], 90)
-    c.text(12, 112, "LAYER 2" if a["layer"] else "LAYER 1", "cyan" if a["layer"] else "grey", "12")
+    big(c, syllable())
+    c.text(206, 56, f"{len(syllable())}/{MAX}", "grey", "12")
+    hint(c, S["last"], 90)
+    c.text(12, 112, "LAYER 2" if S["layer"] else "LAYER 1", "cyan" if S["layer"] else "grey", "12")
     c.text(64, 112, "OCT+ other layer   LFO rub out   ARP weak", "grey", "12")
-    white, black = LAYERS[a["layer"]]
+    white, black = LAYERS[S["layer"]]
     top, w = 122, 15
     for i, k in enumerate(WHITE):
         x = i * w
@@ -168,7 +148,7 @@ def draw_a(c):
 
 
 def draw_b(c):
-    b = S["b"]
+    b = S
     head(c, "B  WHEEL")
     big(c, syllable())
     for i, sign in enumerate(b["slots"]):
@@ -186,39 +166,16 @@ def draw_b(c):
     foot(c)
 
 
-def draw_c(c):
-    s = S["c"]
-    head(c, "C  PARTS")
-    big(c, syllable())
-    cols = (("ONSET", ONSETS, s["on"], "K1"), ("VOWEL", NUCLEI, s["nu"], "K2"), ("CODA", CODAS, s["co"], "K3"))
-    for n, (name, items, at, knob) in enumerate(cols):
-        x = 8 + n * 76
-        c.text(x + 4, 86, name, "cyan", "12")
-        c.text(x + 52, 86, knob, "grey", "12")
-        for d in (-2, -1, 0, 1, 2):
-            j = at + d
-            if not 0 <= j < len(items):
-                continue
-            y = 136 + d * 24
-            if d == 0:
-                c.fill(x, y - 20, 70, 26, "green")
-            c.text(x + 8, y, items[j] or "--", ON_ACC if d == 0 else ("white" if abs(d) == 1 else "grey"),
-                   "20" if d == 0 else "14")
-    hint(c, NUCLEI[s["nu"]][0], 208)
-    c.text(150, 208, "K4 WEAK" if not s["weak"] else "K4 WEAK ON", "amber" if s["weak"] else "grey", "12")
-    foot(c)
-
-
 def frame(c, ev):
-    S["proto"] = (S["proto"] + ev.turns.get("PRESETS", 0)) % 3
+    S["proto"] = (S["proto"] + ev.turns.get("PRESETS", 0)) % 2
     S["said"] = ""
-    [hands_a, hands_b, hands_c][S["proto"]](ev)
+    [hands_a, hands_b][S["proto"]](ev)
     if "SEL" in ev.pressed:
         S["said"] = "TAKEN '" + syllable()
     if "GLO" in ev.pressed:
         S["said"] = "BACK, NOTHING WRITTEN"
     c.clear("black")
-    [draw_a, draw_b, draw_c][S["proto"]](c)
+    [draw_a, draw_b][S["proto"]](c)
     c.show()
 
 
