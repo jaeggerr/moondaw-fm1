@@ -164,6 +164,13 @@ int main(void)
         printf("%s%.0f,", i % 8 ? " " : "\n    ", floor(exp(-3.0 * i / 256.0) * 32768.0 + 0.5));
     printf("\n};\n");
 
+    /* A sample's step for one octave a cent apart: 2^(c/1200) frames of
+     * the bank (22050 Hz) a frame of FS, so half of it. Q16. */
+    open("uint32_t", "SMP_INC_Q16", 1200);
+    for (int c = 0; c < 1200; c++)
+        printf("%s%.0f,", c % 8 ? " " : "\n    ", floor(22050.0 / FS * pow(2.0, c / 1200.0) * 65536.0 + 0.5));
+    printf("\n};\n");
+
     /* Constants. The source's -6 dB/oct tilt; the cascade's three lags
      * (articulation 20 ms, pitch 12 ms, voicing 4 ms); the SINGR vibrato's
      * 5.5 Hz step; and the factors that turn Hz into a fraction of the

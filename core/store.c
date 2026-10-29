@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "store.h"
 
-#include "../platform/platform.h"
-
 /* A sector: 16 bytes of header, then payload.
  *
  *    0  'M' 'D' 'W' '1'
@@ -18,8 +16,8 @@
  * The first sector's payload opens with the name, STORE_NAME bytes. */
 #define SECTORS PLAT_FLASH_SECTORS
 #define SECTOR PLAT_FLASH_SECTOR
-#define HEAD 16u
-#define PAYLOAD (SECTOR - HEAD)
+#define HEAD STORE_HEAD
+#define PAYLOAD STORE_PAYLOAD
 #define NO_SECTOR 0xFF
 
 typedef struct {
@@ -327,4 +325,19 @@ int store_delete(int slot)
         if (info[k].slot == slot && plat_flash_erase(k) != 0)
             return STORE_ERR_IO;
     return store_mount();
+}
+
+int store_map(int slot, uint8_t *sectors, int max)
+{
+    int n;
+
+    if (!store_has(slot))
+        return STORE_ERR_NONE;
+    n = info[first[slot]].count;
+    if (n > max)
+        return STORE_ERR_FULL;
+    for (int q = 0; q < n; q++)
+        if ((sectors[q] = find(slot, info[first[slot]].gen, q)) == NO_SECTOR)
+            return STORE_ERR_CORRUPT;
+    return n;
 }

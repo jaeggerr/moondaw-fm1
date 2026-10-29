@@ -22,6 +22,7 @@
 #define C_SEL    GFX_RGB(0x6E, 0x55, 0x18)
 #define C_WHITE  GFX_RGB(0xFF, 0xFF, 0xFF)
 #define C_TRACK  GFX_RGB(0x28, 0x28, 0x28) /* a scroll bar's groove */
+#define C_SAMPLE GFX_RGB(0xC0, 0x84, 0xE8) /* the sample bank, on SYSTEM */
 #define C_POP    GFX_RGB(0x1A, 0x20, 0x29) /* a panel opened over the screen */
 /* The SYLLABLE screen's keyboard, drawn as the keys lie under the hand. */
 #define C_KEY      GFX_RGB(0xD8, 0xD8, 0xD8) /* a white key that types */

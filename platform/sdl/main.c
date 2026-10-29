@@ -115,6 +115,8 @@ int plat_flash_read(uint32_t off, void *dst, uint32_t n)
     return 0;
 }
 
+const uint8_t *plat_flash_map(void) { return nor; }
+
 int plat_flash_erase(uint32_t sector)
 {
     if (sector >= PLAT_FLASH_SECTORS)

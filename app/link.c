@@ -2,12 +2,15 @@
 #include "link.h"
 
 #include "app.h"
+#include "../core/bank.h"
+#include "../core/player.h"
 
 enum { TIMEOUT_MS = 5000 };
 
 int (*link_control)(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail,
                     uint32_t *tail_n);
 static int state, slot;
+static bool bank; /* what comes in is the sample bank */
 static char name[STORE_NAME + 1];
 static uint32_t size, got, crc, want_crc, last_ms;
 static uint16_t next_seq;
@@ -74,13 +77,19 @@ static void answer(int cmd, int status, uint32_t seq, uint32_t extra, const uint
     plat_sysex_send(msg, 4 + link_pack7(raw, 8 + n, msg + 4));
 }
 
-/* What a failed transfer wrote is free space again. */
+/* What a failed transfer wrote is free space again; the bank, if it was
+ * coming, is the old one again (or none, if it had to go first). */
 static void drop(void)
 {
-    if (state == LINK_RECEIVING)
+    if (state == LINK_RECEIVING) {
         store_mount();
+        if (bank)
+            bank_mount();
+    }
     state = LINK_IDLE;
 }
+
+static bool readable(int s) { return (s >= 0 && s < APP_SONG_SLOTS) || s == BANK_SLOT; }
 
 /* One piece of a slot, by offset. The store reads forward only: the
  * piece just sent is kept for the host that did not get it, anything
@@ -93,7 +102,7 @@ static int read_piece(const uint8_t *p, uint32_t n, uint32_t *off)
     if (n != 5)
         return LINK_BADMSG;
     *off = rd32(p + 1);
-    if (p[0] >= APP_SONG_SLOTS || store_info(p[0], other, &size) != STORE_OK)
+    if (!readable(p[0]) || store_info(p[0], other, &size) != STORE_OK)
         return LINK_NONE;
     if (state == LINK_SENDING && p[0] == slot && *off == piece_at)
         return LINK_OK; /* asked again: the same piece */
@@ -129,6 +138,8 @@ static bool same_name(const char *a, const char *b)
     return *a == *b;
 }
 
+static int begin_bank(void);
+
 static int begin(const uint8_t *p, uint32_t n)
 {
     char other[STORE_NAME + 1];
@@ -137,6 +148,10 @@ static int begin(const uint8_t *p, uint32_t n)
 
     if (n < 10 || n > 9 + STORE_NAME)
         return LINK_BADMSG;
+    size = rd32(p + 1);
+    want_crc = rd32(p + 5);
+    if (p[0] & 2u)
+        return begin_bank();
     for (; i < (int)n - 9; i++) {
         char c = (char)p[9 + i];
         if (c < ' ' || c > '~' || (i == 0 && c == '.'))
@@ -144,8 +159,6 @@ static int begin(const uint8_t *p, uint32_t n)
         name[i] = c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
     }
     name[i] = '\0';
-    size = rd32(p + 1);
-    want_crc = rd32(p + 5);
     slot = -1;
     for (int s = 0; s < APP_SONG_SLOTS; s++) {
         if (store_info(s, other, &bytes) != STORE_OK) {
@@ -165,6 +178,43 @@ static int begin(const uint8_t *p, uint32_t n)
         return LINK_FULL;
     if (store_save_begin(slot, name) != STORE_OK)
         return LINK_IO;
+    got = 0;
+    crc = 0;
+    next_seq = 0;
+    state = LINK_RECEIVING;
+    return LINK_OK;
+}
+
+/* The bank replaces the bank, whole: the song stops and no voice reads
+ * it from here on (the flash is about to be written). When the new one
+ * does not fit beside the old, the old goes first -- the computer has
+ * it, it read it to build this one. */
+static int begin_bank(void)
+{
+    const char *f = BANK_FILE;
+    int i = 0;
+
+    for (; f[i]; i++)
+        name[i] = f[i];
+    name[i] = '\0';
+    player_stop();
+    bank_hold();
+    if (size == 0)
+        return LINK_BADMSG;
+    if (size > store_free() && store_has(BANK_SLOT) && store_delete(BANK_SLOT) != STORE_OK) {
+        bank_mount();
+        return LINK_IO;
+    }
+    if (size > store_free()) {
+        bank_mount();
+        return LINK_FULL;
+    }
+    if (store_save_begin(BANK_SLOT, name) != STORE_OK) {
+        bank_mount();
+        return LINK_IO;
+    }
+    slot = BANK_SLOT;
+    bank = true;
     got = 0;
     crc = 0;
     next_seq = 0;
@@ -233,7 +283,7 @@ int link_frame(uint32_t ms, bool may)
             extra = store_free();
         } else if (cmd == LINK_CMD_INFO) {
             seq = APP_SONG_SLOTS;
-            if (d != 1 || raw[0] >= APP_SONG_SLOTS || store_info(raw[0], other, &extra) != STORE_OK) {
+            if (d != 1 || !readable(raw[0]) || store_info(raw[0], other, &extra) != STORE_OK) {
                 status = d == 1 ? LINK_NONE : LINK_BADMSG;
             } else {
                 status = LINK_OK;
@@ -251,6 +301,7 @@ int link_frame(uint32_t ms, bool may)
             }
         } else if (cmd == LINK_CMD_BEGIN) {
             drop();
+            bank = false;
             status = may ? begin(raw, d) : LINK_BUSY;
         } else if (cmd == LINK_CMD_DATA) {
             status = data(raw, d, &seq);
@@ -266,6 +317,8 @@ int link_frame(uint32_t ms, bool may)
             } else {
                 state = LINK_DONE;
                 status = LINK_OK;
+                if (bank)
+                    bank_mount(); /* the new bank, under the song's names */
             }
             extra = got;
         } else if (cmd == LINK_CMD_CANCEL) {

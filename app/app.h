@@ -9,7 +9,7 @@
 #include "../platform/platform.h"
 #include "theme.h"
 
-#define APP_SONG_SLOTS (STORE_SLOTS - 1) /* the last slot remembers which song was open */
+#define APP_SONG_SLOTS 31 /* then slot 31 remembers which song was open, and 32 is the sample bank */
 
 extern Song app_song;
 extern char app_name[STORE_NAME + 1];

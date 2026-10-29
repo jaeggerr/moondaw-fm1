@@ -8,13 +8,16 @@
  * "MD". The host sends one message and waits for the answer: the
  * firmware holds a single SysEx at a time.
  *
- *   01 BEGIN   flags (bit 0: replace a song of the same name),
+ *   01 BEGIN   flags (bit 0: replace a song of the same name; bit 1:
+ *              the sample bank, core/bank.h -- it replaces the bank, the
+ *              name is not read),
  *              size u32, crc32 u32, name (1..12 characters)
  *   02 DATA    seq u16, bytes
  *   03 END
  *   04 CANCEL
  *   05 PING
- *   06 INFO    slot                 -> its size (extra) and name (tail)
+ *   06 INFO    slot                 -> its size (extra) and name (tail);
+ *                                      slot 32 (BANK_SLOT) is the bank
  *   07 READ    slot, offset u32     -> up to 120 bytes of it (tail);
  *                                      none = the end
  *   7F answer  cmd, status, seq u16, extra u32, tail
@@ -86,7 +89,7 @@ enum {
     LINK_BADMSG,
     LINK_NONE,   /* nothing in that slot */
 };
-#define LINK_VERSION  4 /* 3: SCREEN, 4: LED */
+#define LINK_VERSION  5 /* 3: SCREEN, 4: LED, 5: the sample bank */
 #define LINK_DATA_MAX 240 /* bytes of song in one DATA */
 #define LINK_READ_MAX 120 /* in one READ: an answer never has to wait for the USB queue to drain */
 

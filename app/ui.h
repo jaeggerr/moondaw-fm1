@@ -13,7 +13,7 @@
 enum { UI_CARDS_Y = 22, UI_CARDS_H = 22 };
 
 char *ui_hex2(char *b, int v);
-char *ui_dec(char *b, int v);
+char *ui_dec(char *b, int v); /* 12 bytes hold any int */
 
 /* Card k of four. A null label is a knob that does nothing here: the
  * card keeps its place and says so by being empty. */

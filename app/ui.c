@@ -17,11 +17,16 @@ char *ui_hex2(char *b, int v)
 
 char *ui_dec(char *b, int v)
 {
-    char t[8];
+    /* Ten digits: t was 8 until 29/10, and a profile figure after the clock's turn (firmware.c, fm1_us) wrote
+     * past it into the stack -- the restarts while `status --profile` was asked. */
+    char t[10];
     int n = 0, i = 0;
+    uint32_t u = (uint32_t)v;
+    if (v < 0)
+        b[i++] = '-', u = 0u - u;
     do
-        t[n++] = (char)('0' + v % 10);
-    while ((v /= 10) > 0);
+        t[n++] = (char)('0' + u % 10u);
+    while ((u /= 10u) > 0);
     while (n)
         b[i++] = t[--n];
     b[i] = '\0';

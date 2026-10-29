@@ -16,12 +16,15 @@ static int32_t abuf[2u * HALF_WORDS] __attribute__((aligned(4)));
 static int16_t app_half[HALF_WORDS];
 
 /* diagnostics, kept across resets and UBOOT entry: read with `fm1t memr` */
-#define DBG_MAGIC 0x44424731u                       /* "DBG1" */
+#define DBG_MAGIC 0x44424732u                       /* "DBG2" (29/10: the trail) */
 struct felucca_dbg {
     uint32_t magic, halves, max_us, nested, in_audio, late, timer_irqs, ui_frames;
     uint32_t last_us, cpu_q8, boots;
     uint32_t stage, page, home;           /* where the main loop is (breadcrumbs) */
     uint32_t prev_stage, prev_page, prev_home, prev_rst, prev_frames;   /* as found at boot */
+    /* The trail (29/10): what a reset without a crash record leaves to read. The main loop's ms at its last turn
+     * and the stage it was in, the ms at the end of the last audio half; read at the next boot (firmware.c). */
+    uint32_t loop_ms, audio_ms;
 } felucca_dbg __attribute__((section(".noinit")));
 static volatile uint32_t audio_halves, audio_max_us;
 static volatile uint32_t t5_nested_ticks;              /* TIMER4 ticks TIMER5 spent nested in this ISR */
@@ -59,6 +62,7 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
         if (us > felucca_dbg.max_us)
             felucca_dbg.max_us = us;
         felucca_dbg.cpu_q8 = audio_cpu_q8;
+        felucca_dbg.audio_ms = fm1_ms;
     }
     felucca_dbg.in_audio = 0;
 }

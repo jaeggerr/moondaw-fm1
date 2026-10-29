@@ -7,12 +7,14 @@
 
 #include "../app/app.h"
 #include "../app/link.h"
+#include "../core/bank.h"
 #include "ramflash.h"
 
 Song app_song;
 char app_name[STORE_NAME + 1] = "TEST";
 int app_slot = -1;
 bool app_dirty;
+void player_stop(void) {} /* a bank coming in stops the song: there is none here */
 
 /* host -> device: one message waiting; device -> host: the last answer */
 static uint8_t to_dev[700], from_dev[200];
@@ -205,6 +207,32 @@ int main(void)
         CHECK("a piece from the middle can be asked for on its own",
               say(LINK_CMD_READ, ask, 5) == LINK_OK && !memcmp(ans.tail, one + 240, LINK_READ_MAX));
         (void)bytes;
+    }
+
+    /* the sample bank (version 5): BEGIN's bit 1, slot 32 */
+    {
+        static uint8_t big[300000];
+        char other[STORE_NAME + 1];
+        uint32_t bytes, room;
+        uint8_t q = BANK_SLOT;
+
+        for (uint32_t i = 0; i < sizeof big; i++)
+            big[i] = (uint8_t)(i * 13);
+        at_menu = false;
+        CHECK("away from the MENU the bank is refused too", begin("x", one, sizeof one, 2) == LINK_BUSY);
+        at_menu = true;
+        CHECK("the bank goes through", send("whatever", one, sizeof one, 2) == LINK_OK &&
+                                           link_slot() == BANK_SLOT);
+        CHECK("into slot 32, under the bank's own name",
+              store_info(BANK_SLOT, other, &bytes) == STORE_OK && !strcmp(other, BANK_FILE) && bytes == sizeof one);
+        CHECK("INFO and READ reach it", say(LINK_CMD_INFO, &q, 1) == LINK_OK && ans.extra == sizeof one);
+        CHECK("no song took the slot", !holds(BANK_FILE, one, sizeof one));
+        CHECK("a bank replaces the bank", send("x", big, 100000, 2) == LINK_OK);
+        room = store_free() + 40000; /* more than is free, less than with the old one's room */
+        CHECK("a bank that does not fit beside the old one takes its place",
+              room < sizeof big && send("x", big, room, 2) == LINK_OK &&
+                  store_info(BANK_SLOT, other, &bytes) == STORE_OK && bytes == room);
+        CHECK("more than the whole flash is still refused", begin_as("x", 400000, 0, 2) == LINK_FULL);
     }
 
     printf("link test: %s\n", fails ? "FAIL" : "ok");

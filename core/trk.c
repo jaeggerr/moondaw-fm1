@@ -221,7 +221,7 @@ static void parse_inst(const char *t, InstrumentDef *in, TrkReport *rep)
         copy_name(in->name, p + 5, INSTR_NAME_LEN);
 
     if (rep) {
-        rep->silent_instr += !engine_sounds(in->engine) && in->engine != ENGINE_VOX && in->engine != ENGINE_DRUM;
+        rep->silent_instr += in->engine == ENGINE_PLUCK;
         rep->shaping += find(t, "drive ") || find(t, "amp ") || find(t, "tone ");
     }
 }
@@ -248,6 +248,60 @@ static bool parse_layer(const char *rest, Layer *l)
         l->detune = (int8_t)clampi(v, -100, 100);
     if (field(rest, "gain ", &v))
         l->gain = (int8_t)clampi(v, GAIN_MIN_DB, GAIN_MAX_DB);
+    return true;
+}
+
+/* `smp NN name [begin N] [loop A B [ping]]`, past the index. Absent is
+ * zero, as moondaw reads it: a slot taken again starts clean. */
+static void parse_sample(const char *p, SongSample *e)
+{
+    const char *q;
+    int i = 0, a, b;
+
+    p = skip_ws(p);
+    for (; p[i] && !is_ws(p[i]) && i < SONG_SMP_NAME - 1; i++)
+        e->name[i] = p[i];
+    e->name[i] = '\0';
+    e->begin = e->loop_start = e->loop_end = 0;
+    e->loop = SMP_LOOP_OFF;
+    if ((q = find(p + i, "begin ")) != 0 && (q += 6, rd_int(&q, &a)) && a >= 0)
+        e->begin = (uint32_t)a;
+    if ((q = find(p + i, "loop ")) != 0 && (q += 5, rd_int(&q, &a)) && rd_int(&q, &b) &&
+        a >= 0 && b > a) {
+        e->loop_start = (uint32_t)a;
+        e->loop_end = (uint32_t)b;
+        e->loop = find(q, "ping") ? SMP_LOOP_PING : SMP_LOOP_FWD;
+    }
+}
+
+/* `lo hi root R smp NN [tune T] [gain G]`, past the instrument. A zone
+ * that does not read whole is dropped whole: half a keymap entry could
+ * take notes it was never given. */
+static bool parse_zone(const char *p, Zone *z)
+{
+    int lo, hi, rt, si, v;
+
+    p = skip_ws(p);
+    lo = note_from_name(p);
+    p = skip_ws(p + 3);
+    hi = note_from_name(p);
+    p = skip_ws(p + 3);
+    if (lo < 0 || lo == NOTE_OFF || hi < 0 || hi == NOTE_OFF || lo > hi || !starts(p, "root "))
+        return false;
+    p = skip_ws(p + 5);
+    rt = note_from_name(p);
+    p = skip_ws(p + 3);
+    if (rt < 0 || rt == NOTE_OFF || !starts(p, "smp ") || (p += 4, !rd_hex(&p, &si)) || si >= SONG_SMP_MAX)
+        return false;
+    z->lo = (uint8_t)lo;
+    z->hi = (uint8_t)hi;
+    z->root = (uint8_t)rt;
+    z->smp = (uint8_t)si;
+    z->tune = z->gain = 0;
+    if (field(p, "tune ", &v))
+        z->tune = (int8_t)clampi(v, -ZONE_TUNE_MAX, ZONE_TUNE_MAX);
+    if (field(p, "gain ", &v))
+        z->gain = (int8_t)clampi(v, GAIN_MIN_DB, GAIN_MAX_DB);
     return true;
 }
 
@@ -301,10 +355,10 @@ static int parse_step(char *line, Step *st, Song *song, TrkReport *rep)
             }
         } else if (tok[0] == 'f' && len >= 6) {
             int cmd = fx_from_name(tok + 1), val = hex2(tok + 4);
-            if (cmd == FX_SMP && rep)
-                rep->smp_fx++;
-            if (cmd == FX_SYL || cmd == FX_SMP)
+            if (cmd == FX_SYL)
                 cmd = FX_NONE;
+            if (cmd == FX_SMP && val >= SONG_SMP_MAX)
+                val = SONG_SMP_MAX - 1; /* clamped to the table, as moondaw */
             if (cmd != FX_NONE && val >= 0 && nfx < STEP_MAX_FX &&
                 !fx_conflicts(st, nfx, (uint8_t)cmd)) {
                 st->fx[nfx].cmd = (uint8_t)cmd;
@@ -408,8 +462,11 @@ static void take_line(void)
         if (i1 >= 0 && i1 < SONG_MAX_INSTR)
             parse_inst(t, &tmp->instruments[i1], ld.rep);
         ld.ctx = CTX_NONE;
-    } else if (starts(t, "smp ")) {
-        ld.rep->samples++;
+    } else if (starts(t, "smp ") && (p = t + 4, rd_hex(&p, &i1))) {
+        if (i1 >= 0 && i1 < SONG_SMP_MAX && is_ws(*p))
+            parse_sample(p, &tmp->smp[i1]);
+        else
+            ld.rep->samples++;
         ld.ctx = CTX_NONE;
     } else if (starts(t, "lay ") && (p = t + 4, rd_hex(&p, &i1))) {
         Layer ly;
@@ -422,8 +479,14 @@ static void take_line(void)
     } else if (starts(t, "preview ")) {
         ld.rep->previews++;
         ld.ctx = CTX_NONE;
-    } else if (starts(t, "zone ")) {
-        ld.rep->zones++;
+    } else if (starts(t, "zone ") && (p = t + 5, rd_hex(&p, &i1))) {
+        Zone z;
+        if (i1 >= 0 && i1 < SONG_MAX_INSTR && tmp->nzones < SONG_ZONE_MAX && parse_zone(p, &z)) {
+            z.inst = (uint8_t)i1;
+            tmp->zones[tmp->nzones++] = z;
+        } else {
+            ld.rep->zones++;
+        }
         ld.ctx = CTX_NONE;
     } else if (starts(t, "trk ") && (p = t + 4, rd_int(&p, &i1)) &&
                (p = skip_ws(p), starts(p, "vol ")) &&
@@ -743,7 +806,7 @@ static void write_step(W *w, const Song *s, int row, const Step *st)
             }
             continue;
         }
-        if (st->fx[i].cmd == FX_NONE || st->fx[i].cmd > FX_SYL)
+        if (st->fx[i].cmd == FX_NONE || st->fx[i].cmd >= FX_COUNT)
             continue;
         ws(w, " f");
         ws(w, fx_name(st->fx[i].cmd));
@@ -791,6 +854,76 @@ static void write_inst(W *w, const InstrumentDef *in)
     wc(w, '\n');
 }
 
+static void write_zone(W *w, const Zone *z)
+{
+    char nn[4];
+
+    ws(w, "zone ");
+    wx2(w, z->inst);
+    wc(w, ' ');
+    ws(w, note_name(z->lo, nn));
+    wc(w, ' ');
+    ws(w, note_name(z->hi, nn));
+    ws(w, " root ");
+    ws(w, note_name(z->root, nn));
+    ws(w, " smp ");
+    wx2(w, z->smp);
+    if (z->tune)
+        wkv(w, " tune ", z->tune);
+    if (z->gain)
+        wkv(w, " gain ", z->gain);
+    wc(w, '\n');
+}
+
+/* The entries something plays, as moondaw writes them: named by a zone
+ * of a SMPL instrument the song uses, or by an fSMP. */
+static void write_samples(W *w, const Song *s, const bool *inst_used)
+{
+    static bool used[SONG_SMP_MAX];
+    bool any = false;
+
+    for (int i = 0; i < SONG_SMP_MAX; i++)
+        used[i] = false;
+    for (int z = 0; z < s->nzones && z < SONG_ZONE_MAX; z++) {
+        const Zone *zn = &s->zones[z];
+        if (zn->inst < SONG_MAX_INSTR && inst_used[zn->inst] &&
+            s->instruments[zn->inst].engine == ENGINE_SAMPLE && zn->smp < SONG_SMP_MAX)
+            used[zn->smp] = true;
+    }
+    for (int t = 0; t < SONG_MAX_TRACKS; t++)
+        for (int p = 0; p < TRACK_MAX_PATTERNS; p++) {
+            if (!pattern_kept(s, t, p))
+                continue;
+            for (int r = 0; r < s->patterns[t][p].length; r++) {
+                const Step *st = song_step(s, t, p, r);
+                for (int k = 0; k < STEP_MAX_FX; k++)
+                    if (st->fx[k].cmd == FX_SMP && st->fx[k].val < SONG_SMP_MAX)
+                        used[st->fx[k].val] = true;
+            }
+        }
+    for (int i = 0; i < SONG_SMP_MAX; i++) {
+        const SongSample *e = &s->smp[i];
+        if (!used[i] || !e->name[0])
+            continue;
+        ws(w, "smp ");
+        wx2(w, i);
+        wc(w, ' ');
+        ws(w, e->name);
+        if (e->begin)
+            wkv(w, " begin ", (int32_t)e->begin);
+        if (e->loop != SMP_LOOP_OFF) {
+            wkv(w, " loop ", (int32_t)e->loop_start);
+            wkv(w, " ", (int32_t)e->loop_end);
+            if (e->loop == SMP_LOOP_PING)
+                ws(w, " ping");
+        }
+        wc(w, '\n');
+        any = true;
+    }
+    if (any)
+        wc(w, '\n');
+}
+
 int32_t trk_write(const Song *s, TrkSink sink, void *ctx)
 {
     static bool inst_used[SONG_MAX_INSTR];
@@ -827,6 +960,7 @@ int32_t trk_write(const Song *s, TrkSink sink, void *ctx)
                     inst_used[ins] = true;
             }
         }
+    write_samples(&w, s, inst_used);
     for (int i = 0; i < SONG_MAX_INSTR; i++) {
         const InstrumentDef *in = &s->instruments[i];
         if (!inst_used[i])
@@ -834,6 +968,11 @@ int32_t trk_write(const Song *s, TrkSink sink, void *ctx)
         ws(&w, "inst ");
         wx2(&w, i);
         write_inst(&w, in);
+        /* The keymap right under its instrument, in priority order; as
+         * moondaw, only a SMPL's, and only zones naming a sample. */
+        for (int z = 0; z < s->nzones && z < SONG_ZONE_MAX && in->engine == ENGINE_SAMPLE; z++)
+            if (s->zones[z].inst == i && s->smp[s->zones[z].smp % SONG_SMP_MAX].name[0])
+                write_zone(&w, &s->zones[z]);
         for (int l = 0; l < in->nlayers && l < INSTR_MAX_LAYERS; l++) {
             const Layer *ly = &in->layers[l];
             ws(&w, "lay ");

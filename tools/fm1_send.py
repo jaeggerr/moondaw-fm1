@@ -196,8 +196,8 @@ def main():
     print(f"device: link version {ver}, {free // 1024} KB free")
     if a.ping:
         return
-    if ver < 1 or ver > 4:  # 2 adds the remote (tools/fm1_ctl.py), 3 SCREEN, 4 LED; songs travel as in 1
-        sys.exit(f"the device speaks version {ver} of the link; this tool, 1 to 4")
+    if ver < 1 or ver > 5:  # 2 adds the remote (tools/fm1_ctl.py), 3 SCREEN, 4 LED, 5 the sample bank; songs travel as in 1
+        sys.exit(f"the device speaks version {ver} of the link; this tool, 1 to 5")
     if a.list or a.get:
         have = songs(link)
         if a.list:

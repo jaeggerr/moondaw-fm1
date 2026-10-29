@@ -8,11 +8,15 @@
  *
  *   tracks        8, not 16
  *   steps         a shared pool instead of a fixed grid (below)
- *   engines       PULSE, NOISE, WAVE and VOX sound; SMPL and PLUCK keep
- *                 their name in the file and are silent
+ *   engines       PULSE, NOISE, WAVE, VOX and DRUM sound; SMPL sounds
+ *                 what the sample bank has (core/sampler.h), one-shots
+ *                 at 22 kHz; PLUCK keeps its name in the file, silent
  *   syllables     one table for the whole song instead of one per block
  *                 (below)
- *   not carried   samples and zones, the reference record,
+ *   samples       the table and the zones are carried whole; a name
+ *                 plays the bank's sample of the same name, `begin` and
+ *                 `loop` are kept for the file and not played
+ *   not carried   the reference record,
  *                 drive / amp / tone, preview tunes
  *
  * Freestanding: no libc, no allocation, no float. */
@@ -81,6 +85,29 @@ enum { VOX_ACCENT_FR = 0, VOX_ACCENT_EN };
 #define SECTION_NONE 0xFF
 #define VOL_FULL     127
 
+/* The sample table and the keymaps (FORMAT.md, "Samples", `zone`). An
+ * entry is a NAME: the sound is the bank's (core/bank.h). moondaw's 64
+ * entries of 47 characters, so a file comes back as it went in. The
+ * zones of every instrument share one list, in file order -- the order
+ * is the priority, the first zone holding the note wins. */
+#define SONG_SMP_MAX   64
+#define SONG_SMP_NAME  48 /* 47 + NUL */
+#define SONG_ZONE_MAX  128
+#define ZONE_TUNE_MAX  100 /* cents */
+enum { SMP_LOOP_OFF = 0, SMP_LOOP_FWD, SMP_LOOP_PING };
+
+typedef struct {
+    char name[SONG_SMP_NAME]; /* "" = free */
+    uint32_t begin, loop_start, loop_end;
+    uint8_t loop; /* SMP_LOOP_* */
+} SongSample;
+
+typedef struct {
+    uint8_t inst; /* INSTR_NONE = free */
+    uint8_t lo, hi, root, smp;
+    int8_t tune, gain;
+} Zone;
+
 /* The order is the file's and moondaw's: never reorder, add at the end. */
 enum {
     FX_NONE = 0,
@@ -89,13 +116,13 @@ enum {
     FX_TSP, FX_SLI, FX_VIB, FX_SWP, FX_SCP, FX_ARP, FX_TRM, FX_FLT, FX_RES,
     FX_WAV, FX_RMP, FX_CRS, FX_RAT,
     FX_SYL, /* value: an index into the song's syllable table */
-    FX_SMP, /* never stored here: there is no sample table */
+    FX_SMP, /* value: an entry of the sample table, for this step's notes */
     FX_COUNT
 };
 
 enum {
     ENGINE_PULSE = 0, ENGINE_NOISE, ENGINE_WAVE,
-    ENGINE_SAMPLE, ENGINE_VOX, ENGINE_PLUCK, /* SMPL and PLUCK: named, silent */
+    ENGINE_SAMPLE, ENGINE_VOX, ENGINE_PLUCK, /* PLUCK: named, silent */
     ENGINE_DRUM, /* Felucca's drum voices (core/drum.h): the timbre a kit, the note a drum */
     ENGINE_COUNT
 };
@@ -171,6 +198,9 @@ typedef struct {
     Step pool[POOL_CHUNKS][CHUNK_STEPS];
     uint8_t pool_used[(POOL_CHUNKS + 7) / 8];
     char syl[SONG_SYL_MAX][SONG_SYL_LEN]; /* "" = free */
+    SongSample smp[SONG_SMP_MAX];
+    Zone zones[SONG_ZONE_MAX];
+    uint8_t nzones;
 } Song;
 
 void song_init(Song *s);
@@ -229,7 +259,9 @@ bool fx_conflicts(const Step *st, int slot, uint8_t cmd);
 const char *engine_name(uint8_t engine);
 int engine_from_name(const char *s);    /* -1 if unknown */
 uint8_t engine_timbre_max(uint8_t engine);
-bool engine_sounds(uint8_t engine);     /* the three chip engines; VOX and DRUM by their own paths */
+bool engine_sounds(uint8_t engine);     /* the three chip engines; VOX, DRUM and SMPL by their own paths */
+/* The zone of instrument `inst` that holds `note`, or 0. */
+const Zone *song_zone(const Song *s, int inst, uint8_t note);
 char *note_name(uint8_t note, char buf[4]);
 int note_from_name(const char *t);      /* NOTE_OFF, a note, or -1 */
 

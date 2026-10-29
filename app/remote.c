@@ -112,6 +112,45 @@ static uint32_t boot(uint8_t *tail)
     return (uint32_t)(t - tail);
 }
 
+/* Where the run before this start was when it ended (firmware.c, the trail): the main loop's stage and its ms at
+ * its last turn, the ms of the last audio half, whether a half was being rendered, the worst one, how many came
+ * late, the track each core rendered (player_trail), the last block of sample read. */
+static uint32_t trail(uint8_t *tail)
+{
+    uint8_t *t = tail, *end = tail + LINK_READ_MAX;
+    const uint32_t *b = remote_boot_info;
+    if (!b)
+        return (uint32_t)(put(t, end, "no record here") - tail);
+    t = put_num(t, end, "stage=", (int)b[10]);
+    t = put_num(t, end, "loop_ms=", (int)b[11]);
+    t = put_num(t, end, "audio_ms=", (int)b[12]);
+    t = put_num(t, end, "in_audio=", (int)b[13]);
+    t = put_num(t, end, "max_us=", (int)b[14]);
+    t = put_num(t, end, "late=", (int)b[15]);
+    t = put_hex(t, end, "track=", b[16]);
+    t = put_num(t, end, "smp=", (int)b[17]);
+    return (uint32_t)(t - tail);
+}
+
+/* The last crash's registers (firmware/hal/fm1_irq.h): the caller, EMU_MSG (bit 3: the stack out of its
+ * window), DBG_MSG (bit 13: a write into a guard band; 4, 5, 16..21: unmapped; 12: the pc out of the code), the
+ * stack pointer, the last four jumps the trace saw. */
+static uint32_t crash(uint8_t *tail)
+{
+    uint8_t *t = tail, *end = tail + LINK_READ_MAX;
+    const uint32_t *b = remote_boot_info;
+    if (!b)
+        return (uint32_t)(put(t, end, "no record here") - tail);
+    t = put_hex(t, end, "rets=", b[18]);
+    t = put_hex(t, end, "emu=", b[19]);
+    t = put_hex(t, end, "dbg=", b[20]);
+    t = put_hex(t, end, "sp=", b[21]);
+    t = put(t, end, "etm=");
+    for (int k = 0; k < 4; k++)
+        t = put_hex(t, end, "", b[22 + k]);
+    return (uint32_t)(t - tail);
+}
+
 /* The worst audio block's time, stage by stage, in microseconds (core/player.h): the
  * line HOME draws while a song plays, and whether the second core is taking its share. */
 static uint32_t profile(uint8_t *tail, bool reset)
@@ -266,7 +305,9 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
     switch (cmd) {
     case LINK_CMD_STATUS:
         /* bit 0: start the worst block over; bit 1: the profile line instead; bit 2: the boot record */
-        *tail_n = n >= 1 && (p[0] & 4) ? boot(tail)
+        *tail_n = n >= 1 && (p[0] & 16) ? crash(tail)
+                  : n >= 1 && (p[0] & 8) ? trail(tail)
+                  : n >= 1 && (p[0] & 4) ? boot(tail)
                   : n >= 1 && (p[0] & 2) ? profile(tail, p[0] & 1) : status(tail, n >= 1 && (p[0] & 1));
         return LINK_OK;
     case LINK_CMD_INPUT: {

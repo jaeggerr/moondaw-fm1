@@ -3,6 +3,7 @@
 
 #include "drum.h"
 #include "fx.h"
+#include "sampler.h"
 #include "synth.h"
 #include "tables.h"
 
@@ -325,6 +326,7 @@ typedef struct {
     bool sounding; /* still drawing: it outlives the hold by the release */
     uint8_t wave;  /* 0 = the note itself, 1.. = its layers */
     int8_t vox;    /* the VOX voice it sings through, -1 none (below) */
+    int8_t smp;    /* the sample voice it plays through, -1 none (core/sampler.h) */
     int16_t detune;
 } Voice;
 
@@ -365,6 +367,7 @@ typedef struct {
     char syl[VOX_SYL_LEN]; /* what the next VOX note sings: a setter */
     bool syl_written;      /* the step being played wrote it in a cell */
     bool anticipated;      /* the next row's note was fired early */
+    int8_t smp;            /* fSMP: the table entry this step's notes play, -1 their zones */
 } TrackFx;
 
 typedef struct {
@@ -502,6 +505,7 @@ static void voice_off(Track *tr, Voice *v)
 static void voice_stop(Track *tr, Voice *v)
 {
     voice_off(tr, v);
+    smp_free(&v->smp);
     v->active = false;
     v->sounding = false;
 }
@@ -511,6 +515,8 @@ static void voice_select(Track *tr, Voice *v, uint8_t engine)
 {
     if (engine != ENGINE_VOX)
         vox_unbind(v);
+    if (engine != ENGINE_SAMPLE)
+        smp_free(&v->smp);
     osc_select(&v->osc, &tr->blep, engine);
 }
 
@@ -581,6 +587,8 @@ static void voice_start(Track *tr, const InstrumentDef *in, uint8_t timbre,
     }
     if (in->engine == ENGINE_DRUM)
         drum_hit((int)(tr - tracks), timbre, note, tr->fx.velocity, in->drum);
+    if (in->engine == ENGINE_SAMPLE)
+        smp_strike(&v->smp, song, (int)(in - song->instruments), tr->fx.smp, note);
     v->active = v->sounding = true;
     for (int l = 0; l < waves - 1; l++) {
         const Layer *ly = &in->layers[l];
@@ -613,6 +621,10 @@ static void trigger_step(int t, const Step *st)
 
     tr->last_inst = inst;
     timbre = voice_timbre(tr, in);
+    tr->fx.smp = -1;
+    for (int i = 0; i < STEP_MAX_FX; i++)
+        if (st->fx[i].cmd == FX_SMP)
+            tr->fx.smp = (int8_t)fx_clamp_val(FX_SMP, 0, st->fx[i].val);
     for (int i = 0; i < STEP_MAX_NOTES; i++) {
         uint8_t n = st->notes[i];
         /* Under ARP one voice sounds; under STR the first comes now and
@@ -760,6 +772,7 @@ static void apply_pitch(Track *tr)
         osc_set_cents(&tr->voices[v].osc, clamp_pitch(cents + tr->voices[v].detune));
         if (tr->voices[v].vox >= 0)
             vox_set_cents(&vox_pool[tr->voices[v].vox], clamp_pitch(cents + tr->voices[v].detune));
+        smp_cents(tr->voices[v].smp, clamp_pitch(cents + tr->voices[v].detune));
     }
 }
 
@@ -1405,6 +1418,7 @@ static void handle_cmds(void)
             }
             const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
             tr->last_inst = a;
+            tr->fx.smp = -1; /* a key plays the zones */
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
@@ -1568,6 +1582,15 @@ static Lane lanes[2];
 int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg);
 int (*player_wait_other)(void);
 
+/* The track each core is rendering, + 1, and where in it (the high nibble: 1 its voices, 2 its samples, 3 its
+ * drums, 4 its chain); 0 between tracks. On the FM-1 it survives a reset: what the firmware reports of the run
+ * before when it ended without a crash record (`fm1_ctl.py status --trail`). */
+volatile uint8_t player_trail[2]
+#ifdef PLAT_FM1
+    __attribute__((section(".noinit")))
+#endif
+    ;
+
 /* The VOX voices a track has lent, added to what its oscillators drew. */
 static void track_sing(Track *tr, int32_t *mono, int frames)
 {
@@ -1576,11 +1599,31 @@ static void track_sing(Track *tr, int32_t *mono, int frames)
             vox_render(&vox_pool[tr->voices[v].vox], mono, frames);
 }
 
+/* The sample voices a track has lent, likewise (core/sampler.h). */
+static void track_samples(Track *tr, int32_t *mono, int frames)
+{
+    for (int v = 0; v < TRACK_MAX_VOICES; v++)
+        smp_mix(tr->voices[v].smp, mono, frames);
+}
+
+/* Reads the flash this block: kept on the first core. */
+static bool track_reads_flash(const Track *tr)
+{
+    for (int v = 0; v < TRACK_MAX_VOICES; v++)
+        if (smp_sounds(tr->voices[v].smp))
+            return true;
+    return false;
+}
+
 /* One track into a lane's mix and sends. It touches the track's own state
  * and the lane's buffers, nothing else: the two cores run it side by side.
  * `timed`: the first core's own tracks are timed, the second core's not. */
 static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool timed)
 {
+    volatile uint8_t *at = &player_trail[!timed];
+    uint8_t t = (uint8_t)(tr - tracks + 1);
+
+    *at = 0x10 | t;
     if (timed)
         prof_mark();
     blep_begin(&tr->blep, frames);
@@ -1590,13 +1633,18 @@ static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool tim
     if (timed)
         prof(PROF_OSC);
     track_sing(tr, ln->mono, frames);
+    *at = 0x20 | t;
+    track_samples(tr, ln->mono, frames);
+    *at = 0x30 | t;
     drum_render((int)(tr - tracks), ln->mono, frames);
+    *at = 0x40 | t;
     if (timed)
         prof(PROF_VOX);
     if (tr->fx.send == 0 && tr->fx.echo == 0) {
         chain_process(&tr->chain, ln->mono, out, frames);
         if (timed)
             prof(PROF_CHAIN);
+        *at = 0;
         return;
     }
     /* A track that sends is mixed apart, so that what goes to the
@@ -1634,6 +1682,7 @@ static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool tim
         if (timed)
             prof(PROF_CHAIN);
     }
+    *at = 0;
 }
 
 /* The second core's share: every other track that sounds, into lanes[1]. */
@@ -1657,7 +1706,8 @@ static void render_tracks(int32_t *out, int frames)
 {
     Lane *ln = &lanes[0];
     uint8_t sounding[SONG_MAX_TRACKS];
-    int n = 0;
+    bool far[SONG_MAX_TRACKS];
+    int n = 0, alt = 0;
     bool split;
 
     /* First, on this core: what changes shared state (the mutes, the
@@ -1685,16 +1735,20 @@ static void render_tracks(int32_t *out, int frames)
     }
 
     /* Then every other sounding track to the second core, where there is
-     * one, so that the two voices of a chorus (t6, t7) land on both. */
+     * one, so that the two voices of a chorus (t6, t7) land on both; a
+     * track playing samples stays here. */
     other.n = 0;
     other.frames = frames;
-    for (int k = 1; k < n; k += 2)
-        other.list[other.n++] = sounding[k];
+    for (int k = 0; k < n; k++) {
+        far[k] = !track_reads_flash(&tracks[sounding[k]]) && (alt++ & 1);
+        if (far[k])
+            other.list[other.n++] = sounding[k];
+    }
     split = other.n && player_run_other && player_run_other(render_other, 0);
 
     ln->fed = ln->fed_echo = false;
     for (int k = 0; k < n; k++)
-        if (!split || (k & 1) == 0)
+        if (!split || !far[k])
             render_track(&tracks[sounding[k]], ln, out, frames, true);
 
     if (split) {
@@ -1727,6 +1781,7 @@ static void render_tracks(int32_t *out, int frames)
                 osc_draw(&tr->voices[v].osc, &tr->blep);
             blep_read(&tr->blep, ln->mono, frames);
             track_sing(tr, ln->mono, frames);
+            track_samples(tr, ln->mono, frames);
             drum_render(AUDITION, ln->mono, frames);
             chain_process(&tr->chain, ln->mono, out, frames);
             /* Once it has closed it is put away CLEAN. A song's track
@@ -1830,7 +1885,16 @@ void player_render(int16_t *out, int frames)
 }
 
 /* ============================================================== api === */
-void player_init(Song *s)
+/* From here on, the main loop's side only: left in the flash, where the
+ * rest of the app runs. On the FM-1 this file runs from RAM, and that
+ * RAM was full when the sampler came (29/10, firmware/app.ld). */
+#ifdef PLAT_FM1
+#define MAIN_LOOP __attribute__((section(".flash_text")))
+#else
+#define MAIN_LOOP
+#endif
+
+MAIN_LOOP void player_init(Song *s)
 {
     song = s;
     fx_init();
@@ -1843,6 +1907,7 @@ void player_init(Song *s)
             tr->voices[v].active = tr->voices[v].sounding = false;
             tr->voices[v].wave = 0;
             tr->voices[v].vox = -1;
+            tr->voices[v].smp = -1;
             tr->voices[v].detune = 0;
         }
         tr->used = false;
@@ -1852,6 +1917,7 @@ void player_init(Song *s)
         vox_init(&vox_pool[k]);
         vox_owner[k] = -1;
     }
+    smp_pool_init();
     drum_init();
     tracks[AUDITION].fx.syl[0] = 'A';
     tracks[AUDITION].fx.syl[1] = '\0';
@@ -1865,38 +1931,38 @@ void player_init(Song *s)
     loop_word = 0;
 }
 
-void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
-void player_play_entry(int entry) { cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0); }
-void player_stop(void) { cmd_push(CMD_STOP, 0, 0); }
-void player_set_loop(int from, int len)
+MAIN_LOOP void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
+MAIN_LOOP void player_play_entry(int entry) { cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0); }
+MAIN_LOOP void player_stop(void) { cmd_push(CMD_STOP, 0, 0); }
+MAIN_LOOP void player_set_loop(int from, int len)
 {
     loop_word = from < 0 || len <= 0 ? 0 : ((uint32_t)from & 0xFFFFu) | ((uint32_t)len & 0xFFFFu) << 16;
 }
-void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
-void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }
-void player_note_sing(int instr, uint8_t note, const char *syl)
+MAIN_LOOP void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
+MAIN_LOOP void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }
+MAIN_LOOP void player_note_sing(int instr, uint8_t note, const char *syl)
 {
     syl_copy(audition_syl, syl);
     cmd_push(CMD_NOTE_SYL, (uint8_t)instr, note);
 }
-void player_toggle_mute(int track)
+MAIN_LOOP void player_toggle_mute(int track)
 {
     if (track >= 0 && track < SONG_MAX_TRACKS)
         mute_mask ^= (uint8_t)(1u << track);
 }
-void player_set_master(int pot)
+MAIN_LOOP void player_set_master(int pot)
 {
     master = pot < 0 ? 0 : pot >= 1023 ? 1024 : pot;
 }
-bool player_playing(void) { return ui_playing != 0; }
-uint16_t player_row(void) { return ui_row; }
-uint8_t player_tick_in_step(void) { return ui_tick; }
-void player_click(bool first) { click_req = first ? 2 : 1; }
-uint16_t player_entry(void) { return ui_entry; }
-bool player_muted(int track) { return (mute_mask >> track) & 1u; }
-void player_toggle_solo(int track)
+MAIN_LOOP bool player_playing(void) { return ui_playing != 0; }
+MAIN_LOOP uint16_t player_row(void) { return ui_row; }
+MAIN_LOOP uint8_t player_tick_in_step(void) { return ui_tick; }
+MAIN_LOOP void player_click(bool first) { click_req = first ? 2 : 1; }
+MAIN_LOOP uint16_t player_entry(void) { return ui_entry; }
+MAIN_LOOP bool player_muted(int track) { return (mute_mask >> track) & 1u; }
+MAIN_LOOP void player_toggle_solo(int track)
 {
     if (track >= 0 && track < SONG_MAX_TRACKS)
         solo_mask ^= (uint8_t)(1u << track);
 }
-bool player_soloed(int track) { return (solo_mask >> track) & 1u; }
+MAIN_LOOP bool player_soloed(int track) { return (solo_mask >> track) & 1u; }

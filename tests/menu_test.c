@@ -9,6 +9,7 @@
 
 static uint8_t nor[PLAT_FLASH_SECTORS * PLAT_FLASH_SECTOR];
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { memcpy(d, nor + o, n); return 0; }
+const uint8_t *plat_flash_map(void) { return nor; }
 int plat_flash_erase(uint32_t s) { memset(nor + s * PLAT_FLASH_SECTOR, 0xFF, PLAT_FLASH_SECTOR); return 0; }
 int plat_flash_prog(uint32_t o, const void *d, uint32_t n)
 {

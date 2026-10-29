@@ -1749,8 +1749,127 @@ The flash is one pool, nothing set aside: samples will take room from
 the songs and give it back; the store's 31 song slots are the other
 limit, the sample bank to be one file of them.
 
+## 2026-10-29 — SMPL, stage 1: the sample bank
+
+Decided with him: short one-shots only, one bank filled from the computer,
+the other apps' format unchanged. No screen yet (CHOOSE SAMPLE and a
+SAMPLES page are stage 2) but SYSTEM's line. Built and tested on the
+Mac, then installed and played on the device (below).
+
+- **A sample**: mono, 22 050 Hz, IMA ADPCM (4 bits a frame), a second at
+  most. Blocks of 255 bytes (a predictor, an index, 504 codes): 16 fill a
+  sector's 4080-byte payload, so the bank lays them where none crosses a
+  sector (`core/sampler.h`). ~11 KB a second: the 909 kit, ten sounds,
+  is 4.3 s in 50 KB, 13 sectors.
+- **The bank** is one file of the store, slot 32 (`core/bank.h`: a
+  header, 32-byte entries -- a name of 23, frames, where its blocks
+  start --, then the blocks). `STORE_SLOTS` 32 -> 33; `.LAST` stays 31
+  (`LAST_SLOT` pinned, `APP_SONG_SLOTS` 31): a flash written before
+  mounts the same. A firmware from before sees slot 32 as free space and
+  will write over it, so going back loses the bank, not a song.
+- **Names**: `smp 00 tr909/tr9_kick.wav` plays the bank's `tr9_kick`
+  (the last part of the name, without `.wav`, any case). Missing:
+  silent. Resolved when a song is adopted and when the bank changes
+  (`bank_resolve`, `bank_mount`).
+- **The format carried** (`core/trk.c`, `core/song.h`): the `smp` table
+  (64 entries of 47 characters, `begin`, `loop`, `ping` kept), the zones
+  (one list of 128 for the song, file order = priority, `tune`, `gain`)
+  and `fSMP`, read and written back as moondaw writes them (entries a
+  zone of a used SMPL or an fSMP names; zones only under a SMPL). Every
+  song of `../moondaw/songs` keeps its lines through a save, but
+  tremolo's eleven zones on a PLUCK instrument, which moondaw drops too.
+  `begin` and `loop` are kept and not played: the bank is trimmed, and
+  one-shots only. Song +4.9 KB (84 396 B).
+- **The voice** (`core/sampler.c`): reads the flash in place
+  (`plat_flash_map`, the XIP window the boot maps plain; `store_map`
+  gives the file's sectors), decodes a code at a time, interpolates
+  linearly, ~40 bytes and no sound in RAM. Pitch from the zone's root
+  (fSMP: C-4 over the whole keyboard) through a cents table
+  (`SMP_INC_Q16`), the track's bends on top; the level is moondaw's
+  (16000/32768 of full scale) times the zone's gain; envelope, filter,
+  level are the chain's, as for every engine, and a note-off does not
+  stop it (moondaw's one-shot). 16 voices shared, lent as VOX's are.
+- **Safe against the flash**: `bank_hold()` before anything writes slot
+  32 (the link stops the song too) -- a generation counter, and every
+  voice dies at its next render; an erase runs with the interrupts off
+  on CPU0, so no render meets it. A track with a sample sounding is
+  rendered by CPU0 only: CPU1 never fetches the bank.
+- **RAMTEXT was full**: the first build overflowed by 916 bytes. The
+  sample pool's code lives in `sampler.c` (from the flash, -O2, like
+  DRUM), and the player's main-loop functions (`player_init`, the
+  commands) moved out of RAM (`.flash_text`, `firmware/app.ld`). 196
+  bytes of RAMTEXT left. Image 210 120 B; .data+.bss 66 392 of 73 728;
+  pool 270 380 of 335 872. No 64-bit division in the image.
+- **The link, version 5**: BEGIN's flag bit 1 is the bank (the name is
+  not read); INFO and READ reach slot 32. A bank replaces the bank
+  whole; when the new one does not fit beside the old, the old is
+  deleted first (the computer holds it: it read it to build the new).
+- **The tool**, `tools/fm1_samples.py add | list | remove | get`, and
+  `pack` to make a bank file without a device. `add` converts any WAV:
+  mono, 22 050 Hz (a windowed-sinc low-pass first), the silence cut at
+  both ends (-50 dB under the peak), cut to a second (5 ms fade),
+  **normalised to -1 dBFS** -- so a sample is louder or softer than the
+  file moondaw plays, and a song's gains set against those files will
+  sound out of balance here; to hear on the device. It keeps the last
+  bank it saw (`build/fm1-bank.bin`) and reads only the index back when
+  nothing changed. Free space before and after.
+- **SYSTEM**: SAMPLES says how many and how much, and the bar has the
+  bank's own colour after the songs' (`C_SAMPLE`, a violet; to judge on
+  the panel).
+- **Tests**: `tests/sampler_test.c` (ADPCM round trip, 35 dB on a test
+  tone; the bank in a store whose free sectors are scattered, found by
+  every spelling, read across its sectors frame for frame; a damaged
+  bank is none; `smp`/`zone`/`fSMP` written back the same twice; an
+  octave up rings half as long; zone, fSMP, a missing name, the bank
+  held; the tool's decoder and this one agree to the frame; KIDS' first
+  track plays its 909 kick); `link_test` (the bank through the link);
+  `remotetest.sh` (add, list, remove, get against the whole app).
+- **On the FM-1** (later the same day, his yes): installed over the old
+  flash, which mounted as it was (CLAVIOLINE reopened from `.LAST`, 31).
+  The 909 kit sent in ~4.5 s for 50 KB (196 -> 144 KB free); KIDS (the
+  moondaw one, with `smp` and zones) sent and played through. CPU 48 to
+  68 % by phrase, **max 79** (KIDS with WAVE/NOISE 59, KIDS-DRUM 65). The
+  worst block: T179 O653 V187 C858 R384 E72, **W2**: the sample tracks
+  stay on CPU0 with their chains, and CPU1 waits on nothing -- the split
+  is lopsided, the voices themselves (V) are cheap. To win back: decode
+  into a buffer on CPU0 and let CPU1 run the chain.
+- **Two restarts** while KIDS looped, after ~2.5 and ~3.5 min (P33 0x04
+  then 0x40, no crash recorded); a third play of 3.5 min ran clean. Not
+  explained; DAFT-PUNK-EN restarted the same way before the sampler
+  (29/10, above). Found the same evening, below: not the samples.
+- **Still to measure on the FM-1**: what a voice costs from the audio
+  interrupt alone (V above holds it, with DRUM's), and the balance after
+  normalising, by ear.
+
+## 2026-10-29 — the restarts: `status --profile` after 179 s
+
+The restarts while KIDS played (and DAFT-PUNK-EN's earlier on 29/10) were the
+profile itself. The player's stopwatch was `fm1_ticks() / 24`: 32 bits
+of 24 MHz turn over every 179 s, divided they do not, so a block timed
+across the turn measured 178 956 970 us. Asked for over the link, that
+figure went through `ui_dec`, whose digits buffer held 8: the ninth and
+tenth landed on the stack, and what came next was a crash in the delay or
+the render, or the watchdog. Every `--profile` after three minutes of
+play restarted the machine (4 of 4, KIDS and KIDS-DRUM alike); plain
+`status` never did.
+
+- **Fixed**: `ui_dec` holds any int (and its sign); `fm1_us` counts on
+  over the turn. KIDS 4 min, then five `--profile`: all answered, the
+  block 2 442 us, no restart.
+- **Found with a trail** (kept, `firmware.c`, `audio.c`): .noinit
+  records the main loop's stage and ms, the last audio half's ms,
+  whether a half was being rendered, the track each core renders and its
+  stage (`player_trail`), the last sample block read (`smp_trail`); read
+  at the next start with `fm1_ctl.py status --trail`. And `status
+  --crash`: the crash record's rets, EMU, DBG, sp and last jumps, which
+  the firmware kept and never reported (here DBG bit 4: a write to
+  unmapped space). The record survives an install.
+
 ## Open
 
+- SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
+  calls a SMPL instrument silent (`engine_sounds`) and cannot edit zones;
+  `begin`, `loop` and `ping` carried, not played.
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
 - DRUM in moondaw (the same `drum_voice.inc`), then its songs on it;

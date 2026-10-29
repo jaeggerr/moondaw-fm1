@@ -18,6 +18,7 @@ Song app_song;
 char app_name[STORE_NAME + 1] = "TEST";
 int app_slot = -1;
 bool app_dirty;
+void player_stop(void) {} /* a bank coming in stops the song: there is none here */
 
 static uint32_t now_ms(void)
 {

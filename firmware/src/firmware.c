@@ -99,6 +99,11 @@ int plat_flash_read(uint32_t off, void *dst, uint32_t n)
     return store_range(off, n) ? st_read(STORE_BASE + off, dst, n) : -1;
 }
 
+const uint8_t *plat_flash_map(void)
+{
+    return flash_ok ? fm1_xip_ptr(STORE_BASE) : 0; /* plain since fl_plain_window_init, at boot */
+}
+
 int plat_flash_erase(uint32_t sector)
 {
     return store_range(sector * PLAT_FLASH_SECTOR, PLAT_FLASH_SECTOR)
@@ -224,10 +229,14 @@ extern uint32_t _ra_start[], _ra_end[], _ra_load[];
 extern uint32_t (*player_clock)(void) __attribute__((weak));
 extern int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg) __attribute__((weak));
 extern int (*player_wait_other)(void) __attribute__((weak));
+/* the trail's audio side (core/player.c, core/sampler.c, .noinit here): the track each core renders and its stage,
+ * the last block of sample read */
+extern volatile uint8_t player_trail[2] __attribute__((weak));
+extern volatile uint32_t smp_trail __attribute__((weak));
 /* What the link reports (app/remote.c, `fm1_ctl.py status --boot`): why the last start happened -- P33's reset
  * source (bit0 power-on, 1 VDDIO low, 2 watchdog, 3 VCM, 4 long press, 5 1.2 V, 6 soft) and PWR_CON's --, the
  * last crash record, and the second core's state, kept current by the main loop. */
-static uint32_t plat_boot_info[10];
+static uint32_t plat_boot_info[26];
 extern const uint32_t *remote_boot_info __attribute__((weak));   /* app/remote.c, absent from the bring-up build */
 #if FM1_CPU1
 static int cpu1_run(void (*fn)(uint32_t), uint32_t arg) { return fm1_cpu1_run(fn, arg); }
@@ -242,7 +251,18 @@ static uint32_t build_id(void)
     return h;
 }
 #endif
-static uint32_t fm1_us(void) { return fm1_ticks() / FM1_TICKS_PER_US; }
+/* The player's stopwatch. ticks / 24 turned over every 179 s (2^32 ticks of 24 MHz), not at 2^32: a block timed
+ * across the turn came out as 178 956 970 us (29/10). Counted on instead, so differences stay right; the audio
+ * interrupt is its only caller. */
+static uint32_t fm1_us(void)
+{
+    static uint32_t last, us, rem;
+    uint32_t t = fm1_ticks(), d = t - last + rem;
+    last = t;
+    us += d / FM1_TICKS_PER_US;
+    rem = d % FM1_TICKS_PER_US;
+    return us;
+}
 
 /* TIMER5, 10 kHz, above ALNK0: the key scan keeps its pace while a half
  * buffer renders. Nested in the audio ISR it only scans and counts ms;
@@ -345,7 +365,18 @@ static void fm1_main(void)
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;
+    } else {    /* the trail of the run before this start: where each side was when it ended */
+        plat_boot_info[10] = felucca_dbg.stage;
+        plat_boot_info[11] = felucca_dbg.loop_ms;
+        plat_boot_info[12] = felucca_dbg.audio_ms;
+        plat_boot_info[13] = felucca_dbg.in_audio;
+        plat_boot_info[14] = felucca_dbg.max_us;
+        plat_boot_info[15] = felucca_dbg.late;
+        plat_boot_info[16] = &player_trail ? (uint32_t)player_trail[0] | (uint32_t)player_trail[1] << 8 : 0;
+        plat_boot_info[17] = &smp_trail ? smp_trail : 0;
     }
+    felucca_dbg.late = 0;
+    felucca_dbg.stage = felucca_dbg.loop_ms = felucca_dbg.audio_ms = 0;
     felucca_dbg.boots++;
     felucca_dbg.max_us = 0;
     felucca_dbg.in_audio = 0;                   /* .noinit: a reset inside the audio ISR left it set */
@@ -360,6 +391,12 @@ static void fm1_main(void)
         plat_boot_info[3] = fm1_crash.vec;
         plat_boot_info[4] = fm1_crash.pc;
         plat_boot_info[5] = fm1_crash.uptime_ms;
+        plat_boot_info[18] = fm1_crash.rets;    /* and the rest of it, for `status --crash` */
+        plat_boot_info[19] = fm1_crash.emu;
+        plat_boot_info[20] = fm1_crash.dbg;
+        plat_boot_info[21] = fm1_crash.sp;
+        for (uint32_t k = 0; k < 4u; k++)
+            plat_boot_info[22 + k] = fm1_crash.etm[k];
     }
     if (&remote_boot_info)
         remote_boot_info = plat_boot_info;
@@ -394,8 +431,12 @@ static void fm1_main(void)
     fm1_guard_lock_top();
     fm1_irq_enable_all();
 
+    /* The trail's stages (felucca_dbg.stage): 1 the loop's top, 2 the link, 3 the updater, 4 the hands, 5 the
+     * app's frame, 6 waiting for the next one. */
     for (;;) {
         uint32_t m = fm1_ms;
+        felucca_dbg.stage = 1;
+        felucca_dbg.loop_ms = m;
         fm1_wdt_feed();
 #if FM1_CPU1
         plat_boot_info[6] = fm1_cpu1_on;
@@ -424,7 +465,9 @@ static void fm1_main(void)
                 fm1_enter_uboot();
             }
         }
+        felucca_dbg.stage = 2;
         link_poll();                            /* ours first: it is copied out, never left in the slot */
+        felucca_dbg.stage = 3;
         ota_service();                          /* M-UPGRADE handshake */
         if (usb.ota_req) {                      /* M-UPGRADE upgrade command */
             usb.ota_req = 0;
@@ -441,8 +484,11 @@ static void fm1_main(void)
             fm1_enter_uboot();
         }
         felucca_dbg.ui_frames++;
+        felucca_dbg.stage = 4;
         input_read(&in);
+        felucca_dbg.stage = 5;
         app_frame(&in);
+        felucca_dbg.stage = 6;
         while (fm1_ms - m < 15u)
             ;                                   /* ~60 frames/s at most */
     }
