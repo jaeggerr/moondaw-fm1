@@ -1,0 +1,357 @@
+<title>Planche d'écoute batteries</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a drum-machine grid, pieces down, engines across; each pad shows its own waveform and plays its hit. */
+:root {
+  --bg: #eef0f3;
+  --panel: #ffffff;
+  --pad: #e3e6ec;
+  --line: #cfd4dd;
+  --fg: #1b1f27;
+  --muted: #5d6676;
+  --wave: #8a93a4;
+  --lit: #d9891f;
+  --lit-soft: rgba(217, 137, 31, 0.16);
+  --ref: #3f6fb5;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171d; --panel: #1c2028; --pad: #252a34; --line: #323846;
+    --fg: #e8ebf1; --muted: #98a1b2; --wave: #6c7588;
+    --lit: #f0a53d; --lit-soft: rgba(240, 165, 61, 0.18); --ref: #7fa6e6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171d; --panel: #1c2028; --pad: #252a34; --line: #323846;
+  --fg: #e8ebf1; --muted: #98a1b2; --wave: #6c7588;
+  --lit: #f0a53d; --lit-soft: rgba(240, 165, 61, 0.18); --ref: #7fa6e6;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+header { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 44px); line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: 0.01em; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 0; letter-spacing: 0.02em; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toggle {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px;
+  font-family: var(--display); font-size: 17px; font-weight: 600; letter-spacing: 0.03em; color: var(--fg);
+}
+.toggle input { accent-color: var(--lit); width: 16px; height: 16px; }
+button.stop {
+  font-family: var(--display); font-size: 17px; font-weight: 600; letter-spacing: 0.03em;
+  background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; cursor: pointer;
+}
+button:focus-visible, .pad:focus-visible, .toggle:focus-within { outline: 2px solid var(--lit); outline-offset: 2px; }
+.status { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+.gridbox { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.grid {
+  display: grid; grid-template-columns: 150px repeat(5, minmax(120px, 1fr)); gap: 8px; padding: 14px; min-width: 760px;
+}
+.colhead { display: flex; flex-direction: column; gap: 0; padding: 2px 2px 4px; }
+.colhead b { font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: 0.02em; }
+.colhead span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.colhead.ref b { color: var(--ref); }
+.rowhead { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding-right: 4px; }
+.rowhead b { font-family: var(--display); font-size: 18px; font-weight: 600; letter-spacing: 0.02em; line-height: 1.1; }
+.rowhead button {
+  align-self: flex-start; font-family: var(--mono); font-size: 11px; color: var(--muted); background: none;
+  border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; cursor: pointer;
+}
+.rowhead button:hover { color: var(--fg); border-color: var(--muted); }
+.pad {
+  position: relative; height: 64px; border-radius: 6px; background: var(--pad); border: 1px solid transparent;
+  cursor: pointer; overflow: hidden; padding: 0; color: inherit; font: inherit;
+}
+.pad:hover { border-color: var(--line); }
+.pad canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pad .prog { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--lit-soft); pointer-events: none; }
+.pad .t { position: absolute; right: 6px; bottom: 4px; font-family: var(--mono); font-size: 10px; color: var(--muted); pointer-events: none; }
+.pad.on { border-color: var(--lit); }
+.pad.on .t { color: var(--lit); }
+.pad.ref { box-shadow: inset 3px 0 0 var(--ref); }
+
+.engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.eng { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.eng h3 { margin: 0; font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: 0.02em; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.tag { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+.tag.pick { color: var(--lit); border-color: var(--lit); }
+.eng p { font-size: 14px; }
+.eng dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13px; }
+.eng dt { color: var(--muted); font-family: var(--mono); font-size: 11px; padding-top: 2px; }
+.eng dd { margin: 0; }
+audio { width: 100%; height: 36px; }
+
+.files { display: flex; flex-direction: column; gap: 10px; }
+.file { display: grid; grid-template-columns: 240px 1fr; gap: 6px 16px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.file .name { font-family: var(--mono); font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+.file .what { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+@media (max-width: 640px) { .file { grid-template-columns: 1fr; } }
+.legend { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .pad .prog { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">MOONDAW · FM-1 · 44 100 Hz · 120 bpm</div>
+    <h1>Planche d'écoute des batteries</h1>
+    <p class="muted">Chaque case joue un coup tiré du fichier de ce moteur. Clique dans une ligne de gauche à droite pour comparer la même pièce, ou utilise « enchaîner » pour l'entendre sur les cinq moteurs à la suite. Tous les fichiers sont au même volume moyen.</p>
+  </header>
+
+  <div class="controls">
+    <label class="toggle" for="speaker"><input type="checkbox" id="speaker"> Petit haut-parleur (coupe sous 200 Hz)</label>
+    <button class="stop" id="stop" type="button">Stop</button>
+    <span class="status" id="status">Chargement des sons…</span>
+  </div>
+
+  <div class="gridbox"><div class="grid" id="grid"></div></div>
+  <p class="legend">Le dessin de chaque case est la forme d'onde du coup, à la même échelle de temps sur une ligne : on y voit d'un coup d'œil la grosse caisse actuelle qui s'éteint en 60 ms. Barre d'espace : stop.</p>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>Les moteurs</h2>
+    <div class="engines" id="engines"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>Les fichiers complets</h2>
+    <div class="files" id="files"></div>
+  </section>
+</div>
+
+<script>
+const ENGINES = [
+  { id: "0-actuel", name: "Actuel", sub: "WAVE + NOISE", ref: true,
+    tags: ["référence"],
+    text: "Les batteries d'aujourd'hui, rendues par le cœur du FM-1 (fm_render) : grosse caisse en WAVE avec fSWP, caisse claire, clap et charlestons en NOISE.",
+    meta: [["Source", "MOONDAW"], ["Coût", "quasi nul"]] },
+  { id: "A-felucca", name: "A · Felucca", sub: "GPL-3.0-only",
+    tags: ["recommandé"],
+    text: "Sinus amortis à hauteur balayée, clic et saturation ; six carrés de 808 pour les charlestons. Conçu pour ce processeur et ce haut-parleur. Ma recréation, pas le son exact.",
+    meta: [["Source", "Felucca, drum_voice.c"], ["Coût", "20 à 40 op./éch./voix, déjà en entiers"]] },
+  { id: "B-analog", name: "B · Analog", sub: "MIT",
+    tags: ["808"],
+    text: "Filtre très résonant frappé par une impulsion (grosse caisse, tom), cinq modes et bruit (caisse claire). Le plus rond au casque, perd sa grosse caisse sur le haut-parleur.",
+    meta: [["Source", "Plaits / Peaks, DaisySP"], ["Coût", "le plus cher, jusqu'à 6 filtres par voix"]] },
+  { id: "C-synth", name: "C · Synth", sub: "MIT",
+    tags: ["909"],
+    text: "Sinus façonné sous enveloppe FM, deux sinus et du bruit filtré, charlestons en modulation en anneau. Plus sec et plus numérique.",
+    meta: [["Source", "Plaits, modèles synthétiques"], ["Coût", "moyen, 40 à 60 op./éch./voix"]] },
+  { id: "D-chipplus", name: "D · Chip+", sub: "MOONDAW",
+    tags: ["sans nouveau moteur"],
+    text: "WAVE et NOISE avec enveloppe de hauteur et décroissance calculées à chaque échantillon, bruit passe-haut. Reste chiptune, mais avec un vrai boum.",
+    meta: [["Source", "MOONDAW"], ["Coût", "5 à 15 op./éch./voix"]] },
+];
+const PIECES = [
+  { id: "kick", name: "Grosse caisse", t: 0, d: 0.9 },
+  { id: "snare", name: "Caisse claire", t: 1, d: 0.9 },
+  { id: "hatc", name: "Charleston fermé", t: 2, d: 0.5 },
+  { id: "hato", name: "Charleston ouvert", t: 3, d: 0.95 },
+  { id: "clap", name: "Clap", t: 4, d: 0.95 },
+  { id: "tom", name: "Tom", t: 5, d: 0.95 },
+  { id: "beat", name: "Rythme, 2 mesures", t: 6, d: 4.5 },
+];
+const FILES = [
+  ["0-actuel.wav", "Les batteries actuelles : chaque pièce seule à 0, 1, 2, 3, 4 et 5 s, puis le rythme à 6 s."],
+  ["A-felucca.wav", "Candidat A, même grille."],
+  ["B-analog.wav", "Candidat B, même grille."],
+  ["C-synth.wav", "Candidat C, même grille."],
+  ["D-chipplus.wav", "Candidat D, même grille."],
+  ["comparatif-rythmes.wav", "La mesure avec le break, actuel puis A, B, C, D, toutes les 2,9 s."],
+  ["comparatif-petit-haut-parleur.wav", "Le même passé dans un passe-haut à 200 Hz, un seul gain pour tous."],
+];
+
+const grid = document.getElementById("grid");
+const statusEl = document.getElementById("status");
+const speaker = document.getElementById("speaker");
+let ctx = null;
+const buffers = {};
+const pads = {};
+let playing = [];   // { src, pad, start, dur }
+let raf = 0;
+
+function audioCtx() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  return ctx;
+}
+
+// the grid
+grid.appendChild(document.createElement("div"));
+for (const e of ENGINES) {
+  const h = document.createElement("div");
+  h.className = "colhead" + (e.ref ? " ref" : "");
+  h.innerHTML = `<b>${e.name}</b><span>${e.sub}</span>`;
+  grid.appendChild(h);
+}
+for (const p of PIECES) {
+  const rh = document.createElement("div");
+  rh.className = "rowhead";
+  rh.innerHTML = `<b>${p.name}</b>`;
+  const chain = document.createElement("button");
+  chain.type = "button";
+  chain.textContent = "enchaîner ▸";
+  chain.setAttribute("aria-label", `Enchaîner ${p.name} sur les cinq moteurs`);
+  chain.addEventListener("click", () => playRow(p));
+  rh.appendChild(chain);
+  grid.appendChild(rh);
+  for (const e of ENGINES) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pad" + (e.ref ? " ref" : "");
+    b.id = `pad-${p.id}-${e.id}`;
+    b.setAttribute("aria-label", `${p.name}, ${e.name}`);
+    b.innerHTML = `<canvas></canvas><div class="prog"></div><span class="t">${p.t.toFixed(1)} s</span>`;
+    b.addEventListener("click", () => play([{ e, p, at: 0 }]));
+    grid.appendChild(b);
+    pads[p.id + "|" + e.id] = b;
+  }
+}
+
+// engines and files
+const engBox = document.getElementById("engines");
+for (const e of ENGINES) {
+  const d = document.createElement("article");
+  d.className = "eng";
+  const tags = e.tags.map(t => `<span class="tag${t === "recommandé" ? " pick" : ""}">${t}</span>`).join("");
+  d.innerHTML = `<h3>${e.name} ${tags}</h3><p>${e.text}</p><dl>${e.meta.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
+  engBox.appendChild(d);
+}
+const filesBox = document.getElementById("files");
+for (const [f, what] of FILES) {
+  const d = document.createElement("div");
+  d.className = "file";
+  d.innerHTML = `<span class="name">${f}</span><audio controls preload="none" src="audio/${f}"></audio><span class="what">${what}</span>`;
+  filesBox.appendChild(d);
+}
+
+// loading
+async function load() {
+  const c = audioCtx();
+  let done = 0;
+  await Promise.all(ENGINES.map(async e => {
+    try {
+      const r = await fetch(`audio/${e.id}.wav`);
+      const data = await r.arrayBuffer();
+      buffers[e.id] = await new Promise((ok, ko) => c.decodeAudioData(data, ok, ko));
+      done++;
+      statusEl.textContent = `${done} / ${ENGINES.length} moteurs chargés`;
+      drawEngine(e.id);
+    } catch (err) {
+      statusEl.textContent = `Impossible de charger ${e.id}.wav : les lecteurs du bas restent utilisables.`;
+    }
+  }));
+  if (done === ENGINES.length) statusEl.textContent = "Prêt. Clique une case.";
+}
+
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function drawEngine(id) {
+  const buf = buffers[id];
+  if (!buf) return;
+  const data = buf.getChannelData(0);
+  const sr = buf.sampleRate;
+  const color = cssVar("--wave");
+  for (const p of PIECES) {
+    const pad = pads[p.id + "|" + id];
+    const cv = pad.querySelector("canvas");
+    const w = cv.clientWidth, h = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (!w || !h) continue;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const g = cv.getContext("2d");
+    g.scale(dpr, dpr);
+    g.fillStyle = color;
+    const s0 = Math.floor(p.t * sr), n = Math.floor(p.d * sr);
+    const per = n / w, mid = h / 2;
+    for (let x = 0; x < w; x++) {
+      let pk = 0;
+      const a = s0 + Math.floor(x * per), b = Math.min(s0 + Math.floor((x + 1) * per), data.length);
+      for (let i = a; i < b; i++) { const v = Math.abs(data[i]); if (v > pk) pk = v; }
+      const y = Math.max(0.5, pk * (h * 0.46));
+      g.fillRect(x, mid - y, 1, y * 2);
+    }
+  }
+}
+function redrawAll() { for (const e of ENGINES) drawEngine(e.id); }
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+let rt = 0;
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(redrawAll, 150); });
+
+// playback
+function stopAll() {
+  for (const p of playing) { try { p.src.stop(); } catch (_) {} p.pad.classList.remove("on"); p.pad.querySelector(".prog").style.width = "0"; }
+  playing = [];
+  cancelAnimationFrame(raf);
+}
+
+function output(c) {
+  if (!speaker.checked) return c.destination;
+  const hp = c.createBiquadFilter();
+  hp.type = "highpass"; hp.frequency.value = 200; hp.Q.value = 0.707;
+  hp.connect(c.destination);
+  return hp;
+}
+
+function play(list) {
+  const c = audioCtx();
+  c.resume();
+  stopAll();
+  const out = output(c);
+  const t0 = c.currentTime + 0.03;
+  for (const { e, p, at } of list) {
+    const buf = buffers[e.id];
+    if (!buf) continue;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(out);
+    src.start(t0 + at, p.t, p.d);
+    playing.push({ src, pad: pads[p.id + "|" + e.id], start: t0 + at, dur: p.d });
+  }
+  tick();
+}
+
+function playRow(p) {
+  const gap = p.id === "beat" ? 0.4 : 0.25;
+  play(ENGINES.map((e, i) => ({ e, p, at: i * (p.d + gap) })));
+}
+
+function tick() {
+  const now = ctx.currentTime;
+  let live = false;
+  for (const p of playing) {
+    const f = (now - p.start) / p.dur;
+    const on = f >= 0 && f < 1;
+    p.pad.classList.toggle("on", on);
+    p.pad.querySelector(".prog").style.width = on ? (f * 100).toFixed(1) + "%" : "0";
+    if (f < 1) live = true;
+  }
+  if (live) raf = requestAnimationFrame(tick);
+  else playing = [];
+}
+
+document.getElementById("stop").addEventListener("click", stopAll);
+document.addEventListener("keydown", ev => {
+  if (ev.code === "Space" && ev.target.tagName !== "AUDIO") { ev.preventDefault(); stopAll(); }
+});
+load();
+</script>
