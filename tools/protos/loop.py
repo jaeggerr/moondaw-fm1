@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """LOOP in PATTERN, from the SELECTION (29/10): the selection's steps become
 the loop PLAY goes round. No new mode, no new button: EDIT enters the
-selection as now, SELECT / KNOB 1 stretch it, and OP5 -- the fifth black key,
-after copy paste cut clear -- makes it the LOOP (and lets the selection go).
-OP5 with no selection, or on the loop as it is, forgets it. The loop shows as
+selection as now, SELECT / KNOB 1 stretch it, and OP6 -- the first black key of the third group,
+after copy paste cut, clear and a free OP5 -- makes it the LOOP (and lets the selection go).
+OP6 with no selection, or on the loop as it is, forgets it. The loop shows as
 a cyan rule left of the numbers, its numbers cyan; PLAY plays (the playhead
 the green triangle, here only drawn). HOME leaves.
 
@@ -22,7 +22,7 @@ from fm1_proto import Canvas  # noqa: E402
 ROW, ROWS, HEAD, NUM_X, CELL_X, CELL_W = 28, 8, 16, 14, 50, 38
 ON_ACC, SEL_INK, GROOVE = "#0B1409", "#6E5518", "#282828"
 LEN, STEP_S = 16, 60 / 120 / 4  # sixteenths at 120 bpm
-OP5 = "D#4"  # the fifth black key: F#3 G#3 A#3 C#4 D#4
+OP6 = "F#4"  # the sixth black key, first of the third group: F#3 G#3 A#3 | C#4 D#4 | F#4
 block = [["---"] * 4 for _ in range(LEN)]
 for r, n in {0: "C-4", 2: "E-4", 4: "G-4", 6: "E-4", 8: "C-4", 9: "D-4", 10: "E-4", 12: "G-4", 14: "B-3"}.items():
     block[r][0] = n
@@ -41,7 +41,7 @@ def hands(ev):
         S["anchor"] = S["row"] if S["selecting"] else None
     if "HOME" in ev.pressed and S["selecting"]:
         S["selecting"], S["anchor"] = False, None
-    if OP5 in ev.keys_down and S["selecting"]:
+    if OP6 in ev.keys_down and S["selecting"]:
         if S["anchor"] is not None:
             r0, r1 = sorted((S["anchor"], S["row"]))
             if S["loop"] == (r0, r1):
