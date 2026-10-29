@@ -41,6 +41,10 @@ core/tables.h: tools/gen_tables.c
 	@mkdir -p build
 	$(CC) tools/gen_tables.c -lm -o build/gen_tables && build/gen_tables > $@
 
+core/drum_tables.h: tools/gen_drum_tables.c
+	@mkdir -p build
+	$(CC) tools/gen_drum_tables.c -lm -o build/gen_drum_tables && build/gen_drum_tables > $@
+
 test: sim web
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy build/sim/moondaw-fm1 --selftest build/sim/selftest.bmp $(SELFTEST_SONG)
 	node platform/web/test.mjs
