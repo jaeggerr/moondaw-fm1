@@ -69,10 +69,10 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 /* SELECTION (29/10): EDIT in and out; the rectangle from the anchor to the
  * cursor, KNOB 2 left of the first column taking whole steps; the black
  * keys OP1-4 copy, paste, cut, clear, OP6 makes its steps the LOOP PLAY
- * goes round (again on the same, or with no selection, forgets it). A copy
- * lets the anchor go: the cursor
- * is free again, the clipboard's outline following it to show where OP2
- * puts it. */
+ * goes round (again on the same forgets it); with no selection OP6 sets an
+ * end at the cursor's step, a second the other end, a third none (as
+ * SECTION's). A copy lets the anchor go: the cursor is free again, the
+ * clipboard's outline following it to show where OP2 puts it. */
 /* The black keys by their groups under the hand: the clipboard in the first
  * three, clearing in the two after (OP5 free), listening in the next three. */
 enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = UI_KEY_MONO };
@@ -289,13 +289,13 @@ static void sel_op(int op)
     int r0, r1, c0, c1, n, done;
     sel_rect(&r0, &r1, &c0, &c1);
     n = r1 - r0 + 1;
-    if (op == OP_LOOP) { /* the selection's steps, PLAY going round them */
+    if (op == OP_LOOP) { /* the selection's steps, PLAY going round them; with none, an end at the cursor */
         if (anchored)
             loop_set(entry, r0, r1);
         else
-            loop_clear();
+            loop_press(entry, cur_row);
         anchored = false;
-        said = loop_state() == LOOP_SET ? "LOOP" : "NO LOOP";
+        said = loop_state() == LOOP_SET ? "LOOP" : loop_state() == LOOP_ONE_END ? "LOOP: THE OTHER END" : "NO LOOP";
         return;
     }
     if (op == OP_PASTE) {

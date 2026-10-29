@@ -6,6 +6,7 @@
 #include "edit.h"
 #include "gfx.h"
 #include "grid.h"
+#include "loop.h"
 #include "ui.h"
 #include "undo.h"
 
@@ -15,6 +16,7 @@
  * that step (-- when none), five tracks a screen.
  *
  *   SELECT, KNOB 1  the step   KNOB 2  the track     the keys  write notes, OCT-/OCT+ their octave
+ *   EDIT held + OP6  an end of the LOOP at the step (again: the other end, then none)
  *   SEL, EDIT  the block of that track, to edit   HOME  back to SONG   GLO  the PROJECT
  *   FX      the MIXER    ALGO  UNDO left, REDO right     SAVE  PLAY  as printed */
 enum { CELL_W = 37, CELLS = 5 };
@@ -93,6 +95,13 @@ static void draw(void)
     grid_clear();
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (loop_state() == LOOP_SET) { /* the loop, in place of where one is: LOOP 02-05 */
+        char lo[3], hi[3], range[6];
+        grid_hex2(lo, loop_from()), grid_hex2(hi, loop_to());
+        range[0] = lo[0], range[1] = lo[1], range[2] = '-', range[3] = hi[0], range[4] = hi[1], range[5] = 0;
+        grid_corner("LOOP", C_TITLE, range, C_TITLE);
+    } else if (loop_state() == LOOP_ONE_END)
+        grid_corner("LOOP", C_TITLE, grid_hex2(s, loop_from()), C_TEXT);
     else
         grid_corner("SEC", C_DIM, grid_hex2(s, entry), C_TITLE);
     for (int c = 0; c < CELLS && left + c < song->num_tracks; c++) /* green alone, red muted */
@@ -104,7 +113,11 @@ static void draw(void)
             grid_band(v, PLAT_W - 4 - (steps > GRID_ROWS ? 6 : 0));
         if (r == play_row)
             grid_playing(v, band);
-        grid_num(v, r, band, false, r == play_row ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
+        if (loop_has(r)) /* the loop: a cyan rule at the left edge, as PATTERN's */
+            gfx_fill(0, grid_y(v) + (r == loop_from() ? 3 : 0), 3,
+                     GRID_ROW - (r == loop_from() ? 3 : 0) - (r == loop_to() ? 3 : 0), C_TITLE, 255);
+        grid_num(v, r, band, false,
+                 r == play_row || (loop_has(r) && loop_state() == LOOP_SET) ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
         for (int t = left; t < left + CELLS && t < song->num_tracks; t++)
             draw_cell(v, t, r, band);
     }
@@ -147,6 +160,10 @@ int phrase_frame(const PlatInput *in)
     /* EDIT tapped opens the block (at the release); held, the keys are its
      * commands and write nothing -- MONO, the track under the cursor (ui.h) */
     edit_tap = ui_shift(&shift, in, btns, keys, false, col, &said);
+    /* EDIT held + OP6: an end of the LOOP at the cursor's step; the second
+     * press the other end, a third forgets it (loop.h) */
+    if (shift.held && (keys >> UI_KEY_LOOP & 1u))
+        loop_press(entry, row);
     if (shift.held || shift.mono)
         keys = 0;
 

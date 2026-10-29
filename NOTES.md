@@ -1727,11 +1727,18 @@ KIDS with its WAVE/NOISE drums cpu 48 % max 59 %; KIDS-DRUM cpu 50 % max
 65 %; DPUNK-EN-DRM cpu 40 % max 48 %. DRUM costs about 2 % on average and
 6 points on the worst block: room left.
 
+## 2026-10-29 — LOOP in SECTION
+
+SECTION has no SELECTION (its EDIT opens the block), so its loop is set
+by ends: EDIT held + OP6 at a step sets one end, a second press at
+another step the other, a third forgets it (`loop_press`). The same
+cyan rule and LOOP 02-05 in the corner as PATTERN. PATTERN does the same
+with OP6 when no selection is anchored; with one, OP6 loops it.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
-- LOOP in SECTION (PATTERN has it).
 - DRUM in moondaw (the same `drum_voice.inc`), then its songs on it;
   PATTERN naming a kit's notes by their drum (`drum_note_abbr` is there).
 - `web/installer/` is copied, not adapted, not run.

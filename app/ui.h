@@ -51,7 +51,7 @@ void ui_led_guide_again(void);
  * `lit`: a key's state, lit as PLAY's is (MONO while the track in front
  * plays alone), unless LEDS is OFF. */
 void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half);
-enum { UI_KEY_MONO = 20 }; /* the black keys read OP1-6, PIT, GLO, MONO, POLY */
+enum { UI_KEY_LOOP = 13, UI_KEY_MONO = 20 }; /* the black keys read OP1-6, PIT, GLO, MONO, POLY */
 
 /* EDIT as a shift (29/10), shared by the screens where a track is in front
  * (PATTERN, SONG, SECTION, MIXER): while EDIT is down the black keys are

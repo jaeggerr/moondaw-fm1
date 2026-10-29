@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "../app/app.h"
+#include "../app/loop.h"
 #include "../app/phrase.h"
 #include "../core/player.h"
 #include "../core/trk.h"
@@ -77,6 +78,24 @@ int main(void)
     in.btns = 0;
     go();
     CHECK("EDIT, as SEL, asks for PATTERN", last == PHRASE_PATTERN);
+    phrase_resume();
+    go();
+    /* EDIT held + OP6: the loop's ends, at the cursor's step */
+    enc(PE_K1, -100);
+    in.btns = 1u << PB_EDIT;
+    go();
+    key(13);
+    enc(PE_K1, 2);
+    key(13);
+    in.btns = 0;
+    go();
+    CHECK("EDIT + OP6 twice: a loop from one step to the other", loop_state() == LOOP_SET && loop_from() == 0 && loop_to() == 2);
+    in.btns = 1u << PB_EDIT;
+    go();
+    key(13);
+    in.btns = 0;
+    go();
+    CHECK("and a third time: none", loop_state() == LOOP_NONE);
     phrase_resume();
     go();
     CHECK("GLO asks for the PROJECT", press(PB_GLO) == PHRASE_PROJECT);
