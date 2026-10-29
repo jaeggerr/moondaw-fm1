@@ -537,11 +537,15 @@ void app_frame(const PlatInput *real)
             break;
         }
     }
-    {   /* HELP's topic: where the hand was working */
+    {   /* HELP's topic: where the hand was working -- a screen it did something on,
+         * not one it went back through (HOME from PATTERN crosses SONG) */
         static const int8_t topic[] = { [AT_SONG] = HELP_SONG, [AT_PHRASE] = HELP_SECTION, [AT_PATTERN] = HELP_PATTERN,
                                         [AT_INSTRUMENT] = HELP_INSTRUMENT, [AT_MIXER] = HELP_MIXER,
                                         [AT_PROJECT] = HELP_PROJECT, [AT_SETTINGS] = HELP_SETTINGS };
-        if (screen < (int)sizeof topic && topic[screen])
+        bool worked = (in->btns & ~(1u << PB_HOME)) || in->keys;
+        for (int e = 0; e < PLAT_ENCS; e++)
+            worked |= in->enc[e] != 0;
+        if (worked && screen < (int)sizeof topic && topic[screen])
             help_topic = screen == AT_PATTERN && pattern_in_syllable() ? HELP_SYLLABLE : topic[screen];
     }
     if (screen == AT_MENU || screen == AT_CANVAS || screen == AT_HELP)
