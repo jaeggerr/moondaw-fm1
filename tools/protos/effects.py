@@ -21,18 +21,34 @@ ROW, ON_ACC, CHAR_W, WIDTH = 28, "#0B1409", 9, 222  # CONDENSED 20 is about 9 px
 
 
 def c_table(src, name):
-    """The strings of a C table, adjacent literals joined, NULL as None."""
+    """The strings of a C table, adjacent literals joined, NULL as None: the
+    tokens read one by one, so a comma inside a string is a comma."""
     body = src[src.index(name):]
-    body = body[body.index("{") + 1:body.index("};")]
-    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
-    out = []
-    for entry in re.split(r",\s*(?=\"|NULL)", body.strip().rstrip(",")):
-        entry = entry.strip()
-        if entry.startswith("NULL"):
+    body = body[body.index("{") + 1:]
+    out, cur, i = [], None, 0
+    while True:
+        ch = body[i]
+        if body.startswith("/*", i):
+            i = body.index("*/", i) + 2
+        elif ch == '"':
+            j = i + 1
+            while body[j] != '"':
+                j += 2 if body[j] == "\\" else 1
+            cur = (cur or "") + body[i + 1:j].encode().decode("unicode_escape")
+            i = j + 1
+        elif body.startswith("NULL", i):
+            cur, i = None, i + 4
             out.append(None)
+            cur = "\0skip"
+        elif ch in ",}":
+            if cur != "\0skip" and cur is not None:
+                out.append(cur)
+            cur = None
+            if ch == "}":
+                return out
+            i += 1
         else:
-            out.append("".join(m.encode().decode("unicode_escape") for m in re.findall(r'"((?:[^"\\]|\\.)*)"', entry)))
-    return out
+            i += 1
 
 
 def wrap(text, width_chars):

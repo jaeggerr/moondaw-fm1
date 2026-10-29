@@ -7,7 +7,10 @@
  * smaller type of A read worse on the panel).
  *
  *   SELECT, KNOB 1  the topic, then the page's lines     SEL  open a topic
- *   HOME  back: from a page to the list, from the list to HOME */
+ *   HOME  back: from a page to the list, from the list to HOME
+ * EFFECTS is a list of the effects and their line; SEL opens an effect's
+ * whole page, the other apps' text word for word (app/fx_help.c), KNOB 2
+ * the effect before or after it. */
 #ifndef HELP_H
 #define HELP_H
 

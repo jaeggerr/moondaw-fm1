@@ -1621,6 +1621,13 @@ holds only its screen's gestures (the prototype showed PATTERN's on every
 topic, which he caught). The pages are written from the screens' own
 comments: a gesture changed there is to be changed here.
 
+EFFECTS then became what the other apps have (his ask, prototype
+`tools/protos/effects.py`): a list of the effects with their short line,
+SEL opening an effect's whole page -- moondaw's fx_help text word for
+word, copied by `tools/gen_fx_help.py` into `app/fx_help.c` (12 KB, SMP
+has no page there yet) -- wrapped to the panel in CONDENSED 20 by measured
+width, read a line at a time; KNOB 2 the effect before or after it.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

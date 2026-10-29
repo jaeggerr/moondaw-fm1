@@ -2,6 +2,7 @@
 #include "help.h"
 
 #include "../core/song.h"
+#include "fx_help.h"
 #include "gfx.h"
 #include "grid.h"
 #include "theme.h"
@@ -162,8 +163,102 @@ static const char *const topic_word[HELP_TOPICS] = { "HOME",  "SONG",    "SECTIO
                                                      "MIXER", "PROJECT", "SETTINGS", "GESTURES", "EFFECTS" };
 
 enum { LIST_TOP = 18, LIST_ROWS = 7, PAGE_TOP = 22, ITEM_H = 52, ITEMS = 4 };
+/* EFFECTS: the effects in a list, and an effect's whole page (fx_help.h),
+ * wrapped to the panel in CONDENSED 20 and read a line at a time. */
+enum { FX_TEXT_TOP = 54, FX_LINE = 26, FX_LINES = 7, FX_TEXT_W = PLAT_W - 22 };
 static int page = -1, cur, top, scroll, here;
+static int fx_cur, fx_top, fx_open = -1; /* fx_open: the effect whose page is shown */
 static uint32_t prev_btns;
+
+/* --------------------------------------------------- EFFECTS' pages --- */
+static int text_w(const char *a, const char *b)
+{
+    char s[96];
+    int n = (int)(b - a) < 95 ? (int)(b - a) : 95;
+    for (int i = 0; i < n; i++)
+        s[i] = a[i];
+    s[n] = 0;
+    return gfx_text_w(F_COND20, s);
+}
+
+/* The lines of `t` wrapped to FX_TEXT_W, a blank one between paragraphs:
+ * out(line, length, k) for each. Returns how many. */
+static int wrap(const char *t, void (*out)(const char *, int, int))
+{
+    int k = 0;
+    while (t && *t) {
+        const char *start = t, *end = t;
+        while (*t && *t != '\n') { /* the words that fit, the first one always */
+            const char *w = t;
+            while (*w == ' ')
+                w++;
+            while (*w && *w != ' ' && *w != '\n')
+                w++;
+            if (end > start && text_w(start, w) > FX_TEXT_W)
+                break;
+            end = t = w;
+        }
+        if (out)
+            out(start, (int)(end - start), k);
+        k++;
+        t = end;
+        while (*t == ' ')
+            t++;
+        if (*t == '\n' && *++t) {
+            if (out)
+                out("", 0, k);
+            k++;
+        }
+    }
+    return k;
+}
+
+static void line_out(const char *s, int n, int k)
+{
+    char b[96];
+    int v = k - scroll;
+    if (v < 0 || v >= FX_LINES || n == 0)
+        return;
+    n = n < 95 ? n : 95;
+    for (int i = 0; i < n; i++)
+        b[i] = s[i];
+    b[n] = 0;
+    gfx_text(F_COND20, 8, FX_TEXT_TOP + 20 + v * FX_LINE, b[0] == ' ' ? b + 1 : b, C_TEXT);
+}
+
+static void draw_effects(void)
+{
+    int x = gfx_text(F_COND12, 6, 14, "HELP", C_TITLE);
+    gfx_text(F_COND12, x + 6, 14, "EFFECTS", C_TEXT);
+    if (fx_open < 0) { /* the list: the name, and its line */
+        for (int v = 0; v < LIST_ROWS && fx_top + v < FX_COUNT - 1; v++) {
+            int i = fx_top + v, y = LIST_TOP + v * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent;
+            bool on = i == fx_cur;
+            if (on)
+                gfx_slab(2, y + 1, PLAT_W - 4, GRID_ROW - 2, C_ACCENT, 255);
+            gfx_text(F_COND20, 12, base, fx_name((uint8_t)(i + 1)), on ? C_ON_ACC : C_TEXT);
+            gfx_text(F_COND14, 64, base - 1, fx_desc((uint8_t)(i + 1)), on ? C_ON_ACC : C_DIM);
+        }
+        gfx_text(F_COND12, 6, PLAT_H - 4, "SEL  the whole page", C_DIM);
+        return;
+    }
+    {
+        uint8_t c = (uint8_t)(fx_open + 1);
+        const char *t = fx_help(c);
+        int n = wrap(t, 0);
+        gfx_text(F_COND20, 8, 42, fx_name(c), C_FX);
+        gfx_text(F_COND14, 60, 41, fx_desc(c), C_DIM);
+        gfx_fill(0, 50, PLAT_W, 1, C_TRACK, 255);
+        if (!t)
+            gfx_text(F_COND20, 8, FX_TEXT_TOP + 20, "no page yet", C_DIM);
+        wrap(t, line_out);
+        if (n > FX_LINES) { /* where the page is */
+            int h = FX_LINES * FX_LINE * FX_LINES / n, y = FX_TEXT_TOP + FX_LINES * FX_LINE * scroll / n;
+            gfx_fill(PLAT_W - 4, FX_TEXT_TOP, 2, FX_LINES * FX_LINE, C_TRACK, 255);
+            gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
+        }
+    }
+}
 
 /* A page's length, and its item k: EFFECTS is the effects themselves,
  * their names and moondaw's line for each (core/song.c). */
@@ -202,6 +297,10 @@ static void draw(void)
             gfx_text(F_COND12, 6, PLAT_H - 4, "white: where you came from", C_DIM);
         return;
     }
+    if (page == HELP_EFFECTS) {
+        draw_effects();
+        return;
+    }
     {
         int n = page_len();
         int x = gfx_text(F_COND12, 6, 14, "HELP", C_TITLE);
@@ -233,12 +332,39 @@ bool help_frame(const PlatInput *in)
         if (btns & 1u << PB_SEL) {
             page = cur;
             scroll = 0;
+            fx_open = -1;
             gfx_invalidate();
         }
         if (btns & 1u << PB_HOME) {
             gfx_frame(draw);
             return false;
         }
+    } else if (page == HELP_EFFECTS && fx_open < 0) { /* the list of effects */
+        fx_cur += d;
+        fx_cur = fx_cur < 0 ? 0 : fx_cur >= FX_COUNT - 1 ? FX_COUNT - 2 : fx_cur;
+        grid_follow(&fx_cur, &fx_top, FX_COUNT - 1, LIST_ROWS);
+        if (btns & 1u << PB_SEL) {
+            fx_open = fx_cur;
+            scroll = 0;
+        }
+        if (btns & 1u << PB_HOME) {
+            page = -1;
+            gfx_invalidate();
+        }
+    } else if (page == HELP_EFFECTS) { /* an effect's page: KNOB 2 the one before or after */
+        int n;
+        if (in->enc[PE_K2]) {
+            fx_open += in->enc[PE_K2];
+            fx_open = fx_open < 0 ? 0 : fx_open >= FX_COUNT - 1 ? FX_COUNT - 2 : fx_open;
+            fx_cur = fx_open;
+            grid_follow(&fx_cur, &fx_top, FX_COUNT - 1, LIST_ROWS);
+            scroll = 0;
+        }
+        n = wrap(fx_help((uint8_t)(fx_open + 1)), 0);
+        scroll += d;
+        scroll = scroll < 0 ? 0 : scroll > (n > FX_LINES ? n - FX_LINES : 0) ? (n > FX_LINES ? n - FX_LINES : 0) : scroll;
+        if (btns & 1u << PB_HOME) /* back to the list, on it */
+            fx_open = -1;
     } else {
         int last = page_len() > ITEMS ? page_len() - ITEMS : 0;
         scroll += d;
