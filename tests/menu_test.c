@@ -155,10 +155,10 @@ int main(void)
         CHECK("DELETE asks first, HOME keeps it", songs_in_flash() == n + 1);
         press(PB_SEL);
         press(PB_SEL);        /* yes */
-        CHECK("and SEL deletes it, the song kept in memory", songs_in_flash() == n && app_slot == -1);
+        CHECK("and SEL deletes it, gone from memory too: the first project left opened",
+              songs_in_flash() == n && strcmp(app_name, "SONG 01 2") && app_slot >= 0);
         sel(-10);             /* the panel closed by the delete: the list */
-        sel(1);               /* SONG 01 again: asked over the deleted copy, SEL lets it go */
-        press(PB_SEL);
+        sel(1);               /* SONG 01 again */
         press(PB_SEL);
         CHECK("and SONG 01 opens again", !strcmp(app_name, "SONG 01") && app_slot >= 0);
     }

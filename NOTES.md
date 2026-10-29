@@ -1700,8 +1700,9 @@ EDIT on a project in PROJECTS (his idea; EDIT edits what is under the
 cursor) opens a panel: RENAME (the namer, the project kept in its place),
 DUPLICATE (a copy named KIDS 2, 3..., which becomes the open one -- his
 yes to my addition), DELETE (asked first, SEL delete, HOME keep: a flash
-erase has no UNDO; deleting the open one leaves its song in memory with
-no place, SAVE gives it one). The flash cannot read one file while it
+erase has no UNDO; deleting the open one opens the first project left in
+its place, or an empty one when none is -- first it stayed in memory as an
+unsaved row, which read as a bug to him: deleted is deleted). The flash cannot read one file while it
 writes another (load and save share the sector buffer), so RENAME and
 DUPLICATE go through the song in memory, as SAVE does: the project is
 opened first when it is not the open one, and refused over unsaved

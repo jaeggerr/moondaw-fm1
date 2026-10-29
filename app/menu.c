@@ -19,7 +19,8 @@
  * last. SEL opens, PLAY plays the project under the cursor (opening it if
  * it is not the open one), HOME goes back to the root. EDIT on a project:
  * a panel -- RENAME, DUPLICATE (KIDS 2, then the open one), DELETE (asked
- * first: a flash erase has no UNDO). The version small
+ * first: a flash erase has no UNDO; the open one deleted, the first left
+ * is opened in its place, or an empty project when none is). The version small
  * at the bottom of both. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
@@ -204,9 +205,18 @@ static void opt_named(void)
 static void opt_delete(void)
 {
     int slot = rows[opt_row].slot;
-    if (slot >= 0 && store_delete(slot) == 0 && slot == app_slot) {
-        app_slot = -1; /* the song stays in memory, with no place in flash: SAVE gives it one */
-        app_dirty = true;
+    bool was_open = opt_row == open_row;
+    if (slot >= 0)
+        store_delete(slot);
+    if (was_open) { /* deleted is deleted (his words): another takes its place in memory */
+        int next = -1;
+        refresh();
+        for (int r = 0; r < nrows && next < 0; r++)
+            if (rows[r].slot >= 0)
+                next = rows[r].slot;
+        app_dirty = false;
+        if (next < 0 || app_open_slot(next) != 0)
+            app_new(); /* nothing left: an empty project */
     }
     refresh();
     scroll_to(cur > nrows ? nrows : cur, false);
