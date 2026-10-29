@@ -458,6 +458,8 @@ void app_frame(const PlatInput *real)
     }
     if (screen == AT_MENU || screen == AT_CANVAS)
         ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
+    if (screen != AT_PATTERN)
+        ui_led_keys(0); /* the keys light only for PATTERN's ops */
     remote_leds();
 }
 

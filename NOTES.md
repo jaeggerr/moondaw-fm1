@@ -1448,11 +1448,36 @@ SYLLABLE LFO, and in KEYS OCT (the layer) and ARP (weak); INSTRUMENT
 OCT-/+; MIXER EDIT; PROJECT FX; HOME, the choosers, the namer, the canvas
 none.
 
+## 2026-10-29 — PATTERN: the SELECTION
+
+Two prototypes (`tools/protos/selection.py`): A, KNOB 4 selecting steps
+down from the cursor -- not intuitive, and the cursor not free (his
+words); B, an anchor -- kept. The actions on ARP and LFO were refused:
+labels that say something else are worse than a generic name. His
+design, built:
+
+- EDIT enters the SELECTION and drops the anchor at the cursor; EDIT
+  again leaves. SELECT and KNOB 1 stretch the rectangle; KNOB 1 left of
+  the first column takes whole steps (notes, instrument, effects). The
+  other knobs do nothing meanwhile, the keys write no note.
+- The black keys, printed OP1.. on the FM-1: OP1 copy, OP2 paste at the
+  cursor, OP3 cut, OP4 clear. COPIED n / PASTED n / CUT n / CLEARED n in
+  the corner, SELECT there otherwise.
+- A copy, a cut or a clear lets the anchor go: the cursor is free, the
+  clipboard's outline (amber) follows it to show where OP2 puts it. A
+  new selection: EDIT out and in.
+- The guide lights EDIT, and while selecting the OP keys that do
+  something (OP2 once something was copied) -- the keys' own guide,
+  `ui_led_keys`.
+- The cursor is a white frame while selecting: the hollow cell read as a
+  black hole in the selection (his eye on the screenshot).
+- edit.c's clipboard (moondaw's): notes paste into the slots they came
+  from, effects onto the cursor's slot.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
-- LOOP, the PATTERN selection, cell levels: gone with the old screens,
-  to be redesigned.
+- LOOP, cell levels: gone with the old screens, to be redesigned.
 - The limiter.
 - `web/installer/` is copied, not adapted, not run.

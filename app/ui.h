@@ -37,6 +37,9 @@ void ui_led_guide(uint32_t usable);
 /* The LEDs were written behind the guide's back (the link's LED): the
  * next ui_led_guide writes them all again. */
 void ui_led_guide_again(void);
+/* The same for the keys (bit k = key k), where the keyboard does
+ * something else than notes: PATTERN's OP1-4 while selecting. */
+void ui_led_keys(uint32_t usable);
 
 /* What a button of the map is, this frame. */
 enum {

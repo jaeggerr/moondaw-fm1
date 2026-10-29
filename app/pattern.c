@@ -23,12 +23,14 @@
  *                        block's length)
  *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
+ *   EDIT  the SELECTION, in and out: SELECT and KNOB 1 stretch it from where EDIT
+ *         was pressed (left of the first column: whole steps); the black keys
+ *         OP1 copy, OP2 paste at the cursor, OP3 cut, OP4 clear
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
  *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
  *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
  *   GLO   back where it was opened from     ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
- * FX is a view here, not the MIXER: FX shows the effects of where one is. EDIT
- * does nothing: there is nothing under the cursor the views do not already edit. */
+ * FX is a view here, not the MIXER: FX shows the effects of where one is. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
 static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
 static const int view_cols[VIEWS] = { STEP_MAX_NOTES, STEP_MAX_FX, 1 };
@@ -50,6 +52,14 @@ static int play_row = -1;
 enum { CH_TOP = 24, CH_ROWS = 7, CH_N = SONG_MAX_INSTR + 1, SETTLE = 12, AGAIN = 45 };
 static bool choosing, listening;
 static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
+/* SELECTION (29/10): EDIT in and out; the rectangle from the anchor to the
+ * cursor, KNOB 1 left of the first column taking whole steps; the black
+ * keys OP1-4 copy, paste, cut, clear. A copy lets the anchor go: the cursor
+ * is free again, the clipboard's outline following it to show where OP2
+ * puts it. */
+enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8 }; /* the first four black keys */
+static bool selecting, anchored;
+static int an_row, an_col, clip_cols;
 static int syl_slot;
 static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
 
@@ -134,7 +144,7 @@ static void draw_cell(int v, int r, int c, bool band)
 {
     const Step *st = step_at(r);
     int w = view_w[view], x = GRID_CELL_X + c * w;
-    bool on = band && c == cur_col;
+    bool on = band && c == cur_col && !selecting; /* selecting, the cursor is a frame (draw) */
     char s[4];
 
     if (view == V_NOTES) {
@@ -175,6 +185,69 @@ static void draw_cell(int v, int r, int c, bool band)
         if (named || sounds)
             gfx_text(F_COND20, x + 42 > tx + 10 ? x + 42 : tx + 10, grid_base(v),
                      song->instruments[k % SONG_MAX_INSTR].name, grid_ink(band, on, named ? C_TEXT : C_DIM));
+    }
+}
+
+/* --------------------------------------------------------- selection --- */
+/* The selected steps and columns of the view, inclusive; c0 -1: whole steps. */
+static void sel_rect(int *r0, int *r1, int *c0, int *c1)
+{
+    int ar = anchored ? an_row : cur_row, ac = anchored ? an_col : cur_col;
+    *r0 = ar < cur_row ? ar : cur_row;
+    *r1 = ar < cur_row ? cur_row : ar;
+    *c0 = ac < cur_col ? ac : cur_col;
+    *c1 = ac < cur_col ? cur_col : ac;
+    if (*c0 < 0)
+        *c0 = -1, *c1 = view_cols[view] - 1;
+}
+
+/* The clipboard's fields for columns c0..c1 of the view (edit.h). */
+static int sel_mask(int c0, int c1)
+{
+    int m = 0;
+    if (c0 < 0)
+        return EDIT_CLIP_ALL;
+    for (int c = c0; c <= c1; c++)
+        m |= view == V_NOTES ? EDIT_CLIP_N1 << c : view == V_FX ? EDIT_CLIP_FX1 << c : EDIT_CLIP_INSTR;
+    return m;
+}
+
+static void sel_op(int op)
+{
+    static char word[16];
+    int r0, r1, c0, c1, n, done;
+    sel_rect(&r0, &r1, &c0, &c1);
+    n = r1 - r0 + 1;
+    if (op == OP_PASTE) {
+        if (!edit_clip_len())
+            return;
+        done = edit_clip_paste(song, track, pat, cur_row, view == V_FX && cur_col >= 0 ? cur_col : -1);
+        if (done < 0) {
+            said = "POOL FULL";
+            return;
+        }
+        n = done;
+    } else {
+        if (op == OP_COPY || op == OP_CUT) {
+            edit_clip_copy(song, track, pat, r0, n, sel_mask(c0, c1));
+            clip_cols = c0 < 0 ? -1 : c1 - c0 + 1;
+        }
+        if ((op == OP_CUT || op == OP_CLEAR) && !edit_erase_range(song, track, pat, r0, n, sel_mask(c0, c1))) {
+            said = "POOL FULL";
+            return;
+        }
+        anchored = false;
+    }
+    {
+        const char *w = op == OP_COPY ? "COPIED " : op == OP_PASTE ? "PASTED " : op == OP_CUT ? "CUT " : "CLEARED ";
+        char d[8];
+        int k = 0;
+        for (; *w; w++)
+            word[k++] = *w;
+        for (const char *q = ui_dec(d, n); *q; q++)
+            word[k++] = *q;
+        word[k] = 0;
+        said = word;
     }
 }
 
@@ -339,6 +412,8 @@ static void draw(void)
     s[0] = 'T', s[1] = (char)('1' + track), s[2] = 0;
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (selecting) /* the mode, in place of where one is */
+        grid_corner("SELECT", C_FX, 0, 0);
     else if (cur_col < 0) /* the block's length, while the cursor is on a number */
         grid_corner("LEN", C_DIM, ui_dec(s + 3, len), C_TEXT);
     else
@@ -358,9 +433,28 @@ static void draw(void)
             grid_band(v, PLAT_W - 4 - (len > GRID_ROWS ? 6 : 0));
         if (r == play_row)
             grid_playing(v, band);
+        if (selecting) {
+            int r0, r1, c0, c1;
+            sel_rect(&r0, &r1, &c0, &c1);
+            if (anchored && r >= r0 && r <= r1) /* the selection, under the cells */
+                gfx_fill(c0 < 0 ? 2 : GRID_CELL_X + c0 * w, grid_y(v),
+                         c0 < 0 ? GRID_CELL_X + cols * w - 2 : (c1 - c0 + 1) * w, GRID_ROW, C_SEL, 255);
+        }
         grid_num(v, r, band, band && cur_col < 0, r == play_row ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
         for (int c = 0; c < cols; c++)
             draw_cell(v, r, c, band);
+    }
+    if (selecting && cur_row >= top && cur_row < top + GRID_ROWS) /* the cursor, over the selection */
+        gfx_frame_rect(cur_col < 0 ? 2 : GRID_CELL_X + cur_col * w, grid_y(cur_row - top),
+                       cur_col < 0 ? GRID_CELL_X - 4 : w, GRID_ROW, C_TEXT, 255);
+    if (selecting && !anchored && edit_clip_len()) { /* where OP2 would put the clipboard */
+        int c0 = clip_cols < 0 || cur_col < 0 ? 0 : cur_col, nc = clip_cols < 0 ? cols : clip_cols;
+        int v0 = cur_row - top, v1 = cur_row + edit_clip_len() - 1 - top;
+        v1 = v1 >= GRID_ROWS ? GRID_ROWS - 1 : v1;
+        if (c0 + nc > cols)
+            nc = cols - c0;
+        if (v0 >= 0 && v0 < GRID_ROWS)
+            gfx_frame_rect(GRID_CELL_X + c0 * w, grid_y(v0), nc * w, grid_y(v1) + GRID_ROW - grid_y(v0), C_FX, 255);
     }
     grid_frame(top, len);
 }
@@ -378,7 +472,7 @@ bool pattern_open(Song *s, int e, int t)
     cur_row = top = cur_col = 0;
     view = V_NOTES;
     said = 0;
-    choosing = listening = writing_syl = false;
+    choosing = listening = writing_syl = selecting = false;
     sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* KNOB 3's order: alphabetical, the empty slot first. */
@@ -454,12 +548,29 @@ int pattern_frame(const PlatInput *in)
     }
     if (PRESSED(PB_SEQ) || PRESSED(PB_FX) || PRESSED(PB_ENV)) { /* a button a view */
         view = PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS;
+        selecting = false; /* its columns were the other view's */
         if (cur_col >= 0)
             cur_col = 0;
     }
-    if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0)
+    if (PRESSED(PB_EDIT)) { /* the SELECTION, in and out */
+        selecting = !selecting;
+        anchored = selecting;
+        an_row = cur_row, an_col = cur_col;
+    }
+    if (selecting) {
+        if (keys & 1u << OP_COPY)
+            sel_op(OP_COPY);
+        if (keys & 1u << OP_PASTE)
+            sel_op(OP_PASTE);
+        if (keys & 1u << OP_CUT)
+            sel_op(OP_CUT);
+        if (keys & 1u << OP_CLEAR)
+            sel_op(OP_CLEAR);
+        keys = 0; /* the keyboard is the ops' here: no note is written */
+    }
+    if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0 && !selecting)
         ch_open();
-    if (PRESSED(PB_SEL) && view == V_FX && cur_col >= 0)
+    if (PRESSED(PB_SEL) && view == V_FX && cur_col >= 0 && !selecting)
         syl_open();
     cur_row += in->enc[PE_SELECT];
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
@@ -470,7 +581,7 @@ int pattern_frame(const PlatInput *in)
     if (btns & (1u << PB_OCTUP) && kbd_oct < 3)
         kbd_oct++;
 
-    if ((d = in->enc[PE_K2]) != 0) {
+    if ((d = in->enc[PE_K2]) != 0 && !selecting) { /* selecting, the knobs only move */
         if (cur_col < 0)
             turn_len(d);
         else if (view == V_NOTES && !edit_turn_note(song, track, pat, cur_row, cur_col, d))
@@ -480,7 +591,7 @@ int pattern_frame(const PlatInput *in)
         else if (view == V_INS)
             turn_instr(cur_row, d);
     }
-    if ((d = in->enc[PE_K3]) != 0 && view == V_FX && cur_col >= 0)
+    if ((d = in->enc[PE_K3]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
         turn_fx_cmd(cur_row, cur_col, d);
 
     /* The keys write notes: the first one in the slot under the cursor,
@@ -526,7 +637,12 @@ int pattern_frame(const PlatInput *in)
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
     plat_led_btn(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
-    ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV | 1u << PB_OCTDN | 1u << PB_OCTUP);
+    ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
+                 1u << PB_EDIT | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
+    /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
+    ui_led_keys(!selecting ? 0u
+                           : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
+                                 (edit_clip_len() ? 1u << OP_PASTE : 0u));
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_GLO)) {
         player_note_off();

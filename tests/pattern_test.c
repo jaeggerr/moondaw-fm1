@@ -159,6 +159,39 @@ int main(void)
     CHECK("and -- names none again", st(2)->instrument == INSTR_NONE);
     press(PB_SEQ);
 
+    /* SELECTION: EDIT in, SELECT stretches, the black keys OP1-4 */
+    press(PB_SEQ);            /* NOTES, the cursor on row 2 */
+    enc(PE_K1, -10);
+    enc(PE_K1, 1);            /* the first note */
+    enc(PE_SELECT, -2);
+    {
+        uint8_t n0 = st(0)->notes[0], n1 = st(1)->notes[0];
+        press(PB_EDIT);
+        enc(PE_SELECT, 1);
+        keys(1u << 1);        /* OP1: copy rows 0-1, note 1 */
+        keys(0);
+        enc(PE_SELECT, 4);    /* the cursor is free: row 5 */
+        keys(1u << 3);        /* OP2: paste */
+        keys(0);
+        CHECK("OP1 copies, OP2 pastes at the cursor", st(5)->notes[0] == n0 && st(6)->notes[0] == n1);
+        press(PB_EDIT);
+        press(PB_EDIT);       /* a new anchor at row 5 */
+        enc(PE_SELECT, 1);
+        keys(1u << 8);        /* OP4: clear */
+        keys(0);
+        CHECK("OP4 clears the selection", st(5)->notes[0] == NOTE_NONE && st(6)->notes[0] == NOTE_NONE);
+        CHECK("and no key wrote a note meanwhile", st(0)->notes[0] == n0);
+        press(PB_EDIT);
+        press(PB_EDIT);
+        enc(PE_K1, -1);       /* whole steps */
+        keys(1u << 5);        /* OP3: cut row 6 */
+        keys(0);
+        CHECK("OP3 cuts whole steps", step_is_empty(st(6)));
+        press(PB_EDIT);
+        CHECK("EDIT again: out, the keys write notes", (keys(1u << 1), keys(0), st(6)->notes[0] != NOTE_NONE));
+        enc(PE_SELECT, -6);
+    }
+
     /* the step's number */
     enc(PE_K1, -1);
     enc(PE_K2, -4);

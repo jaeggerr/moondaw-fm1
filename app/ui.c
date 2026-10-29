@@ -85,7 +85,20 @@ void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t he
 bool ui_guide = true, ui_guide_lit = true;
 static uint32_t shown = ~0u; /* what the guide last wrote */
 
-void ui_led_guide_again(void) { shown = ~0u; }
+static uint32_t keys_shown = ~0u;
+
+void ui_led_guide_again(void) { shown = keys_shown = ~0u; }
+
+void ui_led_keys(uint32_t usable)
+{
+    if (!ui_guide)
+        usable = 0;
+    if (usable == keys_shown)
+        return;
+    for (int k = 0; k < PLAT_KEYS; k++)
+        plat_led_level(PLAT_BTNS + k, (usable >> k) & 1u ? PLAT_LED_50 : PLAT_LED_OFF);
+    keys_shown = usable;
+}
 
 void ui_led_guide(uint32_t usable)
 {
