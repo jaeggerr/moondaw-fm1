@@ -34,6 +34,11 @@ static const char *sound(char c)
 }
 
 static char slots[MAX], text[MAX + 1], last;
+/* ALGO, as on every screen: the syllable after each change, HIST of them;
+ * hist[now] is what shows, hist[now + 1 .. top] what ALGO can do again. */
+enum { HIST = 32 };
+static char hist[HIST][MAX];
+static int now, top;
 static int mode, layer, at, instr, track, row, singing;
 static uint8_t note;
 
@@ -64,9 +69,26 @@ static void sing(void)
     singing = SING;
 }
 
+static void keep(void)
+{
+    if (now == HIST - 1) { /* full: the oldest goes */
+        for (int i = 1; i < HIST; i++)
+            for (int k = 0; k < MAX; k++)
+                hist[i - 1][k] = hist[i][k];
+        now--;
+    }
+    now++;
+    for (int k = 0; k < MAX; k++)
+        hist[now][k] = slots[k];
+    top = now;
+}
+
 void syllable_open(const char *t, int in, uint8_t n, int tr, int r)
 {
     set(t);
+    for (int k = 0; k < MAX; k++)
+        hist[0][k] = slots[k];
+    now = top = 0;
     instr = in, note = n, track = tr, row = r;
     last = 0;
     at = 0;
@@ -159,6 +181,16 @@ int syllable_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
         }
         if (PRESSED(PB_LFO) && slots[at] != '-')
             slots[at] = '-', changed = true;
+    }
+    if (changed)
+        keep();
+    if ((d = in->enc[PE_ALGO]) != 0) { /* UNDO left, REDO right */
+        int to = now + d;
+        to = to < 0 ? 0 : to > top ? top : to;
+        changed = to != now;
+        now = to;
+        for (int k = 0; k < MAX; k++)
+            slots[k] = hist[now][k];
     }
     if (changed || PRESSED(PB_PLAY))
         sing();

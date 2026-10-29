@@ -10,6 +10,8 @@
  *   WHEEL  five slots: KNOB 1 the slot, KNOB 2 turns its sign through the
  *          alphabet's order (letters, digits, + .), its sound written below;
  *          LFO empties the slot
+ * In both, ALGO takes the last change back (left) or does it again
+ * (right), as it does the song's on every screen.
  *
  * Each change is sung on the step's note by its instrument, PLAY sings it
  * again; SEL keeps it, GLO goes back without it. The alphabet is the

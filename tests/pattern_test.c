@@ -107,6 +107,11 @@ int main(void)
     keys(0);
     keys(1u << 1);
     keys(0);
+    keys(1u << 4);            /* T, then ALGO takes it back */
+    keys(0);
+    enc(PE_ALGO, -1);
+    enc(PE_ALGO, -1);
+    enc(PE_ALGO, 1);
     press(PB_SEL);
     CHECK("the keys type the syllable, SEL writes it in the empty slot",
           st(0)->fx[2].cmd == FX_SYL && !strcmp(song_syl(&song, st(0)->fx[2].val), "MA") && st(0)->notes[0] == 79);
