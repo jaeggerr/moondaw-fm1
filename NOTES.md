@@ -1645,11 +1645,17 @@ How many bars are counted in is a SETTING (his ask): COUNT-IN OFF, 1 BAR
 (the default), 2 BARS -- the first beat of each bar the higher click; OFF
 records at once. The fourth byte of `.LAST` (three: from before it).
 
+## 2026-10-29 — a cell's level in SONG
+
+KNOB 4 on a SONG cell turns its level in the phrase (the file's `vol`,
+0..127, 4 a notch): the corner says VOL n while it turns; a cell below
+full carries a thin amber bar at its foot, its length the level, so the
+grid stays clean while all is full. KNOB 4 changes, as the rule says.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
-- Cell levels: gone with the old screens, to be redesigned. LOOP in
-  SECTION (PATTERN has it).
+- LOOP in SECTION (PATTERN has it).
 - The limiter.
 - `web/installer/` is copied, not adapted, not run.

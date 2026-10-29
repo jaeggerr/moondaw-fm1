@@ -53,6 +53,10 @@ int main(void)
     go();
 
     /* the cursor starts on phrase 00, track 1 */
+    enc(PE_K4, -4);
+    CHECK("KNOB 4 on a cell lowers its level, 4 a notch", E(0).level[0] == VOL_FULL - 16);
+    enc(PE_K4, 100);
+    CHECK("and stops at full", E(0).level[0] == VOL_FULL);
     enc(PE_K1, 1);
     CHECK("KNOB 1 moves to the next phrase, as SELECT does", songview_entry() == 1 && E(0).pattern[0] == 0);
     enc(PE_K1, -1);

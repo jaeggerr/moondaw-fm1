@@ -13,6 +13,7 @@
  * tracks a screen.
  *
  *   SELECT, KNOB 1  the phrase (SELECT onto its number)   KNOB 2  the track; left of the first, the phrase's number
+ *   KNOB 4  on a cell its level in the phrase (a bar at its foot when below full)
  *   KNOB 3  on a cell its block, -- below 00 and one new block past the last;
  *           on the number the phrase's length (AUTO, then steps)
  *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY listens:
@@ -32,6 +33,7 @@ enum { POP_TOP = 24, POP_ROWS = 7 };
 static int row, col, top, left; /* col -1: the phrase's number */
 static bool ask_delete;
 static const char *said;        /* SAVED, NOT SAVED: until the hand does something else */
+static bool level_said;         /* KNOB 4 turned: the corner says the cell's level */
 static uint32_t prev_btns, prev_keys;
 static UiShift shift; /* EDIT held + MONO: the track under the cursor alone, or muted */
 static bool playing;
@@ -86,6 +88,19 @@ static void turn_block(int d)
     v += d;
     v = v < -1 ? -1 : v > hi ? hi : v;
     set_block(row, col, v < 0 ? PATTERN_NONE : (uint8_t)v);
+}
+
+/* KNOB 4 on a cell: its level in the phrase, 0..127 (the file's `vol`), 4 a
+ * notch -- the drums softer in the intro, the bass up in the chorus,
+ * without touching the block or the mixer (29/10). */
+static void turn_level(int d)
+{
+    SongEntry *e = entry_at(row);
+    int v = e->level[col] + 4 * d;
+    undo_bytes(&e->level[col], 1);
+    e->level[col] = (uint8_t)(v < 0 ? 0 : v > VOL_FULL ? VOL_FULL : v);
+    app_mark_dirty();
+    level_said = true;
 }
 
 /* KNOB 3 on a phrase's number: how long it lasts. AUTO is one full cycle
@@ -270,6 +285,8 @@ static void draw(void)
     grid_clear();
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (level_said && col >= 0 && !is_ref(row)) /* KNOB 4: the cell's level */
+        grid_corner("VOL", C_DIM, ui_dec(s, entry_at(row)->level[col]), C_TEXT);
     else if (col < 0 && !is_ref(row)) /* the phrase's length, while the cursor is on it */
         grid_corner(entry_at(row)->steps ? ui_dec(s, entry_at(row)->steps) : "AUTO", C_TEXT, 0, 0);
     for (int c = 0; c < CELLS && left + c < tracks; c++) /* green alone, red muted */
@@ -297,6 +314,9 @@ static void draw(void)
             grid_cell(v, GRID_CELL_X + (t - left) * CELL_W, CELL_W,
                       p < TRACK_MAX_PATTERNS ? grid_hex2(s, p) : p == PATTERN_HOLD ? "ON" : "--",
                       band, on, ink);
+            if (p != PATTERN_NONE && e->level[t] < VOL_FULL) /* softer: a bar its length at the cell's foot */
+                gfx_fill(GRID_CELL_X + (t - left) * CELL_W + 4, grid_y(v) + GRID_ROW - 5,
+                         (CELL_W - 8) * e->level[t] / VOL_FULL + 1, 2, on ? C_TEXT : band ? C_ON_ACC : C_FX, 255);
         }
     }
     grid_frame(top, n);
@@ -394,6 +414,10 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     col += in->enc[PE_K2];
     col = col < -1 ? -1 : col >= song->num_tracks ? song->num_tracks - 1 : col;
 
+    if (in->enc[PE_K4] && !is_ref(row) && col >= 0 && entry_at(row)->pattern[col] != PATTERN_NONE)
+        turn_level(in->enc[PE_K4]);
+    else if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
+        level_said = false;
     if (in->enc[PE_K3] && !is_ref(row)) {
         if (col < 0)
             turn_steps(in->enc[PE_K3]);

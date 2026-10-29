@@ -28,6 +28,7 @@ static const Item song_items[] = {
     { "KNOB 2", "track" },
     { "KNOB 3 on a cell", "its pattern" },
     { "KNOB 3 on a number", "the phrase's length" },
+    { "KNOB 4 on a cell", "its level in the phrase" },
     { "SEL on a cell", "choose a pattern" },
     { "  in it: PLAY", "listen as you move" },
     { "SEL on a number", "the section" },
