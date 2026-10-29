@@ -13,5 +13,8 @@ void remote_init(void); /* answers link.h's control commands from now on */
 /* Once a frame, before any screen: what the computer pressed, held and
  * turned is added to what the hands did. */
 void remote_input(PlatInput *in);
+/* Once a frame, after the screen: the LEDs the computer holds, over what
+ * the screen lit. */
+void remote_leds(void);
 
 #endif

@@ -1417,6 +1417,18 @@ EDIT where there is something to edit, SEQ and LFO on the number, FX,
 GLO, HOME, PLAY, SAVE; in CHOOSE PATTERN SEL GLO HOME PLAY. The other
 screens put the glow out.
 
+The glow did not read on the white LEDs (his words: the labels drown, it
+mixes with the keyboard's cyan): the guide lights the usable buttons fully
+for now (`ui_guide_lit`), PLAY left out of it -- lit is its state.
+
+## 2026-10-29 — LED on the link
+
+`fm1_ctl.py led FX lit C-4 breath`: the computer lights any button or key
+at any of the panel's levels -- off, glow, mid, lit, breath
+(`plat_led_level`) -- held over what the app lights until `led all app`
+gives it back (link version 4, LED). To show him a button, or to weigh
+levels, without building a firmware (his idea).
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

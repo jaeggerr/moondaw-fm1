@@ -77,6 +77,7 @@ void plat_led_btn(int btn, int on)
 }
 
 void plat_led_glow(int btn, int on) { (void)btn, (void)on; } /* not drawn here */
+void plat_led_level(int led, int level) { (void)led, (void)level; }
 
 /* The flash: a file beside the program, read at start and rewritten on
  * every change. MOONDAW_FLASH names another; the selftest keeps it in

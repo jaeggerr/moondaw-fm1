@@ -458,6 +458,7 @@ void app_frame(const PlatInput *real)
     }
     if (screen != AT_SONG)
         ui_led_guide(0); /* only SONG says what can be pressed, so far */
+    remote_leds();
 }
 
 void app_audio(int16_t *out, int frames)

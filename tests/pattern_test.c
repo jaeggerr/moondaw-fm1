@@ -13,6 +13,7 @@ void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)
 void plat_led_key(int k, int on) { (void)k; (void)on; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
+void plat_led_level(int l, int v) { (void)l; (void)v; }
 int plat_audio_load(int *worst) { *worst = -1; return -1; }
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { (void)o; (void)d; (void)n; return -1; }
 int plat_flash_erase(uint32_t s) { (void)s; return -1; }

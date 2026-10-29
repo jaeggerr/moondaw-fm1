@@ -82,16 +82,26 @@ void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t he
     }
 }
 
-bool ui_guide = true;
+bool ui_guide = true, ui_guide_lit = true;
+static uint32_t shown = ~0u; /* what the guide last wrote */
+
+void ui_led_guide_again(void) { shown = ~0u; }
 
 void ui_led_guide(uint32_t usable)
 {
-    static uint32_t shown = ~0u;
     if (!ui_guide)
         usable = 0;
+    if (ui_guide_lit) /* PLAY stays the screen's: lit is its state, playing */
+        usable &= ~(1u << PB_PLAY);
     if (usable == shown)
         return;
-    for (int b = 0; b < PLAT_BTNS; b++)
-        plat_led_glow(b, (usable >> b) & 1u);
+    for (int b = 0; b < PLAT_BTNS; b++) {
+        if (b == PB_PLAY && ui_guide_lit)
+            continue;
+        if (ui_guide_lit)
+            plat_led_btn(b, (usable >> b) & 1u);
+        else
+            plat_led_glow(b, (usable >> b) & 1u);
+    }
     shown = usable;
 }

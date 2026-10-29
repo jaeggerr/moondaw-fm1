@@ -15,6 +15,7 @@ void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)
 void plat_led_key(int k, int on) { (void)k; (void)on; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
+void plat_led_level(int l, int v) { (void)l; (void)v; }
 
 /* the app's side, as far as this screen needs it */
 Song app_song;

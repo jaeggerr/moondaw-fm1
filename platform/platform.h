@@ -57,6 +57,11 @@ void plat_led_btn(int btn, int on); /* PB_* */
 /* The faint glow (~1/30 of lit) under a button's LED: what can be pressed here
  * (app/ui.h ui_led_guide). A lit LED shows lit over it. */
 void plat_led_glow(int btn, int on);
+/* Any LED at any of the panel's levels (hal/fm1_input.h): `led` a PB_*
+ * button, or PLAT_BTNS + a key (0..PLAT_KEYS-1). The link's LED command
+ * (app/remote.c): a computer showing a button. */
+enum { PLAT_LED_OFF, PLAT_LED_GLOW, PLAT_LED_MID, PLAT_LED_LIT, PLAT_LED_BREATH, PLAT_LED_LEVELS };
+void plat_led_level(int led, int level);
 
 /* Where songs are kept: 73 sectors of 4 KB, the 292 KB of the FM-1's
  * flash that Felucca uses for its own store (0x97000..0xE0000). Offsets

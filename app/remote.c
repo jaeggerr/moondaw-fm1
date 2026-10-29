@@ -226,6 +226,39 @@ static int screen(const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail, 
     return LINK_OK;
 }
 
+/* The LEDs the computer holds (LED): a level each, NONE where the app lights it. */
+enum { LEDS = PLAT_BTNS + PLAT_KEYS, NONE = 0xFF };
+static uint8_t held[LEDS];
+static bool holding;
+
+void remote_leds(void)
+{
+    if (holding)
+        for (int i = 0; i < LEDS; i++)
+            if (held[i] != NONE)
+                plat_led_level(i, held[i]);
+}
+
+static int set_leds(const uint8_t *p, uint32_t n)
+{
+    if (n == 0 || n % 2)
+        return LINK_BADMSG;
+    for (uint32_t k = 0; k < n; k += 2)
+        if ((p[k] >= LEDS && p[k] != 0xFF) || (p[k + 1] >= PLAT_LED_LEVELS && p[k + 1] != NONE))
+            return LINK_BADMSG;
+    for (uint32_t k = 0; k < n; k += 2)
+        for (int i = p[k] == 0xFF ? 0 : p[k]; i < (p[k] == 0xFF ? LEDS : p[k] + 1); i++) {
+            if (p[k + 1] == NONE && held[i] != NONE)
+                plat_led_level(i, PLAT_LED_OFF); /* given back: the app lights it again */
+            held[i] = p[k + 1];
+        }
+    holding = false;
+    for (int i = 0; i < LEDS; i++)
+        holding |= held[i] != NONE;
+    ui_led_guide_again();
+    return LINK_OK;
+}
+
 /* ------------------------------------------------------------- the hook --- */
 static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8_t *tail, uint32_t *tail_n)
 {
@@ -293,6 +326,8 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
         *tail_n = CANVAS_EVENTS;
         *extra = same(app_screen(), "CANVAS"); /* still in front, or the hand left it */
         return LINK_OK;
+    case LINK_CMD_LED:
+        return set_leds(p, n);
     case LINK_CMD_SCREEN:
         return screen(p, n, extra, tail, tail_n);
     default:
@@ -300,4 +335,9 @@ static int control(int cmd, const uint8_t *p, uint32_t n, uint32_t *extra, uint8
     }
 }
 
-void remote_init(void) { link_control = control; }
+void remote_init(void)
+{
+    for (int i = 0; i < LEDS; i++)
+        held[i] = NONE;
+    link_control = control;
+}

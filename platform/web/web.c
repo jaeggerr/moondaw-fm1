@@ -121,6 +121,7 @@ void plat_led_btn(int btn, int on)
 }
 
 void plat_led_glow(int btn, int on) { (void)btn, (void)on; } /* not drawn here */
+void plat_led_level(int led, int level) { (void)led, (void)level; }
 
 static void run_frame(void)
 {

@@ -47,6 +47,10 @@
  *              run-length coded -- runs of count u8 (1..255), colour
  *              RGB565 u16 -- and of that, LINK_READ_MAX bytes from
  *              `offset` (tail); extra: the coded band's whole length
+ *   14 LED     pairs of led, level: the computer shows a button or a key
+ *              (led: a button 0..13 in PB_* order, 14 + a key; FF: all of
+ *              them), at a level 0 dark, 1 glow, 2 mid, 3 lit, 4 breath,
+ *              held over what the app lights until FF gives it back
  *
  * What arrives is written straight to a slot of the store, a piece at a
  * time: it is never whole in memory and never parsed here. The host
@@ -67,7 +71,7 @@ enum { LINK_CMD_BEGIN = 1, LINK_CMD_DATA, LINK_CMD_END, LINK_CMD_CANCEL, LINK_CM
        LINK_CMD_INFO, LINK_CMD_READ,
        LINK_CMD_STATUS, LINK_CMD_INPUT, LINK_CMD_OPEN, LINK_CMD_NEW, LINK_CMD_STEP, LINK_CMD_CELL,
        LINK_CMD_LENGTH, LINK_CMD_SAVE, LINK_CMD_PLAY, LINK_CMD_CANVAS, LINK_CMD_EVENTS,
-       LINK_CMD_SCREEN,
+       LINK_CMD_SCREEN, LINK_CMD_LED,
        LINK_CMD_ANSWER = 0x7F };
 enum {
     LINK_OK,
@@ -81,7 +85,7 @@ enum {
     LINK_BADMSG,
     LINK_NONE,   /* nothing in that slot */
 };
-#define LINK_VERSION  3 /* 3: SCREEN */
+#define LINK_VERSION  4 /* 3: SCREEN, 4: LED */
 #define LINK_DATA_MAX 240 /* bytes of song in one DATA */
 #define LINK_READ_MAX 120 /* in one READ: an answer never has to wait for the USB queue to drain */
 

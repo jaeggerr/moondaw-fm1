@@ -18,6 +18,8 @@ its buttons, turn its knobs, play its keys, and write into the song in memory.
     tools/fm1_ctl.py length T BLOCK STEPS
     tools/fm1_ctl.py save
     tools/fm1_ctl.py screen [-o FILE.png]      what the panel shows, as a picture (default build/screen.png)
+    tools/fm1_ctl.py led FX lit [C-4 breath ...]  show a button or a key: off glow mid lit breath,
+                                               or app to give it back; `all` names every LED
     tools/fm1_ctl.py canvas clear [COLOUR]     a screen of the computer's own, GLO leaves it
     tools/fm1_ctl.py canvas fill X Y W H COLOUR
     tools/fm1_ctl.py canvas text X Y 'WORDS' [--font 20|14|12|mono] [--colour COLOUR]
@@ -40,7 +42,7 @@ in the flash until `save`. `open` and `new` refuse to drop unsaved
 changes unless --force is given.
 
 --udp drives a simulator on this computer (build/sim/moondaw-fm1). The
-protocol is in app/link.h (version 3). MIDI needs python-rtmidi.
+protocol is in app/link.h (version 4). MIDI needs python-rtmidi.
 """
 import argparse
 import re
@@ -51,7 +53,8 @@ import fm1_send as link
 from fm1_proto import FONTS
 
 STATUS, INPUT, OPEN, NEW, STEP, CELL, LENGTH, SAVE, PLAY, CANVAS = range(8, 18)
-SCREEN = 0x13
+SCREEN, LED = 0x13, 0x14
+LEVELS = {"off": 0, "glow": 1, "mid": 2, "lit": 3, "breath": 4, "app": 0xFF}
 BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC",
            "OCT-", "OCT+"]
 KNOBS = ["SELECT", "ALGO", "PRESETS", "K1", "K2", "K3", "K4"]
@@ -181,6 +184,7 @@ def main():
     p = sub.add_parser("length"); p.add_argument("track"); p.add_argument("block"); p.add_argument("steps", type=int)
     sub.add_parser("save")
     p = sub.add_parser("screen"); p.add_argument("-o", "--out", default="build/screen.png")
+    p = sub.add_parser("led"); p.add_argument("pairs", nargs="+", metavar="LED LEVEL")
     p = sub.add_parser("canvas"); p.add_argument("op", choices=["clear", "fill", "text", "line", "image", "events"])
     p.add_argument("args", nargs="*"); p.add_argument("--font", default="20", choices=list(FONTS))
     p.add_argument("--colour", "--color", default="white")
@@ -239,6 +243,24 @@ def main():
         print(f"saved in slot {checked(link.ask(port, SAVE))[2]}")
     elif a.cmd == "screen":
         print(screen(port, a.out))
+    elif a.cmd == "led":
+        if len(a.pairs) % 2:
+            sys.exit("led: pairs of LED LEVEL, e.g. led FX lit C-4 breath")
+        raw = b""
+        for name, level in zip(a.pairs[::2], a.pairs[1::2]):
+            if level.lower() not in LEVELS:
+                sys.exit(f"no level {level}; there are {' '.join(LEVELS)}")
+            if name.lower() == "all":
+                led = 0xFF
+            elif name.upper() in BUTTONS:
+                led = BUTTONS.index(name.upper())
+            else:
+                k = note(name) - KEY0
+                if not 0 <= k < 27:
+                    sys.exit(f"no LED {name}: a button ({' '.join(BUTTONS)}), a key F-3 .. G-5, or all")
+                led = len(BUTTONS) + k
+            raw += bytes([led, LEVELS[level.lower()]])
+        checked(link.ask(port, LED, raw), "install a MOONDAW with LED (link version 4)")
     elif a.cmd == "canvas":
         from fm1_proto import Canvas
         need = {"clear": (0, 1), "fill": (5, 5), "text": (3, 3), "line": (5, 5), "image": (1, 1),

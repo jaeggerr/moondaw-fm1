@@ -34,6 +34,9 @@ sleep 0.1
 $CTL status | grep -q 'screen=SONG' || fail "SEL opened SONG"
 $CTL turn K2 1 || fail "turn"
 $CTL screen -o build/remote_screen.png > /dev/null || fail "screen"
+$CTL led FX lit C-4 breath all glow || fail "led"
+$CTL led all app || fail "led given back"
+$CTL led FX dazzling 2> /dev/null && fail "a level that is not one"
 python3 -c "
 from PIL import Image
 im = Image.open('build/remote_screen.png')

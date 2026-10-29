@@ -26,7 +26,13 @@ int ui_loop_slot(int x, int y);
  * `usable` is a PB_* mask; the screens that have none yet give 0. On
  * until a SETTINGS screen can turn it off. */
 extern bool ui_guide;
+/* Lit rather than glowing (29/10, a trial): the glow did not read on the
+ * white LEDs. PLAY is then left out: lit is its state. */
+extern bool ui_guide_lit;
 void ui_led_guide(uint32_t usable);
+/* The LEDs were written behind the guide's back (the link's LED): the
+ * next ui_led_guide writes them all again. */
+void ui_led_guide_again(void);
 
 /* What a button of the map is, this frame. */
 enum {

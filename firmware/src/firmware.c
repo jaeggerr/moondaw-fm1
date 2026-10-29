@@ -165,17 +165,31 @@ int plat_audio_load(int *worst)
 void plat_led_key(int key, int on) { fm1_led_key(14u + (uint32_t)key, on); }
 void plat_led_btn(int btn, int on) { fm1_led_key(panel.btn[btn], on); }
 
-/* fm1_led_key's glow: the same LED, in fm1_led_dim (hal/fm1_input.h). */
-void plat_led_glow(int btn, int on)
+/* An LED's bit in one of hal/fm1_input.h's sets, by its stock id. */
+static void led_bit(uint8_t *set, uint32_t id, int on)
 {
     for (uint32_t p = 0; p < FM1_NCOL; p++)
         for (uint32_t r = 1; r < 5u; r++)
-            if (FM1_KEYMAP[r][p] == (int8_t)panel.btn[btn]) {
+            if (FM1_KEYMAP[r][p] == (int8_t)id) {
                 if (on)
-                    fm1_led_dim[p] |= (uint8_t)(1u << r);
+                    set[p] |= (uint8_t)(1u << r);
                 else
-                    fm1_led_dim[p] &= (uint8_t)~(1u << r);
+                    set[p] &= (uint8_t)~(1u << r);
             }
+}
+
+/* fm1_led_key's glow: the same LED, in fm1_led_dim. */
+void plat_led_glow(int btn, int on) { led_bit(fm1_led_dim, panel.btn[btn], on); }
+
+void plat_led_level(int led, int level)
+{
+    uint32_t id = led < PLAT_BTNS ? panel.btn[led] : 14u + (uint32_t)(led - PLAT_BTNS);
+    if (led < 0 || led >= PLAT_BTNS + PLAT_KEYS)
+        return;
+    led_bit(fm1_led, id, level == PLAT_LED_LIT);
+    led_bit(fm1_led_dim, id, level == PLAT_LED_GLOW || level == PLAT_LED_MID); /* mid rides on the glow */
+    led_bit(fm1_led_mid, id, level == PLAT_LED_MID);
+    led_bit(fm1_led_breath, id, level == PLAT_LED_BREATH);
 }
 
 static int32_t master_knob = 512 * 16;   /* the pot x16, smoothed per frame (Felucca's master.c) */
