@@ -22,9 +22,13 @@
  *
  *   SELECT, KNOB 1  the step   KNOB 2  the column; left of the first, the step's number (KNOB 3 the
  *                        block's length)
- *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
+ *   the keys  write the note under the cursor in NOTES (a chord while one is held), OCT-/OCT+
+ *             their octave; on the step's number, in FX and INS they only play
+ *   SELECT also brings the cursor to the step's number: the step as a whole
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
- *   EDIT  the SELECTION, in and out: SELECT and KNOB 2 stretch it from where EDIT
+ *   EDIT  tapped, the SELECTION, in and out; held, a shift: the black keys
+ *         are commands while it is down (EDIT + MONO: the track alone, again:
+ *         among the others). The SELECTION: SELECT and KNOB 2 stretch it from where EDIT
  *         was pressed (left of the first column: whole steps); the black keys
  *         OP1 copy, OP2 paste at the cursor, OP3 cut, OP4 clear
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
@@ -42,6 +46,7 @@ static Song *song;
 static int entry, track, pat;
 static int view, cur_row, cur_col, top; /* cur_col -1: the step's number */
 static int kbd_oct;                     /* octaves the keyboard is moved by */
+static bool trying;                     /* a key plays without writing (the cursor in no note column) */
 static int chord_next;                  /* the note slot the next held key fills, 0 = none held */
 static const char *said;
 static uint32_t prev_btns, prev_keys;
@@ -63,8 +68,9 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
  * puts it. */
 /* The black keys by their groups under the hand: the clipboard in the first
  * three, clearing in the two after (OP5 free), listening in the next three. */
-enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13 };
+enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = 20 };
 static bool selecting, anchored;
+static bool edit_held, edit_used; /* EDIT down; a key used as a command while it is */
 static int an_row, an_col, clip_cols;
 static int syl_slot;
 static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
@@ -437,8 +443,8 @@ static void draw(void)
     }
     else if (cur_col < 0) /* the block's length, while the cursor is on a number */
         grid_corner("LEN", C_DIM, ui_dec(s + 3, len), C_TEXT);
-    else
-        grid_corner(s, C_TITLE, view_name[view], C_TEXT);
+    else /* the track, green while it plays alone (MONO) */
+        grid_corner(s, player_soloed(track) ? C_ACCENT : C_TITLE, view_name[view], C_TEXT);
     for (int c = 0; c < cols; c++) {
         char h[6] = { 0 };
         if (view == V_NOTES)
@@ -497,7 +503,7 @@ bool pattern_open(Song *s, int e, int t)
     cur_row = top = cur_col = 0;
     view = V_NOTES;
     said = 0;
-    choosing = listening = writing_syl = selecting = false;
+    choosing = listening = writing_syl = selecting = edit_held = trying = false;
     sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* KNOB 4's order: alphabetical, the empty slot first. */
@@ -577,12 +583,26 @@ int pattern_frame(const PlatInput *in)
         if (cur_col >= 0)
             cur_col = 0;
     }
-    if (PRESSED(PB_EDIT)) { /* the SELECTION, in and out */
-        selecting = !selecting;
-        anchored = selecting;
-        an_row = cur_row, an_col = cur_col;
+    /* EDIT: a tap takes the SELECTION in or out (at the release); held, it
+     * is a shift -- the keys are commands while it is down, the SELECTION
+     * left as it was: EDIT + MONO, the track alone, in one gesture. */
+    if (PRESSED(PB_EDIT))
+        edit_held = true, edit_used = false;
+    if (edit_held && !(in->btns & 1u << PB_EDIT)) {
+        edit_held = false;
+        if (!edit_used) {
+            selecting = !selecting;
+            anchored = selecting;
+            an_row = cur_row, an_col = cur_col;
+        }
     }
-    if (selecting) {
+    if (edit_held && keys)
+        edit_used = true;
+    if (selecting || edit_held) {
+        if (keys & 1u << OP_MONO) { /* the track alone, or back among the others */
+            player_toggle_solo(track);
+            said = player_soloed(track) ? "SOLO" : "NO SOLO";
+        }
         if (keys & 1u << OP_COPY)
             sel_op(OP_COPY);
         if (keys & 1u << OP_PASTE)
@@ -601,6 +621,8 @@ int pattern_frame(const PlatInput *in)
         syl_open();
     cur_row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
+    if (in->enc[PE_SELECT]) /* SELECT: the step as a whole, the cursor on its number (29/10) */
+        cur_col = -1;
     cur_col += in->enc[PE_K2];
     cur_col = cur_col < -1 ? -1 : cur_col >= view_cols[view] ? view_cols[view] - 1 : cur_col;
     if (btns & (1u << PB_OCTDN) && kbd_oct > -3)
@@ -621,18 +643,27 @@ int pattern_frame(const PlatInput *in)
     if ((d = in->enc[PE_K4]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
         turn_fx_cmd(cur_row, cur_col, d);
 
-    /* The keys write notes: the first one in the slot under the cursor,
-     * the ones pressed while it is held in the slots after it. */
+    /* The keys write notes in a note column of NOTES: the first one in the
+     * slot under the cursor, the ones pressed while it is held in the slots
+     * after it. Anywhere else -- the step's number, FX, INS -- they only
+     * play, with the step's instrument: no slot is chosen for the hand
+     * (29/10). */
     if (!in->keys) {
-        if (chord_next)
+        if (chord_next || trying)
             player_note_off();
         chord_next = 0;
+        trying = false;
     }
     for (int k = 0; k < PLAT_KEYS; k++) {
         int n = 53 + kbd_oct * 12 + k, slot;
         if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX)
             continue;
-        slot = chord_next ? chord_next : view == V_NOTES && cur_col > 0 ? cur_col : 0;
+        if (view != V_NOTES || cur_col < 0) {
+            player_note_on(edit_instr_at(song, track, pat, cur_row), (uint8_t)n);
+            trying = true;
+            continue;
+        }
+        slot = chord_next ? chord_next : cur_col;
         if (slot >= STEP_MAX_NOTES)
             continue;
         if (!edit_write_note(song, track, pat, cur_row, slot, (uint8_t)n))
@@ -667,9 +698,9 @@ int pattern_frame(const PlatInput *in)
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
                  1u << PB_EDIT | 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
-    ui_led_keys(!selecting ? 0u
-                           : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR | 1u << OP_LOOP |
-                                 (edit_clip_len() ? 1u << OP_PASTE : 0u));
+    ui_led_keys(!selecting && !edit_held ? 0u
+                                         : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
+                                               1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u));
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */
         selecting = false;

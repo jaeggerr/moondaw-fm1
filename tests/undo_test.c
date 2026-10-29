@@ -164,7 +164,7 @@ int main(void)
     pattern_open(&app_song, 0, 0);
     go();
     for (int r = 1; r < 64; r++) {
-        enc(PE_SELECT, 1);
+        enc(PE_K1, 1);
         for (int pass = 0; pass < 8; pass++) {
             wait(2000);
             enc(PE_K3, pass == 0 || pass % 2 ? 1 : -1); /* stays clear of the top note */

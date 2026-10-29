@@ -61,7 +61,7 @@ int main(void)
     before = note_on_flash();   /* nothing saved yet */
     press(PB_SEL);              /* HOME: open it, SONG */
     press(PB_EDIT);             /* PATTERN, phrase 0 track 1 */
-    in.enc[PE_SELECT] = 5;
+    in.enc[PE_K1] = 5;          /* KNOB 1: the column kept (SELECT would go to the number) */
     go();
     in.keys = 1u << 16;         /* A4 on step 05 */
     go();

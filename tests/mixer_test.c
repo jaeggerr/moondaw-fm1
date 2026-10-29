@@ -75,7 +75,7 @@ int main(void)
     enc(PE_K2, 1);
     enc(PE_K3, -100);
 
-    enc(PE_SELECT, -1);         /* the returns' row, above track 1 */
+    enc(PE_K1, -1);         /* the returns' row, above track 1 */
     enc(PE_K2, -3);
     enc(PE_K3, 10);
     enc(PE_K2, 2);
@@ -89,13 +89,13 @@ int main(void)
     player_play_song(0, false);
     listen();
     CHECK("both tracks sound, each on its side", left > 100000 && right > 100000);
-    enc(PE_SELECT, 1);
+    enc(PE_K1, 1);
     enc(PE_K3, 1);              /* track 1: MUTE */
     listen();
     listen();
     CHECK("KNOB 3 on a track's number mutes it", player_muted(0) && left * 32 < right && right > 100000);
     enc(PE_K3, -1);
-    enc(PE_SELECT, 1);
+    enc(PE_K1, 1);
     enc(PE_K3, 2);              /* track 2: past MUTE, SOLO */
     listen();
     listen();

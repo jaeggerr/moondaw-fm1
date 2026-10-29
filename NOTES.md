@@ -1559,6 +1559,24 @@ And PLAY in PROJECTS on another project went back to the root (his
 find): loading a song put the hand at HOME's start. It stays where it is
 now (`menu_reload`).
 
+## 2026-10-29 — SELECT to the number, keys that only play, EDIT a shift
+
+- SELECT, besides the row, brings the cursor onto the row's number (SONG,
+  PATTERN, MIXER): the row as a whole, at once; KNOB 1 moves and keeps
+  the column. Lists and INSTRUMENT have no number column: SELECT only
+  moves there. (His idea.)
+- PATTERN's keys write only in a note column of NOTES; on the step's
+  number, in FX and INS they play the note with the step's instrument and
+  write nothing -- a slot was chosen for the hand before, in FX and INS
+  one it could not see. SELECT then KEYS: playing to try. (His idea; FX and
+  INS mine, agreed.) SECTION has no number column: its keys always write.
+- The black keys are labelled OP1-6, PIT, GLO, MONO, POLY (his list).
+  MONO: the track alone (the MIXER's solo), again: among the others. To
+  reach it without the SELECTION, EDIT held is a shift: the keys are
+  commands while it is down, the SELECTION left as it was; a tap of EDIT
+  still takes the SELECTION in and out, at the release. The track's number
+  in the corner is green while it plays alone.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

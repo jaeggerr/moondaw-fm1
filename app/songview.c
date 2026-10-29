@@ -12,7 +12,7 @@
  * its number fixed at the left, then the block each track plays, six
  * tracks a screen.
  *
- *   SELECT, KNOB 1  the phrase   KNOB 2  the track; left of the first, the phrase's number
+ *   SELECT, KNOB 1  the phrase (SELECT onto its number)   KNOB 2  the track; left of the first, the phrase's number
  *   KNOB 3  on a cell its block, -- below 00 and one new block past the last;
  *           on the number the phrase's length (AUTO, then steps)
  *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY listens:
@@ -387,6 +387,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
 
     row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     row = row < 0 ? 0 : row >= song->arrange_len ? song->arrange_len - 1 : row;
+    if (in->enc[PE_SELECT]) /* SELECT: the phrase as a whole, the cursor on its number (29/10) */
+        col = -1;
     col += in->enc[PE_K2];
     col = col < -1 ? -1 : col >= song->num_tracks ? song->num_tracks - 1 : col;
 
