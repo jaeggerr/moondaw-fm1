@@ -22,6 +22,8 @@ void pattern_from_phrase(int row);
 int pattern_frame(const PlatInput *in);
 int pattern_instr(void);
 int pattern_entry(void);
+/* Whether the SYLLABLE screen is in front (HELP's topic). */
+bool pattern_in_syllable(void);
 /* Back from INSTRUMENT: the screen as it was left. */
 void pattern_resume(void);
 

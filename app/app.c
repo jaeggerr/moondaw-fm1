@@ -19,6 +19,7 @@
 #include "../core/trk.h"
 #include "demo_trk.h"
 #include "gfx.h"
+#include "help.h"
 #include "settings.h"
 #include "ui.h"
 #include "instrument.h"
@@ -47,7 +48,11 @@ int app_cpu, app_block, app_worst;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS } screen;
+static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS,
+              AT_HELP } screen;
+/* The help of where one was: the topic of the last screen worked on, PATTERN's
+ * SYLLABLE included -- HELP opens on it. */
+static int help_topic = HELP_GESTURES;
 static int mixer_from, project_from, pattern_from, canvas_from; /* the screen HOME leads back to */
 enum { HOME_HOLD = 36 }; /* frames HOME is held to go to the root: 0.6 s */
 
@@ -56,7 +61,7 @@ void app_mark_dirty(void) { app_dirty = true; }
 const char *app_screen(void)
 {
     static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
-                                        "CANVAS", "SETTINGS" };
+                                        "CANVAS", "SETTINGS", "HELP" };
     return name[screen];
 }
 
@@ -386,6 +391,11 @@ void app_frame(const PlatInput *real)
     if (screen == AT_CANVAS) {
         if (!canvas_frame(in))
             leave_canvas();
+    } else if (screen == AT_HELP) {
+        if (!help_frame(in)) {
+            screen = AT_MENU;
+            menu_open(MENU_HELP);
+        }
     } else if (screen == AT_SETTINGS) {
         if (!settings_frame(in)) {
             settings_close();
@@ -521,9 +531,20 @@ void app_frame(const PlatInput *real)
             screen = AT_SETTINGS;
             settings_open();
             break;
+        case MENU_TO_HELP:
+            screen = AT_HELP;
+            help_open(help_topic);
+            break;
         }
     }
-    if (screen == AT_MENU || screen == AT_CANVAS)
+    {   /* HELP's topic: where the hand was working */
+        static const int8_t topic[] = { [AT_SONG] = HELP_SONG, [AT_PHRASE] = HELP_SECTION, [AT_PATTERN] = HELP_PATTERN,
+                                        [AT_INSTRUMENT] = HELP_INSTRUMENT, [AT_MIXER] = HELP_MIXER,
+                                        [AT_PROJECT] = HELP_PROJECT, [AT_SETTINGS] = HELP_SETTINGS };
+        if (screen < (int)sizeof topic && topic[screen])
+            help_topic = screen == AT_PATTERN && pattern_in_syllable() ? HELP_SYLLABLE : topic[screen];
+    }
+    if (screen == AT_MENU || screen == AT_CANVAS || screen == AT_HELP)
         ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
     if (screen != AT_PATTERN && screen != AT_SONG && screen != AT_PHRASE && screen != AT_MIXER)
         ui_led_keys(0, 0, 0); /* the keys light for PATTERN's ops, and MONO where a track is in front */

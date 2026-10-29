@@ -138,6 +138,17 @@ int main(void)
     press(PB_SEL);
     CHECK("SEL answers: the other one is opened, to play", !strcmp(app_name, "SONG 01") && !app_dirty);
 
+    home();                   /* HELP, from the root: and back */
+    sel(-10);
+    sel(3);
+    press(PB_SEL);
+    CHECK("HELP opens from the root", !strcmp(app_screen(), "HELP"));
+    press(PB_SEL);            /* a page */
+    sel(100);                 /* scrolled to its end */
+    press(PB_HOME);           /* the list */
+    press(PB_HOME);           /* the root */
+    CHECK("and HOME goes back to the root, through the list", !strcmp(app_screen(), "HOME"));
+
     app_init();               /* off and on */
     go();
     CHECK("the machine comes back on the song that was open",

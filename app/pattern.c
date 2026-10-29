@@ -538,6 +538,7 @@ void pattern_from_phrase(int row)
 
 int pattern_instr(void) { return edit_instr_at(song, track, pat, cur_row); }
 int pattern_entry(void) { return entry; }
+bool pattern_in_syllable(void) { return writing_syl; }
 
 void pattern_resume(void)
 {

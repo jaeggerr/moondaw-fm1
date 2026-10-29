@@ -1607,6 +1607,20 @@ lit alone, half muted. The MIXER keeps KNOB 3 on a track's number.
 In the MIXER, MONO needs no EDIT (his remark): the keys play nothing
 there, so they are commands as they are; EDIT + MONO still works.
 
+## 2026-10-29 — HELP
+
+From HOME's root (`app/help.c`): a list of topics -- a page a screen
+(HOME, SONG, SECTION, PATTERN, SYLLABLE, INSTRUMENT, MIXER, PROJECT,
+SETTINGS), GESTURES, EFFECTS -- the cursor already on the last screen the
+hand worked on, so a help of where one is needs no button. A page says a
+gesture in two lines, the control white and what it does grey under it,
+both CONDENSED 20 (layout B of `tools/protos/help.py`: he found A
+prettier but too small, and a long meaning would wrap). EFFECTS is the
+effects themselves with moondaw's 18-character line for each. Each page
+holds only its screen's gestures (the prototype showed PATTERN's on every
+topic, which he caught). The pages are written from the screens' own
+comments: a gesture changed there is to be changed here.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

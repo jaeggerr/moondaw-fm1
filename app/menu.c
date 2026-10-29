@@ -7,8 +7,8 @@
 #include "ui.h"
 
 /* HOME, the root menu since 29/10 (as the other MOONDAW apps): CONTINUE,
- * the open project's name at its right; PROJECTS, how many; SETTINGS; HELP,
- * grey until it is written. SELECT or KNOB 1 moves, SEL goes; PLAY on
+ * the open project's name at its right; PROJECTS, how many; SETTINGS; HELP
+ * (app/help.h). SELECT or KNOB 1 moves, SEL goes; PLAY on
  * CONTINUE plays the open project.
  *
  * PROJECTS, as HOME was validated on the panel on 28/10 (NOTES.md): the
@@ -131,7 +131,7 @@ static void draw_root(void)
         int x = PLAT_W - 10 - gfx_text_w(F_COND20, right) - (i == MENU_CONTINUE && app_dirty ? 13 : 0);
         if (here)
             gfx_slab(2, y + 1, PLAT_W - 4, ROW - 2, C_ACCENT, 255);
-        gfx_text(F_COND20, TEXT_X, base, item_word[i], here ? C_ON_ACC : i == MENU_HELP ? C_DIM : C_TEXT);
+        gfx_text(F_COND20, TEXT_X, base, item_word[i], here ? C_ON_ACC : C_TEXT);
         x = gfx_text(F_COND20, x, base, right, here ? C_ON_ACC : C_DIM);
         if (i == MENU_CONTINUE && app_dirty) /* not saved */
             gfx_fill(x + 6, base - 9, 7, 7, here ? C_ON_ACC : C_FX, 255);
@@ -262,6 +262,8 @@ int menu_frame(const PlatInput *in)
                 scroll_to(open_row >= 0 ? open_row : 0, true);
             } else if (item == MENU_SETTINGS)
                 to = MENU_TO_SETTINGS;
+            else if (item == MENU_HELP)
+                to = MENU_TO_HELP;
         }
         if (btns & 1u << PB_PLAY && item == MENU_CONTINUE) {
             if (player_playing())
