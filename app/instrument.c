@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "instrument.h"
 
+#include "../core/drum.h"
 #include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
@@ -17,16 +18,18 @@
  *   SOUND   ENGINE TIMBRE           ENV     ATK DEC SUS REL
  *   FILTER  CUT RES ENV VEL         LEVEL   GAIN LEVEL VIB
  *   VOICE   TRACT ACCENT (a VOX instrument only)
+ *   DRUM    TUNE TONE DECAY SNAP (a DRUM kit only: 64 as designed)
  *   LYR n   SOUND SEMI FINE GAIN, one row a layer; + LYR makes one (KNOB 3 up)
  *
  *   SELECT, KNOB 1  the row     KNOB 2  the column     KNOB 3  the value
  *   PLAY    the preview: a few notes up, round and round, until PLAY again
- *   the keys  play the sound, OCT-/OCT+ their octave     PRESETS  the next instrument
+ *   the keys  play the sound, OCT-/OCT+ their octave (a kit: the first C its kick)
+ *   PRESETS  the next instrument
  *   HOME    back to PATTERN  GLO  the PROJECT     ALGO  UNDO left, REDO right     SAVE  as printed
  *
  * Five cells of 33 px a row; a column takes one or two (an engine's name). */
 enum { LABEL_X = 8, CELL_X = 66, CELL_W = 33 };
-enum { L_NAME, L_SOUND, L_ENV, L_FILTER, L_LEVEL, L_VOICE, L_LAYER };
+enum { L_NAME, L_SOUND, L_ENV, L_FILTER, L_LEVEL, L_VOICE, L_DRUM, L_LAYER };
 
 static int inst, row, col, top, kbd_oct;
 static bool naming;
@@ -41,28 +44,34 @@ static InstrumentDef *I(void) { return &app_song.instruments[inst]; }
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 /* ------------------------------------------------------------- rows --- */
-/* The rows as drawn: the fixed ones, VOICE only for a voice, a row a layer,
+/* The engine's own row: VOICE for a voice, DRUM for a kit, none else. */
+static int own_row(void)
+{
+    return I()->engine == ENGINE_VOX ? L_VOICE : I()->engine == ENGINE_DRUM ? L_DRUM : -1;
+}
+
+/* The rows as drawn: the fixed ones, the engine's own, a row a layer,
  * and + LYR while there is room for one more. */
 static int nrows(void)
 {
-    return L_VOICE + (I()->engine == ENGINE_VOX) + I()->nlayers + (I()->nlayers < INSTR_MAX_LAYERS);
+    return L_VOICE + (own_row() >= 0) + I()->nlayers + (I()->nlayers < INSTR_MAX_LAYERS);
 }
 
 static int kind(int r)
 {
     if (r < L_VOICE)
         return r;
-    if (I()->engine == ENGINE_VOX && r == L_VOICE)
-        return L_VOICE;
+    if (own_row() >= 0 && r == L_VOICE)
+        return own_row();
     return L_LAYER;
 }
 
 /* The layer row r stands for, nlayers for + LYR. */
-static int layer_of(int r) { return r - L_VOICE - (I()->engine == ENGINE_VOX); }
+static int layer_of(int r) { return r - L_VOICE - (own_row() >= 0); }
 
 static int ncols(int r)
 {
-    static const int n[] = { 0, 2, 4, 4, 3, 2 };
+    static const int n[] = { 0, 2, 4, 4, 3, 2, 4 };
     int k = kind(r);
     return k == L_LAYER ? (layer_of(r) < I()->nlayers ? 4 : 1) : n[k];
 }
@@ -96,6 +105,8 @@ static const char *timbre_word(uint8_t engine, uint8_t timbre)
         return shape[timbre < 5 ? timbre : 0];
     if (engine == ENGINE_VOX)
         return style[timbre < 5 ? timbre : 0];
+    if (engine == ENGINE_DRUM)
+        return drum_kit_name(timbre);
     return "--";
 }
 
@@ -156,6 +167,8 @@ static const char *value(int r, int c, char *b)
                 break;
             }
         return b;
+    case L_DRUM:
+        return ui_dec(b, in->drum[c] + 64);
     default: {
         const Layer *l = &in->layers[layer_of(r)];
         if (c == 0)
@@ -168,7 +181,7 @@ static const char *value(int r, int c, char *b)
 /* ------------------------------------------------------------ edits --- */
 /* The engines that sound here, in KNOB 3's order. One that does not (SMPL,
  * PLUCK) leaves for the first of them at a turn. */
-static const uint8_t engines[] = { ENGINE_PULSE, ENGINE_NOISE, ENGINE_WAVE, ENGINE_VOX };
+static const uint8_t engines[] = { ENGINE_PULSE, ENGINE_NOISE, ENGINE_WAVE, ENGINE_VOX, ENGINE_DRUM };
 
 static void turn(int d)
 {
@@ -204,6 +217,8 @@ static void turn(int d)
             in->tract = (uint8_t)clampi((in->tract ? in->tract : 100) + d, VOX_TRACT_MIN, VOX_TRACT_MAX);
         else
             in->accent = (uint8_t)clampi(in->accent + d, VOX_ACCENT_FR, VOX_ACCENT_EN);
+    } else if (k == L_DRUM) {
+        in->drum[col] = (int8_t)clampi(in->drum[col] + d, -64, 63);
     } else {
         int j = layer_of(row);
         if (j >= in->nlayers) { /* + LYR: turning up makes the layer */
@@ -235,16 +250,21 @@ static void turn(int d)
     app_mark_dirty();
 }
 
-/* The preview: C E G C an octave on, a note every 250 ms, a rest, again. */
+/* The preview: C E G C an octave on, a note every 250 ms, a rest, again.
+ * A kit plays its drums instead: kick, closed hat, snare, open hat, clap,
+ * two toms, a rest, a 16th at 120 bpm each. */
 static void preview(uint32_t ms)
 {
     static const uint8_t tune[] = { 60, 64, 67, 72, 0, 0 };
-    int at = (int)((ms - preview_t0) / 250u % sizeof tune);
+    static const uint8_t kit[] = { 36, 42, 38, 46, 36, 39, 48, 45, 0, 0 };
+    bool drum = I()->engine == ENGINE_DRUM;
+    int at = drum ? (int)((ms - preview_t0) / 125u % sizeof kit) : (int)((ms - preview_t0) / 250u % sizeof tune);
+    uint8_t n = drum ? kit[at] : tune[at];
     if (at == preview_at)
         return;
     preview_at = at;
-    if (tune[at])
-        player_note_on(inst, (uint8_t)(tune[at] + 12 * kbd_oct));
+    if (n)
+        player_note_on(inst, (uint8_t)(n + (drum ? 0 : 12 * kbd_oct)));
     else
         player_note_off();
 }
@@ -254,7 +274,8 @@ static void draw(void)
 {
     static const char *const heads[][4] = {
         { 0 }, { "ENGINE", "TIMBRE" }, { "ATK", "DEC", "SUS", "REL" }, { "CUT", "RES", "ENV", "VEL" },
-        { "GAIN", "LEVEL", "VIB" }, { "TRACT", "ACCENT" }, { "SOUND", "SEMI", "FINE", "GAIN" },
+        { "GAIN", "LEVEL", "VIB" }, { "TRACT", "ACCENT" }, { "TUNE", "TONE", "DECAY", "SNAP" },
+        { "SOUND", "SEMI", "FINE", "GAIN" },
     };
     const InstrumentDef *in = I();
     char s[12];
@@ -281,7 +302,7 @@ static void draw(void)
             for (int i = 0; i < 6; i++)
                 gfx_fill(PLAT_W - 16 + i, grid_y(v) + 8 + i, 1, 12 - 2 * i, band ? C_ON_ACC : C_TITLE, 255);
         {
-            static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE" };
+            static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE", "DRUM" };
             char lyr[6] = "LYR 1";
             lyr[4] = (char)('1' + layer_of(r));
             gfx_text(F_COND20, LABEL_X, grid_base(v), k != L_LAYER ? label[k] : adder ? "+ LYR" : lyr,
@@ -297,7 +318,7 @@ static void draw(void)
             continue;
         for (int c = 0; c < ncols(r); c++) {
             bool on = band && c == col, silent = k == L_SOUND && c == 0 && !engine_sounds(in->engine) &&
-                                                 in->engine != ENGINE_VOX;
+                                                 in->engine != ENGINE_VOX && in->engine != ENGINE_DRUM;
             grid_cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, silent ? C_FX : C_TEXT);
         }
     }
@@ -353,7 +374,7 @@ int instrument_frame(const PlatInput *in)
     col = clampi(col + in->enc[PE_K2], 0, ncols(row) ? ncols(row) - 1 : 0);
     if (in->enc[PE_K3] && kind(row) != L_NAME) {
         turn(in->enc[PE_K3]);
-        row = row >= nrows() ? nrows() - 1 : row; /* a layer gone, or VOICE */
+        row = row >= nrows() ? nrows() - 1 : row; /* a layer gone, or VOICE or DRUM */
         col = clampi(col, 0, ncols(row) ? ncols(row) - 1 : 0);
     }
     if (PRESSED(PB_SEL) && kind(row) == L_NAME) {
@@ -366,8 +387,8 @@ int instrument_frame(const PlatInput *in)
     if (btns & (1u << PB_OCTUP) && kbd_oct < 3)
         kbd_oct++;
     /* The keys play the sound: the last one pressed, until all are up. */
-    for (int k = 0; k < PLAT_KEYS; k++) {
-        int n = 53 + kbd_oct * 12 + k;
+    for (int k = 0; k < PLAT_KEYS; k++) { /* as edit_key_note: a kit's first C is its kick */
+        int n = (I()->engine == ENGINE_DRUM ? 29 : 53) + kbd_oct * 12 + k;
         if (((keys >> k) & 1u) && n >= NOTE_MIN && n <= NOTE_MAX) {
             previewing = false;
             player_note_on(inst, (uint8_t)n);

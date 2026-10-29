@@ -1,7 +1,11 @@
 # Batteries : quatre moteurs candidats, à écouter
 
-Matériel d'écoute, pas du code intégré : le moteur du firmware n'est pas
-touché, rien n'est installé sur le FM-1. Tout se régénère avec
+**Choix fait le 29/10 : A, Felucca.** Son moteur est maintenant celui de
+MOONDAW, l'engine **DRUM** (voir « Le moteur DRUM, intégré » en bas).
+`1-drum.wav` est ce moteur-là, le vrai, rendu par le cœur du FM-1 ; le
+reste de cette page est l'étude qui a mené au choix.
+
+Rien n'a été installé sur le FM-1. Tout se régénère avec
 
 ```sh
 python3 tools/drums/drums.py
@@ -18,12 +22,13 @@ des volumes.
 
 | Fichier | Contenu |
 | --- | --- |
-| `0-actuel.wav` | les batteries d'aujourd'hui (voir plus bas) |
+| `0-actuel.wav` | les batteries d'avant DRUM (voir plus bas) |
+| `1-drum.wav` | **le moteur DRUM intégré** (kit STD de Felucca), même grille |
 | `A-felucca.wav` | candidat A, la conception du moteur DRUM de Felucca |
 | `B-analog.wav` | candidat B, les modèles « analogiques » de Plaits/Peaks (808) |
 | `C-synth.wav` | candidat C, les modèles « synthétiques » de Plaits (909-ish) |
 | `D-chipplus.wav` | candidat D, les moteurs actuels avec ce qui leur manque |
-| `comparatif-rythmes.wav` | la mesure du rythme avec son break, dans l'ordre actuel, A, B, C, D, séparés par 0,6 s |
+| `comparatif-rythmes.wav` | la mesure du rythme avec son break, dans l'ordre actuel, DRUM, A, B, C, D, séparés par 0,6 s |
 | `comparatif-petit-haut-parleur.wav` | le même, passé dans un passe-haut à 200 Hz (12 dB/oct), un seul gain pour tous : à peu près ce que laisse le haut-parleur du FM-1 |
 
 Chaque fichier de kit suit la même grille (120 bpm, 16 pas par mesure,
@@ -286,3 +291,37 @@ approximation).
 - FM-1 : [Synthtopia, FM1 Open](https://synthtopia.com/content/2026/10/20/m-vave-officially-opens-fm-1-firmware-to-developers-with-new-workbench-sdk),
   [Synthtopia, firmwares alternatifs](https://www.synthtopia.com/?p=155069),
   [Synth Anatomy, test du FM-1](https://synthanatomy.com/2026/07/m-vave-fm-1-review-low-budget-pocket-fm-ynthesizer-with-iconic-sounds.html)
+
+## Le moteur DRUM, intégré
+
+Les voix de batterie de Felucca (`core/drum_voice.inc`, reprises telles
+quelles) dans un nouveau moteur, `core/drum.c`. `UPSTREAM.md` dit ce qui
+vient d'où.
+
+- **Un instrument = un kit.** TIMBRE choisit lequel : STD (celui de
+  Felucca), ROUND (STD avec la grosse caisse ronde), puis les kits
+  modèles de Felucca : 80, 10, 66, 55, 77, DEEP, TIGHT, PERC.
+- **La note choisit la pièce**, sur le plan General MIDI comme chez
+  Felucca : C-2 grosse caisse, C#2 rim, D-2 caisse claire, D#2 clap, F#2
+  charleston fermé, A#2 charleston ouvert, toms sur F G A B C D, cymbales,
+  cloches, congas et claves jusqu'à A-5 (81). Hors de 35..81, une note
+  joue sa classe de hauteur entre C-2 et B-2. Un accord frappe plusieurs
+  pièces.
+- **La ligne DRUM de l'écran INSTRUMENT** : TUNE, TONE, DECAY, SNAP, 64 =
+  tel que conçu. Dans le fichier : `drum 64 64 64 64`, écrit seulement si
+  l'un n'est pas à 64. La vélocité donne l'accent.
+- **La frappe est l'enveloppe** : la piste d'un kit reste ouverte, chaque
+  pièce d'une piste est une voie mono, les voies sonnent ensemble, le
+  charleston fermé étouffe l'ouvert. Un OFF ou un GAT ferme quand même la
+  piste avec le release de l'instrument. Sur INSTRUMENT, PATTERN et
+  PHRASE, la première touche C (la 8ᵉ) est la grosse caisse.
+- **12 voies partagées** par toutes les pistes, 3,4 Ko de RAM ; environ
+  20 Ko de flash.
+- **Coût estimé** (pas encore mesuré sur l'appareil) : environ 2 % d'un
+  cœur par pièce qui sonne, 18 % pour huit à la fois.
+- **Morceaux** : la démo intégrée au firmware joue maintenant un kit. Dans
+  `songs/`, DAFT-PUNK, DAFT-PUNK-EN et KIDS convertis par
+  `tools/drums/to_drum.py` (KIDS, dont les batteries étaient des samples
+  muets sur le FM-1, a enfin les siennes). Les originaux du dépôt moondaw
+  ne sont pas touchés : moondaw ne connaît pas encore DRUM et y jouerait
+  la pulse.

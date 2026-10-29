@@ -154,6 +154,8 @@ static void parse_inst(const char *t, InstrumentDef *in, TrkReport *rep)
     in->vib_phase = 0;
     in->tract = 0;
     in->accent = VOX_ACCENT_FR;
+    for (int k = 0; k < 4; k++)
+        in->drum[k] = 0;
     in->nlayers = 0;
 
     if ((p = find(t, "engine ")) != 0) {
@@ -209,11 +211,17 @@ static void parse_inst(const char *t, InstrumentDef *in, TrkReport *rep)
         in->tract = (uint8_t)clampi(v, VOX_TRACT_MIN, VOX_TRACT_MAX);
     if ((p = find(t, "accent ")) != 0)
         in->accent = starts(p + 7, "EN") ? VOX_ACCENT_EN : VOX_ACCENT_FR;
+    if ((p = find(t, "drum ")) != 0) {
+        /* TUNE TONE DECAY SNAP, 0..127, 64 as designed */
+        p += 5;
+        for (int k = 0; k < 4 && rd_int(&p, &v); k++)
+            in->drum[k] = (int8_t)(clampi(v, 0, 127) - 64);
+    }
     if ((p = find(t, "name ")) != 0)
         copy_name(in->name, p + 5, INSTR_NAME_LEN);
 
     if (rep) {
-        rep->silent_instr += !engine_sounds(in->engine) && in->engine != ENGINE_VOX;
+        rep->silent_instr += !engine_sounds(in->engine) && in->engine != ENGINE_VOX && in->engine != ENGINE_DRUM;
         rep->shaping += find(t, "drive ") || find(t, "amp ") || find(t, "tone ");
     }
 }
@@ -773,6 +781,9 @@ static void write_inst(W *w, const InstrumentDef *in)
         wkv(w, " tract ", in->tract);
     if (in->accent == VOX_ACCENT_EN)
         ws(w, " accent EN");
+    if (in->drum[0] || in->drum[1] || in->drum[2] || in->drum[3])
+        for (int k = 0; k < 4; k++)
+            wkv(w, k ? " " : " drum ", in->drum[k] + 64);
     if (in->name[0]) {
         ws(w, " name ");
         ws(w, in->name);

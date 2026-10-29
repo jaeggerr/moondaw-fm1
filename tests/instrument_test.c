@@ -100,7 +100,23 @@ int main(void)
     CHECK("the accent goes to EN", I3.accent == VOX_ACCENT_EN);
     enc(PE_SELECT, -4);
     enc(PE_K2, -1);
-    enc(PE_K3, -1);
+    enc(PE_K3, 1);
+    CHECK("then a drum kit", I3.engine == ENGINE_DRUM);
+    enc(PE_K2, 1);
+    enc(PE_K3, -20);
+    enc(PE_K3, 4);
+    CHECK("its timbre is the kit, STD to PERC", I3.timbre == 4);
+    enc(PE_SELECT, 4);
+    enc(PE_K2, -1);
+    enc(PE_K3, 3);
+    enc(PE_K2, 2);
+    enc(PE_K3, -100);
+    CHECK("a kit has its DRUM row: TUNE TONE DECAY SNAP, from -64 to 63",
+          I3.drum[0] == 3 && I3.drum[1] == 0 && I3.drum[2] == -64 && I3.drum[3] == 0);
+    enc(PE_K3, 64);
+    enc(PE_SELECT, -4);
+    enc(PE_K2, -1);
+    enc(PE_K3, -2);
     CHECK("and back to WAVE", I3.engine == ENGINE_WAVE);
 
     /* the layers: + LYR is the row after LEVEL */

@@ -1652,10 +1652,55 @@ KNOB 4 on a SONG cell turns its level in the phrase (the file's `vol`,
 full carries a thin amber bar at its foot, its length the level, so the
 grid stays clean while all is full. KNOB 4 changes, as the rule says.
 
+## 2026-10-29 — DRUM, Felucca's drum voices
+
+He did not like the drums made of WAVE and NOISE, heard four candidates
+(`docs/drums-demo/`, the listening board) and chose Felucca's: "felucca,
+tu peux carrément supprimer le mien". They are a new engine, DRUM
+(`core/drum.c`, `core/drum.h`; `UPSTREAM.md` lists what was taken):
+
+- **An instrument is a kit**: TIMBRE picks it (STD, ROUND -- STD with the
+  round kick --, 80 10 66 55 77 DEEP TIGHT PERC: Felucca's model kits).
+  **The note picks the drum**, on the General MIDI map as Felucca's
+  engine has it: C-2 (36) the kick, D-2 the snare, D#2 the clap, F#2 the
+  closed hat, A#2 the open hat, the toms on F G A B C D, cymbals, bells,
+  congas and claves up to 81; a note outside 35..81 plays its pitch class
+  of 36..47. A chord strikes several drums at once.
+- **Four knobs, the DRUM row of INSTRUMENT**: TUNE TONE DECAY SNAP, 64 as
+  designed, moving every drum of the kit as Felucca's own knobs do. In the
+  file: `drum TUNE TONE DECAY SNAP`, written only when one is not 64.
+  Velocity is Felucca's accent (its ACC at 100).
+- **The hit is the envelope**: a kit's track is held open (no attack ramp,
+  no fast fall under a new hit), each drum of a track is one lane, mono,
+  the lanes ring together, a closed hat chokes the open one. A note-off
+  (OFF, GAT) still closes the track with the instrument's release. On
+  INSTRUMENT a key does not end the hit; the keys put the kick on the
+  first C (key 7), and so do PATTERN's and PHRASE's (`edit_key_note`).
+- **Twelve lanes shared by every track** (`DRUM_VOICES`), 284 bytes each
+  (3.4 KB, `.pool`): a hit takes its own lane back, else a free one, else
+  the quietest. Felucca renders by blocks of 32 (its slow envelopes step
+  once a block); a render here stops at every tick, so a lane renders a
+  block ahead and hands it out: the same samples in any block sizes.
+- **Level**: a hit peaks near -12 dBFS (Felucca's -6, halved), as a PULSE
+  voice; the demo song with its kit plays as loud as it did.
+- **Cost, estimated, not measured**: eight lanes ringing at once take
+  0.25 % of real time on the Mac; DAFT-PUNK-EN takes 0.54 % there and 28
+  to 50 % on the device, so about 2 % of a core a lane ringing, 18 % for
+  eight. To measure on the FM-1.
+- The demo song's KICK, HAT and SNARE are one kit now. DAFT-PUNK,
+  DAFT-PUNK-EN and KIDS converted (`tools/drums/to_drum.py`) in
+  `docs/drums-demo/songs/`; KIDS' drums, samples, were silent here and
+  now play. moondaw does not know DRUM yet (it plays the pulse there):
+  its songs are left as they are until it does; `difftest.sh` silences
+  DRUM on both sides.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
 - LOOP in SECTION (PATTERN has it).
+- DRUM in moondaw (the same `drum_voice.inc`), then its songs on it; the
+  DRUM cost measured on the FM-1; PATTERN naming a kit's notes by their
+  drum (`drum_note_abbr` is there).
 - The limiter.
 - `web/installer/` is copied, not adapted, not run.

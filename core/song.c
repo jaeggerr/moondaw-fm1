@@ -553,7 +553,7 @@ bool fx_conflicts(const Step *st, int slot, uint8_t cmd)
 }
 
 static const char *const engine_names[ENGINE_COUNT] = {
-    "PULSE", "NOISE", "WAVE", "SMPL", "VOX", "PLUCK",
+    "PULSE", "NOISE", "WAVE", "SMPL", "VOX", "PLUCK", "DRUM",
 };
 
 const char *engine_name(uint8_t engine)
@@ -571,7 +571,7 @@ int engine_from_name(const char *s)
 
 uint8_t engine_timbre_max(uint8_t engine)
 {
-    static const uint8_t max[ENGINE_COUNT] = { 3, 1, 4, 0, 4, 2 };
+    static const uint8_t max[ENGINE_COUNT] = { 3, 1, 4, 0, 4, 2, 9 };
     return max[engine < ENGINE_COUNT ? engine : 0];
 }
 

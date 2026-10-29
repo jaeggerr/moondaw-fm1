@@ -192,8 +192,9 @@ def build_app():
            ("cc", *flags, "-c", FW / "src" / "firmware.c", "-o", OUT / "moondaw.o"))
     for u, o in zip(units, objs):               # one at a time: six at once is what crashed qemu
         # the audio core for speed, the rest for size: at -Os the chorus of DAFT-PUNK-EN overran
-        # its block (28/10). Same arithmetic either way, so the same samples.
-        speed = ["-O2"] if u.parent.name == "core" and u.stem in ("synth", "player", "fx") else []
+        # its block (28/10). Same arithmetic either way, so the same samples. drum: its voices run
+        # every sample, as the rest of the audio core.
+        speed = ["-O2"] if u.parent.name == "core" and u.stem in ("synth", "player", "fx", "drum") else []
         tc("cc", *flags, *speed, "-std=gnu11", "-c", u, "-o", o)
     elf = OUT / "moondaw.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o", OUT / "fm1_cpu1.o",

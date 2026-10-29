@@ -96,6 +96,7 @@ enum {
 enum {
     ENGINE_PULSE = 0, ENGINE_NOISE, ENGINE_WAVE,
     ENGINE_SAMPLE, ENGINE_VOX, ENGINE_PLUCK, /* SMPL and PLUCK: named, silent */
+    ENGINE_DRUM, /* Felucca's drum voices (core/drum.h): the timbre a kit, the note a drum */
     ENGINE_COUNT
 };
 
@@ -136,6 +137,7 @@ typedef struct {
     int16_t vib_phase;  /* 0..255, or VIB_PHASE_FREE */
     uint8_t tract;      /* VOX: tract size in percent, 0 = 100 = as tuned */
     uint8_t accent;     /* VOX: VOX_ACCENT_* */
+    int8_t drum[4];     /* DRUM: TUNE TONE DECAY SNAP from the kit's design, -64..63 */
     uint8_t nlayers;
     Layer layers[INSTR_MAX_LAYERS];
     char name[INSTR_NAME_LEN];
@@ -227,7 +229,7 @@ bool fx_conflicts(const Step *st, int slot, uint8_t cmd);
 const char *engine_name(uint8_t engine);
 int engine_from_name(const char *s);    /* -1 if unknown */
 uint8_t engine_timbre_max(uint8_t engine);
-bool engine_sounds(uint8_t engine);     /* the three chip engines; VOX sings by its own path */
+bool engine_sounds(uint8_t engine);     /* the three chip engines; VOX and DRUM by their own paths */
 char *note_name(uint8_t note, char buf[4]);
 int note_from_name(const char *t);      /* NOTE_OFF, a note, or -1 */
 

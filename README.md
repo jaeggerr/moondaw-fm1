@@ -36,6 +36,7 @@ unable to start. Back up the stock flash first and have
 
 GPL-3.0-only. The hardware abstraction, drivers, update loader and build
 tools are from [Felucca](https://github.com/hugelton/Felucca) by Leo
-Kuroshita (@kurogedelic), Hügelton Instruments; `UPSTREAM.md` lists every
-file and what was changed. The package also contains three Apache-2.0
+Kuroshita (@kurogedelic), Hügelton Instruments, and so are the DRUM
+engine's voices (Felucca's own, with helpers from Felucca-Engines, MIT);
+`UPSTREAM.md` lists every file and what was changed. The package also contains three Apache-2.0
 files from JieLi's AC79 SDK (`LICENSES/`).

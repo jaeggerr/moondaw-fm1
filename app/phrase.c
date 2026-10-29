@@ -169,7 +169,7 @@ int phrase_frame(const PlatInput *in)
         chord_next = 0;
     }
     for (int k = 0; has(col) && k < PLAT_KEYS; k++) {
-        int n = 53 + kbd_oct * 12 + k;
+        int n = edit_key_note(song, edit_instr_at(song, col, blk(col), prow(col, row)), kbd_oct, k);
         if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX || chord_next >= STEP_MAX_NOTES)
             continue;
         if (!edit_write_note(song, col, blk(col), prow(col, row), chord_next, (uint8_t)n))

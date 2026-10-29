@@ -6,7 +6,8 @@ Instruments — <https://github.com/hugelton/Felucca>, GPL-3.0-only.
 
 Taken at commit `129a4cf4e98e6ef06a4a89e97b65092247d69412` ("Felucca 1.5",
 2026-10-09). This is not a fork: only the files below were taken, none of
-Felucca's engines, sequencer, UI, editor, MIDI learn or project storage.
+Felucca's sequencer, UI, editor, MIDI learn or project storage, and of its
+engines only the drum voices (below, "Felucca's DRUM").
 
 | Here | From Felucca | State |
 | --- | --- | --- |
@@ -42,6 +43,21 @@ Not Felucca's:
 
 To compare with a later Felucca: `diff -ru Felucca/firmware/hal firmware/hal`,
 and the same for each verbatim file.
+
+## Felucca's DRUM (29/10/2026)
+
+MOONDAW's DRUM engine plays Felucca's drum voices, from **Felucca** at commit
+`5d9694d0475a74c63c71b9aab4edff408f48cd5f` (2026-10-28), and the few DSP helpers and tables
+they use, from **Felucca-Engines** (<https://github.com/hugelton/Felucca-Engines>, MIT) at
+commit `d0260074ce100a47675814b7f38d61f11176c926`. Why this one: `docs/drums-demo/`.
+
+| Here | From | State |
+| --- | --- | --- |
+| `core/drum_voice.inc` | Felucca `firmware/src/drum_voice.c` (GPL-3.0-only) | verbatim, two lines of origin added; `.inc` so that the firmware build does not compile it alone |
+| `core/drum.c` | Felucca `firmware/src/eng_drum.c` (GPL-3.0-only) | its GM map, kit names and lane swaps; the rest new: a pool of lanes shared by the tracks, blocks of 32 under renders of any length |
+| `core/drum_dsp.h` | Felucca-Engines `src/dsp.c` (MIT) | `mulq16`, `clamp`, `sine_i`, `softclip`, `noise32`, `tsvf_coef_k`, verbatim |
+| `core/drum_tables.h`, `tools/gen_drum_tables.c` | Felucca-Engines `tools/gen_engine_tables.py` (MIT) | its SINE, PITCH_OCT / `pitch_inc`, SVF_G and TANH_Q15 at 44.1 kHz, the same numbers, from a C generator |
+| `LICENSES/MIT-Felucca-Engines.txt` | Felucca-Engines `LICENSE` | verbatim |
 
 ## felucca-bsp (28/10/2026)
 

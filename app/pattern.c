@@ -227,8 +227,9 @@ static int rec_nearest(void)
 
 static void rec_keys(const PlatInput *in, uint32_t keys)
 {
+    int instr = edit_instr_at(song, track, pat, rec_row >= 0 ? rec_row : rec_nearest());
     for (int k = 0; k < PLAT_KEYS; k++) {
-        int n = 53 + kbd_oct * 12 + k;
+        int n = edit_key_note(song, instr, kbd_oct, k);
         Step *st;
         if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX)
             continue;
@@ -744,7 +745,7 @@ int pattern_frame(const PlatInput *in)
         trying = false;
     }
     for (int k = 0; k < PLAT_KEYS; k++) {
-        int n = 53 + kbd_oct * 12 + k, slot;
+        int n = edit_key_note(song, edit_instr_at(song, track, pat, cur_row), kbd_oct, k), slot;
         if (!((keys >> k) & 1u) || n < NOTE_MIN || n > NOTE_MAX)
             continue;
         if (view != V_NOTES || cur_col < 0 || rec_armed) {

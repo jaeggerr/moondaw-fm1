@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "player.h"
 
+#include "drum.h"
 #include "fx.h"
 #include "synth.h"
 #include "tables.h"
@@ -115,12 +116,21 @@ static void note_params(Chain *c, uint8_t vol, uint8_t vel,
     c->atk_inc = seg_inc(in->attack, ENV_ONE);
     c->dec_inc = seg_inc(in->decay, ENV_ONE - c->sustain);
     c->rel_inc = seg_inc(in->release, ENV_ONE);
+    if (in->engine == ENGINE_DRUM) /* the hit is the envelope: held open, closed by a note-off */
+        c->sustain = ENV_ONE;
 }
 
 static void chain_note_on(Chain *c, uint8_t vol, uint8_t vel,
                           const InstrumentDef *in, uint8_t cutoff, uint8_t reso)
 {
     note_params(c, vol, vel, in, cutoff, reso);
+    /* A drum is struck at its level, over what still rings: the other
+     * lanes of the kit ring on. */
+    if (in->engine == ENGINE_DRUM) {
+        c->env = ENV_ONE;
+        c->stage = ENV_SUSTAIN;
+        return;
+    }
     /* A note over one still sounding: a fast fall first, so the attack
      * that follows is heard. */
     c->stage = c->env > 0 ? ENV_PUNCH : ENV_ATTACK;
@@ -509,6 +519,7 @@ static void track_silence(Track *tr)
 {
     for (int v = 0; v < TRACK_MAX_VOICES; v++)
         voice_stop(tr, &tr->voices[v]);
+    drum_silence((int)(tr - tracks));
     chain_note_off(&tr->chain);
 }
 
@@ -562,6 +573,8 @@ static void voice_start(Track *tr, const InstrumentDef *in, uint8_t timbre,
             vox_note_on(x, note);
         }
     }
+    if (in->engine == ENGINE_DRUM)
+        drum_hit((int)(tr - tracks), timbre, note, tr->fx.velocity, in->drum);
     v->active = v->sounding = true;
     for (int l = 0; l < waves - 1; l++) {
         const Layer *ly = &in->layers[l];
@@ -1385,6 +1398,7 @@ static void handle_cmds(void)
                 tr->fx.syl_written = true;
             }
             const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
+            tr->last_inst = a;
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
@@ -1395,7 +1409,9 @@ static void handle_cmds(void)
             chain_note_on(&tr->chain, 100, VEL_FULL, in, in->cutoff, in->reso);
             tr->used = true;
         } else if (type == CMD_NOTE_OFF) {
-            track_release(&tracks[AUDITION]);
+            /* A drum is not ended by its key: it rings out (below). */
+            if (song->instruments[tracks[AUDITION].last_inst % SONG_MAX_INSTR].engine != ENGINE_DRUM)
+                track_release(&tracks[AUDITION]);
         }
     }
 }
@@ -1568,6 +1584,7 @@ static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool tim
     if (timed)
         prof(PROF_OSC);
     track_sing(tr, ln->mono, frames);
+    drum_render((int)(tr - tracks), ln->mono, frames);
     if (timed)
         prof(PROF_VOX);
     if (tr->fx.send == 0 && tr->fx.echo == 0) {
@@ -1704,16 +1721,20 @@ static void render_tracks(int32_t *out, int frames)
                 osc_draw(&tr->voices[v].osc, &tr->blep);
             blep_read(&tr->blep, ln->mono, frames);
             track_sing(tr, ln->mono, frames);
+            drum_render(AUDITION, ln->mono, frames);
             chain_process(&tr->chain, ln->mono, out, frames);
             /* Once it has closed it is put away CLEAN. A song's track
              * keeps running between notes and its filters settle; this
              * one stops being rendered, and what its DC block and its
              * filter still held would come out under the next key. */
+            if (!drum_rings(AUDITION) && song->instruments[tr->last_inst % SONG_MAX_INSTR].engine == ENGINE_DRUM)
+                chain_note_off(&tr->chain); /* a kit rung out: closed like any other sound */
             if (tr->chain.stage == ENV_IDLE && tr->chain.env == 0) {
                 for (int v = 0; v < TRACK_MAX_VOICES; v++) {
                     voice_stop(tr, &tr->voices[v]);
                     vox_unbind(&tr->voices[v]);
                 }
+                drum_silence(AUDITION);
                 blep_reset(&tr->blep);
                 tr->chain.dc_x1 = tr->chain.dc_y1 = tr->chain.ic1 = tr->chain.ic2 = 0;
                 tr->used = false;
@@ -1814,6 +1835,7 @@ void player_init(Song *s)
         vox_init(&vox_pool[k]);
         vox_owner[k] = -1;
     }
+    drum_init();
     tracks[AUDITION].fx.syl[0] = 'A';
     tracks[AUDITION].fx.syl[1] = '\0';
     bpm = s->bpm;

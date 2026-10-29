@@ -1,0 +1,80 @@
+# anbernic tracker song
+version 3
+bpm 120
+ticks 6
+meter 4 4
+tracks 8
+
+inst 00 engine DRUM timbre 0 adsr 0 0 255 40 name KIT
+
+trk 0 vol 104 pan 0
+trk 1 vol 90 pan 0
+trk 2 vol 70 pan 0
+trk 3 vol 80 pan 0
+trk 4 vol 90 pan 0
+
+pat t0 00 len 16
+00 C-2 i00 fVOL7F
+
+pat t1 00 len 16
+08 D-2 i00 fVOL7F
+
+pat t2 00 len 16
+00 F#2 i00 fVOL7F
+08 A#2 i00
+
+pat t3 00 len 16
+00 D#2 i00 fVOL7F
+
+pat t4 00 len 16
+08 C-3 i00 fVOL7F
+
+pat t0 01 len 16
+00 C-2 i00 fVOL7F
+04 C-2 i00
+08 C-2 i00
+0C C-2 i00
+
+pat t1 01 len 16
+04 D-2 i00 fVOL7F
+0C D-2 i00
+
+pat t2 01 len 16
+00 F#2 i00 fVOL7F
+02 A#2 i00
+04 F#2 i00
+06 A#2 i00
+08 F#2 i00
+0A A#2 i00
+0C F#2 i00
+0E A#2 i00
+
+pat t3 01 len 16
+0C D#2 i00 fVOL7F
+
+pat t4 01 len 16
+0D C-3 i00 fVOL7F
+0E A-2 i00
+
+arr 00 steps auto
+t0 00
+t1 00
+
+arr 01 steps auto
+t2 00
+
+arr 02 steps auto
+t3 00
+t4 00
+
+arr 03 steps auto
+t0 01
+t1 01
+t2 01
+
+arr 04 steps auto
+t0 01
+t1 01
+t2 01
+t3 01
+t4 01

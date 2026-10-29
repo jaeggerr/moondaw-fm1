@@ -102,6 +102,12 @@ int edit_instr_at(const Song *s, int track, int pat, int row)
     return 0;
 }
 
+int edit_key_note(const Song *s, int instr, int oct, int k)
+{
+    bool kit = s->instruments[instr % SONG_MAX_INSTR].engine == ENGINE_DRUM;
+    return (kit ? 29 : 53) + oct * 12 + k;
+}
+
 /* ------------------------------------------------------ the clipboard --- */
 static Step clip[PATTERN_MAX_STEPS];
 static int clip_len, clip_mask;

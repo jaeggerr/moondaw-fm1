@@ -18,6 +18,10 @@ bool edit_clear_step(Song *s, int track, int pat, int row);
 /* The instrument in force on a row: the last one written at or above it,
  * else the first. What a note written there will sound like. */
 int edit_instr_at(const Song *s, int track, int pat, int row);
+/* The note key k (0..PLAT_KEYS-1, the first F) plays at octave `oct` on
+ * instrument `instr`: F-3 up, or for a DRUM kit F-1 up, so that its first
+ * C is the General MIDI kick. */
+int edit_key_note(const Song *s, int instr, int oct, int k);
 
 /* --- the clipboard ------------------------------------------------------
  * ONE buffer: a run of steps and a mask of the fields it holds. What the

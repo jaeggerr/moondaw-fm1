@@ -19,6 +19,9 @@ Every candidate is written here from the technique, not copied:
              modulated square/saw pairs for the hats
   D CHIP+    the current engines with what they lack: a pitch envelope
              and a decay computed per sample, an LFSR's noise high-passed
+
+and, since A was chosen, the DRUM engine itself (Felucca's drum voices in
+core/drum.c) rendering tools/drums/drum-kit.trk: 1-drum.wav.
 """
 import math
 import os
@@ -730,25 +733,27 @@ def read_wav_mono(path):
     return x.reshape(-1, ch).mean(axis=1)
 
 
-def current_kit():
-    """The current drums, as the FM-1 core renders them (tests/fm_render.c)."""
+def fm1_kit(trk):
+    """A kit written as a song, as the FM-1 core renders it (tests/fm_render.c)."""
     build = os.path.join(ROOT, "build")
     os.makedirs(build, exist_ok=True)
     exe = os.path.join(build, "fm_render")
     src = [os.path.join(ROOT, p) for p in (
-        "tests/fm_render.c", "core/song.c", "core/trk.c", "core/synth.c", "core/fx.c", "core/player.c")]
+        "tests/fm_render.c", "core/song.c", "core/trk.c", "core/synth.c", "core/fx.c", "core/player.c", "core/drum.c")]
     subprocess.check_call(["cc", "-std=c11", "-O2", *src, "-o", exe])
-    raw = os.path.join(build, "current-kit.wav")
-    subprocess.check_call([exe, os.path.join(HERE, "current-kit.trk"), raw, str(BARS * 16 * ROW + 0.5)])
+    raw = os.path.join(build, trk.replace(".trk", ".wav"))
+    subprocess.check_call([exe, os.path.join(HERE, trk), raw, str(BARS * 16 * ROW + 0.5)])
     return read_wav_mono(raw)
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     TARGET = 10 ** (-17 / 20)            # the beats at the same RMS, -17 dBFS
-    cur = loudness_match(current_kit(), TARGET)
+    cur = loudness_match(fm1_kit("current-kit.trk"), TARGET)
     write_wav(os.path.join(OUT, "0-actuel.wav"), cur)
-    beats = [("0-actuel", cur)]
+    drum = loudness_match(fm1_kit("drum-kit.trk"), TARGET)   # the DRUM engine, as integrated
+    write_wav(os.path.join(OUT, "1-drum.wav"), drum)
+    beats = [("0-actuel", cur), ("1-drum", drum)]
     for name, c in CANDIDATES.items():
         print(name, file=sys.stderr)
         y = loudness_match(sequence(kit_voices(c)), TARGET)

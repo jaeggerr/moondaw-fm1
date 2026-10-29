@@ -1,0 +1,811 @@
+# anbernic tracker song
+version 3
+bpm 120
+ticks 6
+meter 4 4
+tracks 8
+reverb 76 98
+delay 18 52
+
+smp 00 tr909/tr9_kick.wav
+smp 01 tr909/tr9_snare.wav
+smp 02 tr909/tr9_chh.wav
+smp 03 tr909/tr9_ohh.wav
+smp 04 tr909/tr9_clap.wav
+smp 05 tr909/tr9_ltom.wav
+smp 06 tr909/tr9_mtom.wav
+smp 07 tr909/tr9_htom.wav
+
+inst 00 engine DRUM timbre 0 adsr 0 0 255 12 gain 7 name KICK
+zone 00 C-0 G-9 root C#3 smp 00
+inst 02 engine WAVE timbre 0 adsr 10 40 235 18 filter 160 150 64 vibphase free name CLAVI
+inst 03 engine DRUM timbre 0 adsr 0 0 255 12 gain 7 name KICK909
+zone 03 C-0 G-9 root C-3 smp 00
+inst 04 engine DRUM timbre 0 adsr 0 0 255 12 gain 11 name SNR909
+zone 04 C-0 G-9 root A-2 smp 01
+inst 05 engine DRUM timbre 0 adsr 0 0 255 12 gain 13 name CHAT909
+zone 05 C-0 G-9 root A-3 smp 02
+inst 06 engine DRUM timbre 0 adsr 0 0 255 24 gain 9 name OHAT909
+zone 06 C-0 G-9 root A-3 smp 03
+inst 07 engine DRUM timbre 0 adsr 0 0 255 12 gain 9 name CLAP909
+zone 07 C-0 G-9 root C#3 smp 04
+inst 08 engine WAVE timbre 0 adsr 0 46 130 18 drive 40 filter 118 90 88 84 name BASS
+inst 09 engine PULSE timbre 1 adsr 8 60 170 40 gain -4 filter 168 40 72 name CHORDS
+inst 0A engine WAVE timbre 0 adsr 0 80 205 100 gain -5 filter 132 55 80 name PAD
+lay 0A engine WAVE timbre 1 transpose 12 detune 6 gain -8
+inst 0B engine DRUM timbre 0 adsr 0 0 255 12 gain 9 name TOM909
+zone 0B C-0 C#3 root A-2 smp 05
+zone 0B D-3 G#3 root F-3 smp 06
+zone 0B A-3 G-9 root B-3 smp 07
+
+trk 0 vol 51 pan 0
+trk 1 vol 44 pan 0 rev 12
+trk 2 vol 26 pan -18 rev 30 ech 38
+trk 3 vol 28 pan 18 rev 22 ech 22
+trk 4 vol 52 pan 0
+trk 5 vol 25 pan -34 rev 8
+trk 6 vol 27 pan 30 rev 22
+trk 7 vol 22 pan 14 rev 54 ech 18
+
+pat t0 04 len 16
+00 C-2 i00 fVOL73 fREV22
+08 C-2 i00
+0A C-2 i00
+
+pat t0 02 len 16
+00 C-2 i03 fVOL7D fREV00
+04 C-2 i03
+08 C-2 i03
+0C C-2 i03
+0E C-2 i00
+
+pat t0 03 len 16
+00 C-2 i03 fVOL7D fREV00
+04 C-2 i03
+06 C-2 i00
+08 C-2 i03
+0C C-2 i03
+0E C-2 i00
+
+pat t1 01 len 64
+04 D-2 i04 fVEL7F fVOL76
+05 --- fREV20
+0C D-2 i04
+14 D-2 i04
+1C D-2 i04
+24 D-2 i04
+2C D-2 i04
+34 D-2 i04
+3C D-2 i04
+
+pat t1 02 len 64
+04 D-2 i04 fVEL7F fVOL7F
+05 --- fREV18
+0A D-2 i04 fVEL38
+0C D-2 i04 fVEL7F
+14 D-2 i04
+1A D-2 i04 fVEL38
+1C D-2 i04 fVEL7F
+24 D-2 i04
+2A D-2 i04 fVEL38
+2C D-2 i04 fVEL7F
+34 D-2 i04
+3A D-2 i04 fVEL38 fREV2C
+3C D-2 i04 fVEL7F
+3D D-2 i04 fVEL5A
+3E D-2 i04 fVEL68
+3F D-2 i04 fVEL74
+
+pat t1 03 len 64
+00 --- fVEL18 fVOL7F fREV2A
+01 --- fRMP3E fVEL7F
+02 D-2 i04
+04 D-2 i04
+06 D-2 i04
+08 D-2 i04
+0A D-2 i04
+0C D-2 i04
+0E D-2 i04
+10 D-2 i04
+12 D-2 i04
+14 D-2 i04
+16 D-2 i04
+18 D-2 i04
+1A D-2 i04
+1C D-2 i04
+1E D-2 i04
+20 D-2 i04 fGAT04
+21 D-2 i04 fGAT04
+22 D-2 i04 fGAT04
+23 D-2 i04 fGAT04
+24 D-2 i04 fGAT04
+25 D-2 i04 fGAT04
+26 D-2 i04 fGAT04
+27 D-2 i04 fGAT04
+28 D-2 i04 fGAT04
+29 D-2 i04 fGAT04
+2A D-2 i04 fGAT04
+2B D-2 i04 fGAT04
+2C D-2 i04 fGAT04
+2D D-2 i04 fGAT04
+2E D-2 i04 fGAT04
+2F D-2 i04 fGAT04
+30 D-2 i04 fGAT04
+31 D-2 i04 fGAT04
+32 D-2 i04 fGAT04
+33 D-2 i04 fGAT04
+34 D-2 i04 fGAT04
+35 D-2 i04 fGAT04
+36 D-2 i04 fGAT04
+37 D-2 i04 fGAT04
+38 D-2 i04 fGAT04
+39 D-2 i04 fGAT04
+3A D-2 i04 fGAT04
+3B D-2 i04 fGAT04
+3C D-2 i04 fGAT04
+3D D-2 i04 fGAT04
+3E D-2 i04 fGAT04
+3F D-2 i04 fGAT04
+
+pat t5 02 len 16
+00 --- fVOL6B
+02 F#2 i05 fVEL5A fPAN4C
+06 F#2 i05
+0A F#2 i05
+0E F#2 i05
+
+pat t5 01 len 16
+00 F#2 i05 fVEL46 fPAN34 fVOL7F
+02 F#2 i05 fVEL78 fPAN4C
+04 F#2 i05 fVEL46 fPAN34
+08 F#2 i05
+0A F#2 i05 fVEL78 fPAN4C
+0C F#2 i05 fVEL46 fPAN34
+
+pat t6 01 len 16
+00 --- fVOL7F fSWP40
+04 D#2 i07 fVEL60 fPAN38 fREV26
+06 A#2 i06 fVEL6A fPAN52 fREV1A
+0C D#2 i07 fVEL60 fPAN38 fREV26
+0E A#2 i06 fVEL58 fPAN52 fREV1A
+
+pat t6 02 len 16
+00 --- fVOL6C fSWP40 fREV1A
+0E A#2 i06 fVEL5C fPAN52
+
+pat t6 03 len 64
+00 --- fVOL7F fSWP40
+04 D#2 i07 fVEL60 fPAN38 fREV26
+0C D#2 i07 fVEL60 fPAN38 fREV26
+14 D#2 i07 fVEL60 fPAN38 fREV26
+1C D#2 i07 fVEL60 fPAN38 fREV26
+30 D-3 i0B fVEL6E fPAN30
+32 C-3 i0B
+34 B-2 i0B
+36 A-2 i0B
+38 G-2 i0B fPAN50
+3A F-2 i0B
+3C F-2 i0B
+3E F-2 i0B
+
+pat t2 00 len 64
+00 A-4 i02 fVIB74 fFLT8A fECH5E
+01 --- fREV5C
+06 C-5 i02
+08 D-5 i02
+0B E-5 i02
+0E D-5 i02
+10 C-5 i02
+16 B-4 i02
+18 B-4 i02
+1C G-4 i02
+20 A-4 i02
+26 C-5 i02
+28 E-5 i02
+2B G-5 i02
+2E E-5 i02
+30 D-5 i02
+36 C-5 i02
+38 B-4 i02
+3C C-5 i02 fECH66
+
+pat t2 01 len 64
+00 A-4 i02 fVIB74 fFLTE2 fECH24
+01 --- fREV16
+02 --- fRMP3E fREV38
+06 C-5 i02
+08 D-5 i02
+0B E-5 i02
+0E D-5 i02
+10 C-5 i02
+16 B-4 i02
+18 B-4 i02
+1C G-4 i02
+20 A-4 i02
+26 C-5 i02
+28 E-5 i02
+2B G-5 i02
+2E E-5 i02
+30 D-5 i02
+36 C-5 i02
+38 B-4 i02
+3C C-5 i02 fECH46
+
+pat t2 02 len 64
+00 C-5 i02 fVIB52 fFLTE6 fECH28
+01 --- fREV18
+02 --- fRMP3E fREV3A
+04 F-5 i02
+0A E-5 i02
+0C C-5 i02
+10 E-5 i02
+14 G-5 i02
+1A E-5 i02
+1C D-5 i02
+20 D-5 i02
+24 B-4 i02
+2A D-5 i02
+2C G-5 i02
+30 E-5 i02
+34 C-5 i02
+3A B-4 i02
+3C A-4 i02 fECH46
+
+pat t2 03 len 64
+00 A-4 i02 fVIB40 fFLTA6 fECH52
+01 --- fREV5C
+10 E-4 i02
+20 A-3 i02
+
+pat t4 00 len 64
+00 A-2 i08 fVEL7F
+01 --- fFLT76
+02 A-2 i08 fVEL52 fGAT02
+05 A-3 i08 fVEL6C fGAT02
+06 A-2 i08 fVEL4A
+08 A-2 i08 fVEL7F
+0A A-2 i08 fVEL52 fGAT02
+0D A-3 i08 fVEL6C fGAT02
+0E A-2 i08 fVEL4A
+10 D-2 i08 fVEL7F
+12 D-2 i08 fVEL52 fGAT02
+15 D-3 i08 fVEL6C fGAT02
+16 D-2 i08 fVEL4A
+18 D-2 i08 fVEL7F
+1A D-2 i08 fVEL52 fGAT02
+1D D-3 i08 fVEL6C fGAT02
+1E D-2 i08 fVEL4A
+20 C-2 i08 fVEL7F
+22 C-2 i08 fVEL52 fGAT02
+25 C-3 i08 fVEL6C fGAT02
+26 C-2 i08 fVEL4A
+28 C-2 i08 fVEL7F
+2A C-2 i08 fVEL52 fGAT02
+2D C-3 i08 fVEL6C fGAT02
+2E C-2 i08 fVEL4A
+30 G-2 i08 fVEL7F
+32 G-2 i08 fVEL52 fGAT02
+35 G-3 i08 fVEL6C fGAT02
+36 G-2 i08 fVEL4A
+38 G-2 i08 fVEL7F
+3A G-2 i08 fVEL52 fGAT02
+3D G-3 i08 fVEL6C fGAT02
+3E G-2 i08 fVEL4A
+
+pat t4 01 len 64
+00 F-2 i08 fVEL7F
+01 --- fFLT7E
+02 F-2 i08 fVEL52 fGAT02
+05 F-3 i08 fVEL6C fGAT02
+06 F-2 i08 fVEL4A
+08 F-2 i08 fVEL7F
+0A F-2 i08 fVEL52 fGAT02
+0D F-3 i08 fVEL6C fGAT02
+0E F-2 i08 fVEL4A
+10 C-2 i08 fVEL7F
+12 C-2 i08 fVEL52 fGAT02
+15 C-3 i08 fVEL6C fGAT02
+16 C-2 i08 fVEL4A
+18 C-2 i08 fVEL7F
+1A C-2 i08 fVEL52 fGAT02
+1D C-3 i08 fVEL6C fGAT02
+1E C-2 i08 fVEL4A
+20 G-2 i08 fVEL7F
+22 G-2 i08 fVEL52 fGAT02
+25 G-3 i08 fVEL6C fGAT02
+26 G-2 i08 fVEL4A
+28 G-2 i08 fVEL7F
+2A G-2 i08 fVEL52 fGAT02
+2D G-3 i08 fVEL6C fGAT02
+2E G-2 i08 fVEL4A
+30 A-2 i08 fVEL7F
+32 A-2 i08 fVEL52 fGAT02
+35 A-3 i08 fVEL6C fGAT02
+36 A-2 i08 fVEL4A
+38 A-2 i08 fVEL7F
+3A A-2 i08 fVEL52 fGAT02
+3D A-3 i08 fVEL6C fGAT02
+3E A-2 i08 fVEL4A
+
+pat t4 02 len 64
+00 D-2 i08 fVEL7F
+01 --- fFLT72
+02 D-2 i08 fVEL52 fGAT02
+05 D-3 i08 fVEL6C fGAT02
+06 D-2 i08 fVEL4A
+08 D-2 i08 fVEL7F
+0A D-2 i08 fVEL52 fGAT02
+0D D-3 i08 fVEL6C fGAT02
+0E D-2 i08 fVEL4A
+10 G-2 i08 fVEL7F
+12 G-2 i08 fVEL52 fGAT02
+15 G-3 i08 fVEL6C fGAT02
+16 G-2 i08 fVEL4A
+18 G-2 i08 fVEL7F
+1A G-2 i08 fVEL52 fGAT02
+1D G-3 i08 fVEL6C fGAT02
+1E G-2 i08 fVEL4A
+20 C-2 i08 fVEL7F
+22 C-2 i08 fVEL52 fGAT02
+25 C-3 i08 fVEL6C fGAT02
+26 C-2 i08 fVEL4A
+28 C-2 i08 fVEL7F
+2A C-2 i08 fVEL52 fGAT02
+2D C-3 i08 fVEL6C fGAT02
+2E C-2 i08 fVEL4A
+30 E-2 i08 fVEL7F
+32 E-2 i08 fVEL52 fGAT02
+35 E-3 i08 fVEL6C fGAT02
+36 E-2 i08 fVEL4A
+38 E-2 i08 fVEL7F
+3A E-2 i08 fVEL52 fGAT02
+3D E-3 i08 fVEL6C fGAT02
+3E E-2 i08 fVEL4A
+
+pat t4 03 len 64
+00 E-2 i08 fVEL7F
+01 --- fFLT3C fRMP3E fFLTE8
+02 E-2 i08 fVEL6A
+04 E-2 i08 fVEL6A
+06 E-2 i08 fVEL6A
+08 E-2 i08 fVEL6A
+0A E-2 i08 fVEL6A
+0C E-2 i08 fVEL6A
+0E E-2 i08 fVEL6A
+10 E-2 i08 fVEL6A
+12 E-2 i08 fVEL6A
+14 E-2 i08 fVEL6A
+16 E-2 i08 fVEL6A
+18 E-2 i08 fVEL6A
+1A E-2 i08 fVEL6A
+1C E-2 i08 fVEL6A
+1E E-2 i08 fVEL6A
+20 E-2 i08 fVEL6A
+22 E-2 i08 fVEL6A
+24 E-2 i08 fVEL6A
+26 E-2 i08 fVEL6A
+28 E-2 i08 fVEL6A
+2A E-2 i08 fVEL6A
+2C E-2 i08 fVEL6A
+2E E-2 i08 fVEL6A
+30 E-2 i08 fVEL74
+31 E-3 i08 fVEL74
+32 E-2 i08 fVEL74
+33 E-3 i08 fVEL74
+34 E-2 i08 fVEL74
+35 E-3 i08 fVEL74
+36 E-2 i08 fVEL74
+37 E-3 i08 fVEL74
+38 E-2 i08 fVEL74
+39 E-3 i08 fVEL74
+3A E-2 i08 fVEL74
+3B E-3 i08 fVEL74
+3C E-2 i08 fVEL74
+3D E-3 i08 fVEL74
+3E E-2 i08 fVEL74
+3F E-3 i08 fVEL74
+
+pat t3 01 len 64
+00 A-3+C-4+E-4 i09 fSTR01 fFLT4E fECH18
+01 --- fREV1E fRMP3E fFLTC4
+03 A-3+C-4+E-4 i09 fGAT03
+06 A-3+C-4+E-4 i09 fGAT04
+08 A-3+C-4+E-4 i09 fSTR01
+0B A-3+C-4+E-4 i09 fGAT03
+0E A-3+C-4+E-4 i09 fGAT04
+10 A-3+D-4+F-4 i09 fSTR01
+13 A-3+D-4+F-4 i09 fGAT03
+16 A-3+D-4+F-4 i09 fGAT04
+18 A-3+D-4+F-4 i09 fSTR01
+1B A-3+D-4+F-4 i09 fGAT03
+1E A-3+D-4+F-4 i09 fGAT04
+20 G-3+C-4+E-4 i09 fSTR01
+23 G-3+C-4+E-4 i09 fGAT03
+26 G-3+C-4+E-4 i09 fGAT04
+28 G-3+C-4+E-4 i09 fSTR01
+2B G-3+C-4+E-4 i09 fGAT03
+2E G-3+C-4+E-4 i09 fGAT04
+30 G-3+B-3+D-4 i09 fSTR01
+33 G-3+B-3+D-4 i09 fGAT03
+36 G-3+B-3+D-4 i09 fGAT04
+38 G-3+B-3+D-4 i09 fSTR01
+3B G-3+B-3+D-4 i09 fGAT03
+3E G-3+B-3+D-4 i09 fGAT04
+
+pat t3 02 len 64
+00 A-3+C-4+F-4 i09 fSTR01 fFLT62 fECH1C
+01 --- fREV20 fRMP3E fFLTCE
+03 A-3+C-4+F-4 i09 fGAT03
+06 A-3+C-4+F-4 i09 fGAT04
+08 A-3+C-4+F-4 i09 fSTR01
+0B A-3+C-4+F-4 i09 fGAT03
+0E A-3+C-4+F-4 i09 fGAT04
+10 G-3+C-4+E-4 i09 fSTR01
+13 G-3+C-4+E-4 i09 fGAT03
+16 G-3+C-4+E-4 i09 fGAT04
+18 G-3+C-4+E-4 i09 fSTR01
+1B G-3+C-4+E-4 i09 fGAT03
+1E G-3+C-4+E-4 i09 fGAT04
+20 G-3+B-3+D-4 i09 fSTR01
+23 G-3+B-3+D-4 i09 fGAT03
+26 G-3+B-3+D-4 i09 fGAT04
+28 G-3+B-3+D-4 i09 fSTR01
+2B G-3+B-3+D-4 i09 fGAT03
+2E G-3+B-3+D-4 i09 fGAT04
+30 A-3+C-4+E-4 i09 fSTR01
+33 A-3+C-4+E-4 i09 fGAT03
+36 A-3+C-4+E-4 i09 fGAT04
+38 A-3+C-4+E-4 i09 fSTR01
+3B A-3+C-4+E-4 i09 fGAT03
+3E A-3+C-4+E-4 i09 fGAT04
+
+pat t3 03 len 64
+00 A-3+D-4+F-4 i09 fSTR01 fFLT58 fECH22
+01 --- fREV24 fRMP3E fFLTC8
+03 A-3+D-4+F-4 i09 fGAT03
+06 A-3+D-4+F-4 i09 fGAT04
+08 A-3+D-4+F-4 i09 fSTR01
+0B A-3+D-4+F-4 i09 fGAT03
+0E A-3+D-4+F-4 i09 fGAT04
+10 G-3+B-3+D-4 i09 fSTR01
+13 G-3+B-3+D-4 i09 fGAT03
+16 G-3+B-3+D-4 i09 fGAT04
+18 G-3+B-3+D-4 i09 fSTR01
+1B G-3+B-3+D-4 i09 fGAT03
+1E G-3+B-3+D-4 i09 fGAT04
+20 G-3+C-4+E-4 i09 fSTR01
+23 G-3+C-4+E-4 i09 fGAT03
+26 G-3+C-4+E-4 i09 fGAT04
+28 G-3+C-4+E-4 i09 fSTR01
+2B G-3+C-4+E-4 i09 fGAT03
+2E G-3+C-4+E-4 i09 fGAT04
+30 E-3+G#3+B-3 i09 fSTR01
+33 E-3+G#3+B-3 i09 fGAT03
+36 E-3+G#3+B-3 i09 fGAT04
+38 E-3+G#3+B-3 i09 fSTR01
+3B E-3+G#3+B-3 i09 fGAT03
+3E E-3+G#3+B-3 i09 fGAT04
+
+pat t3 00 len 64
+00 A-3+C-4+E-4 i09 fSTR02 fFLT52 fECH34
+01 --- fREV48
+08 A-3+C-4+E-4 i09 fSTR03
+10 A-3+D-4+F-4 i09 fSTR02
+18 A-3+D-4+F-4 i09 fSTR03
+20 G-3+C-4+E-4 i09 fSTR02
+28 G-3+C-4+E-4 i09 fSTR03
+30 G-3+B-3+D-4 i09 fSTR02
+38 G-3+B-3+D-4 i09 fSTR03
+
+pat t3 04 len 64
+00 E-3+G#3+B-3 i09 fSTR01 fFLT40 fECH1C
+01 --- fREV22 fRMP3E fFLTD2
+04 E-3+G#3+B-3 i09 fGAT04
+08 E-3+G#3+B-3 i09 fGAT04
+0C E-3+G#3+B-3 i09 fGAT04
+10 E-3+G#3+B-3 i09 fGAT04
+14 E-3+G#3+B-3 i09 fGAT04
+18 E-3+G#3+B-3 i09 fGAT04
+1C E-3+G#3+B-3 i09 fGAT04
+20 E-3+G#3+B-3 i09 fGAT03
+22 E-3+G#3+B-3 i09 fGAT03
+24 E-3+G#3+B-3 i09 fGAT03
+26 E-3+G#3+B-3 i09 fGAT03
+28 E-3+G#3+B-3 i09 fGAT03
+2A E-3+G#3+B-3 i09 fGAT03
+2C E-3+G#3+B-3 i09 fGAT03
+2E E-3+G#3+B-3 i09 fGAT03
+30 E-3+G#3+B-3 i09 fGAT01
+31 E-3+G#3+B-3 i09 fGAT01
+32 E-3+G#3+B-3 i09 fGAT01
+33 E-3+G#3+B-3 i09 fGAT01
+34 E-3+G#3+B-3 i09 fGAT01
+35 E-3+G#3+B-3 i09 fGAT01
+36 E-3+G#3+B-3 i09 fGAT01
+37 E-3+G#3+B-3 i09 fGAT01
+38 E-3+G#3+B-3 i09 fGAT01
+39 E-3+G#3+B-3 i09 fGAT01
+3A E-3+G#3+B-3 i09 fGAT01
+3B E-3+G#3+B-3 i09 fGAT01
+3C E-3+G#3+B-3 i09 fGAT01
+3D E-3+G#3+B-3 i09 fGAT01
+3E E-3+G#3+B-3 i09 fGAT01
+3F E-3+G#3+B-3 i09 fGAT01
+
+pat t7 01 len 64
+00 A-3+E-4+A-4 i0A fVOL34 fRMP03 fVOL73
+01 --- fFLTC8 fREV28
+04 --- fVOL34 fRMP03 fVOL73
+08 --- fVOL34 fRMP03 fVOL73
+0C --- fVOL34 fRMP03 fVOL73
+10 D-3+A-3+D-4 i0A fVOL34 fRMP03 fVOL73
+14 --- fVOL34 fRMP03 fVOL73
+18 --- fVOL34 fRMP03 fVOL73
+1C --- fVOL34 fRMP03 fVOL73
+20 C-3+G-3+C-4 i0A fVOL34 fRMP03 fVOL73
+24 --- fVOL34 fRMP03 fVOL73
+28 --- fVOL34 fRMP03 fVOL73
+2C --- fVOL34 fRMP03 fVOL73
+30 G-3+D-4+G-4 i0A fVOL34 fRMP03 fVOL73
+34 --- fVOL34 fRMP03 fVOL73
+38 --- fVOL34 fRMP03 fVOL73
+3C --- fVOL34 fRMP03 fVOL73
+
+pat t7 02 len 64
+00 F-3+C-4+F-4 i0A fVOL34 fRMP03 fVOL73
+01 --- fFLTD0 fREV2A
+04 --- fVOL34 fRMP03 fVOL73
+08 --- fVOL34 fRMP03 fVOL73
+0C --- fVOL34 fRMP03 fVOL73
+10 C-3+G-3+C-4 i0A fVOL34 fRMP03 fVOL73
+14 --- fVOL34 fRMP03 fVOL73
+18 --- fVOL34 fRMP03 fVOL73
+1C --- fVOL34 fRMP03 fVOL73
+20 G-3+D-4+G-4 i0A fVOL34 fRMP03 fVOL73
+24 --- fVOL34 fRMP03 fVOL73
+28 --- fVOL34 fRMP03 fVOL73
+2C --- fVOL34 fRMP03 fVOL73
+30 A-3+E-4+A-4 i0A fVOL34 fRMP03 fVOL73
+34 --- fVOL34 fRMP03 fVOL73
+38 --- fVOL34 fRMP03 fVOL73
+3C --- fVOL34 fRMP03 fVOL73
+
+pat t7 03 len 64
+00 D-3+A-3+D-4 i0A fVOL34 fRMP03 fVOL73
+01 --- fFLTC0 fREV30
+04 --- fVOL34 fRMP03 fVOL73
+08 --- fVOL34 fRMP03 fVOL73
+0C --- fVOL34 fRMP03 fVOL73
+10 G-3+D-4+G-4 i0A fVOL34 fRMP03 fVOL73
+14 --- fVOL34 fRMP03 fVOL73
+18 --- fVOL34 fRMP03 fVOL73
+1C --- fVOL34 fRMP03 fVOL73
+20 C-3+G-3+C-4 i0A fVOL34 fRMP03 fVOL73
+24 --- fVOL34 fRMP03 fVOL73
+28 --- fVOL34 fRMP03 fVOL73
+2C --- fVOL34 fRMP03 fVOL73
+30 E-3+B-3+E-4 i0A fVOL34 fRMP03 fVOL73
+34 --- fVOL34 fRMP03 fVOL73
+38 --- fVOL34 fRMP03 fVOL73
+3C --- fVOL34 fRMP03 fVOL73
+
+pat t7 00 len 64
+00 A-3+E-4+A-4 i0A fVOL73 fFLT5A fREV50
+01 --- fRMP3E fFLTDC
+10 D-3+A-3+D-4 i0A
+20 C-3+G-3+C-4 i0A
+30 G-3+D-4+G-4 i0A
+
+pat t7 04 len 64
+00 E-3+B-3+E-4 i0A fVOL73 fFLT66 fREV34
+01 --- fRMP3E fFLTE4
+20 E-3+B-3+E-4 i0A
+
+pat t7 05 len 64
+00 A-3+E-4+A-4 i0A fVOL73 fFLTBE fREV5C
+01 --- fRMP3E fVOL06
+
+pat t0 00 len 16
+
+pat t0 01 len 64
+00 C-2 i00 fVOL73 fREV22
+08 C-2 i00
+0A C-2 i00
+10 C-2 i00
+18 C-2 i00
+1A C-2 i00
+20 C-2 i00
+28 C-2 i00
+2A C-2 i00
+30 C-2 i00
+
+# opening copy of pattern 04: it carries the level the mixer used to imply
+pat t1 00 len 64
+00 --- fVOL2E
+04 D-2 i04 fVEL7F fVOL7F
+05 --- fREV18
+0A D-2 i04 fVEL38
+0C D-2 i04 fVEL7F
+14 D-2 i04
+1A D-2 i04 fVEL38
+1C D-2 i04 fVEL7F
+24 D-2 i04
+2A D-2 i04 fVEL38
+2C D-2 i04 fVEL7F
+34 D-2 i04
+3A D-2 i04 fVEL38 fREV2C
+3C D-2 i04 fVEL7F
+3D D-2 i04 fVEL5A
+3E D-2 i04 fVEL68
+3F D-2 i04 fVEL74
+
+# opening copy of pattern 06: it carries the level the mixer used to imply
+pat t5 00 len 16
+00 --- fVOL6B
+02 F#2 i05 fVEL5A fPAN4C
+06 F#2 i05
+0A F#2 i05
+0E F#2 i05
+
+# opening copy of pattern 09: it carries the level the mixer used to imply
+pat t6 00 len 16
+00 --- fVOL6C fSWP40 fREV1A
+0E A#2 i06 fVEL5C fPAN52
+
+arr 00 steps auto
+t0 00
+t2 00
+t7 00
+
+arr 01 steps auto
+t0 01
+t2 00
+t3 00
+t5 00
+t7 00
+
+arr 02 steps auto
+t0 02
+t2 01
+t3 01
+t4 00
+t5 01
+t6 00
+t7 01
+
+arr 03 steps auto
+t0 02
+t1 00
+t2 01
+t3 01
+t4 00
+t5 01
+t6 01
+t7 01
+
+arr 04 steps auto
+t0 02
+t1 01
+t2 02
+t3 02
+t4 01
+t5 01
+t6 01
+t7 02
+
+arr 05 steps auto
+t0 03
+t1 02
+t2 02
+t3 02
+t4 01
+t5 01
+t6 01
+t7 02
+
+arr 06 steps auto
+t2 00
+t3 00
+t7 00
+
+arr 07 steps auto
+t0 02
+t1 01
+t2 01
+t3 01
+t4 00
+t5 01
+t6 01
+t7 01
+
+arr 08 steps auto
+t0 03
+t1 02
+t2 01
+t3 01
+t4 00
+t5 01
+t6 01
+t7 01
+
+arr 09 steps auto
+t0 02
+t1 01
+t2 02
+t3 02
+t4 01
+t5 01
+t6 01
+t7 02
+
+arr 0A steps auto
+t0 03
+t1 02
+t2 02
+t3 02
+t4 01
+t5 01
+t6 01
+t7 02
+
+arr 0B steps auto
+t0 02
+t1 01
+t3 03
+t4 02
+t5 01
+t6 02
+t7 03
+
+arr 0C steps auto
+t1 03
+t3 04
+t4 03
+t5 01
+t6 03
+t7 04
+
+arr 0D steps auto
+t0 02
+t1 02
+t2 02
+t3 02
+t4 01
+t5 01
+t6 01
+t7 02
+
+arr 0E steps auto
+t0 03
+t1 02
+t2 02
+t3 02
+t4 01
+t5 01
+t6 01
+t7 02
+
+arr 0F steps auto
+t0 02
+t1 02
+t2 01
+t3 01
+t4 00
+t5 01
+t6 01
+t7 01
+
+arr 10 steps auto
+t0 04
+t2 00
+t3 00
+t5 02
+t7 00
+
+arr 11 steps auto
+t2 00
+t7 00
+
+arr 12 steps auto
+t2 03
+t7 05

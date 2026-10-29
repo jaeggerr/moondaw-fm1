@@ -3,7 +3,8 @@
 # The FM-1 core against moondaw itself, on real songs.
 #   tests/difftest.sh [SECONDS] SONG.trk...      (MOONDAW=path to the moondaw checkout, built)
 # Each song is first reduced to what the FM-1 carries (build/trkdump), and PLUCK instruments are
-# made silent in the reference as they are on the FM-1. Both engines then render the SAME file,
+# made silent in the reference as they are on the FM-1; DRUM ones (moondaw has no DRUM yet) on both
+# sides. Both engines then render the SAME file,
 # reverb and delay included -- the voice too: VOX, its syllables, tract and accent are carried.
 set -e
 cd "$(dirname "$0")/.."
@@ -16,12 +17,12 @@ OBJS=$(find "$M/build" -name '*.o' -not -path '*/san/*' -not -path '*/test/*' -n
 mkdir -p build/diff
 # shellcheck disable=SC2086
 cc -std=c11 -O2 -I"$M/src" tests/ref_render.c $OBJS -lm -o build/ref_render
-cc -std=c11 -O2 -Wall -Wextra tests/fm_render.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/fm_render
+cc -std=c11 -O2 -Wall -Wextra tests/fm_render.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/fm_render
 cc -std=c11 -O2 -Wall -Wextra tests/trkdump.c core/song.c core/trk.c -o build/trkdump
 bad=0
 for song in "$@"; do
     name=$(basename "$song" .trk)
-    build/trkdump "$song" | sed -E -e '/^inst /s/engine PLUCK/engine SMPL/' > "build/diff/$name.trk"
+    build/trkdump "$song" | sed -E -e '/^inst /s/engine (PLUCK|DRUM)/engine SMPL/' > "build/diff/$name.trk"
     # Track by track: summed, two tracks whose phases have drifted apart interfere differently
     # in each render, and the spectrum of the sum says so although neither track is wrong.
     worst=-200; n=0; fails=""

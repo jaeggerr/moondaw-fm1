@@ -12,7 +12,7 @@ CC      ?= cc
 CFLAGS  += -std=c11 -O2 -g -Wall -Wextra
 APP     ?= app
 MOONDAW ?= ../moondaw
-CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c
+CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c core/drum.c
 ifeq ($(APP),hello)
 SRCS    := app/hello.c app/term.c
 else ifneq ($(filter $(APP),type),)
@@ -50,17 +50,17 @@ test: sim web
 	build/store_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/persist_test.c app/app.c $(UI) $(CORE) -o build/persist_test
 	build/persist_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/song_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/song_test
 	build/song_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/namer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/instrument_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/namer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/instrument_test
 	build/instrument_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/mixer_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/mixer_test
 	build/mixer_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/project_test.c app/project.c app/namer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/project_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/project_test.c app/project.c app/namer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/project_test
 	build/project_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/phrase_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/phrase_test
 	build/phrase_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c -o build/undo_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/undo_test
 	build/undo_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c -o build/link_test
 	build/link_test
@@ -71,6 +71,8 @@ test: sim web
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/vox_test.c app/app.c $(UI) $(CORE) -o build/vox_test -lm
 	@V="tests/vox-styles.trk"; for s in robot-demo LEOMOTEUR DAFT-PUNK DAFT-PUNK-EN; do \
 	   [ -f $(MOONDAW)/songs/$$s.trk ] && V="$$V $(MOONDAW)/songs/$$s.trk"; done; build/vox_test $$V
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/drum_test.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/drum_test
+	build/drum_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck
 	@if ls $(MOONDAW)/songs/*.trk >/dev/null 2>&1; then build/trkcheck $(MOONDAW)/songs/*.trk | cut -c1-72; \
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
