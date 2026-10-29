@@ -50,6 +50,7 @@
  *   14 LED     pairs of led, level: the computer shows a button or a key
  *              (led: a button 0..13 in PB_* order, 14 + a key; FF: all of
  *              them), at a level 0 dark, 1 glow, 2 mid, 3 lit, 4 breath,
+ *              5..8 50, 62.5, 75, 87.5 % of lit,
  *              held over what the app lights until FF gives it back
  *
  * What arrives is written straight to a slot of the store, a piece at a

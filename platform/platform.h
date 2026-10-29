@@ -60,7 +60,8 @@ void plat_led_glow(int btn, int on);
 /* Any LED at any of the panel's levels (hal/fm1_input.h): `led` a PB_*
  * button, or PLAT_BTNS + a key (0..PLAT_KEYS-1). The link's LED command
  * (app/remote.c): a computer showing a button. */
-enum { PLAT_LED_OFF, PLAT_LED_GLOW, PLAT_LED_MID, PLAT_LED_LIT, PLAT_LED_BREATH, PLAT_LED_LEVELS };
+enum { PLAT_LED_OFF, PLAT_LED_GLOW, PLAT_LED_MID, PLAT_LED_LIT, PLAT_LED_BREATH,
+       PLAT_LED_50, PLAT_LED_62, PLAT_LED_75, PLAT_LED_87, PLAT_LED_LEVELS }; /* 50..87: % of lit */
 void plat_led_level(int led, int level);
 
 /* Where songs are kept: 73 sectors of 4 KB, the 292 KB of the FM-1's

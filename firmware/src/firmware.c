@@ -190,6 +190,8 @@ void plat_led_level(int led, int level)
     led_bit(fm1_led_dim, id, level == PLAT_LED_GLOW || level == PLAT_LED_MID); /* mid rides on the glow */
     led_bit(fm1_led_mid, id, level == PLAT_LED_MID);
     led_bit(fm1_led_breath, id, level == PLAT_LED_BREATH);
+    for (int k = 0; k < 4; k++)
+        led_bit(fm1_led_duty[k], id, level == PLAT_LED_50 + k);
 }
 
 static int32_t master_knob = 512 * 16;   /* the pot x16, smoothed per frame (Felucca's master.c) */

@@ -18,7 +18,7 @@ its buttons, turn its knobs, play its keys, and write into the song in memory.
     tools/fm1_ctl.py length T BLOCK STEPS
     tools/fm1_ctl.py save
     tools/fm1_ctl.py screen [-o FILE.png]      what the panel shows, as a picture (default build/screen.png)
-    tools/fm1_ctl.py led FX lit [C-4 breath ...]  show a button or a key: off glow mid lit breath,
+    tools/fm1_ctl.py led FX lit [C-4 breath ...]  show a button or a key: off glow mid lit breath, 50 62 75 87 100 (%),
                                                or app to give it back; `all` names every LED
     tools/fm1_ctl.py canvas clear [COLOUR]     a screen of the computer's own, GLO leaves it
     tools/fm1_ctl.py canvas fill X Y W H COLOUR
@@ -54,7 +54,8 @@ from fm1_proto import FONTS
 
 STATUS, INPUT, OPEN, NEW, STEP, CELL, LENGTH, SAVE, PLAY, CANVAS = range(8, 18)
 SCREEN, LED = 0x13, 0x14
-LEVELS = {"off": 0, "glow": 1, "mid": 2, "lit": 3, "breath": 4, "app": 0xFF}
+LEVELS = {"off": 0, "glow": 1, "mid": 2, "lit": 3, "breath": 4, "50": 5, "62": 6, "75": 7, "87": 8, "100": 3,
+          "app": 0xFF}
 BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC",
            "OCT-", "OCT+"]
 KNOBS = ["SELECT", "ALGO", "PRESETS", "K1", "K2", "K3", "K4"]

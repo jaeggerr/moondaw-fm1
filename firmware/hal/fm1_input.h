@@ -183,6 +183,9 @@ static uint8_t fm1_led[FM1_NCOL];
 static uint8_t fm1_led_dim[FM1_NCOL];
 static uint8_t fm1_led_breath[FM1_NCOL];   /* breathing LEDs (see top): dark .. ~60 % of lit, in step */
 static uint8_t fm1_led_mid[FM1_NCOL];      /* a steady mid level (see top): lit 1 frame in FM1_LED_MID_N */
+/* MOONDAW (29/10): four steady levels between mid and lit, weighed on the panel -- set k lit on 4 + k
+ * frames of 8 (50, 62.5, 75, 87.5 %), in step (fm1__duty_ph), ~114 Hz at the slowest: no flicker. */
+static uint8_t fm1_led_duty[4][FM1_NCOL];
 
 /* scan diagnostics (console `inp`, read and cleared by the main loop): the gap between ticks
  * = the on-time of the column lit in it, in TIMER4 ticks (24 MHz) */
@@ -407,6 +410,7 @@ static uint16_t fm1__dim_t = FM1__DIM_T(FM1_LED_DIM_NS);   /* the pulse the tick
 static const uint32_t FM1__BR_K[2][4] = {FM1__BR(FM1_LED_BREATH_PK, FM1_LED_DIM_NS),
                                          FM1__BR(FM1_LED_BREATH_PK_LO, FM1_LED_DIM_LO_NS)};
 static uint8_t fm1__br_sel;                       /* FM1__BR_K[it]: 0 DIM HI (OFF, INV), 1 DIM LO */
+static uint8_t fm1__duty_ph;                    /* fm1_led_duty's frame, 0..7 */
 static uint8_t fm1__mid_n = FM1_LED_MID_N, fm1__mid_ph;   /* the mid level: 1 frame lit in fm1__mid_n; this frame's */
 /* the glow (main loop, any time; fm1__dim_k follows it in a few frames): 0 FM1_LED_DIM_NS, 1 FM1_LED_DIM_LO_NS;
  * and the breath's peak with it: 0 FM1_LED_BREATH_PK, 1 FM1_LED_BREATH_PK_LO */
@@ -418,7 +422,9 @@ static void fm1_led_dim_level(uint32_t lo)
 }
 /* column c's lit lines this frame: lit, a breath's lit frame (not dim), the mid level's lit frame */
 #define FM1__LIT(c) (fm1_led[c] | (fm1__br_lit ? fm1_led_breath[c] & ~fm1_led_dim[c] : 0u) | \
-                     (!fm1__mid_ph ? fm1_led_mid[c] : 0u))
+                     (!fm1__mid_ph ? fm1_led_mid[c] : 0u) | (fm1__duty_ph < 4u ? fm1_led_duty[0][c] : 0u) | \
+                     (fm1__duty_ph < 5u ? fm1_led_duty[1][c] : 0u) | (fm1__duty_ph < 6u ? fm1_led_duty[2][c] : 0u) | \
+                     (fm1__duty_ph < 7u ? fm1_led_duty[3][c] : 0u))
 #if FM1_LED_DIM_DIV > 1
 static uint8_t fm1__dim_ph;
 #endif
@@ -574,8 +580,10 @@ static void fm1_input_tick(void)
     }
     fm1__sr_bits(w, k, 16u);
     fm1__sr_latch();                               /* column n, the lines dark */
-    if (n == 0u)                                   /* (a new frame: the mid level's turn, before column 0 lights) */
+    if (n == 0u) {                                 /* (a new frame: the mid level's turn, before column 0 lights) */
         fm1__mid_ph = (uint8_t)(fm1__mid_ph + 1u >= fm1__mid_n ? 0u : fm1__mid_ph + 1u);
+        fm1__duty_ph = (uint8_t)((fm1__duty_ph + 1u) & 7u);
+    }
     fm1__led_lines(FM1__LIT(n));
     fm1__tick_col = (uint8_t)n;
     fm1__keys(p);                                  /* its keys now: no wait for the frame's end */
