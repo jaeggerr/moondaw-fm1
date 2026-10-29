@@ -358,15 +358,12 @@ void app_frame(const PlatInput *real)
         break;
     }
 
-    {   /* HOME (29/10): a press is a step back -- each screen takes its own, SONG's is
-         * the root menu -- and held HOME_HOLD frames, the root from anywhere. GLO was
-         * "back" before: its label says global, not back. */
-        static uint32_t prev_btns;
+    {   /* HOME (29/10): a press is a step back, each screen taking its own (SONG's is
+         * the root menu, SONGVIEW_BACK); held HOME_HOLD frames, the root from anywhere.
+         * GLO was "back" before: its label says global, not back. */
         static int held;
-        bool press = (in->btns & ~prev_btns) >> PB_HOME & 1u;
-        prev_btns = in->btns;
         held = in->btns >> PB_HOME & 1u ? held + 1 : 0;
-        if ((press && screen == AT_SONG) || held == HOME_HOLD) {
+        if (held == HOME_HOLD) {
             if (screen == AT_SETTINGS)
                 settings_close();
             if (screen == AT_SONG)
@@ -499,6 +496,13 @@ void app_frame(const PlatInput *real)
             screen = AT_PHRASE;
             phrase_open(entry, track);
             break;
+        case SONGVIEW_BACK:
+            player_note_off();
+            song_pool_compact(&app_song);
+            screen = AT_MENU;
+            loop_clear();
+            menu_open(MENU_CONTINUE);
+            break;
         default:
             break;
         }
@@ -514,10 +518,8 @@ void app_frame(const PlatInput *real)
             break;
         }
     }
-    if (screen == AT_MENU)
-        ui_led_guide(menu_in_root() ? 1u << PB_GLO : 0u); /* SETTINGS */
-    if (screen == AT_CANVAS)
-        ui_led_guide(0); /* the script's own (LED) */
+    if (screen == AT_MENU || screen == AT_CANVAS)
+        ui_led_guide(0); /* HOME: SEL, PLAY; the canvas: the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_keys(0); /* the keys light only for PATTERN's ops */
     remote_leds();

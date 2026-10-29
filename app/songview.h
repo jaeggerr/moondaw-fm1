@@ -9,7 +9,7 @@
 
 #include "../platform/platform.h"
 
-enum { SONGVIEW_STAY, SONGVIEW_PATTERN, SONGVIEW_MIXER, SONGVIEW_PHRASE, SONGVIEW_PROJECT };
+enum { SONGVIEW_STAY, SONGVIEW_PATTERN, SONGVIEW_MIXER, SONGVIEW_PHRASE, SONGVIEW_PROJECT, SONGVIEW_BACK };
 int songview_entry(void); /* the phrase under the cursor */
 
 void songview_open(bool reset_cursor);

@@ -443,6 +443,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         out = SONGVIEW_MIXER;
     if (PRESSED(PB_GLO)) /* GLObal: what holds for the whole song */
         out = SONGVIEW_PROJECT;
+    if (PRESSED(PB_HOME)) /* a step back: HOME's root (CHOOSE PATTERN, open, closed first above) */
+        out = SONGVIEW_BACK;
 
     grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
     {

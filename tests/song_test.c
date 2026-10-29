@@ -66,6 +66,7 @@ int main(void)
     press(PB_SEL);            /* the panel of track 1's blocks, on 00 */
     enc(PE_SELECT, 1);
     press(PB_HOME);
+    CHECK("HOME closes the panel, not SONG", last == SONGVIEW_STAY);
     CHECK("HOME closes the panel and changes nothing", E(0).pattern[0] == 0);
     press(PB_SEL);
     enc(PE_SELECT, 1);
@@ -152,6 +153,9 @@ int main(void)
     go();
     press(PB_GLO);
     CHECK("GLO asks for the PROJECT", last == SONGVIEW_PROJECT);
+    go();
+    press(PB_HOME);
+    CHECK("HOME, the panel closed, goes back to HOME's root", last == SONGVIEW_BACK);
     go();
     press(PB_EDIT);
     CHECK("EDIT on the number asks for the SECTION", last == SONGVIEW_PHRASE);

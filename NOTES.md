@@ -1528,14 +1528,19 @@ words, as with ARP and LFO for the selection). Now:
 - HOME held 0.6 s (36 frames): the root menu from anywhere -- the first
   step taken at the press is not lost, the way is up anyway.
 - GLO: what is global where one is -- PROJECT from SONG, SECTION,
-  PATTERN, MIXER, INSTRUMENT; SETTINGS from the root. The guide lights it
-  there; HOME never.
+  PATTERN, MIXER, INSTRUMENT. The guide lights it there; HOME never. (GLO
+  opening SETTINGS from the root was taken out the same day: it made
+  little sense to him -- SETTINGS is the root's own row.)
 - The canvas: HOME leaves; GLO is always the script's (KEEP says nothing
   now).
 
 And CHOOSE PATTERN's listening put the "new" row's empty block in the cell
 to play it -- which made it, and offered another past it: each notch down
 grew the list (his find). The empty block is silence now, as `--`.
+
+HOME in CHOOSE PATTERN went to the root (his find): the app took SONG's
+step back before SONG could close its list. SONG takes HOME itself now
+(SONGVIEW_BACK), the list closed first.
 
 ## Open
 
