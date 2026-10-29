@@ -200,6 +200,6 @@ bool undo_turn(int d, const char **said)
         return false;
     for (int n = d < 0 ? -d : d; n > 0; n--)
         done |= d < 0 ? undo_pop() : undo_redo();
-    *said = done ? (d < 0 ? "UNDO" : "REDO") : d < 0 ? "NOTHING TO UNDO" : "NOTHING TO REDO";
+    *said = done ? (d < 0 ? "UNDO" : "REDO") : d < 0 ? "NO UNDO" : "NO REDO";
     return done;
 }

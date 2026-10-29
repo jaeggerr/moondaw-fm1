@@ -22,7 +22,7 @@ void grid_corner(const char *a, uint16_t ca, const char *b, uint16_t cb)
 
 uint16_t grid_said_ink(const char *s)
 {
-    return s[0] == 'S' ? C_ACCENT : s[0] == 'U' || s[0] == 'R' ? C_FX : s[1] == 'O' && s[2] == 'T' && s[3] == 'H' ? C_DIM : C_MUTE;
+    return s[0] == 'S' ? C_ACCENT : s[0] == 'U' || s[0] == 'R' ? C_FX : s[0] == 'N' && s[1] == 'O' && s[2] == ' ' ? C_DIM : C_MUTE;
 }
 
 void grid_band(int vis, int w)

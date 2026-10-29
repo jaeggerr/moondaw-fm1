@@ -1369,7 +1369,7 @@ more (GLO on SONG does).
 
 The ALGO knob is the journal, on every screen: a notch left takes a
 gesture back, a notch right does it again; the corner says UNDO or REDO
-in amber, NOTHING TO UNDO / REDO in grey at either end. ALGO rather than
+in amber, NO UNDO / NO REDO in grey at either end. ALGO rather than
 KNOB 3 or 4 (Jaeger's question): KNOB 1-4 are the editing row, whose
 meaning changes with the screen, and KNOB 4 is the natural fourth
 setting some day (the MIXER has four columns); ALGO means nothing in
