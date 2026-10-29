@@ -1836,13 +1836,34 @@ Mac, then installed and played on the device (below).
 - **Two restarts** while KIDS looped, after ~2.5 and ~3.5 min (P33 0x04
   then 0x40, no crash recorded); a third play of 3.5 min ran clean. Not
   explained; DAFT-PUNK-EN restarted the same way before the sampler
-  (29/10, above). KIDS-DRUM on this firmware, 4 min looped: no restart.
-  One clean run against two of three is a hint, not a proof, that the
-  samples have a part in it: to chase (the XIP reads from the audio
-  interrupt, the main loop starved by the heavier CPU0 share).
+  (29/10, above). Found the same evening, below: not the samples.
 - **Still to measure on the FM-1**: what a voice costs from the audio
   interrupt alone (V above holds it, with DRUM's), and the balance after
   normalising, by ear.
+
+## 2026-10-29 — the restarts: `status --profile` after 179 s
+
+The restarts while KIDS played (and DAFT-PUNK-EN's earlier on 29/10) were the
+profile itself. The player's stopwatch was `fm1_ticks() / 24`: 32 bits
+of 24 MHz turn over every 179 s, divided they do not, so a block timed
+across the turn measured 178 956 970 us. Asked for over the link, that
+figure went through `ui_dec`, whose digits buffer held 8: the ninth and
+tenth landed on the stack, and what came next was a crash in the delay or
+the render, or the watchdog. Every `--profile` after three minutes of
+play restarted the machine (4 of 4, KIDS and KIDS-DRUM alike); plain
+`status` never did.
+
+- **Fixed**: `ui_dec` holds any int (and its sign); `fm1_us` counts on
+  over the turn. KIDS 4 min, then five `--profile`: all answered, the
+  block 2 442 us, no restart.
+- **Found with a trail** (kept, `firmware.c`, `audio.c`): .noinit
+  records the main loop's stage and ms, the last audio half's ms,
+  whether a half was being rendered, the track each core renders and its
+  stage (`player_trail`), the last sample block read (`smp_trail`); read
+  at the next start with `fm1_ctl.py status --trail`. And `status
+  --crash`: the crash record's rets, EMU, DBG, sp and last jumps, which
+  the firmware kept and never reported (here DBG bit 4: a write to
+  unmapped space). The record survives an install.
 
 ## Open
 

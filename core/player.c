@@ -1582,6 +1582,15 @@ static Lane lanes[2];
 int (*player_run_other)(void (*fn)(uint32_t), uint32_t arg);
 int (*player_wait_other)(void);
 
+/* The track each core is rendering, + 1, and where in it (the high nibble: 1 its voices, 2 its samples, 3 its
+ * drums, 4 its chain); 0 between tracks. On the FM-1 it survives a reset: what the firmware reports of the run
+ * before when it ended without a crash record (`fm1_ctl.py status --trail`). */
+volatile uint8_t player_trail[2]
+#ifdef PLAT_FM1
+    __attribute__((section(".noinit")))
+#endif
+    ;
+
 /* The VOX voices a track has lent, added to what its oscillators drew. */
 static void track_sing(Track *tr, int32_t *mono, int frames)
 {
@@ -1611,6 +1620,10 @@ static bool track_reads_flash(const Track *tr)
  * `timed`: the first core's own tracks are timed, the second core's not. */
 static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool timed)
 {
+    volatile uint8_t *at = &player_trail[!timed];
+    uint8_t t = (uint8_t)(tr - tracks + 1);
+
+    *at = 0x10 | t;
     if (timed)
         prof_mark();
     blep_begin(&tr->blep, frames);
@@ -1620,14 +1633,18 @@ static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool tim
     if (timed)
         prof(PROF_OSC);
     track_sing(tr, ln->mono, frames);
+    *at = 0x20 | t;
     track_samples(tr, ln->mono, frames);
+    *at = 0x30 | t;
     drum_render((int)(tr - tracks), ln->mono, frames);
+    *at = 0x40 | t;
     if (timed)
         prof(PROF_VOX);
     if (tr->fx.send == 0 && tr->fx.echo == 0) {
         chain_process(&tr->chain, ln->mono, out, frames);
         if (timed)
             prof(PROF_CHAIN);
+        *at = 0;
         return;
     }
     /* A track that sends is mixed apart, so that what goes to the
@@ -1665,6 +1682,7 @@ static void render_track(Track *tr, Lane *ln, int32_t *out, int frames, bool tim
         if (timed)
             prof(PROF_CHAIN);
     }
+    *at = 0;
 }
 
 /* The second core's share: every other track that sounds, into lanes[1]. */

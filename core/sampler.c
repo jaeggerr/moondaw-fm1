@@ -27,6 +27,13 @@ static struct {
 } map[SONG_SMP_MAX];
 static volatile uint8_t gen;
 
+/* The last block a voice fetched, its place in the bank: kept across a reset on the FM-1 (the trail, player.c). */
+volatile uint32_t smp_trail
+#ifdef PLAT_FM1
+    __attribute__((section(".noinit")))
+#endif
+    ;
+
 int16_t smp_decode(int16_t *pred, uint8_t *idx, uint8_t code)
 {
     int32_t step = STEP[*idx], diff = step >> 3, p;
@@ -96,6 +103,7 @@ static int16_t next(SmpVoice *v)
             v->tail++;
             return 0;
         }
+        smp_trail = v->at;
         b = sec[s] + (v->at - s * PAYLOAD);
         v->pred = (int16_t)(b[0] | b[1] << 8);
         v->idx = b[2] > 88 ? 88 : b[2];
