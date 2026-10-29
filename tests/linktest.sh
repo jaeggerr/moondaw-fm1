@@ -9,7 +9,7 @@ SONG=${1:-}
 export MOONDAW_LINK_PORT=19791
 mkdir -p build
 cc -std=c11 -O2 tests/trkdump.c core/song.c core/trk.c -o build/trkdump
-cc -std=c11 -O2 -D_DARWIN_C_SOURCE -D_DEFAULT_SOURCE tests/link_dev.c app/link.c core/store.c -o build/link_dev
+cc -std=c11 -O2 -D_DARWIN_C_SOURCE -D_DEFAULT_SOURCE tests/link_dev.c app/link.c core/store.c core/bank.c core/sampler.c core/song.c -o build/link_dev
 build/trkdump "$SONG" > build/link_want.trk
 build/link_dev build/link_got.trk > build/link_dev.log &
 DEV=$!

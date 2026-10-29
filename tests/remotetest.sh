@@ -17,6 +17,17 @@ sleep 0.3
 fail() { echo "remote end-to-end: $1"; kill $DEV 2>/dev/null; exit 1; }
 python3 tools/fm1_send.py "$SONG" $P > /dev/null || fail "send"
 $CTL status | grep -q 'screen=HOME' || fail "status on HOME"
+# the sample bank (tools/fm1_samples.py): two in, listed, one out, read back
+W=$(dirname "$SONG")/../instruments/tr909
+if [ -f "$W/tr9_kick.wav" ] && [ -f "$W/tr9_snare.wav" ]; then
+    SMP="python3 tools/fm1_samples.py"
+    $SMP add "$W/tr9_kick.wav" "$W/tr9_snare.wav" $P > build/remote_bank.log || fail "samples add"
+    $SMP list $P | grep -q '^  tr9_snare ' || fail "samples list"
+    $SMP remove tr9_snare $P > /dev/null || fail "samples remove"
+    rm -rf build/remote_bank
+    $SMP get $P -o build/remote_bank > /dev/null || fail "samples get"
+    [ -f build/remote_bank/tr9_kick.wav ] && [ ! -f build/remote_bank/tr9_snare.wav ] || fail "the bank read back"
+fi
 $CTL open kids || fail "open"
 $CTL status | grep -q 'song=KIDS dirty=0' || fail "the song in memory"
 $CTL cell 13 1 05 || fail "a new phrase's cell"

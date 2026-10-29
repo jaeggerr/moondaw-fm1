@@ -98,6 +98,11 @@ int plat_flash_read(uint32_t off, void *dst, uint32_t n)
     return store_range(off, n) ? st_read(STORE_BASE + off, dst, n) : -1;
 }
 
+const uint8_t *plat_flash_map(void)
+{
+    return flash_ok ? fm1_xip_ptr(STORE_BASE) : 0; /* plain since fl_plain_window_init, at boot */
+}
+
 int plat_flash_erase(uint32_t sector)
 {
     return store_range(sector * PLAT_FLASH_SECTOR, PLAT_FLASH_SECTOR)

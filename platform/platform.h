@@ -75,6 +75,12 @@ void plat_led_level(int led, int level);
 int plat_flash_read(uint32_t off, void *dst, uint32_t n);
 int plat_flash_erase(uint32_t sector);
 int plat_flash_prog(uint32_t off, const void *src, uint32_t n);
+/* The same 292 KB, readable in place: on the FM-1 the XIP window the
+ * boot maps plain, elsewhere the backend's array. Read by the sample
+ * voices from the audio side (core/sampler.h), so never while an erase
+ * or a write runs: everything that writes the bank stops them first.
+ * 0 where there is no such window. */
+const uint8_t *plat_flash_map(void);
 
 /* SysEx from and to the computer, for app/link.c: the bytes between F0
  * and F7, all under 0x80. One message at a time: plat_sysex_get returns

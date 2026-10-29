@@ -17,7 +17,7 @@ OBJS=$(find "$M/build" -name '*.o' -not -path '*/san/*' -not -path '*/test/*' -n
 mkdir -p build/diff
 # shellcheck disable=SC2086
 cc -std=c11 -O2 -I"$M/src" tests/ref_render.c $OBJS -lm -o build/ref_render
-cc -std=c11 -O2 -Wall -Wextra tests/fm_render.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c -o build/fm_render
+cc -std=c11 -O2 -Wall -Wextra tests/fm_render.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/fm_render
 cc -std=c11 -O2 -Wall -Wextra tests/trkdump.c core/song.c core/trk.c -o build/trkdump
 bad=0
 for song in "$@"; do

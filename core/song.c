@@ -79,6 +79,18 @@ void song_init(Song *s)
         e->section = SECTION_NONE;
     }
     s->arrange_len = 1;
+    for (int i = 0; i < SONG_ZONE_MAX; i++)
+        s->zones[i].inst = INSTR_NONE;
+}
+
+const Zone *song_zone(const Song *s, int inst, uint8_t note)
+{
+    for (int i = 0; i < s->nzones && i < SONG_ZONE_MAX; i++) {
+        const Zone *z = &s->zones[i];
+        if (z->inst == inst && note >= z->lo && note <= z->hi)
+            return z;
+    }
+    return 0;
 }
 
 /* ------------------------------------------------------------ pool --- */
@@ -441,6 +453,9 @@ uint8_t fx_clamp_val(uint8_t cmd, uint8_t ticks_per_step, int v)
         break;
     case FX_DUT:
         hi = 3;
+        break;
+    case FX_SMP:
+        hi = SONG_SMP_MAX - 1;
         break;
     case FX_WAV:
         hi = 4;

@@ -15,6 +15,7 @@
  * still has the 10/10 look. */
 #include "app.h"
 
+#include "../core/bank.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 #include "demo_trk.h"
@@ -120,6 +121,7 @@ static bool same_name(const char *a, const char *b)
  * there already (PLAY in PROJECTS opens what it plays, and stays). */
 static void adopt(int slot, bool dirty)
 {
+    bank_resolve(&app_song); /* its sample names, against the bank */
     player_init(&app_song);
     loop_clear();
     edit_clip_reset(); /* its instrument numbers were the last song's */
@@ -139,7 +141,7 @@ static void adopt(int slot, bool dirty)
 /* The last slot holds which song was open -- so the machine comes back on
  * what was being worked on, not on the first of the list -- then, since
  * 29/10, the SETTINGS: LEDS, LIGHT, COUNT-IN. Shorter files are from before. */
-#define LAST_SLOT (STORE_SLOTS - 1)
+#define LAST_SLOT APP_SONG_SLOTS /* 31, where it was before the bank came after it */
 enum { LAST_BYTES = 4 };
 static char last_slot = -1;
 
@@ -279,6 +281,7 @@ void app_init(void)
 
     remote_init();
     store_mount();
+    bank_mount();
     if (store_load_begin(LAST_SLOT) == STORE_OK && (n = store_load_get(last, LAST_BYTES)) >= 1) {
         slot = last_slot = last[0];
         if (n >= 3 && last[1] >= UI_LEDS_OFF && last[1] <= UI_LEDS_GUIDE && last[2] > PLAT_LED_OFF &&
