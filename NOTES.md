@@ -1350,6 +1350,21 @@ song. GLO did nothing on SONG (HOME goes home), so nothing was taken
 away; on PROJECT, GLO goes back. Not on the device yet: changes are being
 gathered one by one, installed together.
 
+## 2026-10-29 — PATTERN: a button a view, CHOOSE INSTRUMENT
+
+FX no longer turns PATTERN's views round: SEQ shows the NOTES, FX the
+effects, ENV the instruments (Jaeger: ENV was said to be the
+instrument's). ENV again on INS goes into the INSTRUMENT that plays on
+the step -- one press deeper than before, the column first. SEL on INS
+opens CHOOSE INSTRUMENT, CHOOSE PATTERN's twin: `-- keep` (name none, the
+one in force plays) then the 64 instruments; PLAY listens, the one the
+cursor rests on sounding the step's note, struck again every 45 frames;
+SEL takes, GLO goes back. KNOB 2 still turns the step's instrument.
+
+EDIT edits what is under the cursor or nothing: on SECTION it opens the
+block, as SEL; on PATTERN it does nothing. Neither leads to PROJECT any
+more (GLO on SONG does).
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens

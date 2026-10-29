@@ -217,21 +217,6 @@ static void hint(int x, const char *key, const char *word, bool right)
     gfx_text(F_COND14, x + 5, PLAT_H - 6, word, C_DIM);
 }
 
-/* A play sign, 10 x 12 from its top left corner: drawn round, filled while it plays. */
-static void play_sign(int x, int y, uint16_t c, bool filled)
-{
-    if (!filled) {
-        gfx_line(x, y, x, y + 11, c);
-        gfx_line(x, y, x + 9, y + 6, c);
-        gfx_line(x, y + 11, x + 9, y + 5, c);
-        return;
-    }
-    for (int i = 0; i < 10; i++) {
-        int h = 12 - 12 * i / 10;
-        gfx_fill(x + i, y + (12 - h) / 2, 1, h, c, 255);
-    }
-}
-
 /* The whole screen, nothing of the grid behind it: drawn over the grid it
  * read as a grid of one track (29/10). It says what it is for and where
  * from, and every block has its PLAY. */
@@ -261,7 +246,7 @@ static void draw_pop(void)
         else if (k == n - 1 && song_pattern_blank(song, col, b))
             gfx_text(F_COND14, x + 8, base, "new", ink);
         if (b != PATTERN_NONE)
-            play_sign(PLAT_W - 26 - bar, y + 8,
+            grid_play_sign(PLAT_W - 26 - bar, y + 8,
                       here ? C_ON_ACC : k == pop_preview ? C_ACCENT : C_DIM, k == pop_preview);
     }
     if (n > POP_ROWS) {

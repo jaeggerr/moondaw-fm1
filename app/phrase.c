@@ -14,8 +14,8 @@
  * that step (-- when none), five tracks a screen.
  *
  *   SELECT  the step     KNOB 1  the track     the keys  write notes, OCT-/OCT+ their octave
- *   SEL     the block of that track, to edit   GLO  back to SONG
- *   FX      the MIXER    EDIT  the PROJECT     ARP  UNDO     SAVE  PLAY  as printed */
+ *   SEL, EDIT  the block of that track, to edit   GLO  back to SONG
+ *   FX      the MIXER    ARP  UNDO     SAVE  PLAY  as printed */
 enum { CELL_W = 37, CELLS = 5 };
 
 #define song (&app_song)
@@ -196,17 +196,13 @@ int phrase_frame(const PlatInput *in)
         song_pool_compact(song);
         return PHRASE_BACK;
     }
-    if (PRESSED(PB_SEL) && has(col)) {
+    if ((PRESSED(PB_SEL) || PRESSED(PB_EDIT)) && has(col)) { /* EDIT: what is under the cursor */
         player_note_off();
         return PHRASE_PATTERN;
     }
     if (PRESSED(PB_FX)) {
         player_note_off();
         return PHRASE_MIXER;
-    }
-    if (PRESSED(PB_EDIT)) {
-        player_note_off();
-        return PHRASE_PROJECT;
     }
     return PHRASE_STAY;
 #undef PRESSED

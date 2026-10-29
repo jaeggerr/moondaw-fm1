@@ -47,6 +47,8 @@ void grid_playing(int vis, bool band);
  * `n` rows do not fit. */
 void grid_frame(int top, int n);
 
+/* A play sign, 10 x 12 from its top left corner: drawn round, filled while it plays. */
+void grid_play_sign(int x, int y, uint16_t c, bool filled);
 /* Keeps *cur in [0, n) and *first so that *cur is one of `shown`. */
 void grid_follow(int *cur, int *first, int n, int shown);
 /* As hex, two digits. */

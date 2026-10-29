@@ -399,11 +399,6 @@ void app_frame(const PlatInput *real)
             mixer_from = AT_PHRASE;
             mixer_open("PHR", phrase_entry());
             break;
-        case PHRASE_PROJECT:
-            screen = AT_PROJECT;
-            project_from = AT_PHRASE;
-            project_open();
-            break;
         default:
             break;
         }
@@ -428,11 +423,6 @@ void app_frame(const PlatInput *real)
         case PATTERN_INSTR:
             screen = AT_INSTRUMENT;
             instrument_open(pattern_instr(), pattern_entry());
-            break;
-        case PATTERN_PROJECT:
-            screen = AT_PROJECT;
-            project_from = AT_PATTERN;
-            project_open();
             break;
         default:
             break;

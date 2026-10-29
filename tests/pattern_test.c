@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* PATTERN's hands, without a screen: inputs go in as the panel would
- * send them (three views that FX turns through, KNOB 1 the column, KNOB 2
+ * send them (three views, SEQ FX ENV, KNOB 1 the column, KNOB 2
  * the value) and the song is read back. */
 #include <stdio.h>
 #include <string.h>
@@ -97,13 +97,25 @@ int main(void)
     CHECK("GAT cannot outlast its step", st(0)->fx[0].val == song.ticks_per_step);
 
     /* INS */
-    press(PB_FX);
+    press(PB_ENV);
     enc(PE_SELECT, 2);
     enc(PE_K2, 3);
     CHECK("KNOB 2 on INS picks the instrument", st(2)->instrument == 2);
     enc(PE_K2, -10);
     CHECK("and under 00 there is none", st(2)->instrument == INSTR_NONE);
-    press(PB_FX);
+    press(PB_SEL);            /* CHOOSE INSTRUMENT, on -- */
+    enc(PE_SELECT, 2);
+    press(PB_GLO);
+    CHECK("GLO leaves the list and changes nothing", st(2)->instrument == INSTR_NONE);
+    press(PB_SEL);
+    enc(PE_SELECT, 2);
+    press(PB_SEL);
+    CHECK("SEL takes the instrument from the list", st(2)->instrument == 1);
+    press(PB_SEL);
+    enc(PE_SELECT, -2);
+    press(PB_SEL);
+    CHECK("and -- names none again", st(2)->instrument == INSTR_NONE);
+    press(PB_SEQ);
 
     /* the step's number */
     enc(PE_K1, -1);
@@ -113,8 +125,9 @@ int main(void)
     press(PB_SAVE);
     CHECK("SAVE asks the app to save, once", saves == 1);
     CHECK("every edit told the app the song changed", dirtied > 10);
+    press(PB_ENV);            /* INS; ENV again goes into the instrument */
     in.btns = 1u << PB_ENV;
-    CHECK("ENV asks for the instrument of the step", pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 0);
+    CHECK("ENV on INS asks for the instrument of the step", pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 0);
     in.btns = 0;
     pattern_resume();
     go();

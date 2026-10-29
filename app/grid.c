@@ -89,3 +89,17 @@ char *grid_hex2(char *b, int v)
     b[2] = 0;
     return b;
 }
+
+void grid_play_sign(int x, int y, uint16_t c, bool filled)
+{
+    if (!filled) {
+        gfx_line(x, y, x, y + 11, c);
+        gfx_line(x, y, x + 9, y + 6, c);
+        gfx_line(x, y + 11, x + 9, y + 5, c);
+        return;
+    }
+    for (int i = 0; i < 10; i++) {
+        int h = 12 - 12 * i / 10;
+        gfx_fill(x + i, y + (12 - h) / 2, 1, h, c, 255);
+    }
+}

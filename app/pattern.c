@@ -10,7 +10,7 @@
 #include "undo.h"
 
 /* PATTERN, as validated on the panel on 28/10 (NOTES.md): one block of
- * one track, in three views that FX turns through, each SONG's grid once
+ * one track, in three views, a button each (29/10), each SONG's grid once
  * more -- one row a step, its number at the left, white on the beat.
  *
  *   NOTES  the four notes of a chord          KNOB 2 a semitone, under the lowest OFF then empty
@@ -21,9 +21,12 @@
  *   SELECT  the step     KNOB 1  the column; left of the first, the step's number (KNOB 2 the
  *                        block's length)
  *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
- *   GLO   back where it was opened from     ENV  the INSTRUMENT of the step
- *   EDIT  the PROJECT    ARP  UNDO          SAVE  PLAY  as printed
- * FX is the views here, not the MIXER: FX shows the effects of where one is. */
+ *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
+ *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
+ *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
+ *   GLO   back where it was opened from     ARP  UNDO     SAVE  PLAY  as printed
+ * FX is a view here, not the MIXER: FX shows the effects of where one is. EDIT
+ * does nothing: there is nothing under the cursor the views do not already edit. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
 static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
 static const int view_cols[VIEWS] = { STEP_MAX_NOTES, STEP_MAX_FX, 1 };
@@ -39,6 +42,12 @@ static uint32_t prev_btns, prev_keys;
 static uint8_t fx_order[FX_SYL]; /* alphabetical, --- first */
 static int fx_count;
 static int play_row = -1;
+/* CHOOSE INSTRUMENT: its rows are --, then the instruments. While it
+ * listens, the one the cursor rests on SETTLE frames sounds the step's
+ * note, struck again every AGAIN frames. */
+enum { CH_TOP = 24, CH_ROWS = 7, CH_N = SONG_MAX_INSTR + 1, SETTLE = 12, AGAIN = 45 };
+static bool choosing, listening;
+static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
 
 /* ----------------------------------------------------------- data --- */
 static int pat_len(void) { return song->patterns[track][pat].length; }
@@ -155,6 +164,122 @@ static void draw_cell(int v, int r, int c, bool band)
     }
 }
 
+/* ------------------------------------------------- choose instrument --- */
+static int ch_instr(int k) { return k == 0 ? edit_instr_at(song, track, pat, cur_row) : k - 1; }
+
+static void ch_sound(void)
+{
+    const Step *st = step_at(cur_row);
+    player_note_on(ch_instr(ch_cur), st->notes[0] <= NOTE_MAX ? st->notes[0] : 60);
+    sounding = ch_cur;
+    again = AGAIN;
+}
+
+static void ch_hush(void)
+{
+    if (sounding >= 0)
+        player_note_off();
+    sounding = -1;
+}
+
+static void ch_close(bool take)
+{
+    Step *st;
+    listening = false;
+    ch_hush();
+    if (take && ch_cur - 1 != ch_orig && (st = step_w(cur_row)) != 0)
+        st->instrument = ch_cur == 0 ? INSTR_NONE : (uint8_t)(ch_cur - 1);
+    choosing = false;
+    gfx_invalidate();
+}
+
+static void ch_open(void)
+{
+    const Step *st = step_at(cur_row);
+    ch_orig = st->instrument == INSTR_NONE ? -1 : st->instrument;
+    ch_cur = ch_orig + 1;
+    ch_top = 0;
+    listening = false;
+    settle = 0;
+    sounding = -1;
+    grid_follow(&ch_cur, &ch_top, CH_N, CH_ROWS);
+    choosing = true;
+}
+
+static void ch_frame(const PlatInput *in, uint32_t btns)
+{
+#define PRESSED(b) ((btns >> (b)) & 1u)
+    ch_cur += in->enc[PE_SELECT];
+    grid_follow(&ch_cur, &ch_top, CH_N, CH_ROWS);
+    if (in->enc[PE_SELECT])
+        settle = SETTLE;
+    if (PRESSED(PB_PLAY)) {
+        listening = !listening;
+        if (listening)
+            ch_sound();
+        else
+            ch_hush();
+    } else if (listening && settle > 0 && --settle == 0 && ch_cur != sounding) {
+        ch_sound();
+    } else if (listening && sounding >= 0 && --again == 0) {
+        ch_sound();
+    }
+    if (PRESSED(PB_SEL))
+        ch_close(true);
+    else if (PRESSED(PB_GLO))
+        ch_close(false);
+    plat_led_btn(PB_PLAY, listening);
+#undef PRESSED
+}
+
+static void ch_hint(int x, const char *key, const char *word, bool right)
+{
+    int w = gfx_text_w(F_COND14, key) + 5 + gfx_text_w(F_COND14, word);
+    if (right)
+        x -= w;
+    x = gfx_text(F_COND14, x, PLAT_H - 6, key, C_TEXT);
+    gfx_text(F_COND14, x + 5, PLAT_H - 6, word, C_DIM);
+}
+
+static void ch_draw(void)
+{
+    char s[24] = "STEP ", h[3];
+    int n;
+    grid_hex2(s + 5, cur_row);
+    for (n = 0; s[n]; n++)
+        ;
+    for (const char *w = " / TRK "; *w;)
+        s[n++] = *w++;
+    s[n++] = (char)('1' + track), s[n] = 0;
+    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
+    gfx_text(F_COND14, 6, 17, "CHOOSE INSTRUMENT", C_TITLE);
+    gfx_text(F_COND12, PLAT_W - 12 - gfx_text_w(F_COND12, s), 17, s, C_DIM);
+    gfx_fill(0, CH_TOP - 3, PLAT_W, 1, C_TRACK, 255);
+    for (int r = 0; r < CH_ROWS && ch_top + r < CH_N; r++) {
+        int k = ch_top + r, y = CH_TOP + r * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent;
+        bool here = k == ch_cur;
+        const char *name = song->instruments[ch_instr(k)].name;
+        uint16_t ink = here ? C_ON_ACC : k == 0 || !name[0] ? C_DIM : C_TEXT;
+        if (here)
+            gfx_slab(4, y + 1, PLAT_W - 14, GRID_ROW - 2, C_ACCENT, 255);
+        if (k - 1 == ch_orig) /* what the step says now, as HOME marks the open project */
+            gfx_fill(6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        gfx_text(F_COND20, 16, base, k == 0 ? "--" : grid_hex2(h, k - 1), ink);
+        if (k == 0) /* none named: the one in force plays */
+            gfx_text(F_COND14, 48, base, "keep", ink);
+        gfx_text(F_COND20, k == 0 ? 84 : 48, base, name, ink);
+        grid_play_sign(PLAT_W - 32, y + 8, here ? C_ON_ACC : k == sounding ? C_ACCENT : C_DIM, k == sounding);
+    }
+    {
+        int hh = CH_ROWS * GRID_ROW * CH_ROWS / CH_N, y = CH_TOP + CH_ROWS * GRID_ROW * ch_top / CH_N;
+        gfx_fill(PLAT_W - 4, CH_TOP, 2, CH_ROWS * GRID_ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
+    }
+    ch_hint(6, "SEL", "TAKE", false);
+    ch_hint(96, "PLAY", "LISTEN", false);
+    ch_hint(PLAT_W - 6, "GLO", "BACK", true);
+}
+
 static void draw(void)
 {
     int len = pat_len(), cols = view_cols[view], w = view_w[view];
@@ -203,6 +328,8 @@ bool pattern_open(Song *s, int e, int t)
     cur_row = top = cur_col = 0;
     view = V_NOTES;
     said = 0;
+    choosing = listening = false;
+    sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* KNOB 3's order: alphabetical, the empty slot first. */
     fx_count = 0;
@@ -253,11 +380,22 @@ int pattern_frame(const PlatInput *in)
     if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
         said = 0;
 
-    if (PRESSED(PB_FX)) { /* NOTES -> FX -> INS -> NOTES */
-        view = (view + 1) % VIEWS;
+    if (choosing) {
+        ch_frame(in, btns);
+        gfx_frame(choosing ? ch_draw : draw);
+        return PATTERN_STAY;
+    }
+    if (PRESSED(PB_ENV) && view == V_INS) { /* ENV twice: from the column into the instrument */
+        player_note_off();
+        return PATTERN_INSTR;
+    }
+    if (PRESSED(PB_SEQ) || PRESSED(PB_FX) || PRESSED(PB_ENV)) { /* a button a view */
+        view = PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS;
         if (cur_col >= 0)
             cur_col = 0;
     }
+    if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0)
+        ch_open();
     cur_row += in->enc[PE_SELECT];
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
     cur_col += in->enc[PE_K1];
@@ -322,19 +460,11 @@ int pattern_frame(const PlatInput *in)
     grid_follow(&cur_row, &top, len, GRID_ROWS);
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
     plat_led_btn(PB_PLAY, playing);
-    gfx_frame(draw);
+    gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_GLO)) {
         player_note_off();
         song_pool_compact(song);
         return PATTERN_BACK;
-    }
-    if (PRESSED(PB_ENV)) {
-        player_note_off();
-        return PATTERN_INSTR;
-    }
-    if (PRESSED(PB_EDIT)) {
-        player_note_off();
-        return PATTERN_PROJECT;
     }
     return PATTERN_STAY;
 #undef PRESSED

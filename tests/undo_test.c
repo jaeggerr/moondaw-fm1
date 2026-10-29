@@ -114,10 +114,9 @@ int main(void)
     enc(PE_K2, -100);         /* the note: OFF, then nothing */
     enc(PE_K2, -100);
     wait(2000);
-    press(PB_FX);
-    press(PB_FX);             /* INS */
+    press(PB_ENV);            /* INS */
     enc(PE_K2, -10);          /* the instrument: none */
-    press(PB_FX);
+    press(PB_SEQ);
     CHECK("the block's only step is empty", step_is_empty(st(0)));
     song_pool_compact(&app_song);
     undo();

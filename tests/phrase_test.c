@@ -70,7 +70,7 @@ int main(void)
     CHECK("FX for the mixer", press(PB_FX) == PHRASE_MIXER);
     phrase_resume();
     go();
-    CHECK("EDIT for the project", press(PB_EDIT) == PHRASE_PROJECT);
+    CHECK("EDIT, as SEL, asks for PATTERN", press(PB_EDIT) == PHRASE_PATTERN);
     phrase_resume();
     go();
     CHECK("GLO leaves", press(PB_GLO) == PHRASE_BACK);
