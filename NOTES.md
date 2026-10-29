@@ -1435,6 +1435,7 @@ Then four steady levels between mid and lit, to weigh the guide's
 brightness: `fm1_led_duty` in hal/fm1_input.h (MOONDAW's addition to
 Felucca's scan), set k lit on 4 + k frames of 8 -- 50, 62.5, 75, 87.5 % --
 in step, ~114 Hz at the slowest. `led ENV 50 LFO 62 EDIT 75 ARP 87 SEQ 100`.
+He saw little difference between the five: the guide lights at 50 %.
 
 ## Open
 

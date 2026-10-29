@@ -98,8 +98,8 @@ void ui_led_guide(uint32_t usable)
     for (int b = 0; b < PLAT_BTNS; b++) {
         if (b == PB_PLAY && ui_guide_lit)
             continue;
-        if (ui_guide_lit)
-            plat_led_btn(b, (usable >> b) & 1u);
+        if (ui_guide_lit) /* half lit: as plain as lit on the panel (29/10), and kinder */
+            plat_led_level(b, (usable >> b) & 1u ? PLAT_LED_50 : PLAT_LED_OFF);
         else
             plat_led_glow(b, (usable >> b) & 1u);
     }
