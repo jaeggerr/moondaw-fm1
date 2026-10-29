@@ -4,7 +4,8 @@
  * atom, counted inside the audio render; the rules of every fx are
  * moondaw's and so is the order they are applied in.
  *
- * Not here yet: the master limiter, the metronome. */
+ * After the MASTER knob, a peak limiter keeps the output under clipping
+ * (player.c, LIM_*). */
 #ifndef PLAYER_H
 #define PLAYER_H
 

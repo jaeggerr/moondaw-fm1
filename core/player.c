@@ -419,6 +419,12 @@ static volatile uint8_t ui_tick; /* the tick inside ui_row's step: REC rounds to
  * the song, never in it. */
 enum { CLICK_N = FS / 30 };
 static volatile uint8_t click_req;
+/* The master limiter (29/10): after the MASTER knob, a stereo-linked peak
+ * limiter -- the gain drops at once to keep a peak under LIM_CEIL and
+ * comes back over ~90 ms (LIM_REL, a one-pole step a sample). Below the
+ * ceiling it does nothing at all: what does not clip sounds as before. */
+enum { LIM_CEIL = 30000, LIM_ONE = 1 << 16, LIM_REL = 12 };
+static int32_t lim_gain = LIM_ONE;
 static int click_left, click_half, click_phase;
 static volatile uint8_t mute_mask, solo_mask;
 static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio side never sees half of it */
@@ -1798,9 +1804,20 @@ void player_render(int16_t *out, int frames)
             int32_t c = (++click_phase / click_half & 1 ? 6000 : -6000) * click_left / CLICK_N;
             mix[2 * i] += c, mix[2 * i + 1] += c;
         }
-        for (int i = 0; i < n * 2; i++) {
-            int32_t s = mul_q(mix[i], master, 10);
-            out[i] = (int16_t)(s > 32767 ? 32767 : s < -32768 ? -32768 : s);
+        for (int i = 0; i < n; i++) {
+            int32_t l = mul_q(mix[2 * i], master, 10), r = mul_q(mix[2 * i + 1], master, 10);
+            int32_t peak = (l < 0 ? -l : l) > (r < 0 ? -r : r) ? (l < 0 ? -l : l) : (r < 0 ? -r : r);
+            if (peak > LIM_CEIL && (int64_t)peak * lim_gain > (int64_t)LIM_CEIL * LIM_ONE)
+                lim_gain = (int32_t)((uint32_t)LIM_CEIL * LIM_ONE / (uint32_t)peak); /* at once: on the ceiling
+                                                                                     (32-bit: no 64-bit division here) */
+            else if (lim_gain < LIM_ONE)
+                lim_gain += (LIM_ONE - lim_gain) >> LIM_REL; /* and back, slowly */
+            if (lim_gain < LIM_ONE) {
+                l = (int32_t)((int64_t)l * lim_gain >> 16);
+                r = (int32_t)((int64_t)r * lim_gain >> 16);
+            }
+            out[2 * i] = (int16_t)(l > 32767 ? 32767 : l < -32768 ? -32768 : l);
+            out[2 * i + 1] = (int16_t)(r > 32767 ? 32767 : r < -32768 ? -32768 : r);
         }
         out += n * 2;
         frames -= n;

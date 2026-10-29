@@ -1714,13 +1714,24 @@ panel (where, stopped, it plays the project, as on its row), the namer,
 HOME's question, SETTINGS, HELP (his find: stuck listening in the panel,
 only HOME got out).
 
+## 2026-10-29 — the limiter, and DRUM's cost measured
+
+A master limiter after the MASTER knob (`player.c`, LIM_*): stereo-linked,
+the gain drops at once to put a peak on 30000 and comes back over ~90 ms
+(a one-pole step a sample); below the ceiling it does nothing, so
+`make difftest` still passes as before. 32-bit division only, once per
+sample over the ceiling (no 64-bit division in the image).
+
+DRUM on the FM-1 (`status --profile`, 25 s of each, the worst block held):
+KIDS with its WAVE/NOISE drums cpu 48 % max 59 %; KIDS-DRUM cpu 50 % max
+65 %; DPUNK-EN-DRM cpu 40 % max 48 %. DRUM costs about 2 % on average and
+6 points on the worst block: room left.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
 - LOOP in SECTION (PATTERN has it).
-- DRUM in moondaw (the same `drum_voice.inc`), then its songs on it; the
-  DRUM cost measured on the FM-1; PATTERN naming a kit's notes by their
-  drum (`drum_note_abbr` is there).
-- The limiter.
+- DRUM in moondaw (the same `drum_voice.inc`), then its songs on it;
+  PATTERN naming a kit's notes by their drum (`drum_note_abbr` is there).
 - `web/installer/` is copied, not adapted, not run.
