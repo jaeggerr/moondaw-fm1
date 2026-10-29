@@ -1742,5 +1742,8 @@ with OP6 when no selection is anchored; with one, OP6 loops it.
 - DRUM in moondaw (the same `drum_voice.inc`), then its songs on it;
   PATTERN naming a kit's notes by their drum (`drum_note_abbr` is there).
 - `web/installer/`: adapted (29/10), checked byte for byte against
-  `fm1_install.py` on a simulated FM-1 (`tools/installer_compare.py`); not
-  yet run on a device -- the first run is in `web/installer/README.md`.
+  `fm1_install.py` on a simulated FM-1 (`tools/installer_compare.py`). On
+  the device (29/10, Chrome, macOS): Connect, Save songs (13 songs, two
+  compared byte for byte with `fm1_send.py --get`) and Install over
+  MOONDAW work. Not yet tried: back to V15 and installing from V15 (they
+  erase the songs), the cut-off cable, Windows, Linux, Edge.

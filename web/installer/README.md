@@ -189,5 +189,8 @@ In Chrome, <http://127.0.0.1:8793/>:
 6. Cut-off: during "Writing", pull the cable; plug it back; Connect shows
    `ota-…`; Install finishes it.
 
+Done on 29/10 (Chrome on macOS, the FM-1 running MOONDAW): steps 1 to 3
+went as said. Steps 4 to 6 are still to do.
+
 If anything stops, `tools/fm1_install.py` (same protocol) and
 `fm1_rescue.py` (docs/ARRIVEE.md, section 2) are the ways back.
