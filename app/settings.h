@@ -5,6 +5,7 @@
  *   LEDS   OFF, STATE (PLAY's alone), GUIDE (and what each screen can do)
  *   LIGHT  how bright the guide is, 15 to 100 %; on its row a few buttons
  *          light at it, to judge
+ *   COUNT-IN  the bars REC counts before it records: OFF, 1 BAR (default), 2 BARS
  *
  *   SELECT, KNOB 1  the setting     KNOB 3  its value     HOME  back
  * Kept in flash beside which song was open, when the screen is left. */

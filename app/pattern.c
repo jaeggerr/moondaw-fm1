@@ -35,7 +35,8 @@
  *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
  *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
  *   HOME  back where it was opened from (out of the SELECTION first)   GLO  the PROJECT
- *   REC   armed, or not: PLAY then counts a bar in and records what the keys play
+ *   REC   armed, or not: PLAY then counts SETTINGS' COUNT-IN in (a bar by default, or
+ *         none) and records what the keys play
  *         on the nearest step (replacing it), an OFF where the last key is let go
  *   REC   armed, or not: PLAY then counts a bar in and records what the keys play
  *         on the nearest step (replacing it), an OFF where the last key is let go;
@@ -709,7 +710,7 @@ int pattern_frame(const PlatInput *in)
     }
     if (counting) { /* a bar of clicks, the meter's beats, then the phrase from the top */
         uint32_t beat = 60000u / (song->bpm ? song->bpm : 120);
-        int beats = song->beats_per_bar ? song->beats_per_bar : 4;
+        int beats = (song->beats_per_bar ? song->beats_per_bar : 4) * ui_count_in; /* SETTINGS' bars */
         if (in->ms - count_t0 >= (uint32_t)count_beat * beat) {
             if (count_beat == beats) {
                 counting = false;
@@ -717,7 +718,7 @@ int pattern_frame(const PlatInput *in)
                 rec_live = false;
                 player_play_entry(entry);
             } else {
-                player_click(count_beat == 0);
+                player_click(count_beat % (beats / ui_count_in) == 0); /* each bar's first beat higher */
                 count_beat++;
             }
         }
@@ -775,10 +776,14 @@ int pattern_frame(const PlatInput *in)
         if (playing || counting) {
             player_stop();
             counting = recording = false;
-        } else if (rec_armed) { /* armed: a bar counted in first */
+        } else if (rec_armed && ui_count_in) { /* armed: the bars counted in first */
             counting = true;
             count_beat = 0;
             count_t0 = in->ms;
+        } else if (rec_armed) { /* no count: at once */
+            recording = true;
+            rec_live = false;
+            player_play_entry(entry);
         } else {
             player_play_entry(entry);
         }

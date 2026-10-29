@@ -76,7 +76,7 @@ static const Item pattern_items[] = {
     { "MONO", "solo; held: mute" },
     { "ALGO", "undo left, redo right" },
     { "PLAY", "the phrase, round" },
-    { "REC", "armed: PLAY counts a bar" },
+    { "REC", "armed: PLAY counts in" },
     { "  then keys", "record; OFF when let go" },
     { "GLO", "the project" },
     { "HOME", "back" },
@@ -135,6 +135,7 @@ static const Item settings_items[] = {
     { "KNOB 3", "its value" },
     { "LEDS", "off, state, guide" },
     { "LIGHT", "how bright the guide" },
+    { "COUNT-IN", "bars before REC records" },
     { "HOME", "back, kept" },
 };
 static const Item gestures_items[] = {

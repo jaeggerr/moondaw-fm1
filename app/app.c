@@ -137,16 +137,16 @@ static void adopt(int slot, bool dirty)
 /* ------------------------------------------------------------ flash --- */
 /* The last slot holds which song was open -- so the machine comes back on
  * what was being worked on, not on the first of the list -- then, since
- * 29/10, the SETTINGS: LEDS and LIGHT. A file of one byte is from before. */
+ * 29/10, the SETTINGS: LEDS, LIGHT, COUNT-IN. Shorter files are from before. */
 #define LAST_SLOT (STORE_SLOTS - 1)
-enum { LAST_BYTES = 3 };
+enum { LAST_BYTES = 4 };
 static char last_slot = -1;
 
 static void record(void)
 {
-    char b[LAST_BYTES] = { last_slot, (char)ui_leds, (char)ui_light }, was[LAST_BYTES];
+    char b[LAST_BYTES] = { last_slot, (char)ui_leds, (char)ui_light, (char)ui_count_in }, was[LAST_BYTES];
     if (store_load_begin(LAST_SLOT) == STORE_OK && store_load_get(was, LAST_BYTES) == LAST_BYTES &&
-        was[0] == b[0] && was[1] == b[1] && was[2] == b[2])
+        was[0] == b[0] && was[1] == b[1] && was[2] == b[2] && was[3] == b[3])
         return; /* already says so: an erase saved */
     if (store_save_begin(LAST_SLOT, ".LAST") == STORE_OK && store_save_put(b, LAST_BYTES) == STORE_OK)
         store_save_commit();
@@ -280,9 +280,11 @@ void app_init(void)
     store_mount();
     if (store_load_begin(LAST_SLOT) == STORE_OK && (n = store_load_get(last, LAST_BYTES)) >= 1) {
         slot = last_slot = last[0];
-        if (n == LAST_BYTES && last[1] >= UI_LEDS_OFF && last[1] <= UI_LEDS_GUIDE && last[2] > PLAT_LED_OFF &&
+        if (n >= 3 && last[1] >= UI_LEDS_OFF && last[1] <= UI_LEDS_GUIDE && last[2] > PLAT_LED_OFF &&
             last[2] < PLAT_LED_LEVELS)
             ui_leds = last[1], ui_light = last[2];
+        if (n >= 4 && last[3] >= 0 && last[3] <= UI_COUNT_MAX) /* three bytes: from before COUNT-IN */
+            ui_count_in = last[3];
     }
     for (int s = 0; !store_has(slot) && s < APP_SONG_SLOTS; s++)
         if (store_has(s))

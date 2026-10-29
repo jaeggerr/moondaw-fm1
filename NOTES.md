@@ -1641,6 +1641,10 @@ the last key is let go an OFF goes where that falls (the next step when
 let go within the note's own), so the lengths played are kept. REC again,
 or STOP, ends it; ALGO takes a recording back, step by step.
 
+How many bars are counted in is a SETTING (his ask): COUNT-IN OFF, 1 BAR
+(the default), 2 BARS -- the first beat of each bar the higher click; OFF
+records at once. The fourth byte of `.LAST` (three: from before it).
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

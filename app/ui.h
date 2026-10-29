@@ -37,6 +37,9 @@ int ui_loop_slot(int x, int y);
  * REC, later) are apart: they light only for their state. */
 enum { UI_LEDS_OFF, UI_LEDS_STATE, UI_LEDS_GUIDE };
 extern int ui_leds, ui_light;
+/* SETTINGS' COUNT-IN: bars REC counts before it records, 0 to 2; 1 by default. */
+enum { UI_COUNT_MAX = 2 };
+extern int ui_count_in;
 void ui_led_guide(uint32_t usable);
 /* A state's LED (PLAY playing), unless LEDS is OFF. */
 void ui_led_state(int btn, bool on);

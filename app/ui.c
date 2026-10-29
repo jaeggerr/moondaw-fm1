@@ -84,7 +84,7 @@ void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t he
     }
 }
 
-int ui_leds = UI_LEDS_GUIDE, ui_light = PLAT_LED_50;
+int ui_leds = UI_LEDS_GUIDE, ui_light = PLAT_LED_50, ui_count_in = 1;
 static uint32_t shown = ~0u; /* what the guide last wrote */
 
 static uint32_t keys_shown = ~0u;
