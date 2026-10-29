@@ -147,8 +147,9 @@ int mixer_frame(const PlatInput *in)
     prev_keys = in->keys;
     if (btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3])
         said = 0;
-    /* EDIT tapped: the PROJECT (at the release); held + MONO: the row's track (ui.h) */
-    edit_tap = ui_shift(&shift, in, btns, keys, false, row, &said);
+    /* EDIT tapped: the PROJECT (at the release). MONO without EDIT: the keys play
+     * nothing here, so they are commands as they are -- the row's track (ui.h) */
+    edit_tap = ui_shift(&shift, in, btns, keys, true, row, &said);
 
     row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], -1, song->num_tracks - 1);
     if (in->enc[PE_SELECT]) /* SELECT: the track as a whole, the cursor on its number (29/10) */
@@ -174,7 +175,7 @@ int mixer_frame(const PlatInput *in)
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_EDIT | 1u << PB_GLO); /* the PROJECT */
-    ui_led_mono(row, shift.held ? 1u << UI_KEY_MONO : 0u); /* MONO: lit alone, half muted */
+    ui_led_mono(row, row >= 0 ? 1u << UI_KEY_MONO : 0u); /* MONO usable, lit alone, half muted */
     gfx_frame(draw);
     return PRESSED(PB_HOME) ? MIXER_BACK : edit_tap || PRESSED(PB_GLO) ? MIXER_PROJECT : MIXER_STAY;
 #undef PRESSED

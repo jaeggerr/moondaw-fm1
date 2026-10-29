@@ -35,6 +35,13 @@ static const char trk[] =
 static PlatInput in;
 static int fails;
 static void go(void) { mixer_frame(&in); memset(in.enc, 0, sizeof in.enc); }
+static bool any_alone(void)
+{
+    for (int t = 0; t < SONG_MAX_TRACKS; t++)
+        if (player_soloed(t))
+            return true;
+    return false;
+}
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static long left, right;
@@ -107,6 +114,16 @@ int main(void)
         listen();
     CHECK("and both are back when it is lifted", !player_soloed(1) && left > 100000 && right > 100000);
 
+    in.keys = 1u << 20;       /* MONO, no EDIT: the keys play nothing here */
+    go();
+    in.keys = 0;
+    go();
+    CHECK("MONO alone puts the row's track alone", any_alone());
+    in.keys = 1u << 20;
+    go();
+    in.keys = 0;
+    go();
+    CHECK("and back to normal", !any_alone());
     in.btns = 1u << PB_EDIT;
     mixer_frame(&in);
     in.btns = 0;              /* EDIT is also a shift: it answers at the release */

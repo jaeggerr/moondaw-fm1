@@ -1604,6 +1604,8 @@ Seen at once: a track's number at the top of its column green alone, red
 muted, in SONG and SECTION (`grid_track_head`); the cells of a track one
 does not hear grey (`grid_heard`); PATTERN's corner as well. MONO's LED
 lit alone, half muted. The MIXER keeps KNOB 3 on a track's number.
+In the MIXER, MONO needs no EDIT (his remark): the keys play nothing
+there, so they are commands as they are; EDIT + MONO still works.
 
 ## Open
 
