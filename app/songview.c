@@ -15,15 +15,15 @@
  *   SELECT  the phrase          KNOB 1  the track; left of the first, the phrase's number
  *   KNOB 2  on a cell its block, -- below 00 and one new block past the last;
  *           on the number the phrase's length (AUTO, then steps)
- *   SEL     on a cell: the track's blocks in a panel (SELECT walks, PLAY plays one
- *           alone, SEL takes it, GLO goes back); on the number: the SECTION
+ *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY plays
+ *           one alone, SEL takes it, GLO goes back); on the number: the SECTION
  *   SEQ     on a cell: its block, to edit; on the number: a copy of the phrase below
  *   LFO     on the number: delete the phrase (twice)
  *   FX      the MIXER      EDIT  the PROJECT
  *   ARP     UNDO           SAVE  PLAY  as printed
  * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
 enum { CELL_W = 31, CELLS = 6 };
-enum { POP_X = 46, POP_TOP = 18, POP_ROWS = 7 };
+enum { POP_TOP = 24, POP_ROWS = 7 };
 
 #define song (&app_song)
 
@@ -195,40 +195,61 @@ static void hint(int x, const char *key, const char *word, bool right)
     gfx_text(F_COND14, x + 5, PLAT_H - 6, word, C_DIM);
 }
 
+/* A play sign, 10 x 12 from its top left corner: drawn round, filled while it plays. */
+static void play_sign(int x, int y, uint16_t c, bool filled)
+{
+    if (!filled) {
+        gfx_line(x, y, x, y + 11, c);
+        gfx_line(x, y, x + 9, y + 6, c);
+        gfx_line(x, y + 11, x + 9, y + 5, c);
+        return;
+    }
+    for (int i = 0; i < 10; i++) {
+        int h = 12 - 12 * i / 10;
+        gfx_fill(x + i, y + (12 - h) / 2, 1, h, c, 255);
+    }
+}
+
+/* The whole screen, nothing of the grid behind it: drawn over the grid it
+ * read as a grid of one track (29/10). It says what it is for and where
+ * from, and every block has its PLAY. */
 static void draw_pop(void)
 {
-    int n = pop_rows();
-    char s[8] = "TRACK ";
-    gfx_fill(POP_X, 0, PLAT_W - POP_X, PLAT_H, C_BG, 255);
-    gfx_fill(POP_X, 0, 1, PLAT_H, C_TEXT, 255); /* over the grid: its edge */
-    s[6] = (char)('1' + col), s[7] = 0;
-    gfx_text(F_COND12, POP_X + 10, 13, s, C_DIM);
+    int n = pop_rows(), bar = n > POP_ROWS ? 6 : 0;
+    char s[24] = "PHR ", h[3];
+    grid_hex2(s + 4, (uint8_t)row);
+    s[6] = ' ', s[7] = '/', s[8] = ' ', s[9] = 'T', s[10] = 'R', s[11] = 'K', s[12] = ' ';
+    s[13] = (char)('1' + col), s[14] = 0;
+    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
+    gfx_text(F_COND14, 6, 17, "CHOOSE PATTERN", C_TITLE);
+    gfx_text(F_COND12, PLAT_W - 6 - gfx_text_w(F_COND12, s), 17, s, C_DIM);
+    gfx_fill(0, POP_TOP - 3, PLAT_W, 1, C_TRACK, 255);
     for (int r = 0; r < POP_ROWS && pop_top + r < n; r++) {
         int k = pop_top + r, y = POP_TOP + r * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent, x;
         uint8_t b = pop_block(k);
         bool here = k == pop_cur;
         uint16_t ink = here ? C_ON_ACC : b == PATTERN_NONE || k == n - 1 ? C_DIM : C_TEXT;
-        char h[3];
         if (here)
-            gfx_slab(POP_X + 4, y + 1, PLAT_W - POP_X - 8 - (n > POP_ROWS ? 6 : 0), GRID_ROW - 2, C_ACCENT, 255);
+            gfx_slab(4, y + 1, PLAT_W - 8 - bar, GRID_ROW - 2, C_ACCENT, 255);
         if (b == pop_orig) /* the block in place, as HOME marks the open project */
-            gfx_fill(POP_X + 6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
-        if (k == pop_preview)
-            for (int i = 0; i < 6; i++)
-                gfx_fill(PLAT_W - 24 + i, y + 8 + i, 1, 12 - 2 * i, here ? C_ON_ACC : C_TITLE, 255);
-        x = gfx_text(F_COND20, POP_X + 14, base, b == PATTERN_NONE ? "--" : grid_hex2(h, b), ink);
+            gfx_fill(6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        x = gfx_text(F_COND20, 16, base, b == PATTERN_NONE ? "--" : grid_hex2(h, b), ink);
         if (b == PATTERN_NONE)
             gfx_text(F_COND14, x + 8, base, "silent", ink);
         else if (k == n - 1 && song_pattern_blank(song, col, b))
             gfx_text(F_COND14, x + 8, base, "new", ink);
+        if (b != PATTERN_NONE)
+            play_sign(PLAT_W - 26 - bar, y + 8,
+                      here ? C_ON_ACC : k == pop_preview ? C_ACCENT : C_DIM, k == pop_preview);
     }
     if (n > POP_ROWS) {
-        int h = POP_ROWS * GRID_ROW * POP_ROWS / n, y = POP_TOP + POP_ROWS * GRID_ROW * pop_top / n;
+        int hh = POP_ROWS * GRID_ROW * POP_ROWS / n, y = POP_TOP + POP_ROWS * GRID_ROW * pop_top / n;
         gfx_fill(PLAT_W - 4, POP_TOP, 2, POP_ROWS * GRID_ROW, C_TRACK, 255);
-        gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
+        gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
     }
-    hint(POP_X + 10, "SEL", "OK", false);
-    hint(PLAT_W - 8, "GLO", "BACK", true);
+    hint(6, "SEL", "TAKE", false);
+    hint(96, "PLAY", "LISTEN", false);
+    hint(PLAT_W - 6, "GLO", "BACK", true);
 }
 
 static void draw(void)

@@ -1298,6 +1298,21 @@ app's fonts only (20, 14, 12, mono 8), and the computer plugged in. To
 weigh other sizes, `MOONDAW_APP=type` (`app/type.c`) stays. The old
 mockups (HOME, SONG, PATTERN, MIXER, INSTRUMENT...) are in the history.
 
+## 2026-10-29 — the SCREEN capture, and CHOOSE PATTERN
+
+`tools/fm1_ctl.py screen` saves what the panel shows as a PNG (link
+version 3, SCREEN): each band drawn again into gfx's own band and sent
+run-length coded, about 3 s a screen, no memory added. The canvas's raw
+pictures are not in it.
+
+The first thing it showed: the panel of a SONG cell's blocks, drawn over
+the grid with the phrase numbers still at its left, read as "the phrase
+view with one track" -- Jaeger forgot in a day what it was for. Redrawn
+(prototype `tools/protos/pattern_choice.py`, validated): the whole screen,
+titled CHOOSE PATTERN with PHR nn / TRK n, a play sign on every block,
+filled green on the one PLAY plays, and SEL TAKE / PLAY LISTEN / GLO BACK
+at the foot.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
