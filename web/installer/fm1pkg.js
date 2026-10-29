@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
-// FM-1 .fwsc packages in the browser: the package identity and the image the
-// device reads during an update.
+// Adapted for MOONDAW.
+//
+// FM-1 .fwsc packages in the browser: the package identity, the image the
+// device reads during an update, and which packages may be installed
+// (tools/fm1_install.py load_package).
 
 const BLOCKS = 20, BLK = 0x30, KEEP = 0x2F;
 export const STOCK_V15_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a";
 export const STOCK_APP_SIZE = 0x8DFBC;
 export const STOCK_V15_SIZE = 699956;
+// Felucca's update loader, which MOONDAW's packages carry (firmware/loader/crt0_ldr.S)
+export const LOADER_MARK = "FELUCCA-LOADER-1";
+export const MOONDAW_PRODUCT = "FM-1_900";
 
 const T = new Uint16Array(256);
 for (let i = 0; i < 256; i++) {
@@ -236,21 +242,36 @@ export async function sha256hex(bytes) {
 // The digest pins every file, loader and flash layout; filenames are not evidence.
 export async function validateStockPackage(bytes) {
   if (bytes.length !== STOCK_V15_SIZE || await sha256hex(bytes) !== STOCK_V15_SHA256)
-    throw new Error("Select the unmodified official FM-1 V15 file (FM-1.fwsc).");
+    throw new Error("this is not the unmodified official V15 (FM-1_015.fwsc, 699 956 bytes)");
   const pkg = new Package(bytes);
   if (pkg.product !== "FM-1_015" || pkg.flashFileOff !== 1044 || pkg.flashSize !== 602112 ||
       pkg.appBase !== 16384 || pkg.appOff !== 16672 || pkg.app.size !== STOCK_APP_SIZE ||
       !pkg.entries.some((e) => e.type === 100 && e.name === "ota.bin" && e.size === 19969))
-    throw new Error("The official firmware has an unsupported FM-1 layout.");
+    throw new Error("the official firmware has an unexpected layout");
   return { product: pkg.product, image: logicalImage(bytes), sha256: STOCK_V15_SHA256 };
 }
 
-// official V15 + Felucca app -> installable package (Uint8Array)
-export async function buildFeluccaPackage(stockBytes, appBytes, product) {
-  const sha = await sha256hex(stockBytes);
-  if (sha !== STOCK_V15_SHA256) throw new Error("this is not the official FM-1 V15 firmware file (FM-1.fwsc)");
-  const pkg = new Package(stockBytes);
-  pkg.setApp(appBytes);
-  pkg.setProduct(product);
-  return pkg.serialize();
+// the package to install: one made by tools/fm1pkg_make.py (Felucca's update loader in it),
+// as fm1_install.py accepts without --force. The official V15 goes through validateStockPackage.
+// -> {product, image, sha256, size, moondaw}
+export async function checkPackage(bytes) {
+  bytes = new Uint8Array(bytes);
+  const product = productOf(bytes);
+  if (!/^[^_]+_\d+$/.test(product)) throw new Error("not an FM-1 package");
+  const sha256 = await sha256hex(bytes);
+  if (sha256 === STOCK_V15_SHA256) throw new Error("this is the official V15: use \"Return to the official firmware\" below");
+  if (!hasMark(bytes, LOADER_MARK))
+    throw new Error("no Felucca update loader in this package: only packages built by MOONDAW's build.sh (or Felucca's) are installed here");
+  new Package(bytes);                              // the UFW header, the entry list and flash.bin CRCs
+  return { product, image: logicalImage(bytes), sha256, size: bytes.length, moondaw: product === MOONDAW_PRODUCT };
+}
+
+function hasMark(bytes, text) {
+  const m = [...text].map((c) => c.charCodeAt(0));
+  outer: for (let i = 0; i + m.length <= bytes.length; i++) {
+    if (bytes[i] !== m[0]) continue;
+    for (let k = 1; k < m.length; k++) if (bytes[i + k] !== m[k]) continue outer;
+    return true;
+  }
+  return false;
 }
