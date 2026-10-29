@@ -24,7 +24,7 @@
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
  *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
  *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
- *   GLO   back where it was opened from     ARP  UNDO     SAVE  PLAY  as printed
+ *   GLO   back where it was opened from     ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
  * FX is a view here, not the MIXER: FX shows the effects of where one is. EDIT
  * does nothing: there is nothing under the cursor the views do not already edit. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
@@ -288,7 +288,7 @@ static void draw(void)
     grid_clear();
     s[0] = 'T', s[1] = (char)('1' + track), s[2] = 0;
     if (said)
-        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+        grid_corner(said, grid_said_ink(said), 0, 0);
     else if (cur_col < 0) /* the block's length, while the cursor is on a number */
         grid_corner("LEN", C_DIM, ui_dec(s + 3, len), C_TEXT);
     else
@@ -440,7 +440,7 @@ int pattern_frame(const PlatInput *in)
 
     if (PRESSED(PB_SAVE))
         said = app_save() == 0 ? "SAVED" : "NOT SAVED";
-    if (PRESSED(PB_ARP) && undo_pop()) {
+    if (undo_turn(in->enc[PE_ALGO], &said)) {
         /* what was taken back may be older than this screen: the block
          * the phrase names here, or the track itself */
         pat = track < song->num_tracks ? song->arrangement[entry].pattern[track] : PATTERN_NONE;

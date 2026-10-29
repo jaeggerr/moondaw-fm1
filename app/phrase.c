@@ -15,7 +15,7 @@
  *
  *   SELECT  the step     KNOB 1  the track     the keys  write notes, OCT-/OCT+ their octave
  *   SEL, EDIT  the block of that track, to edit   GLO  back to SONG
- *   FX      the MIXER    ARP  UNDO     SAVE  PLAY  as printed */
+ *   FX      the MIXER    ALGO  UNDO left, REDO right     SAVE  PLAY  as printed */
 enum { CELL_W = 37, CELLS = 5 };
 
 #define song (&app_song)
@@ -88,7 +88,7 @@ static void draw(void)
 
     grid_clear();
     if (said)
-        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+        grid_corner(said, grid_said_ink(said), 0, 0);
     else
         grid_corner("SEC", C_DIM, grid_hex2(s, entry), C_TITLE);
     for (int c = 0; c < CELLS && left + c < song->num_tracks; c++) {
@@ -170,7 +170,7 @@ int phrase_frame(const PlatInput *in)
         chord_next++;
     }
 
-    if (PRESSED(PB_ARP) && undo_pop()) {
+    if (undo_turn(in->enc[PE_ALGO], &said)) {
         if (entry >= song->arrange_len)
             entry = song->arrange_len - 1; /* it may be older than this screen */
         measure();

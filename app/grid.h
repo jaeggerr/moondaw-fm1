@@ -31,6 +31,9 @@ void grid_head(int x, int w, const char *s, bool on);
 /* The small words at the top left, over the numbers: where one is, or
  * what just happened (SAVED, POOL FULL). */
 void grid_corner(const char *a, uint16_t ca, const char *b, uint16_t cb);
+/* The colour of a word said there: SAVED green, UNDO / REDO amber, the end
+ * of the journal grey, a failure red. */
+uint16_t grid_said_ink(const char *s);
 
 /* The cursor's row: the green band, `w` wide from the left edge. */
 void grid_band(int vis, int w);

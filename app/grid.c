@@ -20,6 +20,11 @@ void grid_corner(const char *a, uint16_t ca, const char *b, uint16_t cb)
         gfx_text(F_COND12, x + 4, GRID_HEAD - 3, b, cb);
 }
 
+uint16_t grid_said_ink(const char *s)
+{
+    return s[0] == 'S' ? C_ACCENT : s[0] == 'U' || s[0] == 'R' ? C_FX : s[1] == 'O' && s[2] == 'T' && s[3] == 'H' ? C_DIM : C_MUTE;
+}
+
 void grid_band(int vis, int w)
 {
     gfx_slab(2, grid_y(vis) + 1, w, GRID_ROW - 2, C_ACCENT, 255);

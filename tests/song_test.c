@@ -126,8 +126,8 @@ int main(void)
     press(PB_SEL);
     CHECK("SEL on the number asks for its SECTION", last == SONGVIEW_PHRASE && entry == 0);
     go();
-    press(PB_ARP);
-    CHECK("ARP takes the last edit back", E(0).steps != 0 || app_song.arrange_len == 3);
+    enc(PE_ALGO, -1);
+    CHECK("ALGO to the left takes the last edit back", E(0).steps != 0 || app_song.arrange_len == 3);
     press(PB_SAVE);
     CHECK("SAVE saves", saves == 1);
     press(PB_FX);

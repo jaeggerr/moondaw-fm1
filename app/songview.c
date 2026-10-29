@@ -22,7 +22,7 @@
  *   SEQ     on the number: a copy of the phrase below (on a cell: free, 29/10)
  *   LFO     on the number: delete the phrase (twice)
  *   FX      the MIXER      GLO   the PROJECT: what is GLObal (HOME goes home)
- *   ARP     UNDO           SAVE  PLAY  as printed
+ *   ALGO    UNDO left, REDO right     SAVE  PLAY  as printed
  * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
 enum { CELL_W = 31, CELLS = 6 };
 enum { POP_TOP = 24, POP_ROWS = 7 };
@@ -266,7 +266,7 @@ static void draw(void)
 
     grid_clear();
     if (said)
-        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+        grid_corner(said, grid_said_ink(said), 0, 0);
     else if (col < 0 && !is_ref(row)) /* the phrase's length, while the cursor is on it */
         grid_corner(entry_at(row)->steps ? ui_dec(s, entry_at(row)->steps) : "AUTO", C_TEXT, 0, 0);
     for (int c = 0; c < CELLS && left + c < tracks; c++) {
@@ -408,7 +408,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             delete_phrase();
         ask_delete = !ask_delete;
     }
-    if (PRESSED(PB_ARP) && undo_pop()) {
+    if (undo_turn(in->enc[PE_ALGO], &said)) {
         if (row >= song->arrange_len)
             row = song->arrange_len - 1;
         if (col >= song->num_tracks)

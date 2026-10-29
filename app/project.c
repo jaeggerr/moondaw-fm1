@@ -19,7 +19,7 @@
  *   STEP    what a step is worth as a note: 1/16 at 4 steps a beat, 1/12 at 3
  *           (the file's steps_per_beat)
  *   GLO     back where it was opened from     FX  the MIXER
- *   ARP     UNDO     SAVE  as printed */
+ *   ALGO    UNDO left, REDO right     SAVE  as printed */
 enum { S_NAME, S_BPM, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
 enum { LABEL_X = 14, VALUE_X = 120 };
 
@@ -108,7 +108,7 @@ static void draw(void)
     char s[STORE_NAME + 4];
     grid_clear();
     if (said)
-        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+        grid_corner(said, grid_said_ink(said), 0, 0);
     else
         grid_corner("PROJECT", C_DIM, 0, 0);
     if (naming) {
@@ -162,8 +162,7 @@ int project_frame(const PlatInput *in)
         namer_open(app_name, STORE_NAME);
         naming = true;
     }
-    if (PRESSED(PB_ARP))
-        undo_pop();
+    undo_turn(in->enc[PE_ALGO], &said);
     if (PRESSED(PB_SAVE))
         said = app_save() == 0 ? "SAVED" : "NOT SAVED";
     if (PRESSED(PB_PLAY)) {

@@ -55,7 +55,8 @@ static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
 static void wait(int ms) { in.ms += (uint32_t)ms; go(); }
-static void undo(void) { press(PB_ARP); }
+static void undo(void) { enc(PE_ALGO, -1); }
+static void redo(void) { enc(PE_ALGO, 1); }
 static const Step *st(int row) { return song_step(&app_song, 0, 0, row); }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 
@@ -97,6 +98,18 @@ int main(void)
     CHECK("a pause makes two gestures: the second goes first", st(0)->notes[0] == 62);
     undo();
     CHECK("then the first", st(0)->notes[0] == 60 && !undo_can());
+    redo();
+    CHECK("REDO does the first again", st(0)->notes[0] == 62 && undo_can_redo());
+    redo();
+    CHECK("then the second", st(0)->notes[0] == 65 && !undo_can_redo());
+    undo();
+    CHECK("UNDO again after a REDO", st(0)->notes[0] == 62);
+    wait(2000);
+    enc(PE_K2, 1);
+    CHECK("an edit after an UNDO forgets what could be done again", st(0)->notes[0] == 63 && !undo_can_redo());
+    undo();
+    undo();
+    CHECK("and the journal goes back as before", st(0)->notes[0] == 60 && !undo_can());
 
     wait(2000);
     enc(PE_K2, 100);

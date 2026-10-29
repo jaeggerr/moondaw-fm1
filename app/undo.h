@@ -6,7 +6,8 @@
  * One press takes back one GESTURE: everything written in one frame,
  * and what the same hand went on writing at the same place within a
  * second (a knob turned twelve notches is one gesture, not twelve).
- * When the journal is full the oldest gestures are forgotten. */
+ * When the journal is full the oldest gestures are forgotten. What was
+ * taken back is kept, to be done again, until the next edit. */
 #ifndef UNDO_H
 #define UNDO_H
 
@@ -24,5 +25,13 @@ void undo_bytes(void *p, uint32_t len);
 
 bool undo_can(void);
 bool undo_pop(void); /* true when something was taken back */
+/* REDO: a gesture taken back, done again -- until the next edit, which
+ * forgets what was taken back. */
+bool undo_can_redo(void);
+bool undo_redo(void);
+/* The ALGO knob, on every screen (29/10): a notch left takes a gesture
+ * back, a notch right does it again. `*said` gets the word for the
+ * screen's corner. True when the song changed. */
+bool undo_turn(int d, const char **said);
 
 #endif

@@ -22,7 +22,7 @@
  *   SELECT  the row     KNOB 1  the column     KNOB 2  the value
  *   PLAY    the preview: a few notes up, round and round, until PLAY again
  *   the keys  play the sound, OCT-/OCT+ their octave     PRESETS  the next instrument
- *   GLO     back to PATTERN     ARP  UNDO     SAVE  as printed
+ *   GLO     back to PATTERN     ALGO  UNDO left, REDO right     SAVE  as printed
  *
  * Five cells of 33 px a row; a column takes one or two (an engine's name). */
 enum { LABEL_X = 8, CELL_X = 66, CELL_W = 33 };
@@ -262,7 +262,7 @@ static void draw(void)
 
     grid_clear();
     if (said)
-        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+        grid_corner(said, grid_said_ink(said), 0, 0);
     else
         grid_corner("INS", C_DIM, grid_hex2(s, inst), C_TITLE);
     if (naming) {
@@ -381,8 +381,7 @@ bool instrument_frame(const PlatInput *in)
     }
     if (previewing)
         preview(in->ms);
-    if (PRESSED(PB_ARP))
-        undo_pop();
+    undo_turn(in->enc[PE_ALGO], &said);
     if (PRESSED(PB_SAVE))
         said = app_save() == 0 ? "SAVED" : "NOT SAVED";
 

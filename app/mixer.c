@@ -17,7 +17,7 @@
  *   KNOB 2  the value; on a track's number: normal -> MUTE -> SOLO (monitoring,
  *           never in the file)
  *   GLO     back where it was opened from     EDIT  the PROJECT
- *   ARP     UNDO     SAVE  PLAY  as printed */
+ *   ALGO    UNDO left, REDO right     SAVE  PLAY  as printed */
 enum { CELL_W = 45, COLS = 4 };
 
 #define song (&app_song)
@@ -79,7 +79,7 @@ static void draw(void)
 
     grid_clear();
     if (said)
-        grid_corner(said, said[0] == 'S' ? C_ACCENT : C_MUTE, 0, 0);
+        grid_corner(said, grid_said_ink(said), 0, 0);
     else
         grid_corner("MIXER", C_DIM, 0, 0);
     for (int c = 0; c < COLS; c++)
@@ -153,8 +153,7 @@ int mixer_frame(const PlatInput *in)
         else if (row >= 0)
             turn_state(row, d);
     }
-    if (PRESSED(PB_ARP))
-        undo_pop();
+    undo_turn(in->enc[PE_ALGO], &said);
     if (PRESSED(PB_SAVE))
         said = app_save() == 0 ? "SAVED" : "NOT SAVED";
     if (PRESSED(PB_PLAY)) {

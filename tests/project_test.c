@@ -59,8 +59,14 @@ int main(void)
     enc(PE_SELECT, 1);
     enc(PE_K2, -100);
     CHECK("TRACKS stops at one", S.num_tracks == 1);
-    press(PB_ARP);
-    CHECK("UNDO takes the last setting back", S.num_tracks == 8);
+    enc(PE_ALGO, -1);
+    CHECK("ALGO to the left takes the last setting back", S.num_tracks == 8);
+    enc(PE_ALGO, 1);
+    CHECK("and to the right does it again", S.num_tracks == 1);
+    enc(PE_ALGO, 1);
+    CHECK("past the last, nothing", S.num_tracks == 1);
+    enc(PE_ALGO, -1);
+    CHECK("and back", S.num_tracks == 8);
 
     enc(PE_SELECT, -10);       /* NAME */
     press(PB_SEL);

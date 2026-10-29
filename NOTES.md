@@ -1365,11 +1365,27 @@ EDIT edits what is under the cursor or nothing: on SECTION it opens the
 block, as SEL; on PATTERN it does nothing. Neither leads to PROJECT any
 more (GLO on SONG does).
 
+## 2026-10-29 — UNDO and REDO on ALGO
+
+The ALGO knob is the journal, on every screen: a notch left takes a
+gesture back, a notch right does it again; the corner says UNDO or REDO
+in amber, NOTHING TO UNDO / REDO in grey at either end. ALGO rather than
+KNOB 3 or 4 (Jaeger's question): KNOB 1-4 are the editing row, whose
+meaning changes with the screen, and KNOB 4 is the natural fourth
+setting some day (the MIXER has four columns); ALGO means nothing in
+MOONDAW, PRESETS may one day mean presets. ARP no longer undoes: it is
+free, as SEQ on a SONG cell.
+
+REDO in the journal: taking a gesture back swaps the song's bytes with
+the journal's, so the records keep what the undo replaced, and doing it
+again swaps them back. The next edit forgets what could be done again.
+No memory added.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
   that do not know it sounds (above).
 - LOOP, the PATTERN selection, cell levels: gone with the old screens,
   to be redesigned.
-- The limiter; redo (no button for it).
+- The limiter.
 - `web/installer/` is copied, not adapted, not run.
