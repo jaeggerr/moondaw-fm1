@@ -141,15 +141,20 @@ int main(void)
     /* EDIT on a project: RENAME, DUPLICATE, DELETE */
     home();
     projects();               /* the cursor on the open one, SONG 01 */
+    press(PB_EDIT);
+    press(PB_SEL);            /* OPEN, first: EDIT where SEL was meant */
+    CHECK("the panel's OPEN opens the project", !strcmp(app_screen(), "SONG"));
+    home();
+    projects();
     {
         int n = songs_in_flash();
         press(PB_EDIT);
-        sel(1);               /* DUPLICATE */
+        sel(2);               /* OPEN, RENAME, DUPLICATE */
         press(PB_SEL);
         press(PB_SEL);        /* the name it offers, SONG 01 2, kept */
         CHECK("DUPLICATE writes a copy, the open one now", songs_in_flash() == n + 1 && !strcmp(app_name, "SONG 01 2"));
         press(PB_EDIT);
-        sel(2);               /* DELETE */
+        sel(3);               /* DELETE */
         press(PB_SEL);
         press(PB_HOME);       /* asked: kept */
         CHECK("DELETE asks first, HOME keeps it", songs_in_flash() == n + 1);

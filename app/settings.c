@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "settings.h"
 
+#include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
 #include "grid.h"
@@ -72,6 +73,9 @@ bool settings_frame(const PlatInput *in)
     ui_led_guide(row == S_LIGHT ? 1u << PB_FX | 1u << PB_ENV | 1u << PB_LFO | 1u << PB_EDIT | 1u << PB_SEQ |
                                       1u << PB_ARP
                                 : 0u);
+    if ((btns >> PB_PLAY & 1u) && player_playing()) /* stop, from anywhere */
+        player_stop();
+    ui_led_state(PB_PLAY, player_playing());
     gfx_frame(draw);
     return !((btns >> PB_HOME) & 1u);
 }

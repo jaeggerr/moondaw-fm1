@@ -1708,6 +1708,12 @@ DUPLICATE go through the song in memory, as SAVE does: the project is
 opened first when it is not the open one, and refused over unsaved
 changes ("SAVE THE OPEN ONE FIRST"). The guide lights EDIT in the list.
 
+Then OPEN first in the panel, for EDIT pressed where SEL was meant; and
+PLAY stops what plays from wherever it has nothing else to do -- the
+panel (where, stopped, it plays the project, as on its row), the namer,
+HOME's question, SETTINGS, HELP (his find: stuck listening in the panel,
+only HOME got out).
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

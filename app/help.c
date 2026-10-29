@@ -1,11 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "help.h"
 
+#include "../core/player.h"
 #include "../core/song.h"
 #include "fx_help.h"
 #include "gfx.h"
 #include "grid.h"
 #include "theme.h"
+#include "ui.h"
 
 /* A gesture: the control, and what it does -- each 24 characters at most,
  * a line of CONDENSED 20 on the panel. Written from the screens' own
@@ -379,6 +381,9 @@ bool help_frame(const PlatInput *in)
             gfx_invalidate();
         }
     }
+    if ((btns >> PB_PLAY & 1u) && player_playing()) /* stop, from anywhere */
+        player_stop();
+    ui_led_state(PB_PLAY, player_playing());
     gfx_frame(draw);
     return true;
 }

@@ -18,7 +18,7 @@
  * a bar at its left and an amber dot while it has unsaved changes; + NEW
  * last. SEL opens, PLAY plays the project under the cursor (opening it if
  * it is not the open one), HOME goes back to the root. EDIT on a project:
- * a panel -- RENAME, DUPLICATE (KIDS 2, then the open one), DELETE (asked
+ * a panel -- OPEN (EDIT where SEL was meant), RENAME, DUPLICATE (KIDS 2, then the open one), DELETE (asked
  * first: a flash erase has no UNDO; the open one deleted, the first left
  * is opened in its place, or an empty project when none is). The version small
  * at the bottom of both. */
@@ -43,8 +43,8 @@ static uint32_t prev_btns;
 static int peak; /* the worst block since PLAY, held */
 static bool listing; /* in PROJECTS, not the root */
 /* EDIT on a project (29/10): a panel of what can be done to it. */
-enum { OPT_RENAME, OPT_DUPLICATE, OPT_DELETE, OPTS };
-static const char *const opt_word[OPTS] = { "RENAME", "DUPLICATE", "DELETE" };
+enum { OPT_OPEN, OPT_RENAME, OPT_DUPLICATE, OPT_DELETE, OPTS };
+static const char *const opt_word[OPTS] = { "OPEN", "RENAME", "DUPLICATE", "DELETE" }; /* OPEN: EDIT where SEL was meant */
 static bool opts, deleting, naming;
 static int opt_cur, opt_row;    /* opt_row: the project the panel is about */
 static char new_name[STORE_NAME + 1];
@@ -169,6 +169,8 @@ static bool take_in_hand(void)
 static void opt_go(void)
 {
     opt_said = 0;
+    if (opt_cur == OPT_OPEN)
+        return; /* menu_frame opens it, as SEL in the list */
     if (opt_cur == OPT_DELETE) {
         deleting = true;
     } else if (take_in_hand()) {
@@ -376,7 +378,10 @@ int menu_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     if (asking) {
-        /* The question's two buttons answer it; anything else is "stay". */
+        /* The question's two buttons answer it; anything else is "stay" -- PLAY
+         * stopping what plays as well. */
+        if (btns & 1u << PB_PLAY && player_playing())
+            player_stop();
         int then = asking;
         bool answered = false;
         if (btns & 1u << PB_SAVE)
@@ -422,6 +427,8 @@ int menu_frame(const PlatInput *in)
         }
     } else if (naming) {
         int r = namer_frame(in, btns);
+        if (btns & 1u << PB_PLAY && player_playing()) /* stop, from anywhere */
+            player_stop();
         if (r == NAMER_KEPT)
             opt_named();
         if (r != NAMER_TYPING)
@@ -437,11 +444,37 @@ int menu_frame(const PlatInput *in)
         } else {
             opt_cur += in->enc[PE_SELECT] + in->enc[PE_K1];
             opt_cur = opt_cur < 0 ? 0 : opt_cur >= OPTS ? OPTS - 1 : opt_cur;
-            if (btns & 1u << PB_SEL)
+            if (btns & 1u << PB_SEL && opt_cur == OPT_OPEN) { /* as SEL on the row */
+                opts = false;
+                cur = opt_row;
+                if (cur == open_row) {
+                    gfx_frame(draw);
+                    return MENU_SONG;
+                }
+                if (app_dirty) {
+                    pending = cur;
+                    asking = ASK_OPEN;
+                } else {
+                    load(cur);
+                    gfx_frame(draw);
+                    return MENU_SONG;
+                }
+            } else if (btns & 1u << PB_SEL)
                 opt_go();
             else if (btns & 1u << PB_HOME)
                 opts = false;
         }
+        if (btns & 1u << PB_PLAY) { /* stop, from here too; or the project, as PLAY on its row */
+            if (player_playing())
+                player_stop();
+            else if (opt_row == open_row)
+                play();
+            else if (!app_dirty) {
+                load(opt_row);
+                play();
+            }
+        }
+        ui_led_state(PB_PLAY, player_playing());
         gfx_frame(draw);
         return MENU_STAY;
     } else {
