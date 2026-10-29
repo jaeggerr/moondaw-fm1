@@ -1,27 +1,27 @@
 <meta charset="utf-8">
-<title>LOOP sur le FM-1</title>
+<title>LOOP on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — LOOP sur le M-VAVE FM-1 (écran 240 × 240) : la boucle d'écoute de PATTERN et de PHRASE.
-  Même système que proto/pattern.html et proto/menu.html.
+  MOONDAW — LOOP on the M-VAVE FM-1 (240 × 240 screen): the listening loop of PATTERN and PHRASE.
+  Same system as proto/pattern.html and proto/menu.html.
 
-  Données : celles de proto/pattern.html (KIDS, t3 01) et de proto/phrase.html
+  Data: the same as proto/pattern.html (KIDS, t3 01) and proto/phrase.html
   (KIDS, phrase 04).
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -70,7 +70,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in panel pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -81,7 +81,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -97,13 +97,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the guide to the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+/* the grid: # · N1..N4 ┊ IN ┊ FX1..FX3 · RMP span */
 .cols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
 .head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
@@ -125,12 +125,12 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .ramp{ align-self:stretch; }
 .ramp.on{ background:var(--sel); }
 
-/* un champ = un slot, plein ou vide */
+/* one field = one slot, full or empty */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
 .slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
-  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
-     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  /* The condensed face has more ascender than descender: centred by its line box, the
+     digit sits half a pixel too low. It is raised by as much. */
   position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
 .slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
@@ -144,9 +144,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .sc .slot.cur{ background:var(--accent); box-shadow:none; }
 .sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
 
-/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
-   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
-   et l'œil va de la carte au potard sans descendre. */
+/* the cards: the four right knobs, in their order.  AT THE TOP
+   (decided on 10/10): the knobs are to the right of the screen, level with it,
+   and the eye goes from card to knob without moving down. */
 .cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
   border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
@@ -162,7 +162,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .card.off{ background:rgba(200,208,200,.03); }
 .card.off .l b{ color:var(--dim); }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on the screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -174,7 +174,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
 .b.gap{ margin-left:2px; }
 
-/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+/* a panel: the list, placed next to the slot it details */
 .pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
   border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
   display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
@@ -190,13 +190,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .pop .pr.cur .m, .pop .pr.cur .d{ color:var(--on-acc); }
 
 
-/* ── cet écran ───────────────────────────────────────────────────── */
+/* ── this screen ───────────────────────────────────────────────────── */
 .nav .id{ font-family:var(--cond); font-size:12px; font-weight:700; letter-spacing:.05em; color:var(--text); }
 .nav .len{ font-family:var(--jb); font-size:8px; color:var(--dim); white-space:nowrap; }
 .nav .len b{ color:var(--text); font-weight:500; margin-right:2px; }
 .gcols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 15px repeat(8, 23px) 1fr; }
-/* la tête de colonne : la piste et son bloc — la poignée de la piste */
+/* the column head: the track and its block — the track's handle */
 .heads{ height:19px; flex:none; margin-bottom:1px; }
 .hd{ height:19px; border-radius:2px; background:rgba(200,208,200,.045);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
@@ -211,7 +211,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .slab.beat .pos{ color:var(--beat); } .slab.bar .pos{ color:var(--text); }
 .slab.playing .pos{ color:var(--accent); }
 .slab.playing .gauge{ background:var(--accent); }
-/* la case : N1, et un point par note de plus dans l'accord */
+/* the cell: N1, and one dot per extra note in the chord */
 .cell{ height:10px; border-radius:1.5px; line-height:10px; white-space:nowrap;
   display:flex; align-items:center; justify-content:center; gap:2px; }
 .cell .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--text); }
@@ -231,7 +231,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .pair figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
 .pair figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); max-width:calc(240px * var(--s)); }
 
-/* ── la boucle ────────────────────────────────────────────────────── */
+/* ── the loop ────────────────────────────────────────────────────── */
 .slab.loop .gauge{ background:var(--title); }
 .slab.loop .step, .slab.loop .pos{ color:var(--title); }
 .slab.playing .gauge{ background:var(--accent); }
@@ -244,77 +244,77 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026</div>
-  <h1>La boucle, <em>en trois pressions</em></h1>
-  <p class="lede">Écouter en boucle quelques pas d'un bloc ou d'une phrase pendant qu'on les
-  travaille. Dans l'app c'est un interrupteur et une barre DÉBUT / FIN où l'on tape une ligne ;
-  ici il n'y a rien à taper, donc <strong>un seul bouton, là où le curseur est</strong>. Jamais
-  sauvegardée : c'est un outil d'écoute.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026</div>
+  <h1>The loop, <em>in three presses</em></h1>
+  <p class="lede">Loop a few steps of a block or a phrase while you work on
+  them. In the app it is a switch and a START / END bar where you tap a row;
+  here there is nothing to tap, so <strong>a single button, where the cursor is</strong>. Never
+  saved: it is a listening tool.</p>
 
   <section>
-    <span class="tag">Cadres 1 et 2 · PATTERN</span>
-    <h2>LOOP pose le début, END pose la fin</h2>
-    <p>Première pression sur LOOP : le pas du curseur devient le début, son numéro passe en cyan
-    et le bouton dit <code>END</code>. On descend avec SELECT, seconde pression : la fin est posée,
-    la boucle existe, le bouton LOOP reste allumé en cyan. Troisième pression : plus de boucle.
-    Si la fin est posée au-dessus du début, les deux s'échangent.</p>
+    <span class="tag">Frames 1 and 2 · PATTERN</span>
+    <h2>LOOP sets the start, END sets the end</h2>
+    <p>First press on LOOP: the cursor's step becomes the start, its number turns cyan
+    and the button says <code>END</code>. Move down with SELECT, second press: the end is set,
+    the loop exists, the LOOP button stays lit in cyan. Third press: no more loop.
+    If the end is set above the start, the two swap.</p>
     <div class="trio">
       <figure><div class="zoom"><div class="sc" id="l1"></div></div>
-        <figcaption>Après la première pression, sur le pas 03. Le bouton attend la fin.</figcaption></figure>
+        <figcaption>After the first press, on step 03. The button waits for the end.</figcaption></figure>
       <figure><div class="zoom"><div class="sc" id="l2"></div></div>
-        <figcaption>La boucle 03–08 posée, en lecture : la gouttière cyan dit ce qui tourne, le pas 06 joue.</figcaption></figure>
+        <figcaption>The loop 03–08 set, playing: the cyan gutter shows what loops, step 06 plays.</figcaption></figure>
     </div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p>La <b>gouttière</b> à gauche des pas et leurs numéros en cyan, et la plage dans la barre.</p></div>
-      <div><span class="k">Ce qu'on entend</span><p>PLAY joue la plage en boucle. Posée pendant la lecture, elle prend tout de suite.</p></div>
-      <div><span class="k">Ce qui ne bouge pas</span><p>Le morceau : rien n'est écrit, SAVE n'en garde rien, UNDO ne la voit pas.</p></div>
+      <div><span class="k">What you see</span><p>The <b>gutter</b> left of the steps and their numbers in cyan, and the range in the bar.</p></div>
+      <div><span class="k">What you hear</span><p>PLAY plays the range in a loop. Set during playback, it takes effect at once.</p></div>
+      <div><span class="k">What does not change</span><p>The song: nothing is written, SAVE keeps none of it, UNDO does not see it.</p></div>
     </div>
   </section>
 
   <section>
-    <span class="tag">Cadre 3 · PHRASE</span>
-    <h2>La même boucle, vue sur les huit pistes</h2>
-    <p>Sur PHRASE le bouton et les trois pressions sont les mêmes. C'est <b>une seule boucle</b> :
-    posée sur PHRASE, elle est encore là en descendant dans PATTERN par OPEN, et en revenant.
-    Elle s'efface quand on change de phrase ou qu'on retourne à SONG.</p>
+    <span class="tag">Frame 3 · PHRASE</span>
+    <h2>The same loop, seen on the eight tracks</h2>
+    <p>On PHRASE the button and the three presses are the same. It is <b>one single loop</b>:
+    set on PHRASE, it is still there when you go down into PATTERN with OPEN, and when you come back.
+    It is cleared when you change phrase or go back to SONG.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="l3"></div></div></div>
   </section>
 
   <section>
-    <h2>Déjà tranché</h2>
+    <h2>Already decided</h2>
     <ul class="notes">
-      <li><b>10/10 — validé et écrit</b> (<code>app/loop.c</code>, la plage dans
-      <code>core/player.c</code>) : les trois pressions, la gouttière, la plage dans la barre,
-      la même boucle sur PATTERN et PHRASE.</li>
-      <li><b>Sur une tête de colonne de PHRASE</b>, LOOP ne pose rien (ce n'est pas un pas) ; il
-      peut seulement y effacer une boucle posée.</li>
-      <li><b>La plage cède sa place dans la barre</b> à SAVED ou POOL FULL le temps qu'ils s'affichent.</li>
-      <li><b>MIXER et SONG jouent le morceau</b> : la boucle n'y agit pas. PLAY depuis INSTRUMENT
-      joue la phrase, donc la boucle.</li>
+      <li><b>10/10 — approved and written</b> (<code>app/loop.c</code>, the range in
+      <code>core/player.c</code>): the three presses, the gutter, the range in the bar,
+      the same loop on PATTERN and PHRASE.</li>
+      <li><b>On a PHRASE column head</b>, LOOP sets nothing (it is not a step); there it
+      can only clear a loop that is set.</li>
+      <li><b>The range gives up its place in the bar</b> to SAVED or POOL FULL while they are shown.</li>
+      <li><b>MIXER and SONG play the song</b>: the loop has no effect there. PLAY from INSTRUMENT
+      plays the phrase, so the loop.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>Un bouton au lieu d'une barre.</b> La barre DÉBUT / FIN de l'app sert à dire lequel
-      des deux bouts le prochain tap pose. Ici le bouton le dit lui-même en changeant de mot.</li>
-      <li><b>Pas de mémoire des bouts.</b> Dans l'app, éteindre garde DÉBUT et FIN pour plus tard.
-      Ici la troisième pression les oublie : les reposer coûte deux pressions.</li>
-      <li><b>Reprendre un bout</b> : on efface et on repose. Pas de geste pour déplacer un seul bout.</li>
-      <li><b>Dans PATTERN, un bloc plus court que sa phrase</b> : la boucle porte sur le premier
-      passage du bloc. Elle se pose en pas de la phrase, et les pas d'un bloc sont ceux de son
-      premier passage.</li>
-      <li><b>Sur SONG, LOOP reste éteint</b> pour l'instant : dans l'app il y veut dire autre
-      chose (boucler la phrase au lieu de suivre le morceau). Ce serait une autre maquette.</li>
+      <li><b>A button instead of a bar.</b> The app's START / END bar is there to say which
+      of the two ends the next tap sets. Here the button says it itself by changing its word.</li>
+      <li><b>No memory of the ends.</b> In the app, switching off keeps START and END for later.
+      Here the third press forgets them: setting them again costs two presses.</li>
+      <li><b>Changing one end</b>: clear and set again. There is no gesture to move a single end.</li>
+      <li><b>In PATTERN, a block shorter than its phrase</b>: the loop covers the first
+      pass of the block. It is set in phrase steps, and the steps of a block are those of its
+      first pass.</li>
+      <li><b>On SONG, LOOP stays off</b> for now: in the app it means something else
+      there (looping the phrase instead of following the song). That would be another mockup.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What is still open</h2>
     <ul class="notes">
-      <li><b>La boucle à cheval sur deux phrases</b> (entendre une transition) : elle existe dans
-      l'app, je ne la propose pas ici tant que celle-ci n'a pas servi.</li>
+      <li><b>A loop across two phrases</b> (to hear a transition): it exists in
+      the app; I do not propose it here until this one has been used.</li>
     </ul>
   </section>
 </div>
@@ -333,7 +333,7 @@ const btns = (st, words, off) => `<div class="btns">` + words.map((w, k) => {
     return `<div class="b${k === 6 ? " back" : ""}${!word || (off[k] && !o.cls) ? " off" : ""}${o.cls ? " " + o.cls : ""}">${word}</div>`;
   }).join("") + `</div>`;
 
-/* PATTERN — songs/KIDS.trk, pat t3 01, les onze premiers pas. */
+/* PATTERN — songs/KIDS.trk, pat t3 01, the first eleven steps. */
 const ROWS = [
   { n:["A-3","C-4","E-4"], i:"09", f:[["STR","01"],["FLT","4E"],["ECH","18"]] },
   { n:[], i:"", f:[["REV","1E"],["RMP","3E"],["FLT","C4"]] },
@@ -368,7 +368,7 @@ function pattern(st) {
   return h + `</div>` + btns(st, ["FX","LOOP","INSTR","CLEAR","SELECT","MIXER","‹ PHR","SAVE","UNDO","SONG","PLAY","REC"], { 4: 1, 11: 1 });
 }
 
-/* PHRASE — songs/KIDS.trk, phrase 04, pas 00 à 09. */
+/* PHRASE — songs/KIDS.trk, phrase 04, steps 00 to 09. */
 const BLOCKS = ["02", "01", "02", "02", "01", "01", "01", "02"];
 const G = [
   [["C-3",0], null,      ["C-5",0], ["A-3",2], ["F-2",0], ["A-3",0], "VOL",     ["F-3",2]],

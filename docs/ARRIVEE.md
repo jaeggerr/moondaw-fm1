@@ -1,54 +1,54 @@
-# Le jour où le FM-1 arrive
+# The day the FM-1 arrives
 
-L'ordre des opérations, écrit avant d'avoir l'appareil. Rien de ce dépôt n'a
-jamais tourné sur un vrai FM-1 : le firmware compile, se lie, passe les
-contrôles de Felucca, et c'est tout ce qu'on sait.
+The order of operations, written before having the device. Nothing in this
+repository has ever run on a real FM-1: the firmware compiles, links, passes
+Felucca's checks, and that is all we know.
 
-Deux règles au-dessus de tout le reste :
+Two rules above everything else:
 
-- **On ne flashe rien avant d'avoir une sauvegarde de la flash d'origine,
-  vérifiée, en deux endroits.**
-- **On ne flashe rien avant d'avoir prouvé qu'on sait revenir en arrière.**
+- **Nothing gets flashed before there is a backup of the stock flash,
+  verified, in two places.**
+- **Nothing gets flashed before we have proved we know how to go back.**
 
-## 0. À préparer avant (sans l'appareil)
+## 0. To prepare beforehand (without the device)
 
-Fait le 10/10/2026, sur ce Mac :
+Done on 10/10/2026, on this Mac:
 
-- [x] Le firmware [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter)
-      **compilé** : `~/Documents/Code/FM-1-transporter/build/fm1_transporter.uf2`
-      (commit `a632d92`, avec `wl82loader.bin` embarqué).
-- [x] `pyserial` installé, `tools/fm1t.py` se lance.
+- [x] The [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter) firmware
+      **built**: `~/Documents/Code/FM-1-transporter/build/fm1_transporter.uf2`
+      (commit `a632d92`, with `wl82loader.bin` embedded).
+- [x] `pyserial` installed, `tools/fm1t.py` starts.
 
-Ce qui a été installé pour ça, hors de tout dépôt :
+What was installed for this, outside any repository:
 
-| Quoi | Où |
+| What | Where |
 |---|---|
 | pico-sdk 2.2.0 | `~/pico-sdk` |
-| GCC ARM 13.3 (archive d'Arm, sans installation système) | `~/.fm1/arm/` |
-| jl-uboot-tool, pour `wl82loader.bin` (24 064 octets) | `~/.fm1/jl-uboot-tool/` |
+| GCC ARM 13.3 (Arm's archive, no system install) | `~/.fm1/arm/` |
+| jl-uboot-tool, for `wl82loader.bin` (24 064 bytes) | `~/.fm1/jl-uboot-tool/` |
 
-Pour recompiler :
+To rebuild:
 
 ```bash
 cd ~/Documents/Code/FM-1-transporter && ninja -C build
 ```
 
-Reste à faire :
+Still to do:
 
-- [ ] Une **Seeed XIAO RP2040** (pas une autre carte : les autres RP2040 ne
-      sont pas testées, la Waveshare RP2350-USB-A ne marche pas).
-- [ ] **Charger le firmware sur la XIAO** : la brancher en tenant son bouton
-      BOOT, elle apparaît comme un disque `RPI-RP2` ; y copier
-      `fm1_transporter.uf2`. Elle redémarre seule.
-- [ ] Un câble USB sacrifié pour atteindre D+, D− et la masse du FM-1.
-- [x] `pip3 install --user mido python-rtmidi` (fait le 28/10).
-- [x] Le fichier **V15 officiel**, rangé dans `~/.fm1/stock/FM-1_015.fwsc` :
-      699 956 octets, l'empreinte attendue par `fm1_install.py`, identité
-      `FM-1_015`. Pris dans le dépôt de M-VAVE
-      (`m-vave/fm1_open`, `sdk/firmware/FM-1_015.fwsc`) : depuis le 21/10,
-      le `FM-1.fwsc` de m-vave.com/download est la **V16**, pas la V15.
+- [ ] A **Seeed XIAO RP2040** (not another board: the other RP2040s are
+      untested, the Waveshare RP2350-USB-A does not work).
+- [ ] **Load the firmware onto the XIAO**: plug it in while holding its BOOT
+      button, it shows up as an `RPI-RP2` disk; copy
+      `fm1_transporter.uf2` onto it. It restarts on its own.
+- [ ] A sacrificed USB cable to reach the FM-1's D+, D− and ground.
+- [x] `pip3 install --user mido python-rtmidi` (done on 28/10).
+- [x] The **official V15** file, stored in `~/.fm1/stock/FM-1_015.fwsc`:
+      699 956 bytes, the hash `fm1_install.py` expects, identity
+      `FM-1_015`. Taken from M-VAVE's repository
+      (`m-vave/fm1_open`, `sdk/firmware/FM-1_015.fwsc`): since 21/10,
+      the `FM-1.fwsc` on m-vave.com/download is **V16**, not V15.
 
-Câblage, trois fils et pas un de plus :
+Wiring, three wires and not one more:
 
 | XIAO RP2040 | FM-1 |
 |---|---|
@@ -56,55 +56,55 @@ Câblage, trois fils et pas un de plus :
 | D7 (GP1) | D− |
 | GND | GND |
 
-**Ne jamais brancher VBUS (le 5 V).** Le FM-1 tourne sur sa batterie.
+**Never connect VBUS (the 5 V).** The FM-1 runs on its battery.
 
-## 1. L'appareil tel qu'il sort de la boîte
+## 1. The device as it comes out of the box
 
-- [x] Reçu le 28/10, en **V14**. Le firmware d'origine n'affiche pas sa
-      version au démarrage (il démarre instantanément) ; elle se lit par
-      USB : `python3 tools/fm1_install.py --info` (requête d'identité seule,
-      n'écrit rien). `FM-1_014` = V14, `FM-1_015` = V15.
-- [x] Passé en **V15** par le Workbench de M-VAVE
-      (open.m-vave.com/fm1-workbench, Chrome) : bouton « retour à la V15
-      d'usine », V15 intégrée à la page. Piège : le bouton par défaut
-      installe **FM1 Open** (identité `FM-1_8000014`, port `FM1 Community`),
-      pas la V15. `--info` répond maintenant `FM-1_015`.
-- [x] Port MIDI de la V15 : `USB Composite Device`. La poignée de main de
-      Felucca y répond du premier coup.
-- [ ] **Mesurer la diagonale de l'écran** (ou sa largeur visible, au pied à
-      coulisse). C'est la donnée qui manque pour fixer la hauteur d'une ligne.
-- [x] La disposition correspond à `proto/pattern.html` : quatre potards à
-      gauche de l'écran, quatre à droite, deux rangées de six boutons, OCT−
-      et OCT+ sous les potards de gauche.
+- [x] Received on 28/10, on **V14**. The stock firmware does not show its
+      version at startup (it starts instantly); it is read over
+      USB: `python3 tools/fm1_install.py --info` (identity request only,
+      writes nothing). `FM-1_014` = V14, `FM-1_015` = V15.
+- [x] Moved to **V15** with M-VAVE's Workbench
+      (open.m-vave.com/fm1-workbench, Chrome): the "back to factory V15"
+      button, V15 built into the page. Trap: the default button
+      installs **FM1 Open** (identity `FM-1_8000014`, port `FM1 Community`),
+      not V15. `--info` now answers `FM-1_015`.
+- [x] V15's MIDI port: `USB Composite Device`. Felucca's handshake
+      answers on it the first time.
+- [ ] **Measure the screen diagonal** (or its visible width, with
+      calipers). It is the missing figure for setting the height of a line.
+- [x] The layout matches `proto/pattern.html`: four knobs to the
+      left of the screen, four to the right, two rows of six buttons, OCT−
+      and OCT+ under the left knobs.
 
-Depuis le 20/10, M-VAVE publie aussi **FM1 Open** (application GPLv3,
-moteur en SDK binaire) et un Workbench qui installe et revient à la V15.
-Rien n'y dit comment récupérer un appareil dont le firmware plante avant
-l'USB : la XIAO reste le seul recours pour ce cas.
+Since 20/10, M-VAVE also publishes **FM1 Open** (a GPLv3 application,
+engine as a binary SDK) and a Workbench that installs and goes back to V15.
+Nothing there says how to recover a device whose firmware crashes before
+USB: the XIAO remains the only way out in that case.
 
-## 2. La sauvegarde
+## 2. The backup
 
-**Faite le 28/10 sans XIAO**, avec `fm1_rescue.py` de felucca-bsp
-(`tools/`, commit `5942e68`), qui parle au chargeur de la puce
-(`WL80UBOOT1.00`, 4C4A:8057) directement depuis le Mac :
+**Done on 28/10 without a XIAO**, with `fm1_rescue.py` from felucca-bsp
+(`tools/`, commit `5942e68`), which talks to the chip's loader
+(`WL80UBOOT1.00`, 4C4A:8057) directly from the Mac:
 
 1. `sudo ~/fm1-rescue/env/bin/python ~/fm1-rescue/fm1_rescue.py
    ~/fm1-rescue/FM-1.fwsc --loader ~/fm1-rescue/wl82loader.bin`
-   (sans `--write` : lit, sauvegarde, compare, n'écrit rien) ;
-2. pendant qu'il attend, la V15 reçoit par USB-MIDI `F0 22 24 35 7D F7`
-   et passe dans le chargeur ; trouvé en 8 s ;
-3. puce 980F, flash 856014, 1 Mo lu en 2,6 s, **0 secteur sur 147 ne
-   diffère de la V15** ; le FM-1 redémarre seul en V15.
+   (without `--write`: reads, backs up, compares, writes nothing);
+2. while it waits, V15 receives `F0 22 24 35 7D F7` over USB-MIDI
+   and drops into the loader; found in 8 s;
+3. chip 980F, flash 856014, 1 MB read in 2.6 s, **0 sectors out of 147
+   differ from V15**; the FM-1 restarts on its own on V15.
 
-- [x] `fm1-backup-20261028-181751.bin`, 1 048 576 octets, sha256
-      `d562b0e8…534f62`, dans `~/fm1-rescue` et `~/.fm1/backups`.
-- [ ] Une copie hors de la machine (disque externe ou nuage).
+- [x] `fm1-backup-20261028-181751.bin`, 1 048 576 bytes, sha256
+      `d562b0e8…534f62`, in `~/fm1-rescue` and `~/.fm1/backups`.
+- [ ] A copy off the machine (external disk or cloud).
 
-C'est aussi le chemin de secours sans XIAO : un firmware qui plante au
-démarrage finit dans ce chargeur (garde de démarrage), et le même script
-avec `--write` y remet la V15.
+This is also the rescue path without a XIAO: a firmware that crashes at
+startup ends up in this loader (boot guard), and the same script
+with `--write` puts V15 back.
 
-Avec la XIAO, prévu à l'origine :
+With the XIAO, the original plan:
 
 ```bash
 python3 tools/fm1t.py info
@@ -119,80 +119,80 @@ python3 tools/fm1t.py dump backup-2.bin --compare backup-1.bin
 shasum -a 256 backup-1.bin backup-2.bin
 ```
 
-(à lancer depuis `~/Documents/Code/FM-1-transporter`)
+(to run from `~/Documents/Code/FM-1-transporter`)
 
-- [ ] Les deux empreintes sont identiques, les fichiers font 1 048 576 octets.
-- [ ] Une copie hors de la machine (disque externe ou nuage).
+- [ ] The two hashes are identical, the files are 1 048 576 bytes.
+- [ ] A copy off the machine (external disk or cloud).
 
-À savoir : le transporter lit toute la flash mais **n'écrit que 0x4000 à
-0x93000**, la zone du firmware. Il ne restaure donc pas la zone des données
-(0x97000 et au-delà), et n'en a pas besoin : nous n'écrivons jamais dans la
-sauvegarde du firmware d'origine (0xE8000 et au-delà).
+Worth knowing: the transporter reads the whole flash but **only writes 0x4000
+to 0x93000**, the firmware area. So it does not restore the data area
+(0x97000 and beyond), and does not need to: we never write to the
+stock firmware's backup (0xE8000 and beyond).
 
-## 3. Prouver le retour avant le premier aller
+## 3. Prove the way back before the first way there
 
 ```bash
 python3 tools/fm1t.py write --package FM-1.fwsc --ref backup-1.bin
 ```
 
-Sans `--write`, cette commande **vérifie et n'écrit rien**. Elle doit passer.
+Without `--write`, this command **checks and writes nothing**. It must pass.
 
-Le transporter est un outil de **retour**, pas d'installation : `write`
-n'accepte que le paquet officiel V15 (ou un paquet explicitement validé par
-son auteur) et refuse le reste. MOONDAW ne s'installera donc jamais par lui,
-mais par la mise à jour USB normale (`tools/fm1_install.py`, celle de
-Felucca).
+The transporter is a tool for **going back**, not for installing: `write`
+only accepts the official V15 package (or a package explicitly validated by
+its author) and refuses the rest. So MOONDAW will never be installed through it,
+but through the normal USB update (`tools/fm1_install.py`, Felucca's
+one).
 
-## 4. Felucca d'abord, pas MOONDAW
+## 4. Felucca first, not MOONDAW
 
-Ma recommandation : le premier firmware alternatif à installer est
-**Felucca**, par son installateur web, pas le nôtre. C'est un firmware connu
-pour marcher. S'il s'installe et qu'on sait revenir à la V15 (le bouton
-« Return to official V15 » de l'installateur, ou M-VAVE), on a prouvé le
-chemin d'installation et le chemin de retour avec autre chose qu'un firmware
-qui n'a jamais tourné.
+My recommendation: the first alternative firmware to install is
+**Felucca**, through its web installer, not ours. It is a firmware known
+to work. If it installs and we know how to go back to V15 (the
+"Return to official V15" button of the installer, or M-VAVE), we have proved the
+install path and the way back with something other than a firmware
+that has never run.
 
-- [x] Felucca 1.7.0 installé le 28/10 par son installateur web, câble
-      direct, Chrome : identité `FM-1_917`, port MIDI `Felucca`. Son,
-      écran et commandes répondent.
-- [x] Retour à la V15 officielle : `FM-1_015`, port `USB Composite Device`.
+- [x] Felucca 1.7.0 installed on 28/10 through its web installer, direct
+      cable, Chrome: identity `FM-1_917`, MIDI port `Felucca`. Sound,
+      screen and controls respond.
+- [x] Back to the official V15: `FM-1_015`, port `USB Composite Device`.
 
-Felucca n'est plus développé activement depuis le 16/10 (maintenance
-« occasionnelle ») ; sa couche matérielle vit dans felucca-bsp, sur
-laquelle Felucca 1.7 et la plupart des firmwares alternatifs sont bâtis.
-MOONDAW porte une copie à la main des pilotes de Felucca du 10/10 : passer
-à felucca-bsp est à décider après le premier démarrage de MOONDAW.
+Felucca has not been actively developed since 16/10 ("occasional"
+maintenance); its hardware layer lives in felucca-bsp, on
+which Felucca 1.7 and most alternative firmwares are built.
+MOONDAW carries a hand-made copy of Felucca's drivers from 10/10: moving
+to felucca-bsp is to be decided after MOONDAW's first boot.
 
-## 5. Le firmware de test (`MOONDAW_APP=hello`)
+## 5. The test firmware (`MOONDAW_APP=hello`)
 
-Le plus petit possible : du texte, toutes les commandes lues et affichées,
-une onde carrée sous les touches. 18 Ko.
+As small as possible: text, every control read and shown,
+a square wave under the keys. 18 KB.
 
 ```bash
 MOONDAW_APP=hello ./build.sh
 ```
 
-Installé le 28/10 par `tools/fm1_install.py build/moondaw.fwsc` (image
-18 484 B) : écriture, redémarrage, identité `FM-1_900` acceptée, port MIDI
-`Felucca` (les chaînes USB de usb.c).
+Installed on 28/10 with `tools/fm1_install.py build/moondaw.fwsc` (image
+18 484 B): write, restart, identity `FM-1_900` accepted, MIDI port
+`Felucca` (the USB strings of usb.c).
 
-- [x] L'écran s'allume et le texte est à l'endroit, les couleurs justes
-      (sinon : ordre des octets ou inversion, `lcd.c`).
-- [x] Chaque **touche** allume sa case, sa LED, et joue sa note, de Fa3 à
-      Sol5 de gauche à droite.
-- [x] Chaque **bouton** allume le nom qui est imprimé dessus :
-      `PANEL_DEFAULT` vaut pour cet exemplaire.
-- [x] Chaque **potard** compte dans le bon sens, et le bon compteur bouge.
-- [x] MASTER va de 0 à environ 1023 et règle le volume.
-- [x] **CPU et MAX** : 0 et 0. Le compteur est en pourcents entiers
-      arrondis vers le bas sur une demi de 2,9 ms : moins de 12 µs en
-      moyenne, moins de 29 µs au pire. Sous sa résolution, donc ; il
-      ne prouve pas encore que TIMER4 compte. MOONDAW doit montrer un
-      chiffre nettement non nul, sinon c'est la mesure qui est fausse.
-- [x] **OCT− et OCT+ tenus 5 secondes** : l'écran s'éteint (le bandeau
-      UBOOT ne se voit pas) et le Mac voit `WL80UBOOT1.00` (4C4A:8057).
-      La porte de sortie marche ; c'est là que `fm1_rescue` prend la main.
-- [x] Une mise à jour par-dessus passe : MOONDAW installé sur `hello`.
+- [x] The screen lights up and the text is the right way up, the colours right
+      (otherwise: byte order or inversion, `lcd.c`).
+- [x] Each **key** lights its cell, its LED, and plays its note, from F3 to
+      G5 from left to right.
+- [x] Each **button** lights the name printed on it:
+      `PANEL_DEFAULT` holds for this unit.
+- [x] Each **knob** counts in the right direction, and the right counter moves.
+- [x] MASTER goes from 0 to about 1023 and sets the volume.
+- [x] **CPU and MAX**: 0 and 0. The counter is in whole percent
+      rounded down over a half of 2.9 ms: under 12 µs on
+      average, under 29 µs at worst. Below its resolution, then; it
+      does not yet prove that TIMER4 counts. MOONDAW must show a
+      clearly non-zero figure, otherwise it is the measurement that is wrong.
+- [x] **OCT− and OCT+ held 5 seconds**: the screen goes dark (the
+      UBOOT banner is not visible) and the Mac sees `WL80UBOOT1.00` (4C4A:8057).
+      The exit door works; this is where `fm1_rescue` takes over.
+- [x] An update on top goes through: MOONDAW installed over `hello`.
 
 ## 6. MOONDAW
 
@@ -200,62 +200,62 @@ Installé le 28/10 par `tools/fm1_install.py build/moondaw.fwsc` (image
 ./build.sh
 ```
 
-Installé le 28/10 sur `hello` (image 102 172 B). `--info` ne le distingue
-pas de `hello` (tous deux `FM-1_900`) ; `fm1_send.py --ping` si :
-`link version 1, 290 KB free`, sur le port `Felucca`.
+Installed on 28/10 over `hello` (image 102 172 B). `--info` does not tell it
+apart from `hello` (both `FM-1_900`); `fm1_send.py --ping` does:
+`link version 1, 290 KB free`, on the `Felucca` port.
 
-- [x] La démo joue, proprement. **CPU 0, MAX entre 0 et 7 %** : le
-      compteur marche (MAX n'est pas nul), et la démo prend moins de 1 %
-      en moyenne, 200 µs au pire d'une demi de 2,9 ms. La marge est
-      énorme ; les replis prévus ne servent pas.
-- [x] EDIT ouvre PATTERN : **illisible**. « Horrible, trop petit » ;
-      l'interface est à repenser de A à Z (NOTES.md, 28/10).
-- [ ] Écrire une note, SAVE, éteindre, rallumer : la note est là. Remis à
-      plus tard : naviguer est trop pénible en l'état.
-- [ ] Pendant SAVE le son s'arrête (attendu : un effacement de secteur bloque
-      les interruptions une cinquantaine de millisecondes).
+- [x] The demo plays, cleanly. **CPU 0, MAX between 0 and 7 %**: the
+      counter works (MAX is not zero), and the demo takes under 1 %
+      on average, 200 µs at worst out of a half of 2.9 ms. The margin is
+      huge; the planned fallbacks are not needed.
+- [x] EDIT opens PATTERN: **unreadable**. "Horrible, too small";
+      the interface has to be rethought from A to Z (NOTES.md, 28/10).
+- [ ] Write a note, SAVE, power off, power on: the note is there. Put
+      off for later: navigating is too painful as it stands.
+- [ ] During SAVE the sound stops (expected: a sector erase blocks
+      interrupts for around fifty milliseconds).
 
-Si le CPU ne tient pas, les replis sont dans `NOTES.md` : moins de voix par
-piste, le filtre à demi-cadence, un noyau moins cher pour le moteur WAVE,
-moins de bandes redessinées par image.
+If the CPU does not keep up, the fallbacks are in `NOTES.md`: fewer voices per
+track, the filter at half rate, a cheaper kernel for the WAVE engine,
+fewer bands redrawn per frame.
 
-## 7. Les morceaux
+## 7. The songs
 
-Une fois MOONDAW installé et l'appareil sur son écran MENU, branché en USB :
+Once MOONDAW is installed and the device is on its MENU screen, connected over USB:
 
 ```
 tools/fm1_send.py --ping
 tools/fm1_send.py ../moondaw/songs/KIDS.trk
 ```
 
-`--ping` doit répondre avec la place libre (290 Ko sur une flash vide ;
-les 13 morceaux en prennent 100, le plus gros 25). L'envoi réduit d'abord
-le morceau à ce que le FM-1 porte, puis l'écrit dans la flash de
-l'appareil, qui affiche RECEIVING. Rien n'y est remplacé sans `--replace`.
+`--ping` must answer with the free space (290 KB on an empty flash;
+the 13 songs take 100, the biggest 25). Sending first reduces
+the song to what the FM-1 carries, then writes it into the device's
+flash, which shows RECEIVING. Nothing there is replaced without `--replace`.
 
-Dans l'autre sens, pour sauvegarder ce qui a été écrit sur l'appareil :
+The other way, to back up what was written on the device:
 
 ```
 tools/fm1_send.py --list
 tools/fm1_send.py --get KIDS -o KIDS-fm1.trk
 ```
 
-**Fait le 28/10** : les 13 morceaux envoyés d'un coup, 131 Ko, 159 Ko
-restent libres. L'appareil n'accepte que sur l'accueil (« busy » sinon,
-sans rien écrire). Les noms sont mis en majuscules et coupés à 12
-caractères (`PIANO-VELOCI`).
+**Done on 28/10**: the 13 songs sent in one go, 131 KB, 159 KB
+left free. The device only accepts on the home screen ("busy" otherwise,
+without writing anything). Names are upper-cased and cut to 12
+characters (`PIANO-VELOCI`).
 
-Si aucun port MIDI n'est trouvé, l'outil liste ceux qu'il voit :
-`--port` avec un bout du bon nom. **Ce chemin MIDI n'a jamais tourné** :
-tout le reste du transfert est vérifié sans appareil, mais le nom du port
-et le débit réel sont à découvrir ce jour-là.
+If no MIDI port is found, the tool lists the ones it sees:
+`--port` with part of the right name. **This MIDI path has never run**:
+everything else in the transfer is checked without a device, but the port name
+and the real throughput are to be discovered on the day.
 
-## Ce qu'on ne sait pas et qu'on saura ce jour-là
+## What we do not know and will know on the day
 
-- La fréquence du processeur, donc ce que coûtent réellement huit pistes.
-- La taille de l'écran, donc si onze pas par écran sont lisibles.
-- Si la table des boutons de Felucca vaut pour cet exemplaire.
-- Si l'envoi d'un morceau par SysEx passe au débit attendu (le port de la
-  V15 s'appelle `USB Composite Device` ; celui de MOONDAW reste à voir).
-- Si l'identité `FM-1_900` de notre paquet est acceptée telle quelle par
-  l'installateur (c'est celle des versions de développement de Felucca).
+- The processor's frequency, so what eight tracks really cost.
+- The size of the screen, so whether eleven steps per screen are readable.
+- Whether Felucca's button table holds for this unit.
+- Whether sending a song by SysEx goes at the expected rate (V15's
+  port is called `USB Composite Device`; MOONDAW's remains to be seen).
+- Whether our package's `FM-1_900` identity is accepted as it is by
+  the installer (it is the one of Felucca's development builds).

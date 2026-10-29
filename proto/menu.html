@@ -1,28 +1,28 @@
 <meta charset="utf-8">
-<title>MENU sur le FM-1</title>
+<title>MENU on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — MENU sur le M-VAVE FM-1 (écran 240 × 240) : là où la machine
-  s'ouvre.  Même système que proto/pattern.html, mêmes mesures de texte
-  (chasse fixe 8 px, condensé gras 9 px au moins).
+  MOONDAW — MENU on the M-VAVE FM-1 (240 × 240 screen): where the machine
+  opens.  Same system as proto/pattern.html, same text measures
+  (8 px monospace, 9 px bold condensed at least).
 
-  Données : les morceaux de moondaw/songs/ que le FM-1 sait jouer, à la
-  taille que core/trk.c leur donne (tests/trkcheck).
+  Data: the songs from moondaw/songs/ that the FM-1 can play, at the
+  size core/trk.c gives them (tests/trkcheck).
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -71,7 +71,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in panel pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -82,7 +82,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -98,13 +98,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the manual for the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -117,7 +117,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.gap{ margin-left:2px; }
 
 
-/* ── cet écran ───────────────────────────────────────────────────── */
+/* ── this screen ─────────────────────────────────────────────────── */
 .mark{ font-family:var(--cond); font-size:12px; font-weight:700; letter-spacing:.14em; color:var(--title); }
 .nav .flash{ font-family:var(--jb); font-size:8px; color:var(--dim); white-space:nowrap; }
 .nav .flash b{ color:var(--text); font-weight:500; }
@@ -151,98 +151,98 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026</div>
-  <h1>L'accueil, <em>et la liste des morceaux</em></h1>
-  <p class="lede">Ce qui remplace l'écran de lecture provisoire. Une seule colonne : en haut
-  <strong>le morceau en cours</strong>, qu'on reprend, puis <strong>les morceaux gardés dans
-  l'appareil</strong>, puis la case qui en crée un. SELECT descend dans la liste ; les boutons
-  du bas disent ce qu'on peut faire de la ligne choisie. Rien à tourner ici, donc pas de cartes.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026</div>
+  <h1>The home screen, <em>and the list of songs</em></h1>
+  <p class="lede">What replaces the temporary playback screen. A single column: at the top
+  <strong>the current song</strong>, to pick up again, then <strong>the songs kept on the
+  device</strong>, then the cell that creates one. SELECT moves down the list; the buttons
+  at the bottom say what you can do with the chosen line. Nothing to turn here, so no cards.</p>
 
   <section>
-    <span class="tag">Cadre 1 · à l'allumage</span>
-    <h2>Le curseur est sur ce qu'on reprend</h2>
-    <p>La machine s'ouvre sur le morceau qu'elle a en mémoire, déjà chargé : OPEN (le bouton
-    EDIT) y retourne sans rien relire. À la racine il n'y a rien au-dessus, donc le sigle prend
-    la place du retour, comme dans l'app. À droite de la barre, la place prise dans la flash.</p>
+    <span class="tag">Frame 1 · at power-on</span>
+    <h2>The cursor is on what you pick up again</h2>
+    <p>The machine opens on the song it has in memory, already loaded: OPEN (the EDIT
+    button) goes back to it without reading anything again. At the root there is nothing above, so the logo takes
+    the place of the back label, as in the app. On the right of the bar, the space used in flash.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="m1"></div></div></div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p>Le morceau en cours et <b>10 lignes</b> de liste. Au-delà, la liste défile.</p></div>
-      <div><span class="k">Ce que le chrome prend</span><p>30 px en haut (barre, manuel de la main gauche), 25 en bas (les douze boutons).</p></div>
-      <div><span class="k">Ce qui manque</span><p>AIDE et RÉGLAGES, que l'app a à l'accueil. Ils n'existent pas encore sur le FM-1.</p></div>
+      <div><span class="k">What you see</span><p>The current song and <b>10 lines</b> of list. Beyond that, the list scrolls.</p></div>
+      <div><span class="k">What the chrome takes</span><p>30 px at the top (bar, left-hand manual), 25 at the bottom (the twelve buttons).</p></div>
+      <div><span class="k">What is missing</span><p>HELP and SETTINGS, which the app has on its home screen. They do not exist on the FM-1 yet.</p></div>
     </div>
   </section>
 
   <section>
-    <span class="tag">Cadres 2 et 3 · dans la liste</span>
-    <h2>Ouvrir, écouter, supprimer</h2>
-    <p>Sur un morceau de la liste, trois boutons s'allument. PLAY le fait entendre sans l'ouvrir.
-    DELETE ne supprime pas : il pose la question sur la ligne, en rouge, et c'est un
-    <b>second appui</b> qui supprime ; n'importe quelle autre commande annule. Les potards du
-    FM-1 n'ont pas de poussoir et il n'y a pas de combinaison B+A, donc la garde est le second appui.</p>
+    <span class="tag">Frames 2 and 3 · in the list</span>
+    <h2>Open, listen, delete</h2>
+    <p>On a song in the list, three buttons light up. PLAY lets you hear it without opening it.
+    DELETE does not delete: it asks the question on the line, in red, and a
+    <b>second press</b> deletes; any other command cancels. The FM-1's knobs
+    have no push switch and there is no B+A combination, so the guard is the second press.</p>
     <div class="pair">
       <figure><div class="zoom"><div class="sc" id="m2"></div></div>
-        <figcaption>Le curseur sur LEOMOTEUR. Le morceau en cours garde son nom en cyan dans la liste : c'est où l'on est.</figcaption></figure>
+        <figcaption>The cursor on LEOMOTEUR. The current song keeps its name in cyan in the list: that is where you are.</figcaption></figure>
       <figure><div class="zoom"><div class="sc" id="m3"></div></div>
-        <figcaption>Après un premier DELETE. Le bouton dit SURE, la ligne dit ce qui va partir.</figcaption></figure>
+        <figcaption>After a first DELETE. The button says SURE, the line says what is about to go.</figcaption></figure>
     </div>
   </section>
 
   <section>
-    <h2>Déjà tranché</h2>
+    <h2>Already settled</h2>
     <ul class="notes">
-      <li><b>10/10 — validé et écrit</b> (<code>app/menu.c</code>) : une colonne, SELECT, OPEN sur
-      le bouton EDIT, DELETE gardé par un second appui, la question SAVE / DISCARD quand le
-      morceau en cours a des modifications, + NEW qui crée SONG nn et l'ouvre, la machine qui
-      revient sur le morceau qui était ouvert.</li>
-      <li><b>Écart avec le dessin : PLAY ne s'allume que sur le morceau en cours.</b> Écouter un
-      morceau de la liste sans l'ouvrir demanderait un deuxième morceau en mémoire, et il n'y a
-      la place que pour un. Pour l'entendre, on l'ouvre.</li>
-      <li><b>Le morceau de démonstration</b> n'est pas une ligne de la liste : c'est ce qu'on
-      trouve quand la flash est vide. Sauvé, il devient un morceau comme un autre.</li>
-      <li><b>OPEN mène à PATTERN</b>, sur le premier bloc que joue la première phrase, tant que
-      SONG et PHRASE n'existent pas.</li>
+      <li><b>10/10 — approved and written</b> (<code>app/menu.c</code>): one column, SELECT, OPEN on
+      the EDIT button, DELETE guarded by a second press, the SAVE / DISCARD question when the
+      current song has changes, + NEW that creates SONG nn and opens it, the machine that
+      comes back to the song that was open.</li>
+      <li><b>Departure from the drawing: PLAY only lights up on the current song.</b> Listening to a
+      song in the list without opening it would need a second song in memory, and there is
+      only room for one. To hear it, you open it.</li>
+      <li><b>The demo song</b> is not a line in the list: it is what you
+      find when the flash is empty. Once saved, it becomes a song like any other.</li>
+      <li><b>OPEN leads to PATTERN</b>, on the first block the first phrase plays, as long as
+      SONG and PHRASE do not exist.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>Une colonne, pas deux.</b> L'app met ses entrées à gauche et un volet à droite ;
-      dans 240 px les noms de 12 caractères ne tiendraient plus à côté d'autre chose.</li>
-      <li><b>OPEN est sur le bouton EDIT</b>, et DELETE là où PATTERN a CLEAR : la même place
-      pour le même genre de geste d'un écran à l'autre. PLAY ne bouge jamais.</li>
-      <li><b>+ NEW crée et ouvre</b> un morceau vide nommé tout seul (SONG 01, SONG 02…), comme
-      NOUVEAU dans l'app ouvre ce qu'il vient de faire.</li>
-      <li><b>Ouvrir un autre morceau quand celui en cours a des modifications</b> pose la question
-      de l'app, de la même façon que DELETE : la ligne dit « KIDS HAS CHANGES », et deux boutons
-      s'allument, SAVE à sa place et DISCARD à la place de DELETE. Rien ne se sauve tout seul.</li>
-      <li><b>Une case sans mot</b> est un bouton qui ne fait rien sur cet écran : elle garde sa
-      place pour que les deux rangées restent la carte des boutons.</li>
-      <li><b>La taille de chaque morceau et la place prise</b> sont affichées : 292 Ko pour tout,
-      c'est une ressource qu'on doit voir.</li>
+      <li><b>One column, not two.</b> The app puts its entries on the left and a pane on the right;
+      in 240 px, 12-character names would no longer fit next to anything else.</li>
+      <li><b>OPEN is on the EDIT button</b>, and DELETE where PATTERN has CLEAR: the same place
+      for the same kind of gesture from one screen to the next. PLAY never moves.</li>
+      <li><b>+ NEW creates and opens</b> an empty song that names itself (SONG 01, SONG 02…), as
+      NEW in the app opens what it has just made.</li>
+      <li><b>Opening another song when the current one has changes</b> asks the app's
+      question, the same way as DELETE: the line says "KIDS HAS CHANGES", and two buttons
+      light up, SAVE in its place and DISCARD in place of DELETE. Nothing saves itself.</li>
+      <li><b>A cell with no word</b> is a button that does nothing on this screen: it keeps its
+      place so that the two rows stay the map of the buttons.</li>
+      <li><b>The size of each song and the space used</b> are shown: 292 KB for everything,
+      it is a resource you must see.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What is still open</h2>
     <ul class="notes">
-      <li><b>Renommer.</b> Il faut taper des lettres sans clavier de lettres. Felucca le fait sur
-      les touches blanches façon téléphone ; je ne l'ai pas dessiné. En attendant, un morceau
-      garde le nom qu'il avait sur l'ordinateur, ou SONG nn.</li>
-      <li><b>Faire entrer un morceau depuis l'ordinateur.</b> Aucun chemin n'existe encore
-      (l'USB du firmware ne sait que se mettre à jour). C'est ce qui remplira cette liste.</li>
+      <li><b>Renaming.</b> It means typing letters without a letter keyboard. Felucca does it on
+      the white keys, phone-style; I have not drawn it. Until then, a song
+      keeps the name it had on the computer, or SONG nn.</li>
+      <li><b>Bringing a song in from the computer.</b> No path exists yet
+      (the firmware's USB can only update itself). That is what will fill this list.</li>
     </ul>
   </section>
 </div>
 
 <script>
-/* Les morceaux de moondaw/songs/ que le FM-1 joue, taille en flash (tests/trkcheck). */
+/* The songs from moondaw/songs/ that the FM-1 plays, size in flash (tests/trkcheck). */
 const SONGS = [["CLAVIOLINE", 1], ["DAFT-PUNK", 7], ["DAFT-PUNK-EN", 10], ["KIDS", 14], ["LEOMOTEUR", 4],
                ["ROBOT-DEMO", 1], ["SANDSTORM3", 9], ["SUPERSAW2", 2], ["TREMOLO", 26], ["TREMOLO-CHIP", 23]];
 const USED = SONGS.reduce((n, s) => n + Math.ceil(s[1] / 4) * 4, 0);
 const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
 
-/* st : { cur: -1 la carte, 0.. une ligne, SONGS.length = NEW ; ask: bool ; btn: {index: {word, cls}} } */
+/* st: { cur: -1 the card, 0.. a line, SONGS.length = NEW; ask: bool; btn: {index: {word, cls}} } */
 function screen(st) {
   let h = el("nav", `<span class="mark">MOONDAW</span><span class="sp"></span>` +
                     `<span class="flash">FLASH <b>${USED}</b> / 292 KB</span>`);
@@ -265,7 +265,7 @@ function screen(st) {
   }
   return h + `</div>`;
 }
-/* place des boutons : 0 FX 1 SEL 2 ENV 3 LFO 4 EDIT 5 GLO / 6 HOME 7 SAVE 8 ARP 9 SEQ 10 PLAY 11 REC */
+/* button positions: 0 FX 1 SEL 2 ENV 3 LFO 4 EDIT 5 GLO / 6 HOME 7 SAVE 8 ARP 9 SEQ 10 PLAY 11 REC */
 document.getElementById("m1").innerHTML = screen({ cur: -1, btn: { 4: { word: "OPEN" }, 10: { word: "PLAY" } } });
 document.getElementById("m2").innerHTML = screen({ cur: 4, btn: { 3: { word: "DELETE" }, 4: { word: "OPEN" }, 10: { word: "PLAY" } } });
 document.getElementById("m3").innerHTML = screen({ cur: 4, ask: true, btn: { 3: { word: "SURE", cls: "danger" }, 4: { word: "OPEN", cls: "off" }, 10: { word: "PLAY", cls: "off" } } });

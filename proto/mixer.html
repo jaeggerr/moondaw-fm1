@@ -1,26 +1,26 @@
 <meta charset="utf-8">
-<title>MIXER sur le FM-1</title>
+<title>MIXER on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — MIXER sur le M-VAVE FM-1 (écran 240 × 240).
-  Même système que les autres maquettes de proto/.
+  MOONDAW — MIXER on the M-VAVE FM-1 (240 × 240 screen).
+  Same system as the other mockups in proto/.
 
-  Données : les lignes `trk`, `reverb` et `delay` de moondaw/songs/KIDS.trk.
+  Data: the `trk`, `reverb` and `delay` lines of moondaw/songs/KIDS.trk.
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -69,7 +69,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in panel pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -80,7 +80,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -96,13 +96,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the manual for the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+/* the grid: # · N1..N4 ┊ IN ┊ FX1..FX3 · RMP span */
 .cols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
 .head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
@@ -124,12 +124,12 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .ramp{ align-self:stretch; }
 .ramp.on{ background:var(--sel); }
 
-/* un champ = un slot, plein ou vide */
+/* a field = a slot, full or empty */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
 .slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
-  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
-     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  /* The condensed face has more ascender than descender: centred by its line box, the
+     digit sits half a pixel too low. We raise it by as much. */
   position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
 .slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
@@ -143,9 +143,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .sc .slot.cur{ background:var(--accent); box-shadow:none; }
 .sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
 
-/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
-   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
-   et l'œil va de la carte au potard sans descendre. */
+/* the cards: the four right-hand knobs, in their order.  AT THE TOP
+   (decided 10/10): the knobs are to the right of the screen, level with it,
+   and the eye goes from card to knob without looking down. */
 .cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
   border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
@@ -161,7 +161,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .card.off{ background:rgba(200,208,200,.03); }
 .card.off .l b{ color:var(--dim); }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -173,7 +173,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
 .b.gap{ margin-left:2px; }
 
-/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+/* a panel: the list, placed next to the slot it details */
 .pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
   border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
   display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
@@ -190,7 +190,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 
 
 
-/* ── cet écran ───────────────────────────────────────────────────── */
+/* ── this screen ─────────────────────────────────────────────────── */
 .nav .id{ font-family:var(--cond); font-size:12px; font-weight:700; letter-spacing:.05em; color:var(--text); }
 .gname{ height:9px; flex:none; font-family:var(--jb); font-size:8px; color:var(--dim); padding:0 2px;
   display:flex; align-items:flex-end; }
@@ -215,91 +215,91 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026</div>
-  <h1>Huit pistes, <em>quatre réglages chacune</em></h1>
-  <p class="lede">Une piste a quatre choses à dire sur sa place dans le mix : son volume, son
-  panoramique, ce qu'elle envoie à la reverb et ce qu'elle envoie au delay. <strong>Quatre réglages,
-  quatre potards</strong> : SELECT choisit la piste, et la main droite a toute la piste sous les
-  doigts. La première rangée règle la reverb et le delay eux-mêmes.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026</div>
+  <h1>Eight tracks, <em>four settings each</em></h1>
+  <p class="lede">A track has four things to say about its place in the mix: its volume, its
+  pan, what it sends to the reverb and what it sends to the delay. <strong>Four settings,
+  four knobs</strong>: SELECT picks the track, and the right hand has the whole track under its
+  fingers. The first row sets the reverb and the delay themselves.</p>
 
   <section>
-    <span class="tag">Cadre 1 · le curseur sur une piste</span>
-    <h2>Une rangée par piste</h2>
-    <p>Chaque case porte sa valeur et un trait qui la dessine : la longueur pour un niveau, la
-    position pour le panoramique. Le numéro de piste est dans la première case. On arrive ici par
-    le bouton MIXER de SONG ou de PATTERN, et le retour ramène d'où l'on vient.</p>
+    <span class="tag">Frame 1 · the cursor on a track</span>
+    <h2>One row per track</h2>
+    <p>Each cell carries its value and a line that draws it: the length for a level, the
+    position for the pan. The track number is in the first cell. You get here with the
+    MIXER button of SONG or PATTERN, and the way back returns to where you came from.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="x1"></div></div></div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p><b>Les huit pistes</b> et les deux retours, sans défiler.</p></div>
-      <div><span class="k">Ce que le chrome prend</span><p>59 px en haut, 25 en bas.</p></div>
-      <div><span class="k">Ce qui manque</span><p>Les niveaux qui bougent pendant la lecture, et le métronome.</p></div>
+      <div><span class="k">What you see</span><p><b>The eight tracks</b> and the two returns, without scrolling.</p></div>
+      <div><span class="k">What the chrome takes</span><p>59 px at the top, 25 at the bottom.</p></div>
+      <div><span class="k">What is missing</span><p>Levels that move during playback, and the metronome.</p></div>
     </div>
   </section>
 
   <section>
-    <span class="tag">Cadres 2 et 3 · les retours, et couper une piste</span>
-    <h2>La pièce et l'écho en haut, MUTE et SOLO en bas</h2>
-    <p>Tout en haut, la rangée des retours : la taille et l'amortissement de la reverb, le temps
-    et la réinjection du delay. Deux boutons agissent sur la piste du curseur : MUTE la coupe,
-    SOLO la laisse seule. Une piste coupée a son numéro en rouge, une piste en solo en vert, et
-    ça ne s'enregistre pas dans le morceau, comme dans l'app.</p>
+    <span class="tag">Frames 2 and 3 · the returns, and muting a track</span>
+    <h2>The room and the echo at the top, MUTE and SOLO at the bottom</h2>
+    <p>At the very top, the returns row: the size and damping of the reverb, the time
+    and feedback of the delay. Two buttons act on the track under the cursor: MUTE cuts it,
+    SOLO leaves it on its own. A muted track has its number in red, a soloed track in green, and
+    this is not saved in the song, as in the app.</p>
     <div class="pair">
       <figure><div class="zoom"><div class="sc" id="x2"></div></div>
-        <figcaption>Sur les retours. Le temps du delay est en ticks, 18 est la croche pointée.</figcaption></figure>
+        <figcaption>On the returns. The delay time is in ticks; 18 is a dotted eighth.</figcaption></figure>
       <figure><div class="zoom"><div class="sc" id="x3"></div></div>
-        <figcaption>En lecture, la piste 3 coupée, le curseur sur la piste 8.</figcaption></figure>
+        <figcaption>Playing, track 3 muted, the cursor on track 8.</figcaption></figure>
     </div>
   </section>
 
   <section>
-    <h2>Déjà tranché</h2>
+    <h2>Already decided</h2>
     <ul class="notes">
-      <li><b>10/10 — validé et écrit</b> (<code>app/mixer.c</code>) : une rangée par piste, les
-      deux retours en première rangée, MUTE et SOLO sur la piste sous le curseur, SAVE, PLAY, et
-      le retour vers l'écran d'où l'on vient (SONG ou PATTERN).</li>
-      <li><b>SOLO n'écrit rien dans le morceau.</b> Il fait taire les autres pistes sans les
-      muter : en le relâchant, on retrouve les mutes tels qu'on les avait laissés.</li>
-      <li><b>Le pan va de L64 à R63</b>, comme dans le fichier : à fond à droite, un
-      soixante-quatrième de la piste reste à gauche.</li>
-      <li><b>Sur la rangée des retours, MUTE et SOLO ne font rien</b> et sont éteints.</li>
-      <li><b>UNDO est écrit</b> (10/10) : une pression reprend un geste, éteint quand il n'y a rien à reprendre.</li>
-      <li><b>Pas encore là</b> : les vumètres, le métronome.</li>
+      <li><b>10/10 — approved and written</b> (<code>app/mixer.c</code>): one row per track, the
+      two returns in the first row, MUTE and SOLO on the track under the cursor, SAVE, PLAY, and
+      the way back to the screen you came from (SONG or PATTERN).</li>
+      <li><b>SOLO writes nothing into the song.</b> It silences the other tracks without
+      muting them: when you release it, the mutes are as you left them.</li>
+      <li><b>Pan goes from L64 to R63</b>, as in the file: hard right, one
+      sixty-fourth of the track stays on the left.</li>
+      <li><b>On the returns row, MUTE and SOLO do nothing</b> and are off.</li>
+      <li><b>UNDO is written</b> (10/10): one press undoes one gesture; it is off when there is nothing to undo.</li>
+      <li><b>Not there yet</b>: the VU meters, the metronome.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>La piste en rangée, pas en tranche verticale.</b> Une console dessine des tranches ;
-      ici les quatre réglages d'une piste doivent tomber sous les quatre potards, qui sont en ligne.</li>
-      <li><b>Le volume va de 0 à 127 et il est linéaire</b>, comme dans le fichier : 64 est la
-      moitié de l'amplitude. Le panoramique s'écrit L18, C, R14.</li>
-      <li><b>MUTE et SOLO vivent ici.</b> C'était la question laissée ouverte sur SONG.</li>
-      <li><b>PLAY joue le morceau</b> depuis la phrase d'où l'on vient.</li>
-      <li><b>Un envoi à zéro est écrit en gris</b> : on voit d'un coup d'œil qui envoie quoi.</li>
+      <li><b>The track as a row, not a vertical strip.</b> A mixing desk draws strips;
+      here the four settings of a track must fall under the four knobs, which are in a line.</li>
+      <li><b>Volume goes from 0 to 127 and is linear</b>, as in the file: 64 is
+      half the amplitude. Pan is written L18, C, R14.</li>
+      <li><b>MUTE and SOLO live here.</b> That was the question left open on SONG.</li>
+      <li><b>PLAY plays the song</b> from the phrase you came from.</li>
+      <li><b>A send at zero is written in grey</b>: you see at a glance what sends where.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What remains open</h2>
     <ul class="notes">
-      <li><b>Les vumètres.</b> L'app montre le niveau de chaque piste pendant la lecture. Le
-      moteur du FM-1 ne le mesure pas encore ; ça coûte un peu de calcul par piste.</li>
-      <li><b>Le métronome</b> est sur cet écran dans l'app. Il n'existe pas dans le moteur du FM-1.</li>
-      <li><b>Le volume général</b> est le potard MASTER de l'appareil et n'apparaît nulle part à
-      l'écran. Faut-il l'afficher ici ?</li>
+      <li><b>The VU meters.</b> The app shows each track's level during playback. The
+      FM-1 engine does not measure it yet; it costs a little computation per track.</li>
+      <li><b>The metronome</b> is on this screen in the app. It does not exist in the FM-1 engine.</li>
+      <li><b>The master volume</b> is the device's MASTER knob and appears nowhere on
+      the screen. Should it be shown here?</li>
     </ul>
   </section>
 </div>
 
 <script>
-/* songs/KIDS.trk : trk N vol pan [rev] [ech], puis reverb 76 98 et delay 18 52. */
+/* songs/KIDS.trk: trk N vol pan [rev] [ech], then reverb 76 98 and delay 18 52. */
 const TRK = [[51, 0, 0, 0], [44, 0, 12, 0], [26, -18, 30, 38], [28, 18, 22, 22],
              [52, 0, 0, 0], [25, -34, 8, 0], [27, 30, 22, 0], [22, 14, 54, 18]];
 const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
 const pan = (p) => p === 0 ? "C" : p < 0 ? "L" + -p : "R" + p;
 
-/* st : { cur: -1 les retours, 0..7 une piste ; mute: masque ; solo: masque ; play ; cards } */
+/* st: { cur: -1 the returns, 0..7 a track; mute: mask; solo: mask; play; cards } */
 function screen(st) {
   const words = ["", "", "MUTE", "SOLO", "", "", "‹ SONG", "SAVE", "UNDO", "", st.play ? "STOP" : "PLAY", ""];
   let h = el("nav", `<span class="back">‹ SONG</span><span class="id">KIDS</span><span class="sp"></span>`);

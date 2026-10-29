@@ -1,27 +1,27 @@
 <meta charset="utf-8">
-<title>REC sur le FM-1</title>
+<title>REC on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — REC sur le M-VAVE FM-1 (écran 240 × 240) : jouer au clavier pendant que la phrase tourne, calé au pas.
-  Même système que proto/pattern.html et proto/menu.html.
+  MOONDAW — REC on the M-VAVE FM-1 (240 × 240 screen): playing the keyboard while the phrase runs, snapped to the step.
+  Same system as proto/pattern.html and proto/menu.html.
 
-  Données : celles de proto/pattern.html (KIDS, t3 01) et de proto/phrase.html
+  Data: the same as proto/pattern.html (KIDS, t3 01) and proto/phrase.html
   (KIDS, phrase 04).
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -70,7 +70,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in panel pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -81,7 +81,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -97,13 +97,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the guide to the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+/* the grid: # · N1..N4 ┊ IN ┊ FX1..FX3 · RMP span */
 .cols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
 .head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
@@ -125,12 +125,12 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .ramp{ align-self:stretch; }
 .ramp.on{ background:var(--sel); }
 
-/* un champ = un slot, plein ou vide */
+/* one field = one slot, full or empty */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
 .slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
-  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
-     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  /* The condensed face has more ascender than descender: centred by its line box, the
+     digit sits half a pixel too low. It is raised by as much. */
   position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
 .slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
@@ -144,9 +144,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .sc .slot.cur{ background:var(--accent); box-shadow:none; }
 .sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
 
-/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
-   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
-   et l'œil va de la carte au potard sans descendre. */
+/* the cards: the four right knobs, in their order.  AT THE TOP
+   (decided on 10/10): the knobs are to the right of the screen, level with it,
+   and the eye goes from card to knob without moving down. */
 .cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
   border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
@@ -162,7 +162,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .card.off{ background:rgba(200,208,200,.03); }
 .card.off .l b{ color:var(--dim); }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on the screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -174,7 +174,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
 .b.gap{ margin-left:2px; }
 
-/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+/* a panel: the list, placed next to the slot it details */
 .pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
   border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
   display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
@@ -190,13 +190,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .pop .pr.cur .m, .pop .pr.cur .d{ color:var(--on-acc); }
 
 
-/* ── cet écran ───────────────────────────────────────────────────── */
+/* ── this screen ───────────────────────────────────────────────────── */
 .nav .id{ font-family:var(--cond); font-size:12px; font-weight:700; letter-spacing:.05em; color:var(--text); }
 .nav .len{ font-family:var(--jb); font-size:8px; color:var(--dim); white-space:nowrap; }
 .nav .len b{ color:var(--text); font-weight:500; margin-right:2px; }
 .gcols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 15px repeat(8, 23px) 1fr; }
-/* la tête de colonne : la piste et son bloc — la poignée de la piste */
+/* the column head: the track and its block — the track's handle */
 .heads{ height:19px; flex:none; margin-bottom:1px; }
 .hd{ height:19px; border-radius:2px; background:rgba(200,208,200,.045);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
@@ -211,7 +211,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .slab.beat .pos{ color:var(--beat); } .slab.bar .pos{ color:var(--text); }
 .slab.playing .pos{ color:var(--accent); }
 .slab.playing .gauge{ background:var(--accent); }
-/* la case : N1, et un point par note de plus dans l'accord */
+/* the cell: N1, and one dot per extra note in the chord */
 .cell{ height:10px; border-radius:1.5px; line-height:10px; white-space:nowrap;
   display:flex; align-items:center; justify-content:center; gap:2px; }
 .cell .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--text); }
@@ -231,7 +231,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .pair figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
 .pair figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); max-width:calc(240px * var(--s)); }
 
-/* ── la boucle ────────────────────────────────────────────────────── */
+/* ── the loop ────────────────────────────────────────────────────── */
 .slab.loop .gauge{ background:var(--title); }
 .slab.loop .step, .slab.loop .pos{ color:var(--title); }
 .slab.playing .gauge{ background:var(--accent); }
@@ -248,63 +248,63 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026</div>
-  <h1>REC : <em>jouer, et ça s'écrit</em></h1>
-  <p class="lede">Ce que tu as tranché pour l'app le 3 septembre, appliqué à une machine qui a un
-  vrai clavier : <strong>une pression</strong>, un décompte de quatre temps, la phrase part, et
-  ce qu'on joue sur les 27 touches s'écrit dans le bloc, <strong>calé au pas le plus proche</strong>.
-  Rien de plus fin n'est écrit tout seul. Sur PATTERN pour commencer.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026</div>
+  <h1>REC: <em>play, and it is written</em></h1>
+  <p class="lede">What you decided for the app on 3 September, applied to a machine that has a
+  real keyboard: <strong>one press</strong>, a four-beat count-in, the phrase starts, and
+  what you play on the 27 keys is written into the block, <strong>snapped to the nearest step</strong>.
+  Nothing finer is written on its own. On PATTERN to begin with.</p>
 
   <section>
-    <span class="tag">Cadre 1 · le décompte</span>
-    <h2>Une pression sur REC</h2>
-    <p>Le bouton passe au rouge, la barre compte les quatre temps (<code>REC 4</code> …
-    <code>REC 1</code>) et un clic les marque. Rien ne joue encore, rien ne s'écrit. Une seconde
-    pression pendant le décompte annule.</p>
+    <span class="tag">Frame 1 · the count-in</span>
+    <h2>One press on REC</h2>
+    <p>The button turns red, the bar counts the four beats (<code>REC 4</code> …
+    <code>REC 1</code>) and a click marks them. Nothing plays yet, nothing is written. A second
+    press during the count-in cancels.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="r1"></div></div></div>
   </section>
 
   <section>
-    <span class="tag">Cadre 2 · la prise</span>
-    <h2>La phrase tourne, les notes apparaissent</h2>
-    <p>Au quatrième temps la phrase part du début et tourne en boucle, le clic continue sur les
-    temps. Chaque touche s'entend tout de suite et s'écrit au pas le plus proche de l'instant où
-    elle est enfoncée ; plusieurs touches sur le même pas font un accord. La page suit la tête de
-    lecture. REC une seconde fois arrête la prise et laisse tourner, pour entendre le résultat ;
-    STOP arrête tout.</p>
+    <span class="tag">Frame 2 · the take</span>
+    <h2>The phrase runs, the notes appear</h2>
+    <p>On the fourth beat the phrase starts from the top and loops, the click goes on marking the
+    beats. Each key is heard at once and is written to the step nearest the moment
+    it is pressed; several keys on the same step make a chord. The page follows the play
+    head. REC a second time stops the take and keeps playing, to hear the result;
+    STOP stops everything.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="r2"></div></div></div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p>Les notes de cette prise sur fond rouge pâle jusqu'à l'arrêt, la ligne jouée en vert.</p></div>
-      <div><span class="k">Ce qu'on entend</span><p>La phrase, le clic, et la touche jouée — <b>une seule à la fois</b> : l'écoute au clavier n'a qu'une voix.</p></div>
-      <div><span class="k">Ce qui se tait</span><p>Les potards, SELECT, CLEAR, FX, INSTR : pendant la prise on joue.</p></div>
+      <div><span class="k">What you see</span><p>The notes of this take on a pale red ground until it stops, the playing row in green.</p></div>
+      <div><span class="k">What you hear</span><p>The phrase, the click, and the key played — <b>one at a time</b>: keyboard monitoring has only one voice.</p></div>
+      <div><span class="k">What goes quiet</span><p>The knobs, SELECT, CLEAR, FX, INSTR: during the take you play.</p></div>
     </div>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>Une touche qui retombe sur un pas déjà écrit le remplace</b> (ses notes, pas son
-      instrument ni ses effets). Les pas qu'on ne rejoue pas gardent ce qu'ils avaient : c'est
-      comme ça qu'on complète une phrase tour après tour.</li>
-      <li><b>Relâcher écrit <code>OFF</code></b> au pas le plus proche, si ce pas est vide et
-      qu'aucune autre touche n'est tenue. Sans ça, toute prise serait liée et un silence joué
-      disparaîtrait. C'est le point que je te demande de trancher.</li>
-      <li><b>Avec une boucle posée (LOOP), la prise tourne dans la boucle</b> : on enregistre
-      deux mesures sans attendre le reste de la phrase.</li>
-      <li><b>L'instrument n'est pas écrit</b> : les notes prennent celui qui est en vigueur à cet
-      endroit du bloc, comme une note écrite à la main.</li>
-      <li><b>Un seul UNDO reprend toute la prise.</b></li>
-      <li><b>Le clic n'est pas dans le morceau</b> : il n'existe que pendant le décompte et la prise.</li>
+      <li><b>A key that lands on a step already written replaces it</b> (its notes, not its
+      instrument or its effects). Steps you do not play again keep what they had: that is
+      how you fill a phrase pass after pass.</li>
+      <li><b>Releasing writes <code>OFF</code></b> at the nearest step, if that step is empty and
+      no other key is held. Without it, every take would be legato and a played silence would
+      be lost. This is the point I am asking you to decide.</li>
+      <li><b>With a loop set (LOOP), the take runs inside the loop</b>: you record
+      two bars without waiting for the rest of the phrase.</li>
+      <li><b>The instrument is not written</b>: the notes take the one in effect at that
+      point of the block, like a note written by hand.</li>
+      <li><b>A single UNDO takes back the whole take.</b></li>
+      <li><b>The click is not in the song</b>: it exists only during the count-in and the take.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What is still open</h2>
     <ul class="notes">
-      <li><b>PHRASE</b> : le même bouton pourrait y enregistrer sur la piste du curseur. Après PATTERN.</li>
-      <li><b>Le clic pendant la lecture simple</b> (un métronome, hors REC) : pas proposé ici.</li>
-      <li><b>Les accords qu'on entend en jouant</b> : il faudrait plusieurs voix d'écoute. Les
-      accords s'écrivent bien, on n'en entend que la dernière note pendant la prise.</li>
+      <li><b>PHRASE</b>: the same button could record there, on the cursor's track. After PATTERN.</li>
+      <li><b>The click during plain playback</b> (a metronome, outside REC): not proposed here.</li>
+      <li><b>Hearing chords while playing</b>: it would take several monitoring voices. The
+      chords are written correctly; during the take only their last note is heard.</li>
     </ul>
   </section>
 </div>
@@ -312,7 +312,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 <script>
 const hex = (n) => n.toString(16).toUpperCase().padStart(2, "0");
 const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
-/* songs/KIDS.trk, pat t3 01, les onze premiers pas ; fresh = écrit pendant cette prise */
+/* songs/KIDS.trk, pat t3 01, the first eleven steps; fresh = written during this take */
 const BASE = [
   { n:["A-3","C-4","E-4"], i:"09", f:[["STR","01"],["FLT","4E"],["ECH","18"]] },
   { n:[], i:"", f:[["REV","1E"],["RMP","3E"],["FLT","C4"]] },
@@ -321,7 +321,7 @@ const BASE = [
   { n:["A-3","C-4","E-4"], i:"09", f:[["STR","01"]] }, {}, {},
 ];
 const BTN = ["FX","LOOP","INSTR","CLEAR","SELECT","MIXER","‹ PHR","SAVE","UNDO","SONG","PLAY","REC"];
-/* st : { count: 4..1 | 0, play: row | -1, fresh: { row: [notes] } } */
+/* st: { count: 4..1 | 0, play: row | -1, fresh: { row: [notes] } } */
 function pattern(st) {
   const heads = ["", "#", "N1", "N2", "N3", "N4", "", "IN", "", "FX1", "FX2", "FX3", ""];
   let h = el("nav", `<span class="back">‹ PHR</span><span class="trk" style="color:var(--dim)">P04</span><span class="trk">T4</span>` +

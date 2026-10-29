@@ -1,32 +1,32 @@
 <meta charset="utf-8">
-<title>PATTERN sur le FM-1</title>
+<title>PATTERN on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — PATTERN sur le M-VAVE FM-1 (écran 240 × 240).
+  MOONDAW — PATTERN on the M-VAVE FM-1 (240 × 240 screen).
 
-  Le système de design est celui de moondaw/proto/pattern-ios/ et de
-  proto/console/ : mêmes couleurs (les COL_* de ui.c, à l'octet près),
-  mêmes familles, mêmes primitives (dalle, slot, barre du bas).  Seules
-  les MESURES changent, et la façon dont on agit : ni doigt ni croix,
-  des potards, un clavier de piano et quatorze boutons.
+  The design system is that of moondaw/proto/pattern-ios/ and of
+  proto/console/: same colours (the COL_* of ui.c, to the byte),
+  same families, same primitives (slab, slot, bottom bar).  Only
+  the MEASUREMENTS change, and the way you act: no finger, no D-pad,
+  but knobs, a piano keyboard and fourteen buttons.
 
-  Données : moondaw/songs/KIDS.trk, `pat t3 01` (piste 4, inst 09 CHORDS).
-  Une seule fonction dessine l'écran ; chaque cadre est un état.
+  Data: moondaw/songs/KIDS.trk, `pat t3 01` (track 4, inst 09 CHORDS).
+  A single function draws the screen; each frame is a state.
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -75,7 +75,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in display pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -86,7 +86,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -102,13 +102,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the manual for the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+/* the grid: # · N1..N4 ┊ IN ┊ FX1..FX3 · RMP span */
 .cols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
 .head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
@@ -130,12 +130,12 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .ramp{ align-self:stretch; }
 .ramp.on{ background:var(--sel); }
 
-/* un champ = un slot, plein ou vide */
+/* a field = a slot, full or empty */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
 .slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
-  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
-     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  /* The condensed face has more ascender than descender: centred by its line box, the
+     digit sits half a pixel too low. It is raised by as much. */
   position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
 .slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
@@ -149,9 +149,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .sc .slot.cur{ background:var(--accent); box-shadow:none; }
 .sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
 
-/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
-   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
-   et l'œil va de la carte au potard sans descendre. */
+/* the cards: the four right-hand knobs, in their order.  AT THE TOP
+   (decided on 10/10): the knobs are to the right of the screen, level with it,
+   and the eye goes from the card to the knob without dropping. */
 .cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
   border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
@@ -167,7 +167,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .card.off{ background:rgba(200,208,200,.03); }
 .card.off .l b{ color:var(--dim); }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on the screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -179,7 +179,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
 .b.gap{ margin-left:2px; }
 
-/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+/* a panel: the list, set beside the slot it details */
 .pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
   border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
   display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
@@ -194,7 +194,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .pop .pr.cur{ background:var(--accent); }
 .pop .pr.cur .m, .pop .pr.cur .d{ color:var(--on-acc); }
 
-/* ═══ LE PANNEAU : qui fait quoi ══════════════════════════════════ */
+/* ═══ THE PANEL: who does what ══════════════════════════════════ */
 .devwrap{ margin-top:26px; overflow-x:auto; padding-bottom:8px; }
 .dev{ width:640px; padding:16px 18px 18px; border-radius:16px; flex:none;
   background:linear-gradient(160deg,#2a2c31 0%,#191b20 55%,#0d0e12 100%);
@@ -235,75 +235,75 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 
 <div class="wrap">
 
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026, révisée</div>
-  <h1>Pattern, sans croix <em>ni doigt</em></h1>
-  <p class="lede">L'écran PATTERN de l'app, remesuré pour une dalle de <strong>240 × 240</strong>
-  et pour ce que le FM-1 a sous les mains : quatre potards à gauche de l'écran, quatre à droite,
-  douze boutons et un clavier de 27 touches. Le dessin reste celui de l'iPhone — dalles, neuf
-  slots par pas, cyan où l'on est, vert le curseur. Ce n'est <strong>pas une grille de caractères
-  8 × 8</strong> : l'écran du FM-1 peint ce qu'on veut, Felucca y dessine déjà des fontes lissées.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026, revised</div>
+  <h1>Pattern, no D-pad, <em>no finger</em></h1>
+  <p class="lede">The app's PATTERN screen, re-measured for a <strong>240 × 240</strong> display
+  and for what the FM-1 has under the hands: four knobs left of the screen, four on the right,
+  twelve buttons and a 27-key keyboard. The drawing stays the iPhone's — slabs, nine
+  slots per step, cyan where you are, green for the cursor. It is <strong>not an 8 × 8
+  character grid</strong>: the FM-1's screen paints whatever you want, and Felucca already draws anti-aliased fonts on it.</p>
 
   <section>
-    <span class="tag">Cadre 1 · le curseur sur une note</span>
-    <h2>Deux mains, deux rôles</h2>
-    <p>La main gauche <b>se déplace</b> : SELECT monte et descend d'un pas, ALGORITHM passe d'un
-    champ au suivant, PRESETS change de bloc. La main droite <b>écrit</b> : les quatre potards
-    KNOB 1–4 sont les quatre cartes sous la barre, dans le même ordre, et ne parlent que du champ sous
-    le curseur. Une touche du clavier écrit sa note dans le slot et la joue.</p>
+    <span class="tag">Frame 1 · the cursor on a note</span>
+    <h2>Two hands, two roles</h2>
+    <p>The left hand <b>moves</b>: SELECT goes up and down by one step, ALGORITHM goes from one
+    field to the next, PRESETS changes block. The right hand <b>writes</b>: the four knobs
+    KNOB 1–4 are the four cards under the bar, in the same order, and only speak of the field under
+    the cursor. A key on the keyboard writes its note in the slot and plays it.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="f1"></div></div></div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p><b>11 pas</b> entiers. L'iPhone en montre 8, la console 17.</p></div>
-      <div><span class="k">Ce que le chrome prend</span><p>66 px en haut (barre, cartes, manuel de la main gauche, en-tête), 25 en bas (les douze boutons).</p></div>
-      <div><span class="k">Ce qui manque</span><p>Les rails Éditer / Écouter. Leur rôle passe aux douze boutons, dessinés en bas à leur place.</p></div>
+      <div><span class="k">What you see</span><p><b>11 whole steps</b>. The iPhone shows 8, the console 17.</p></div>
+      <div><span class="k">What the chrome takes</span><p>66 px at the top (bar, cards, left-hand manual, header), 25 at the bottom (the twelve buttons).</p></div>
+      <div><span class="k">What is missing</span><p>The Edit / Listen rails. Their role goes to the twelve buttons, drawn at the bottom in their places.</p></div>
     </div>
   </section>
 
   <section>
-    <span class="tag">Cadre 2 · le curseur sur un effet</span>
-    <h2>Tourner KNOB 1 ouvre la liste</h2>
-    <p>Sur un slot d'effet, la première carte choisit la commande et la liste s'ouvre à côté du
-    slot tant que le potard tourne — la même liste alphabétique que partout, <code>---</code> en
-    tête pour vider. La deuxième carte règle la valeur ; pour <code>VIB</code>, <code>TRM</code> et
-    <code>SCP</code> ce sont deux cartes, une par demi-octet.</p>
+    <span class="tag">Frame 2 · the cursor on an effect</span>
+    <h2>Turning KNOB 1 opens the list</h2>
+    <p>On an effect slot, the first card picks the command and the list opens beside the
+    slot while the knob turns — the same alphabetical list as everywhere, with <code>---</code> at
+    the top to clear. The second card sets the value; for <code>VIB</code>, <code>TRM</code> and
+    <code>SCP</code> there are two cards, one per nibble.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="f2"></div></div></div>
   </section>
 
   <section>
-    <span class="tag">Cadre 3 · en lecture, une sélection posée</span>
-    <h2>Ce qui joue en vert, ce qui est pris en ambre</h2>
-    <p>PLAY joue la phrase. La ligne jouée prend le fond et la barre verte de l'app ; le curseur
-    reste où la main l'a laissé. SELECT (le bouton EDIT) est un mode : allumé, les deux potards de
-    gauche étendent le rectangle au lieu de déplacer le curseur, et trois boutons changent de mot.</p>
+    <span class="tag">Frame 3 · playing, with a selection made</span>
+    <h2>What plays in green, what is taken in amber</h2>
+    <p>PLAY plays the phrase. The playing row gets the app's background and green bar; the cursor
+    stays where the hand left it. SELECT (the EDIT button) is a mode: when it is on, the two left
+    knobs extend the rectangle instead of moving the cursor, and three buttons change their word.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="f3"></div></div></div>
   </section>
 
   <section>
-    <span class="tag">Le panneau</span>
-    <h2>Qui fait quoi sur cet écran</h2>
-    <p>L'écran est ici à la moitié de la maquette : sur un portable à écran dense, c'est à peu près
-    sa taille réelle <b>si la dalle fait 1,3 pouce — je ne connais pas sa diagonale</b>, ni Felucca
-    ni SLOOP ne la donnent. C'est la première chose à vérifier à l'arrivée, elle décide de la
-    hauteur d'une ligne.</p>
+    <span class="tag">The panel</span>
+    <h2>Who does what on this screen</h2>
+    <p>The screen here is at half the mockup's size: on a laptop with a dense screen, that is roughly
+    its real size <b>if the display is 1.3 inches — I do not know its diagonal</b>; neither Felucca
+    nor SLOOP gives it. It is the first thing to check when the device arrives: it decides the
+    height of a row.</p>
     <div class="devwrap"><div class="dev">
       <div>
         <div class="knobs two">
           <div class="kn"><i></i><span class="p">MASTER</span><span class="w">Volume</span></div>
-          <div class="kn"><i></i><span class="p">SELECT</span><span class="w acc">Pas</span></div>
-          <div class="kn"><i></i><span class="p">PRESETS</span><span class="w acc">Bloc</span></div>
-          <div class="kn"><i></i><span class="p">ALGORITHM</span><span class="w acc">Champ</span></div>
+          <div class="kn"><i></i><span class="p">SELECT</span><span class="w acc">Step</span></div>
+          <div class="kn"><i></i><span class="p">PRESETS</span><span class="w acc">Block</span></div>
+          <div class="kn"><i></i><span class="p">ALGORITHM</span><span class="w acc">Field</span></div>
         </div>
         <div class="pads two">
-          <div class="pad same"><span class="p">OCT−</span><span class="w">Clavier ↓</span></div>
-          <div class="pad same"><span class="p">OCT+</span><span class="w">Clavier ↑</span></div>
+          <div class="pad same"><span class="p">OCT−</span><span class="w">Keys ↓</span></div>
+          <div class="pad same"><span class="p">OCT+</span><span class="w">Keys ↑</span></div>
         </div>
       </div>
       <div class="scr"><div class="sc" id="f0"></div></div>
       <div>
         <div class="knobs four">
-          <div class="kn"><i></i><span class="p">KNOB 1</span><span class="w">Carte 1</span></div>
-          <div class="kn"><i></i><span class="p">KNOB 2</span><span class="w">Carte 2</span></div>
-          <div class="kn"><i></i><span class="p">KNOB 3</span><span class="w">Carte 3</span></div>
-          <div class="kn"><i></i><span class="p">KNOB 4</span><span class="w">Carte 4</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 1</span><span class="w">Card 1</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 2</span><span class="w">Card 2</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 3</span><span class="w">Card 3</span></div>
+          <div class="kn"><i></i><span class="p">KNOB 4</span><span class="w">Card 4</span></div>
         </div>
         <div class="pads">
           <div class="pad same"><span class="p">FX</span><span class="w">FX</span></div>
@@ -322,79 +322,79 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
       </div>
       <div class="keysrow">
         <div class="kb" id="kb"></div>
-        <p><b>27 touches, de Fa à Sol.</b> Sur un slot de note : écrit la note et la joue ;
-        plusieurs touches tenues remplissent N1 à N4. OCT− et OCT+ déplacent le clavier d'une
-        octave, et la barre du haut dit où il est.</p>
+        <p><b>27 keys, from F to G.</b> On a note slot: writes the note and plays it;
+        several keys held together fill N1 to N4. OCT− and OCT+ shift the keyboard by one
+        octave, and the top bar says where it is.</p>
       </div>
     </div></div>
     <div class="legend">
-      <span><b style="color:var(--accent)">vert</b> : le mot imprimé sur l'appareil dit déjà la fonction</span>
-      <span><b style="color:var(--fx)">ambre</b> : le mot imprimé dit autre chose</span>
+      <span><b style="color:var(--accent)">green</b>: the word printed on the device already names the function</span>
+      <span><b style="color:var(--fx)">amber</b>: the printed word says something else</span>
     </div>
-    <p>Quatre boutons sur douze font autre chose que ce qui est imprimé dessus (SEL, ENV, LFO, ARP).
-    C'est pour ça que l'écran <b>redessine les douze boutons à leur place</b>, deux rangées de six :
-    on lit la position, pas l'étiquette. Les mots changent d'un écran à l'autre, la place jamais.</p>
+    <p>Four buttons out of twelve do something other than what is printed on them (SEL, ENV, LFO, ARP).
+    That is why the screen <b>redraws the twelve buttons in their places</b>, two rows of six:
+    you read the position, not the label. The words change from one screen to the next, the places never do.</p>
   </section>
 
   <section>
-    <h2>Déjà tranché</h2>
+    <h2>Already decided</h2>
     <ul class="notes">
-      <li><b>10/10 — la liste d'effets est écrite</b> (cadre 2). Elle s'ouvre à gauche du slot dès que KNOB 1 tourne dessus, reste une seconde et demie après le dernier cran, et se ferme à tout autre geste. Six effets autour du courant, chacun avec la ligne de description de l'app, en 8 px comme le reste (le dessin les montrait plus petites) : le panneau fait 124 px de large au lieu de 112.</li>
-      <li><b>10/10 — la main gauche se déplace, la main droite écrit.</b> SELECT le pas,
-      ALGORITHM le champ, PRESETS le bloc ; KNOB 1–4 les quatre cartes.</li>
-      <li><b>10/10 — les douze boutons</b> : FX, LOOP, INSTR, CLEAR, SELECT, MIXER sur la
-      rangée du haut ; ‹ PHR, SAVE, UNDO, SONG, PLAY, REC sur celle du bas. Redessinés à
-      l'écran à leur place.</li>
-      <li><b>10/10 — les mots des boutons en 9 px gras</b>, et un bouton éteint en gris clair
-      (<code>COL_BEAT</code>) : en 8 px demi-gras ils étaient illisibles dans le simulateur.</li>
-      <li><b>10/10 — la chasse fixe en 8 px, sans lissage.</b> Les libellés en 6 px étaient trop
-      petits et flous. Dans l'appareil et le simulateur, JetBrains Mono est dessinée en pixels
-      entiers à 8 px : nette, et aucun pas perdu. Cette page ne peut pas le montrer, un navigateur
-      lisse toujours. Le condensé gras reste lissé. ALGORITHM s'écrit ALGO pour tenir sur la ligne.</li>
-      <li><b>10/10 — le retour mène à SONG</b> tant que PHRASE n'existe pas : la barre dit
-      <code>‹ SONG</code> et la phrase d'où l'on vient est écrite à côté (<code>P02</code>). Le
-      bouton SONG y mène aussi.</li>
-      <li><b>10/10 — les cartes sont en haut</b>, sous la barre, à la hauteur des potards
-      qu'elles nomment. Les douze boutons restent en bas.</li>
+      <li><b>10/10 — the effect list is written</b> (frame 2). It opens to the left of the slot as soon as KNOB 1 turns on it, stays a second and a half after the last detent, and closes on any other gesture. Six effects around the current one, each with the app's description line, in 8 px like the rest (the drawing showed them smaller): the panel is 124 px wide instead of 112.</li>
+      <li><b>10/10 — the left hand moves, the right hand writes.</b> SELECT the step,
+      ALGORITHM the field, PRESETS the block; KNOB 1–4 the four cards.</li>
+      <li><b>10/10 — the twelve buttons</b>: FX, LOOP, INSTR, CLEAR, SELECT, MIXER on the
+      top row; ‹ PHR, SAVE, UNDO, SONG, PLAY, REC on the bottom one. Redrawn on
+      the screen in their places.</li>
+      <li><b>10/10 — the button words in 9 px bold</b>, and an off button in light grey
+      (<code>COL_BEAT</code>): in 8 px semibold they were unreadable in the simulator.</li>
+      <li><b>10/10 — the monospace at 8 px, without anti-aliasing.</b> The 6 px labels were too
+      small and blurry. On the device and in the simulator, JetBrains Mono is drawn on whole
+      pixels at 8 px: sharp, and no step lost. This page cannot show it; a browser always
+      anti-aliases. The bold condensed stays anti-aliased. ALGORITHM is written ALGO to fit on the line.</li>
+      <li><b>10/10 — back leads to SONG</b> as long as PHRASE does not exist: the bar says
+      <code>‹ SONG</code> and the phrase you came from is written beside it (<code>P02</code>). The
+      SONG button leads there too.</li>
+      <li><b>10/10 — the cards are at the top</b>, under the bar, level with the knobs
+      they name. The twelve buttons stay at the bottom.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>Neuf slots par pas, comme partout.</b> Le pas, N1 à N4, IN, FX1 à FX3, pleins ou en
-      pointillé, avec les deux coutures cyan après N4 et après IN. Ils tiennent dans 240 px avec des
-      notes de 10,5 px en condensé gras.</li>
-      <li><b>Vider, c'est tourner jusqu'en bas.</b> Les potards du FM-1 n'ont pas de poussoir. Sous
-      la note la plus basse il y a <code>OFF</code> puis <code>---</code> ; la liste des effets
-      commence par <code>---</code> ; l'instrument par <code>--</code>. CLEAR vide le slot d'un coup.</li>
-      <li><b>Le clavier est un vrai clavier, donc il écrit des notes.</b> La règle « aucun clavier
-      chromatique » visait un clavier dessiné sur du verre. Ici il est sous les doigts et c'est ce
-      que la machine a de mieux. KNOB 1 et 2 gardent le demi-ton et l'octave pour retoucher.</li>
-      <li><b>La portée d'un RMP reste dans la marge droite</b>, en ambre sombre, sur les pas qu'elle couvre.</li>
-      <li><b>Une carte éteinte garde sa place</b> et dit qu'elle ne fait rien sur ce champ.</li>
+      <li><b>Nine slots per step, as everywhere.</b> The step, N1 to N4, IN, FX1 to FX3, full or
+      dotted, with the two cyan seams after N4 and after IN. They fit in 240 px with
+      notes of 10.5 px in bold condensed.</li>
+      <li><b>Clearing is turning all the way down.</b> The FM-1's knobs do not push. Below
+      the lowest note there is <code>OFF</code> then <code>---</code>; the effect list
+      starts with <code>---</code>; the instrument with <code>--</code>. CLEAR empties the slot in one go.</li>
+      <li><b>The keyboard is a real keyboard, so it writes notes.</b> The rule "no chromatic
+      keyboard" was aimed at a keyboard drawn on glass. Here it is under the fingers, and it is the
+      best thing the machine has. KNOB 1 and 2 keep the semitone and the octave for touch-ups.</li>
+      <li><b>The range of an RMP stays in the right margin</b>, in dark amber, on the steps it covers.</li>
+      <li><b>A card that is off keeps its place</b> and says it does nothing on this field.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What is still open</h2>
     <ul class="notes">
-      <li><b>Le rôle de REC.</b> Je l'ai laissé allumable sans rien lui faire faire : enregistrer
-      au vol les touches jouées pendant la lecture, calées au pas, serait sa suite logique.</li>
-      <li><b>Refaire</b> n'a pas de bouton. Un UNDO tenu, ou un treizième mot quelque part. UNDO, lui, est écrit (10/10) : une pression reprend un geste — tout ce qu'une main a écrit au même endroit sans s'arrêter plus d'une seconde.</li>
-      <li><b>MUET et SOLO</b> ne sont pas sur cet écran. Dans l'app ils sont sur PHRASE.</li>
-      <li><b>Changer de piste</b> depuis PATTERN : aucun potard libre. Dans l'app ce n'est plus
-      possible non plus depuis le 23/09, on passe par PHRASE.</li>
-      <li><b>Le prérequis technique.</b> Ce dessin demande des fontes lissées dans le firmware, à
-      la place de la grille de texte que j'ai écrite pour l'écran de lecture. Felucca le fait avec
-      des fontes précalculées à la compilation ; Barlow Condensed et JetBrains Mono sont sous
-      licence libre.</li>
+      <li><b>The role of REC.</b> I left it able to light up without making it do anything: recording
+      on the fly the keys played during playback, quantised to the step, would be its logical next step.</li>
+      <li><b>Redo</b> has no button. A held UNDO, or a thirteenth word somewhere. UNDO itself is written (10/10): one press takes back one gesture — everything one hand wrote in the same place without pausing for more than a second.</li>
+      <li><b>MUTE and SOLO</b> are not on this screen. In the app they are on PHRASE.</li>
+      <li><b>Changing track</b> from PATTERN: no knob is free. In the app it has not been
+      possible either since 23/09; you go through PHRASE.</li>
+      <li><b>The technical prerequisite.</b> This drawing needs anti-aliased fonts in the firmware, in
+      place of the text grid I wrote for the playback screen. Felucca does it with
+      fonts precomputed at compile time; Barlow Condensed and JetBrains Mono are under a
+      free licence.</li>
     </ul>
   </section>
 </div>
 
 <script>
-/* songs/KIDS.trk, pat t3 01 len 64 — les onze premiers pas. */
+/* songs/KIDS.trk, pat t3 01 len 64 — the first eleven steps. */
 const ROWS = [
   { n:["A-3","C-4","E-4"], i:"09", f:[["STR","01"],["FLT","4E"],["ECH","18"]] },
   { n:[], i:"", f:[["REV","1E"],["RMP","3E"],["FLT","C4"]] },
@@ -406,8 +406,8 @@ const BTN = ["FX","LOOP","INSTR","CLEAR","SELECT","MIXER","‹ PHR","SAVE","UNDO
 const hex = (n) => n.toString(16).toUpperCase().padStart(2, "0");
 const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
 
-/* st : { cur:[row,col], play:row|-1, sel:[r0,c0,r1,c1]|null, cards:[...], btn:{name:state}, pop:{...} }
-   col : 0 = pas, 1..4 = N1..N4, 5 = IN, 6..8 = FX1..FX3 */
+/* st: { cur:[row,col], play:row|-1, sel:[r0,c0,r1,c1]|null, cards:[...], btn:{name:state}, pop:{...} }
+   col: 0 = step, 1..4 = N1..N4, 5 = IN, 6..8 = FX1..FX3 */
 function screen(st) {
   const inSel = (r, c) => st.sel && r >= st.sel[0] && r <= st.sel[2] && c >= st.sel[1] && c <= st.sel[3];
   const state = (r, c) => (st.cur[0] === r && st.cur[1] === c) ? " cur" : inSel(r, c) ? " picked" : "";
@@ -473,7 +473,7 @@ document.getElementById("f0").innerHTML = screen(note);
 document.getElementById("f2").innerHTML = screen(fx);
 document.getElementById("f3").innerHTML = screen(playing);
 
-/* Fa3..Sol5 : 16 blanches, 11 noires. */
+/* F3..G5: 16 white, 11 black. */
 const black = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
 document.getElementById("kb").innerHTML = Array.from({ length: 27 }, (_, k) =>
   `<span class="${black[(5 + k) % 12] ? "bk" : ""}"></span>`).join("");

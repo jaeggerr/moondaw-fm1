@@ -1,4 +1,4 @@
-<title>Planche d'écoute batteries</title>
+<title>Drums listening board</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,81 +129,81 @@ audio { width: 100%; height: 36px; }
 <div class="wrap">
   <header>
     <div class="eyebrow">MOONDAW · FM-1 · 44 100 Hz · 120 bpm</div>
-    <h1>Planche d'écoute des batteries</h1>
-    <p class="muted">Felucca a été choisi : la colonne DRUM est son moteur intégré à MOONDAW, rendu par le cœur du FM-1. Chaque case joue un coup tiré du fichier de ce moteur ; « enchaîner » joue la même pièce sur tous les moteurs à la suite. Tous les fichiers sont au même volume moyen. En bas, les morceaux avant et après.</p>
+    <h1>Drums listening board</h1>
+    <p class="muted">Felucca was chosen: the DRUM column is its engine integrated into MOONDAW, rendered by the FM-1 core. Each pad plays a hit taken from that engine's file; "chain" plays the same piece on every engine in a row. All files are at the same average volume. At the bottom, the songs before and after.</p>
   </header>
 
   <div class="controls">
-    <label class="toggle" for="speaker"><input type="checkbox" id="speaker"> Petit haut-parleur (coupe sous 200 Hz)</label>
+    <label class="toggle" for="speaker"><input type="checkbox" id="speaker"> Small speaker (cuts below 200 Hz)</label>
     <button class="stop" id="stop" type="button">Stop</button>
-    <span class="status" id="status">Chargement des sons…</span>
+    <span class="status" id="status">Loading sounds…</span>
   </div>
 
   <div class="gridbox"><div class="grid" id="grid"></div></div>
-  <p class="legend">Le dessin de chaque case est la forme d'onde du coup, à la même échelle de temps sur une ligne : on y voit d'un coup d'œil la grosse caisse actuelle qui s'éteint en 60 ms. Barre d'espace : stop.</p>
+  <p class="legend">The drawing on each pad is the hit's waveform, on the same time scale across a row: you see at a glance the current kick dying out in 60 ms. Space bar: stop.</p>
 
   <section style="display:flex;flex-direction:column;gap:12px">
-    <h2>Les morceaux, avant et après</h2>
-    <p class="muted">Les 20 premières secondes, rendues par le cœur du FM-1. « Avant » et « Après » basculent au même instant du morceau. KIDS jouait ses batteries sur des samples, muets sur le FM-1.</p>
+    <h2>The songs, before and after</h2>
+    <p class="muted">The first 20 seconds, rendered by the FM-1 core. "Before" and "After" switch at the same moment of the song. KIDS played its drums on samples, silent on the FM-1.</p>
     <div class="songs" id="songs"></div>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:12px">
-    <h2>Les moteurs</h2>
+    <h2>The engines</h2>
     <div class="engines" id="engines"></div>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:12px">
-    <h2>Les fichiers complets</h2>
+    <h2>The full files</h2>
     <div class="files" id="files"></div>
   </section>
 </div>
 
 <script>
 const ENGINES = [
-  { id: "0-actuel", name: "Actuel", sub: "WAVE + NOISE", ref: true,
-    tags: ["référence"],
-    text: "Les batteries d'aujourd'hui, rendues par le cœur du FM-1 (fm_render) : grosse caisse en WAVE avec fSWP, caisse claire, clap et charlestons en NOISE.",
-    meta: [["Source", "MOONDAW"], ["Coût", "quasi nul"]] },
-  { id: "1-drum", name: "DRUM", sub: "intégré", pick: true,
-    tags: ["choisi"],
-    text: "Le moteur de batterie de Felucca, repris tel quel dans MOONDAW et rendu par le cœur du FM-1 : le son réel, kit STD.",
-    meta: [["Source", "Felucca, drum_voice.c"], ["Coût", "≈ 2 % d'un cœur par pièce qui sonne (estimé)"]] },
+  { id: "0-actuel", name: "Current", sub: "WAVE + NOISE", ref: true,
+    tags: ["reference"],
+    text: "Today's drums, rendered by the FM-1 core (fm_render): kick on WAVE with fSWP, snare, clap and hi-hats on NOISE.",
+    meta: [["Source", "MOONDAW"], ["Cost", "almost nil"]] },
+  { id: "1-drum", name: "DRUM", sub: "integrated", pick: true,
+    tags: ["chosen"],
+    text: "Felucca's drum engine, taken as is into MOONDAW and rendered by the FM-1 core: the real sound, STD kit.",
+    meta: [["Source", "Felucca, drum_voice.c"], ["Cost", "≈ 2 % of a core per sounding piece (estimated)"]] },
   { id: "A-felucca", name: "A · Felucca", sub: "GPL-3.0-only",
-    tags: ["recréation"],
-    text: "Ma recréation en flottant de la conception de Felucca, faite avant le choix. Comparer avec DRUM : c'est la même idée, pas le même son.",
-    meta: [["Source", "Felucca, drum_voice.c"], ["Coût", "20 à 40 op./éch./voix, déjà en entiers"]] },
+    tags: ["recreation"],
+    text: "My floating-point recreation of Felucca's design, made before the choice. Compare with DRUM: it is the same idea, not the same sound.",
+    meta: [["Source", "Felucca, drum_voice.c"], ["Cost", "20 to 40 ops/sample/voice, already in integers"]] },
   { id: "B-analog", name: "B · Analog", sub: "MIT",
     tags: ["808"],
-    text: "Filtre très résonant frappé par une impulsion (grosse caisse, tom), cinq modes et bruit (caisse claire). Le plus rond au casque, perd sa grosse caisse sur le haut-parleur.",
-    meta: [["Source", "Plaits / Peaks, DaisySP"], ["Coût", "le plus cher, jusqu'à 6 filtres par voix"]] },
+    text: "A very resonant filter struck by an impulse (kick, tom), five modes and noise (snare). The roundest on headphones, loses its kick on the speaker.",
+    meta: [["Source", "Plaits / Peaks, DaisySP"], ["Cost", "the most expensive, up to 6 filters per voice"]] },
   { id: "C-synth", name: "C · Synth", sub: "MIT",
     tags: ["909"],
-    text: "Sinus façonné sous enveloppe FM, deux sinus et du bruit filtré, charlestons en modulation en anneau. Plus sec et plus numérique.",
-    meta: [["Source", "Plaits, modèles synthétiques"], ["Coût", "moyen, 40 à 60 op./éch./voix"]] },
+    text: "A shaped sine under an FM envelope, two sines and filtered noise, ring-modulated hi-hats. Drier and more digital.",
+    meta: [["Source", "Plaits, synthetic models"], ["Cost", "medium, 40 to 60 ops/sample/voice"]] },
   { id: "D-chipplus", name: "D · Chip+", sub: "MOONDAW",
-    tags: ["sans nouveau moteur"],
-    text: "WAVE et NOISE avec enveloppe de hauteur et décroissance calculées à chaque échantillon, bruit passe-haut. Reste chiptune, mais avec un vrai boum.",
-    meta: [["Source", "MOONDAW"], ["Coût", "5 à 15 op./éch./voix"]] },
+    tags: ["no new engine"],
+    text: "WAVE and NOISE with a pitch envelope and a decay computed every sample, high-passed noise. Stays chiptune, but with a real boom.",
+    meta: [["Source", "MOONDAW"], ["Cost", "5 to 15 ops/sample/voice"]] },
 ];
 const PIECES = [
-  { id: "kick", name: "Grosse caisse", t: 0, d: 0.9 },
-  { id: "snare", name: "Caisse claire", t: 1, d: 0.9 },
-  { id: "hatc", name: "Charleston fermé", t: 2, d: 0.5 },
-  { id: "hato", name: "Charleston ouvert", t: 3, d: 0.95 },
+  { id: "kick", name: "Kick", t: 0, d: 0.9 },
+  { id: "snare", name: "Snare", t: 1, d: 0.9 },
+  { id: "hatc", name: "Closed hi-hat", t: 2, d: 0.5 },
+  { id: "hato", name: "Open hi-hat", t: 3, d: 0.95 },
   { id: "clap", name: "Clap", t: 4, d: 0.95 },
   { id: "tom", name: "Tom", t: 5, d: 0.95 },
-  { id: "beat", name: "Rythme, 2 mesures", t: 6, d: 4.5 },
+  { id: "beat", name: "Beat, 2 bars", t: 6, d: 4.5 },
 ];
 const FILES = [
-  ["0-actuel.wav", "Les batteries actuelles : chaque pièce seule à 0, 1, 2, 3, 4 et 5 s, puis le rythme à 6 s."],
-  ["1-drum.wav", "Le moteur DRUM intégré, même grille."],
-  ["A-felucca.wav", "Candidat A, même grille."],
-  ["B-analog.wav", "Candidat B, même grille."],
-  ["C-synth.wav", "Candidat C, même grille."],
-  ["D-chipplus.wav", "Candidat D, même grille."],
-  ["comparatif-rythmes.wav", "La mesure avec le break : actuel, DRUM, A, B, C, D, toutes les 2,9 s."],
-  ["comparatif-petit-haut-parleur.wav", "Le même passé dans un passe-haut à 200 Hz, un seul gain pour tous."],
+  ["0-actuel.wav", "The current drums: each piece alone at 0, 1, 2, 3, 4 and 5 s, then the beat at 6 s."],
+  ["1-drum.wav", "The integrated DRUM engine, same grid."],
+  ["A-felucca.wav", "Candidate A, same grid."],
+  ["B-analog.wav", "Candidate B, same grid."],
+  ["C-synth.wav", "Candidate C, same grid."],
+  ["D-chipplus.wav", "Candidate D, same grid."],
+  ["comparatif-rythmes.wav", "The bar with the break: current, DRUM, A, B, C, D, every 2.9 s."],
+  ["comparatif-petit-haut-parleur.wav", "The same through a 200 Hz high-pass, one gain for all."],
 ];
 
 const grid = document.getElementById("grid");
@@ -234,8 +234,8 @@ for (const p of PIECES) {
   rh.innerHTML = `<b>${p.name}</b>`;
   const chain = document.createElement("button");
   chain.type = "button";
-  chain.textContent = "enchaîner ▸";
-  chain.setAttribute("aria-label", `Enchaîner ${p.name} sur tous les moteurs`);
+  chain.textContent = "chain ▸";
+  chain.setAttribute("aria-label", `Chain ${p.name} on every engine`);
   chain.addEventListener("click", () => playRow(p));
   rh.appendChild(chain);
   grid.appendChild(rh);
@@ -257,7 +257,7 @@ const engBox = document.getElementById("engines");
 for (const e of ENGINES) {
   const d = document.createElement("article");
   d.className = "eng";
-  const tags = e.tags.map(t => `<span class="tag${t === "choisi" ? " pick" : ""}">${t}</span>`).join("");
+  const tags = e.tags.map(t => `<span class="tag${t === "chosen" ? " pick" : ""}">${t}</span>`).join("");
   d.innerHTML = `<h3>${e.name} ${tags}</h3><p>${e.text}</p><dl>${e.meta.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
   engBox.appendChild(d);
 }
@@ -279,13 +279,13 @@ async function load() {
       const data = await r.arrayBuffer();
       buffers[e.id] = await new Promise((ok, ko) => c.decodeAudioData(data, ok, ko));
       done++;
-      statusEl.textContent = `${done} / ${ENGINES.length} moteurs chargés`;
+      statusEl.textContent = `${done} / ${ENGINES.length} engines loaded`;
       drawEngine(e.id);
     } catch (err) {
-      statusEl.textContent = `Impossible de charger ${e.id}.wav : les lecteurs du bas restent utilisables.`;
+      statusEl.textContent = `Could not load ${e.id}.wav: the players at the bottom still work.`;
     }
   }));
-  if (done === ENGINES.length) statusEl.textContent = "Prêt. Clique une case.";
+  if (done === ENGINES.length) statusEl.textContent = "Ready. Click a pad.";
 }
 
 function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
@@ -375,12 +375,12 @@ function tick() {
   else playing = [];
 }
 
-// the songs: one player each, Avant / Après switch at the same moment
+// the songs: one player each, Before / After switch at the same moment
 const SONGS = [
-  ["DEMO", "la démo du firmware"],
+  ["DEMO", "the firmware demo"],
   ["DAFT-PUNK", "WAVE + NOISE → DRUM"],
   ["DAFT-PUNK-EN", "samples + NOISE → DRUM"],
-  ["KIDS", "samples 909 muets → DRUM"],
+  ["KIDS", "silent 909 samples → DRUM"],
 ];
 const songBox = document.getElementById("songs");
 const players = [];
@@ -388,7 +388,7 @@ for (const [id, sub] of SONGS) {
   const row = document.createElement("div");
   row.className = "song";
   row.innerHTML = `<div class="sname">${id}<span>${sub}</span></div>
-    <div class="seg" role="group" aria-label="${id}"><button type="button" data-v="avant">▶ Avant</button><button type="button" data-v="apres">▶ Après</button></div>
+    <div class="seg" role="group" aria-label="${id}"><button type="button" data-v="avant">▶ Before</button><button type="button" data-v="apres">▶ After</button></div>
     <div class="bar" aria-hidden="true"><i></i></div><span class="clock">0:00</span>`;
   const audio = new Audio();
   audio.preload = "none";

@@ -1,27 +1,27 @@
 <meta charset="utf-8">
-<title>SONG sur le FM-1</title>
+<title>SONG on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — SONG sur le M-VAVE FM-1 (écran 240 × 240) : l'arrangement.
-  Même système que proto/pattern.html et proto/menu.html.
+  MOONDAW — SONG on the M-VAVE FM-1 (240 × 240 screen): the arrangement.
+  Same system as proto/pattern.html and proto/menu.html.
 
-  Données : l'arrangement de moondaw/songs/KIDS.trk, recopié de ses blocs
-  `arr` (19 phrases, 8 pistes, blocs numérotés par piste).
+  Data: the arrangement of moondaw/songs/KIDS.trk, copied from its
+  `arr` blocks (19 phrases, 8 tracks, blocks numbered per track).
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -70,7 +70,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in panel pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -81,7 +81,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -97,13 +97,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the manual for the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+/* the grid: # · N1..N4 ┊ IN ┊ FX1..FX3 · RMP span */
 .cols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
 .head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
@@ -125,12 +125,12 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .ramp{ align-self:stretch; }
 .ramp.on{ background:var(--sel); }
 
-/* un champ = un slot, plein ou vide */
+/* one field = one slot, full or empty */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
 .slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
-  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
-     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  /* The condensed face has more ascender than descender: centred by its line box, the
+     digit sits half a pixel too low. We raise it by as much. */
   position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
 .slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
@@ -144,9 +144,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .sc .slot.cur{ background:var(--accent); box-shadow:none; }
 .sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
 
-/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
-   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
-   et l'œil va de la carte au potard sans descendre. */
+/* the cards: the four right knobs, in their order.  AT THE TOP
+   (settled on 10/10): the knobs are to the right of the screen, at its height,
+   and the eye goes from the card to the knob without moving down. */
 .cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
   border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
@@ -162,7 +162,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .card.off{ background:rgba(200,208,200,.03); }
 .card.off .l b{ color:var(--dim); }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -174,7 +174,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
 .b.gap{ margin-left:2px; }
 
-/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+/* a panel: the list, placed next to the slot it details */
 .pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
   border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
   display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
@@ -190,7 +190,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .pop .pr.cur .m, .pop .pr.cur .d{ color:var(--on-acc); }
 
 
-/* ── cet écran ───────────────────────────────────────────────────── */
+/* ── this screen ─────────────────────────────────────────────────── */
 .nav .id{ font-family:var(--cond); font-size:12px; font-weight:700; letter-spacing:.05em; color:var(--text); }
 .nav .lost{ font-family:var(--jb); font-size:8px; color:var(--fx); white-space:nowrap; }
 .songline{ height:12px; flex:none; border-radius:2px; background:rgba(200,208,200,.045);
@@ -217,93 +217,93 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026</div>
-  <h1>Le morceau, <em>phrase par phrase</em></h1>
-  <p class="lede">L'arrangement : une ligne par phrase, une colonne par piste, dans chaque case le
-  numéro du bloc que la piste joue. <strong>Les huit pistes tiennent côte à côte</strong>, ce
-  qu'on ne peut pas faire sur PATTERN. C'est l'écran où mène OPEN depuis l'accueil, et d'où l'on
-  descend vers une phrase ou un bloc.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026</div>
+  <h1>The song, <em>phrase by phrase</em></h1>
+  <p class="lede">The arrangement: one line per phrase, one column per track, in each cell the
+  number of the block the track plays. <strong>The eight tracks fit side by side</strong>, which
+  you cannot do on PATTERN. It is the screen OPEN leads to from the home screen, and from which you
+  go down to a phrase or a block.</p>
 
   <section>
-    <span class="tag">Cadre 1 · le curseur sur une case</span>
-    <h2>SELECT la phrase, ALGORITHM la piste</h2>
-    <p>Les mêmes mains que sur PATTERN. KNOB 1 change le bloc de la case : les blocs de cette
-    piste, puis <code>ON</code> (ne joue rien et ne coupe rien), puis la case vide. KNOB 2 règle le
-    niveau de la case. Les autres cases de la colonne qui jouent le même bloc prennent un fond
-    vert pâle. OPEN ouvre le bloc dans PATTERN.</p>
+    <span class="tag">Frame 1 · the cursor on a cell</span>
+    <h2>SELECT the phrase, ALGORITHM the track</h2>
+    <p>The same hands as on PATTERN. KNOB 1 changes the cell's block: the blocks of this
+    track, then <code>ON</code> (plays nothing and cuts nothing), then the empty cell. KNOB 2 sets the
+    cell's level. The other cells in the column that play the same block get a pale green
+    background. OPEN opens the block in PATTERN.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="s1"></div></div></div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p><b>10 phrases</b> sur les 19 de KIDS, et les 8 pistes.</p></div>
-      <div><span class="k">Ce que le chrome prend</span><p>82 px en haut (barre, cartes, manuel, ligne du morceau, en-tête), 25 en bas.</p></div>
-      <div><span class="k">Ce qui manque</span><p>La durée de chaque phrase : elle n'a pas de colonne, elle est sur une carte.</p></div>
+      <div><span class="k">What you see</span><p><b>10 phrases</b> of the 19 in KIDS, and the 8 tracks.</p></div>
+      <div><span class="k">What the chrome takes</span><p>82 px at the top (bar, cards, manual, song line, header), 25 at the bottom.</p></div>
+      <div><span class="k">What is missing</span><p>The length of each phrase: it has no column, it is on a card.</p></div>
     </div>
   </section>
 
   <section>
-    <span class="tag">Cadres 2 et 3 · la phrase entière, et le morceau</span>
-    <h2>Tout à gauche, et tout en haut</h2>
-    <p>ALGORITHM à fond à gauche pose le curseur sur le <b>numéro de la phrase</b> : les boutons
-    parlent alors de la phrase (l'ouvrir, en insérer une, la supprimer) et KNOB 1 règle sa durée.
-    SELECT à fond en haut pose le curseur sur la <b>ligne du morceau</b> : les quatre cartes
-    deviennent le tempo, le swing, la subdivision et le nombre de pistes.</p>
+    <span class="tag">Frames 2 and 3 · the whole phrase, and the song</span>
+    <h2>All the way left, and all the way up</h2>
+    <p>ALGORITHM fully left puts the cursor on the <b>phrase number</b>: the buttons
+    then act on the phrase (open it, insert one, delete it) and KNOB 1 sets its length.
+    SELECT fully up puts the cursor on the <b>song line</b>: the four cards
+    become the tempo, the swing, the subdivision and the number of tracks.</p>
     <div class="pair">
       <figure><div class="zoom"><div class="sc" id="s2"></div></div>
-        <figcaption>Sur le numéro de la phrase 04, en lecture : la phrase 02 joue, sa barre verte se remplit au fil de ses pas.</figcaption></figure>
+        <figcaption>On the number of phrase 04, while playing: phrase 02 plays, its green bar fills as its steps go by.</figcaption></figure>
       <figure><div class="zoom"><div class="sc" id="s3"></div></div>
-        <figcaption>Sur la ligne du morceau. Elle reste lisible quand le curseur est ailleurs.</figcaption></figure>
+        <figcaption>On the song line. It stays readable when the cursor is elsewhere.</figcaption></figure>
     </div>
   </section>
 
   <section>
-    <h2>Déjà tranché</h2>
+    <h2>Already settled</h2>
     <ul class="notes">
-      <li><b>10/10 — validé et écrit</b> (<code>app/songview.c</code>) : la grille, les deux mains,
-      la ligne du morceau, le numéro de phrase, les cartes, + PHRASE, la suppression à second
-      appui, PLAY depuis la phrase du curseur, SAVE, et ce que l'appareil ne porte pas dans la barre.</li>
-      <li><b>Une case baissée le montre</b> : un trait ambre en bas de la case, large comme son niveau.</li>
-      <li><b>Un renvoi s'affiche</b> sur sa ligne (<code>REF 01</code>) et ne s'édite pas ici.
-      Supprimer la phrase qu'il vise en fait une phrase vide.</li>
-      <li><b>OPEN sur un numéro de phrase ouvre PHRASE</b>, et MIXER ouvre MIXER (écrits le 10/10).
-      MUET et SOLO sont sur MIXER, MUET aussi sur PHRASE.</li>
-      <li><b>UNDO est écrit</b> (10/10) : il rend aussi une phrase supprimée.</li>
-      <li><b>Pas encore écrits, donc éteints</b> : LOOP, REC.</li>
+      <li><b>10/10 — approved and written</b> (<code>app/songview.c</code>): the grid, the two hands,
+      the song line, the phrase number, the cards, + PHRASE, deletion on a second
+      press, PLAY from the cursor's phrase, SAVE, and what the device does not carry in the bar.</li>
+      <li><b>A lowered cell shows it</b>: an amber line at the bottom of the cell, as wide as its level.</li>
+      <li><b>A reference is shown</b> on its line (<code>REF 01</code>) and is not edited here.
+      Deleting the phrase it points to turns it into an empty phrase.</li>
+      <li><b>OPEN on a phrase number opens PHRASE</b>, and MIXER opens MIXER (written on 10/10).
+      MUTE and SOLO are on MIXER, MUTE also on PHRASE.</li>
+      <li><b>UNDO is written</b> (10/10): it also brings back a deleted phrase.</li>
+      <li><b>Not written yet, so unlit</b>: LOOP, REC.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>Les boutons gardent leur place</b> : OPEN sur EDIT, CLEAR sur LFO, LOOP, MIXER, SAVE,
-      UNDO, PLAY, REC là où PATTERN les a. HOME dit <code>‹ MENU</code>. La case qui disait SONG
-      dans PATTERN (le bouton SEQ) devient <code>+ PHRASE</code> : on y est déjà.</li>
-      <li><b>PLAY joue le morceau depuis la phrase du curseur.</b></li>
-      <li><b>Ce que le FM-1 ne porte pas est écrit dans la barre</b>, en ambre : KIDS a 18 lignes
-      de samples, de zones et de réglages d'ampli que l'appareil ignore, et qu'une sauvegarde
-      d'ici perdrait. C'est l'information que l'ancien écran donnait et qui avait disparu.</li>
-      <li><b>CLEAR sur un numéro de phrase supprime la phrase</b>, avec le second appui de
-      l'accueil. Sur une case, il la vide d'un coup.</li>
-      <li><b>Un bloc neuf</b> : tourner KNOB 1 au-delà du dernier bloc écrit de la piste donne le
-      premier numéro libre, vide. Pas de bouton en plus.</li>
+      <li><b>The buttons keep their place</b>: OPEN on EDIT, CLEAR on LFO, LOOP, MIXER, SAVE,
+      UNDO, PLAY, REC where PATTERN has them. HOME says <code>‹ MENU</code>. The cell that said SONG
+      in PATTERN (the SEQ button) becomes <code>+ PHRASE</code>: you are already there.</li>
+      <li><b>PLAY plays the song from the cursor's phrase.</b></li>
+      <li><b>What the FM-1 does not carry is written in the bar</b>, in amber: KIDS has 18 lines
+      of samples, zones and amp settings that the device ignores, and that a save
+      from here would lose. It is the information the old screen gave and that had disappeared.</li>
+      <li><b>CLEAR on a phrase number deletes the phrase</b>, with the second press of
+      the home screen. On a cell, it empties it in one go.</li>
+      <li><b>A new block</b>: turning KNOB 1 past the track's last written block gives the
+      first free number, empty. No extra button.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What is still open</h2>
     <ul class="notes">
-      <li><b>Les sections, les titres et les renvois.</b> Le modèle les porte et le lecteur les
-      joue, mais aucun de tes 13 morceaux n'en contient : je n'avais rien de réel à dessiner,
-      donc je ne les ai pas dessinés. Je propose de les <b>afficher</b> comme dans l'app (un titre
-      ambre au-dessus du groupe, un renvoi qui porte le nom de sa cible) et de ne pas les
-      <b>éditer</b> sur le FM-1 dans un premier temps : un titre demande de taper des lettres.</li>
-      <li><b>Le niveau d'une case</b> quand il n'est pas plein : aucun morceau n'en a non plus.
-      Une marque dans la case, ou seulement la carte ?</li>
-      <li><b>La mesure</b> (pas par temps, temps par mesure) n'a pas de carte : il n'y en a que quatre.</li>
+      <li><b>Sections, titles and references.</b> The model carries them and the player
+      plays them, but none of your 13 songs contains any: I had nothing real to draw,
+      so I did not draw them. I propose to <b>show</b> them as in the app (an amber title
+      above the group, a reference that carries its target's name) and not to
+      <b>edit</b> them on the FM-1 at first: a title means typing letters.</li>
+      <li><b>A cell's level</b> when it is not full: no song has one either.
+      A mark in the cell, or only the card?</li>
+      <li><b>The time signature</b> (steps per beat, beats per bar) has no card: there are only four.</li>
     </ul>
   </section>
 </div>
 
 <script>
-/* songs/KIDS.trk, blocs `arr` 00 à 09 : le bloc de chaque piste, null = aucun. */
+/* songs/KIDS.trk, `arr` blocks 00 to 09: each track's block, null = none. */
 const ARR = [
   ["00", null, "00", null, null, null, null, "00"],
   ["01", null, "00", "00", null, "00", null, "00"],
@@ -320,7 +320,7 @@ const WORDS = ["", "LOOP", "", "CLEAR", "OPEN", "MIXER", "‹ MENU", "SAVE", "UN
 const hex = (n) => n.toString(16).toUpperCase().padStart(2, "0");
 const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
 
-/* st : { row: -1 la ligne du morceau, 0.. ; col: 0 le numéro, 1..8 une piste ; play ; cards ; btn } */
+/* st: { row: -1 the song line, 0..; col: 0 the number, 1..8 a track; play; cards; btn } */
 function screen(st) {
   const onSong = st.row === -1;
   let h = el("nav", `<span class="back">‹ MENU</span><span class="id">KIDS</span><span class="sp"></span>` +

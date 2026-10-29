@@ -1,27 +1,27 @@
 <meta charset="utf-8">
-<title>INSTRUMENT sur le FM-1</title>
+<title>INSTRUMENT on the FM-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 
 <!--
-  MOONDAW — INSTRUMENT sur le M-VAVE FM-1 (écran 240 × 240).
-  Même système que les autres maquettes de proto/.
+  MOONDAW — INSTRUMENT on the M-VAVE FM-1 (240 × 240 screen).
+  Same system as the other mockups in proto/.
 
-  Données : moondaw/songs/KIDS.trk `inst 09` (CHORDS) et
-  moondaw/songs/DAFT-PUNK.trk `inst 06` (LEAD) avec ses deux `lay`.
+  Data: moondaw/songs/KIDS.trk `inst 09` (CHORDS) and
+  moondaw/songs/DAFT-PUNK.trk `inst 06` (LEAD) with its two `lay`.
 -->
 
 <style>
-/* Une colonne de lecture ; les écrans sont des objets posés dedans, à ×3,
-   et une fois à la taille de l'appareil dans le plan du panneau. */
+/* One reading column; the screens are objects placed in it, at ×3,
+   and once at the device's size in the panel layout. */
 :root{
   color-scheme:dark;
-  /* l'écran : COL_* de moondaw/src/ui/design.h */
+  /* the screen: COL_* from moondaw/src/ui/design.h */
   --bg:#10141C; --text:#C8D0C8; --dim:#5A6470; --accent:#7FD962;
   --title:#62C8D9; --play:#243A28; --sel:#6E5518; --fx:#F0BE5A;
   --mute:#9E5555; --beat:#919A9C; --on-acc:#0B1409;
-  /* la page */
+  /* the page */
   --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
   --panel:#191C22; --panel-hi:#2A2D34; --cap:#3A3E47;
 
@@ -70,7 +70,7 @@ ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
 ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px;
   height:2px; background:var(--dim); }
 
-/* ═══ L'ÉCRAN, à l'échelle 1 : tout est en pixels de la dalle ═════ */
+/* ═══ THE SCREEN, at scale 1: everything is in panel pixels ═════ */
 .zoom{ width:calc(240px * var(--s)); height:calc(240px * var(--s)); flex:none;
   border-radius:calc(3px * var(--s)); overflow:hidden;
   box-shadow:0 0 0 calc(2px * var(--s)) #000, 0 24px 50px -18px rgba(0,0,0,.8); }
@@ -81,7 +81,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
   overflow:hidden; display:flex; flex-direction:column; padding:2px 3px 3px;
   color:var(--text); line-height:1; }
 
-/* la barre d'identité : où l'on est, et la sortie */
+/* the identity bar: where you are, and the way out */
 .nav{ height:17px; flex:none; display:flex; align-items:center; gap:5px;
   border-bottom:1px solid rgba(90,100,112,.30); }
 .nav .back{ font-family:var(--cond); font-size:11.5px; font-weight:700;
@@ -97,13 +97,13 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .nav .keys{ font-family:var(--jb); font-size:6.5px; color:var(--dim); white-space:nowrap; }
 .nav .keys b{ color:var(--text); font-weight:500; }
 
-/* le manuel des potards de gauche : une ligne, toujours */
+/* the manual for the left knobs: one line, always */
 .left{ height:10px; flex:none; display:flex; align-items:center; gap:5px;
   font-family:var(--jb); font-size:8px; letter-spacing:0; color:var(--dim);
   white-space:nowrap; }
 .left b{ color:var(--text); font-weight:500; margin-left:2px; }
 
-/* la grille : # · N1..N4 ┊ IN ┊ FX1..FX3 · portée RMP */
+/* the grid: # · N1..N4 ┊ IN ┊ FX1..FX3 · RMP span */
 .cols{ display:grid; column-gap:2px; padding:0 1px;
   grid-template-columns:3px 12px 20px 20px 20px 20px 3px 14px 3px 29px 29px 29px 3px; }
 .head{ height:8px; flex:none; align-items:end; font-family:var(--jb);
@@ -125,12 +125,12 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .ramp{ align-self:stretch; }
 .ramp.on{ background:var(--sel); }
 
-/* un champ = un slot, plein ou vide */
+/* a field = a slot, full or empty */
 .slot{ height:10px; border-radius:1.5px; text-align:center; line-height:10px;
   white-space:nowrap; background:rgba(200,208,200,.07); }
 .slot .n{ font-family:var(--cond); font-size:10.5px; font-weight:700; letter-spacing:.02em;
-  /* Le condensé a plus d'ascendante que de descendante : centré par sa boîte de ligne, le
-     chiffre tombe un demi-pixel trop bas. On le remonte d'autant. */
+  /* The condensed face has more ascender than descender: centred by its line box, the
+     digit sits half a pixel too low. We raise it by as much. */
   position:relative; top:-.6px; }
 .slot.i{ background:rgba(98,200,217,.10); }
 .slot.i .n{ font-family:var(--jb); font-size:8px; font-weight:500; color:var(--title); letter-spacing:0; top:0; }
@@ -144,9 +144,9 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .sc .slot.cur{ background:var(--accent); box-shadow:none; }
 .sc .slot.cur .n, .sc .slot.cur .m, .sc .slot.cur .v{ color:var(--on-acc); }
 
-/* les cartes : les quatre potards de droite, dans leur ordre.  EN HAUT
-   (tranché le 10/10) : les potards sont à droite de l'écran, à sa hauteur,
-   et l'œil va de la carte au potard sans descendre. */
+/* the cards: the four right-hand knobs, in their order.  AT THE TOP
+   (decided 10/10): the knobs are to the right of the screen, level with it,
+   and the eye goes from card to knob without looking down. */
 .cards{ height:22px; flex:none; margin-top:3px; padding-bottom:3px; display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px;
   border-bottom:1px solid rgba(127,217,98,.28); box-sizing:content-box; }
@@ -162,7 +162,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .card.off{ background:rgba(200,208,200,.03); }
 .card.off .l b{ color:var(--dim); }
 
-/* la carte des douze boutons : la PLACE à l'écran est la place sous la main */
+/* the map of the twelve buttons: the PLACE on screen is the place under the hand */
 .btns{ flex:none; margin-top:3px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr));
   gap:1px 2px; }
 .b{ height:9.5px; border-radius:1.5px; background:rgba(200,208,200,.07);
@@ -174,7 +174,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 .b.off{ background:rgba(200,208,200,.03); color:var(--beat); }
 .b.gap{ margin-left:2px; }
 
-/* un panneau : la liste, posée à côté du slot qu'elle détaille */
+/* a panel: the list, placed next to the slot it details */
 .pop{ position:absolute; z-index:4; width:112px; background:#1a2029;
   border:1px solid rgba(90,100,112,.45); border-radius:2px; padding:2px;
   display:flex; flex-direction:column; gap:1px; box-shadow:0 5px 12px rgba(0,0,0,.7); }
@@ -191,7 +191,7 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 
 
 
-/* ── cet écran ───────────────────────────────────────────────────── */
+/* ── this screen ─────────────────────────────────────────────────── */
 .nav .id{ font-family:var(--cond); font-size:12px; font-weight:700; letter-spacing:.05em; color:var(--text); }
 .nav .id i{ font-style:normal; color:var(--title); margin-right:4px; font-family:var(--jb); font-size:8px; font-weight:500; }
 .plot{ height:34px; flex:none; margin:1px 0 3px; border-radius:2px; background:rgba(200,208,200,.035); position:relative; }
@@ -214,85 +214,85 @@ ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">MOONDAW · FM-1 · maquette du 10 octobre 2026</div>
-  <h1>Un son, <em>quatre potards à la fois</em></h1>
-  <p class="lede">Les réglages d'un instrument rangés par rangées de quatre, parce que la main
-  droite a quatre potards. <strong>SELECT choisit la rangée, et les quatre cartes deviennent ses
-  quatre réglages</strong> : l'enveloppe entière sous les doigts, puis le filtre entier. Chaque
-  case est alignée sous la carte, donc sous le potard, qui la règle. Le clavier joue le son.</p>
+  <div class="eyebrow">MOONDAW · FM-1 · mockup of 10 October 2026</div>
+  <h1>One sound, <em>four knobs at once</em></h1>
+  <p class="lede">An instrument's settings arranged in rows of four, because the right
+  hand has four knobs. <strong>SELECT picks the row, and the four cards become its
+  four settings</strong>: the whole envelope under the fingers, then the whole filter. Each
+  cell is aligned under the card, so under the knob, that sets it. The keyboard plays the sound.</p>
 
   <section>
-    <span class="tag">Cadre 1 · l'enveloppe</span>
-    <h2>Attaque, chute, tenue, relâchement</h2>
-    <p>La rangée choisie est en vert et les cartes disent ses quatre réglages en clair, avec leur
-    valeur traduite (des millisecondes, un pourcentage). La courbe au-dessus dessine l'enveloppe
-    et bouge avec les potards. On arrive ici par le bouton INSTR de PATTERN, sur l'instrument du
-    pas sous le curseur ; PRESETS passe à l'instrument voisin.</p>
+    <span class="tag">Frame 1 · the envelope</span>
+    <h2>Attack, decay, sustain, release</h2>
+    <p>The chosen row is in green and the cards spell out its four settings, with their
+    value translated (milliseconds, a percentage). The curve above draws the envelope
+    and moves with the knobs. You get here with the INSTR button of PATTERN, on the instrument of the
+    step under the cursor; PRESETS moves to the neighbouring instrument.</p>
     <div class="stage"><div class="zoom"><div class="sc" id="i1"></div></div></div>
     <div class="budget">
-      <div><span class="k">Ce qu'on voit</span><p><b>Les treize réglages</b> que le FM-1 porte, et les quatre couches, sans défiler.</p></div>
-      <div><span class="k">Ce que le chrome prend</span><p>59 px en haut, 25 en bas, 38 pour la courbe.</p></div>
-      <div><span class="k">Ce qui manque</span><p>Drive, ampli, tonalité et zones de samples : le FM-1 ne les a pas.</p></div>
+      <div><span class="k">What you see</span><p><b>The thirteen settings</b> the FM-1 carries, and the four layers, without scrolling.</p></div>
+      <div><span class="k">What the chrome takes</span><p>59 px at the top, 25 at the bottom, 38 for the curve.</p></div>
+      <div><span class="k">What is missing</span><p>Drive, amp, tone and sample zones: the FM-1 does not have them.</p></div>
     </div>
   </section>
 
   <section>
-    <span class="tag">Cadres 2 et 3 · le son, et les couches</span>
-    <h2>Le moteur en haut, les couches en bas</h2>
-    <p>La première rangée porte le moteur, son timbre et les deux niveaux. Les quatre dernières
-    sont les couches : une couche tient sur une rangée parce que son moteur et son timbre se
-    choisissent sur <b>un seul potard</b> (PULSE 25 %, WAVE SAW, NOISE SHORT… ou rien). Une rangée
-    en pointillé est une couche libre : tourner KNOB 1 la crée.</p>
+    <span class="tag">Frames 2 and 3 · the sound, and the layers</span>
+    <h2>The engine at the top, the layers at the bottom</h2>
+    <p>The first row carries the engine, its timbre and the two levels. The last four
+    are the layers: a layer fits on one row because its engine and its timbre are
+    chosen on <b>a single knob</b> (PULSE 25%, WAVE SAW, NOISE SHORT… or nothing). A dotted
+    row is a free layer: turning KNOB 1 creates it.</p>
     <div class="pair">
       <figure><div class="zoom"><div class="sc" id="i2"></div></div>
-        <figcaption>CHORDS de KIDS, sur la rangée du son. La courbe reste celle de l'enveloppe.</figcaption></figure>
+        <figcaption>CHORDS from KIDS, on the sound row. The curve stays the envelope's.</figcaption></figure>
       <figure><div class="zoom"><div class="sc" id="i3"></div></div>
-        <figcaption>LEAD de DAFT-PUNK et ses deux couches, le curseur sur la seconde.</figcaption></figure>
+        <figcaption>LEAD from DAFT-PUNK and its two layers, the cursor on the second.</figcaption></figure>
     </div>
   </section>
 
   <section>
-    <h2>Déjà tranché</h2>
+    <h2>Already decided</h2>
     <ul class="notes">
-      <li><b>10/10 — validé et écrit</b> (<code>app/instrument.c</code>) : les rangées de quatre,
-      la courbe de l'enveloppe, les couches créées et retirées au potard, le clavier qui joue le
-      son, PRESETS, SAVE, PLAY.</li>
-      <li><b>Écart avec le dessin : les cartes ne traduisent pas encore les valeurs</b> (les
-      millisecondes, le pourcentage de tenue). Elles montrent le nombre du fichier ; la durée
-      totale de l'enveloppe est écrite sur la courbe.</li>
-      <li><b>Un instrument muet ici</b> (SMPL, VOX, PLUCK) le dit dans la barre, en ambre, et son
-      moteur est en ambre dans sa case. Un cran de KNOB 1 lui donne un moteur du FM-1.</li>
-      <li><b>UNDO ajouté le 10/10</b>, à la place qu'il a partout (le bouton ARP) : il n'était pas sur le dessin.</li>
-      <li><b>La même audition sert à PATTERN</b> : une note qu'on y écrit au clavier s'entend.</li>
+      <li><b>10/10 — approved and written</b> (<code>app/instrument.c</code>): the rows of four,
+      the envelope curve, layers created and removed with the knob, the keyboard that plays the
+      sound, PRESETS, SAVE, PLAY.</li>
+      <li><b>Departure from the drawing: the cards do not translate the values yet</b> (the
+      milliseconds, the sustain percentage). They show the number from the file; the total
+      length of the envelope is written on the curve.</li>
+      <li><b>An instrument that is silent here</b> (SMPL, VOX, PLUCK) says so in the bar, in amber, and its
+      engine is in amber in its cell. One notch of KNOB 1 gives it an FM-1 engine.</li>
+      <li><b>UNDO added on 10/10</b>, in the place it has everywhere (the ARP button): it was not in the drawing.</li>
+      <li><b>The same note preview serves PATTERN</b>: a note you write there with the keyboard is heard.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce que je propose, et pourquoi</h2>
+    <h2>What I propose, and why</h2>
     <ul class="notes">
-      <li><b>Quatre par rangée, toujours.</b> L'enveloppe a quatre réglages et le filtre aussi :
-      le découpage vient tout seul, et l'ordre des cases est celui des potards.</li>
-      <li><b>Le clavier joue l'instrument</b>, à la hauteur des touches, tant qu'on est sur cet
-      écran. OCT− et OCT+ déplacent le clavier comme ailleurs.</li>
-      <li><b>PLAY joue la phrase d'où l'on vient</b>, pour régler le son dans le morceau.</li>
-      <li><b>Les valeurs sont celles du fichier</b> (0 à 255) dans les cases, et leur traduction
-      sur la carte : c'est ce qu'on lit dans un <code>.trk</code>.</li>
-      <li><b>Peu de boutons</b> : le retour, SAVE et PLAY. Régler un son ne demande rien d'autre.</li>
+      <li><b>Four per row, always.</b> The envelope has four settings and so does the filter:
+      the split comes by itself, and the order of the cells is the order of the knobs.</li>
+      <li><b>The keyboard plays the instrument</b>, at the pitch of the keys, as long as you are on this
+      screen. OCT− and OCT+ shift the keyboard as elsewhere.</li>
+      <li><b>PLAY plays the phrase you came from</b>, to set the sound within the song.</li>
+      <li><b>The values are the file's</b> (0 to 255) in the cells, and their translation
+      on the card: that is what you read in a <code>.trk</code>.</li>
+      <li><b>Few buttons</b>: the way back, SAVE and PLAY. Setting a sound needs nothing else.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Ce qui reste ouvert</h2>
+    <h2>What remains open</h2>
     <ul class="notes">
-      <li><b>Le nom.</b> Affiché, pas modifiable : toujours la question des lettres.</li>
-      <li><b>Changer de moteur efface-t-il quelque chose ?</b> Dans l'app non, le timbre est
-      simplement ramené dans les bornes du nouveau moteur. Je garde ça.</li>
-      <li><b>Les instruments sur SMPL, VOX ou PLUCK</b> : je propose de les afficher avec leur
-      moteur en ambre et la mention qu'ils sont muets ici, et de laisser KNOB 1 les passer sur
-      un moteur du FM-1 si on le veut.</li>
-      <li><b>Une bibliothèque de sons</b> (les presets de l'app) : rien de prévu sur l'appareil.</li>
-      <li><b>Le filtre n'a pas de courbe</b>, seulement l'enveloppe. Une seconde courbe quand le
-      curseur est sur la rangée du filtre ?</li>
+      <li><b>The name.</b> Shown, not editable: still the question of letters.</li>
+      <li><b>Does changing engine erase anything?</b> In the app, no: the timbre is
+      simply brought back within the new engine's bounds. I keep that.</li>
+      <li><b>Instruments on SMPL, VOX or PLUCK</b>: I propose showing them with their
+      engine in amber and a note that they are silent here, and letting KNOB 1 move them to
+      an FM-1 engine if you want.</li>
+      <li><b>A sound library</b> (the app's presets): nothing planned on the device.</li>
+      <li><b>The filter has no curve</b>, only the envelope. A second curve when the
+      cursor is on the filter row?</li>
     </ul>
   </section>
 </div>
@@ -302,14 +302,14 @@ const el = (cls, html) => `<div class="${cls}">${html ?? ""}</div>`;
 const WORDS = ["", "", "", "", "", "", "‹ PAT", "SAVE", "", "", "PLAY", ""];
 const ms = (v) => Math.floor(v * v / 8);
 
-/* ins : { num, name, rows: [[label, value]...] x4 par rangée, adsr } ; cur : rangée ; cards */
+/* ins: { num, name, rows: [[label, value]...] x4 per row, adsr }; cur: row; cards */
 function screen(ins, cur, cards) {
   let h = el("nav", `<span class="back">‹ PAT</span><span class="id"><i>${ins.num}</i>${ins.name}</span><span class="sp"></span>`);
   h += `<div class="cards">` + cards.map((c, k) => c
     ? el("card", `<span class="l"><b>K${k + 1}</b>${c[0]}</span><span class="v">${c[1]}${c[2] ? `<small>${c[2]}</small>` : ""}</span>`)
     : el("card off", `<span class="l"><b>K${k + 1}</b></span><span class="v"></span>`)).join("") + `</div>`;
   h += el("left", `<span>SELECT<b>ROW</b></span><span>PRESETS<b>INSTR</b></span><span>KEYS<b>PLAY</b></span>`);
-  /* l'enveloppe : les temps à l'échelle, la tenue sur une largeur fixe */
+  /* the envelope: times to scale, the sustain over a fixed width */
   const [a, d, s, r] = ins.adsr, hold = 300, total = ms(a) + ms(d) + hold + ms(r);
   const X = (t) => 4 + t / total * 226, Y = (l) => 30 - l * 25;
   const pts = [[0, 0], [ms(a), 1], [ms(a) + ms(d), s / 255], [ms(a) + ms(d) + hold, s / 255], [total, 0]]
