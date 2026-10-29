@@ -32,6 +32,8 @@ static void go(void) { app_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void sel(int d) { in.enc[PE_SELECT] = (int8_t)d; go(); }
 static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
+/* HOME's root -> PROJECTS, the list; its cursor on the open project. */
+static void projects(void) { sel(-10); sel(1); press(PB_SEL); }
 /* HOME -> SONG on the open project, then the block of its first cell. */
 static void into(void) { press(PB_SEL); press(PB_EDIT); }
 static int songs_in_flash(void)
@@ -55,6 +57,7 @@ int main(void)
     press(PB_HOME);
     CHECK("SAVE gives it a place", app_slot >= 0 && songs_in_flash() == 1 && !app_dirty);
 
+    projects();
     sel(100);                 /* the last row: + NEW */
     press(PB_SEL);
     CHECK("NEW makes SONG 01, in memory only",
@@ -70,6 +73,7 @@ int main(void)
     press(PB_HOME);           /* from PATTERN, straight home */
     CHECK("a second song beside the first", songs_in_flash() == 2 && !app_dirty);
 
+    projects();
     sel(-1);                  /* rows by name: DEMO, SONG 01, + NEW; the cursor was on SONG 01 */
     press(PB_SEL);
     CHECK("SEL on another row opens it", !strcmp(app_name, "DEMO"));
@@ -77,6 +81,7 @@ int main(void)
     press(PB_EDIT);
     key(3);
     press(PB_HOME);
+    projects();
     sel(1);
     press(PB_SEL);
     CHECK("opening another song over changes asks first", !strcmp(app_name, "DEMO") && app_dirty);
@@ -91,16 +96,19 @@ int main(void)
     press(PB_EDIT);
     key(20);
     press(PB_HOME);
+    projects();
     sel(-1);
     press(PB_SEL);
     press(PB_SAVE);           /* SAVE answers the other way */
     CHECK("SAVE writes the changes, then opens", !strcmp(app_name, "DEMO") && songs_in_flash() == 2);
     press(PB_HOME);
+    projects();
     sel(1);
     press(PB_SEL);
     CHECK("and they were written", song_step(&app_song, 0, 0, 0)->notes[0] == 73);
 
     press(PB_HOME);
+    projects();
     sel(-1);                  /* DEMO */
     press(PB_PLAY);
     CHECK("PLAY on another project opens it, to play it", !strcmp(app_name, "DEMO") && !app_dirty);
@@ -110,6 +118,7 @@ int main(void)
     press(PB_EDIT);
     key(5);
     press(PB_HOME);
+    projects();
     sel(1);
     press(PB_PLAY);
     CHECK("over unsaved changes PLAY asks first", !strcmp(app_name, "DEMO") && app_dirty);

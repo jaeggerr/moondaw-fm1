@@ -75,9 +75,11 @@ int main(void)
     press(PB_SAVE);             /* saved again, untouched: still there */
     again = note_on_flash();
 
-    /* SETTINGS: GLO from HOME, KNOB 3 the value, kept across a restart */
+    /* SETTINGS: from HOME's root menu, KNOB 3 the value, kept across a restart */
     press(PB_HOME);
-    press(PB_GLO);
+    in.enc[PE_K2] = 2;          /* CONTINUE, PROJECTS, SETTINGS */
+    go();
+    press(PB_SEL);
     {
         bool there = !strcmp(app_screen(), "SETTINGS"), kept;
         in.enc[PE_K3] = -1;     /* LEDS: GUIDE -> STATE */

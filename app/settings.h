@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SETTINGS (29/10): what holds for the machine rather than the song,
- * reached by GLO from HOME -- GLO is what is global, as it opens PROJECT
- * from SONG. One setting a row, as PROJECT:
+ * reached from HOME's root menu. One setting a row, as PROJECT:
  *
  *   LEDS   OFF, STATE (PLAY's alone), GUIDE (and what each screen can do)
  *   LIGHT  how bright the guide is, 15 to 100 %; on its row a few buttons

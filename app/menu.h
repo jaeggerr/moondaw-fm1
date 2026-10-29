@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* HOME, where the machine opens and where the HOME button leads from
- * anywhere: the projects by name, and the row that makes a new one. */
+ * anywhere: a root menu (29/10) -- CONTINUE the open project, PROJECTS
+ * the list by name with the row that makes a new one, SETTINGS, HELP. */
 #ifndef MENU_H
 #define MENU_H
 
@@ -8,9 +9,12 @@
 
 #include "../platform/platform.h"
 
-void menu_open(void);
-/* One frame. True once SEL opened a project (now the song in memory):
- * the caller goes into it. */
-bool menu_frame(const PlatInput *in);
+/* The root's items, and where its cursor starts. */
+enum { MENU_CONTINUE, MENU_PROJECTS, MENU_SETTINGS, MENU_HELP, MENU_ITEMS };
+void menu_open(int item);
+/* One frame. MENU_SONG: SEL opened a project (now the song in memory), or
+ * CONTINUE the open one -- the caller goes into it; MENU_TO_SETTINGS. */
+enum { MENU_STAY, MENU_SONG, MENU_TO_SETTINGS };
+int menu_frame(const PlatInput *in);
 
 #endif

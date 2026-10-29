@@ -6,11 +6,17 @@
 #include "gfx.h"
 #include "ui.h"
 
-/* HOME, as validated on the panel on 28/10 (NOTES.md): the projects by name
- * only, CONDENSED 20, eight rows; the open one marked by a bar at its left
- * and an amber dot while it has unsaved changes; + NEW last; the version
- * small at the bottom. SELECT moves, SEL opens, PLAY plays the project
- * under the cursor (opening it if it is not the open one). */
+/* HOME, the root menu since 29/10 (as the other MOONDAW apps): CONTINUE,
+ * the open project's name at its right; PROJECTS, how many; SETTINGS; HELP,
+ * grey until it is written. SELECT or KNOB 2 moves, SEL goes; PLAY on
+ * CONTINUE plays the open project.
+ *
+ * PROJECTS, as HOME was validated on the panel on 28/10 (NOTES.md): the
+ * projects by name only, CONDENSED 20, eight rows; the open one marked by
+ * a bar at its left and an amber dot while it has unsaved changes; + NEW
+ * last. SEL opens, PLAY plays the project under the cursor (opening it if
+ * it is not the open one), GLO goes back to the root. The version small
+ * at the bottom of both. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
 #ifndef MOONDAW_VERSION
@@ -30,6 +36,9 @@ static int cur, top, asking, pending; /* pending: the row the question is about 
 enum { ASK_NONE, ASK_OPEN, ASK_PLAY };   /* what the question leads to once answered */
 static uint32_t prev_btns;
 static int peak; /* the worst block since PLAY, held */
+static bool listing; /* in PROJECTS, not the root */
+static int item;     /* the root's cursor */
+static const char *const item_word[MENU_ITEMS] = { "CONTINUE", "PROJECTS", "SETTINGS", "HELP" };
 
 static bool before(const char *a, const char *b)
 {
@@ -77,10 +86,12 @@ static void scroll_to(int row, bool centre)
     top = top < 0 ? 0 : top > last ? last : top;
 }
 
-void menu_open(void)
+void menu_open(int at)
 {
     refresh();
     scroll_to(open_row >= 0 ? open_row : 0, true);
+    listing = false;
+    item = at;
     asking = ASK_NONE;
     prev_btns = 0xFFFFFFFFu;
     gfx_invalidate();
@@ -103,6 +114,25 @@ static void draw_question(void)
     }
 }
 
+static void draw_root(void)
+{
+    for (int i = 0; i < MENU_ITEMS; i++) {
+        int y = i * ROW, base = y + 2 + FONTS[F_COND20].ascent;
+        bool here = i == item;
+        char n[8];
+        const char *right = i == MENU_CONTINUE ? app_name : i == MENU_PROJECTS ? ui_dec(n, nrows) : "";
+        int x = PLAT_W - 10 - gfx_text_w(F_COND20, right) - (i == MENU_CONTINUE && app_dirty ? 13 : 0);
+        if (here)
+            gfx_slab(2, y + 1, PLAT_W - 4, ROW - 2, C_ACCENT, 255);
+        gfx_text(F_COND20, TEXT_X, base, item_word[i], here ? C_ON_ACC : i == MENU_HELP ? C_DIM : C_TEXT);
+        x = gfx_text(F_COND20, x, base, right, here ? C_ON_ACC : C_DIM);
+        if (i == MENU_CONTINUE && app_dirty) /* not saved */
+            gfx_fill(x + 6, base - 9, 7, 7, here ? C_ON_ACC : C_FX, 255);
+    }
+}
+
+static void draw_foot(void);
+
 static void draw(void)
 {
     int count = nrows + 1; /* + NEW */
@@ -110,6 +140,11 @@ static void draw(void)
     gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
     if (asking) {
         draw_question();
+        return;
+    }
+    if (!listing) {
+        draw_root();
+        draw_foot();
         return;
     }
     for (int r = 0; r < ROWS && top + r < count; r++) {
@@ -129,6 +164,12 @@ static void draw(void)
         gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
+    draw_foot();
+}
+
+/* The version, or while a song plays what it costs, stage by stage; MAX. */
+static void draw_foot(void)
+{
     if (player_playing() && player_clock) {
         /* the worst block's time, stage by stage, in microseconds: O the oscillators,
          * V the voice, C the filters and mix, R the reverb, E the delay, T the tick, W the
@@ -171,10 +212,11 @@ static void play(void)
     player_play_song(0, false);
 }
 
-bool menu_frame(const PlatInput *in)
+int menu_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns;
     bool open_it = false;
+    int to = MENU_STAY;
 
     prev_btns = in->btns;
     if (asking) {
@@ -187,7 +229,7 @@ bool menu_frame(const PlatInput *in)
             answered = true;
         else if (!btns && !in->enc[PE_SELECT]) {
             gfx_frame(draw);
-            return false;
+            return MENU_STAY;
         }
         asking = ASK_NONE; /* "stay": the list as it was, the cursor where it was */
         if (answered) {
@@ -198,37 +240,62 @@ bool menu_frame(const PlatInput *in)
                 open_it = true;
         }
         gfx_frame(draw);
-        return open_it;
+        return open_it ? MENU_SONG : MENU_STAY;
     }
 
-    scroll_to(cur + in->enc[PE_SELECT] < 0 ? 0 : cur + in->enc[PE_SELECT] > nrows ? nrows
-              : cur + in->enc[PE_SELECT], false);
-    if (btns & 1u << PB_SEL) {
-        if (cur == open_row) {
-            open_it = true;
-        } else if (app_dirty) {
-            pending = cur;
-            asking = ASK_OPEN;
-        } else {
-            load(cur);
-            open_it = true;
+    if (!listing) { /* the root */
+        item += in->enc[PE_SELECT] + in->enc[PE_K2];
+        item = item < 0 ? 0 : item >= MENU_ITEMS ? MENU_ITEMS - 1 : item;
+        if (btns & 1u << PB_SEL) {
+            if (item == MENU_CONTINUE)
+                to = MENU_SONG;
+            else if (item == MENU_PROJECTS) {
+                listing = true;
+                refresh();
+                scroll_to(open_row >= 0 ? open_row : 0, true);
+            } else if (item == MENU_SETTINGS)
+                to = MENU_TO_SETTINGS;
         }
-    }
-    /* PLAY: the project under the cursor. One song fits in memory, so
-     * hearing another is opening it -- asked first over unsaved changes --
-     * without leaving HOME. */
-    if (btns & 1u << PB_PLAY && cur < nrows) {
-        if (cur == open_row && player_playing()) {
-            player_stop();
-        } else if (cur == open_row) {
-            play();
-        } else if (app_dirty) {
-            pending = cur;
-            asking = ASK_PLAY;
-        } else {
-            player_stop();
-            load(cur);
-            play();
+        if (btns & 1u << PB_PLAY && item == MENU_CONTINUE) {
+            if (player_playing())
+                player_stop();
+            else
+                play();
+        }
+    } else {
+        if (btns & 1u << PB_GLO) { /* back to the root, on PROJECTS */
+            listing = false;
+            item = MENU_PROJECTS;
+        }
+        scroll_to(cur + in->enc[PE_SELECT] < 0 ? 0 : cur + in->enc[PE_SELECT] > nrows ? nrows
+                  : cur + in->enc[PE_SELECT], false);
+        if (btns & 1u << PB_SEL) {
+            if (cur == open_row) {
+                open_it = true;
+            } else if (app_dirty) {
+                pending = cur;
+                asking = ASK_OPEN;
+            } else {
+                load(cur);
+                open_it = true;
+            }
+        }
+        /* PLAY: the project under the cursor. One song fits in memory, so
+         * hearing another is opening it -- asked first over unsaved changes --
+         * without leaving HOME. */
+        if (btns & 1u << PB_PLAY && cur < nrows) {
+            if (cur == open_row && player_playing()) {
+                player_stop();
+            } else if (cur == open_row) {
+                play();
+            } else if (app_dirty) {
+                pending = cur;
+                asking = ASK_PLAY;
+            } else {
+                player_stop();
+                load(cur);
+                play();
+            }
         }
     }
     peak = !player_playing() ? 0 : app_block > peak ? app_block : peak; /* the worst block, from PLAY on */
@@ -236,5 +303,5 @@ bool menu_frame(const PlatInput *in)
         player_profile_reset();
     ui_led_state(PB_PLAY, player_playing());
     gfx_frame(draw);
-    return open_it;
+    return open_it ? MENU_SONG : to;
 }

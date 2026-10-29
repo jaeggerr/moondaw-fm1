@@ -1497,6 +1497,18 @@ the last slot beside which song was open (`.LAST`, three bytes since: a
 file of one is from before), written once when the screen is left, by
 GLO or HOME: an erase stops the audio for 50 ms.
 
+## 2026-10-29 — HOME, a root menu
+
+SETTINGS was reachable only by GLO from HOME: hidden (his question, "how
+does one get there?"). HOME is now a root menu, as the other MOONDAW
+apps': CONTINUE (the open project's name at its right, the amber dot if
+unsaved; SEL goes into it, PLAY plays it), PROJECTS (how many; SEL opens
+the list HOME was, GLO back to the root), SETTINGS, HELP (grey: to come,
+the effects' help as in the other apps, then the FM-1's own, its buttons).
+HOME leads to the root from anywhere (his call), the cursor on CONTINUE;
+back from SETTINGS it is on SETTINGS. GLO no longer opens SETTINGS.
+Prototype `tools/protos/home_root.py`.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

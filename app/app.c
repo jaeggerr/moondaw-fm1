@@ -49,7 +49,6 @@ static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
 static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS } screen;
 static int mixer_from, project_from, pattern_from, canvas_from; /* the screen GLO leads back to */
-static uint32_t menu_prev_glo; /* HOME: GLO pressed, not held on the way in */
 
 void app_mark_dirty(void) { app_dirty = true; }
 
@@ -75,7 +74,7 @@ static void leave_canvas(void)
 {
     screen = canvas_from;
     if (screen == AT_MENU)
-        menu_open();
+        menu_open(MENU_CONTINUE);
     else if (screen == AT_PHRASE)
         phrase_resume();
     else if (screen == AT_PATTERN || screen == AT_INSTRUMENT)
@@ -121,7 +120,7 @@ static void adopt(int slot, bool dirty)
     app_dirty = dirty;
     screen = AT_MENU;
     ready = 1;
-    menu_open();
+    menu_open(MENU_CONTINUE);
 }
 
 /* ------------------------------------------------------------ flash --- */
@@ -350,7 +349,7 @@ void app_frame(const PlatInput *real)
          * would have been refused): what is in memory is the old one */
         if (link_slot() == app_slot)
             app_open_slot(app_slot);
-        menu_open();
+        menu_open(MENU_CONTINUE);
         break;
     default:
         break;
@@ -369,7 +368,7 @@ void app_frame(const PlatInput *real)
             song_pool_compact(&app_song);
             screen = AT_MENU;
             loop_clear();
-            menu_open();
+            menu_open(MENU_CONTINUE);
         }
     }
 
@@ -380,7 +379,7 @@ void app_frame(const PlatInput *real)
         if (!settings_frame(in)) {
             settings_close();
             screen = AT_MENU;
-            menu_open();
+            menu_open(MENU_SETTINGS);
         }
     } else if (screen == AT_MIXER) {
         switch (mixer_frame(in)) {
@@ -477,18 +476,20 @@ void app_frame(const PlatInput *real)
         default:
             break;
         }
-    } else if (menu_frame(in)) {
-        screen = AT_SONG;
-        songview_open(true);
-    } else if (in->btns & ~menu_prev_glo & 1u << PB_GLO) { /* GLO: what is global, the machine's */
-        screen = AT_SETTINGS;
-        settings_open();
+    } else {
+        switch (menu_frame(in)) {
+        case MENU_SONG:
+            screen = AT_SONG;
+            songview_open(true);
+            break;
+        case MENU_TO_SETTINGS:
+            screen = AT_SETTINGS;
+            settings_open();
+            break;
+        }
     }
-    menu_prev_glo = in->btns;
-    if (screen == AT_MENU)
-        ui_led_guide(1u << PB_GLO); /* SETTINGS */
-    if (screen == AT_CANVAS)
-        ui_led_guide(0); /* the script's own (LED) */
+    if (screen == AT_MENU || screen == AT_CANVAS)
+        ui_led_guide(0); /* HOME: SEL, PLAY, GLO back; the canvas: the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_keys(0); /* the keys light only for PATTERN's ops */
     remote_leds();
