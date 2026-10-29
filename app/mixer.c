@@ -16,7 +16,8 @@
  *   SELECT  the row     KNOB 1  the column; left of the first, the track's number
  *   KNOB 2  the value; on a track's number: normal -> MUTE -> SOLO (monitoring,
  *           never in the file)
- *   GLO     back where it was opened from     ARP  UNDO     SAVE  PLAY  as printed */
+ *   GLO     back where it was opened from     EDIT  the PROJECT
+ *   ARP     UNDO     SAVE  PLAY  as printed */
 enum { CELL_W = 45, COLS = 4 };
 
 #define song (&app_song)
@@ -134,7 +135,7 @@ void mixer_open(const char *back, int e)
     gfx_invalidate();
 }
 
-bool mixer_frame(const PlatInput *in)
+int mixer_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns;
     int d, vis;
@@ -167,6 +168,6 @@ bool mixer_frame(const PlatInput *in)
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
     plat_led_btn(PB_PLAY, player_playing());
     gfx_frame(draw);
-    return !PRESSED(PB_GLO);
+    return PRESSED(PB_GLO) ? MIXER_BACK : PRESSED(PB_EDIT) ? MIXER_PROJECT : MIXER_STAY;
 #undef PRESSED
 }

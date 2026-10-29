@@ -105,8 +105,12 @@ int main(void)
         listen();
     CHECK("and both are back when it is lifted", !player_soloed(1) && left > 100000 && right > 100000);
 
+    in.btns = 1u << PB_EDIT;
+    CHECK("EDIT goes to the PROJECT", mixer_frame(&in) == MIXER_PROJECT);
+    in.btns = 0;
+    go();
     in.btns = 1u << PB_GLO;
-    CHECK("GLO leaves", !mixer_frame(&in));
+    CHECK("GLO leaves", mixer_frame(&in) == MIXER_BACK);
     printf("mixer test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

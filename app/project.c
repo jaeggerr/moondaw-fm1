@@ -18,7 +18,8 @@
  *   METER   beats in a bar, written x/4 (the file's beats_per_bar)
  *   STEP    what a step is worth as a note: 1/16 at 4 steps a beat, 1/12 at 3
  *           (the file's steps_per_beat)
- *   GLO     back where it was opened from     ARP  UNDO     SAVE  as printed */
+ *   GLO     back where it was opened from     FX  the MIXER
+ *   ARP     UNDO     SAVE  as printed */
 enum { S_NAME, S_BPM, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
 enum { LABEL_X = 14, VALUE_X = 120 };
 
@@ -136,7 +137,7 @@ void project_open(void)
     gfx_invalidate();
 }
 
-bool project_frame(const PlatInput *in)
+int project_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns;
 #define PRESSED(b) ((btns >> (b)) & 1u)
@@ -151,7 +152,7 @@ bool project_frame(const PlatInput *in)
             app_mark_dirty(); /* the next SAVE writes it under this name, in its place */
         naming = r == NAMER_TYPING;
         gfx_frame(draw);
-        return true;
+        return PROJECT_STAY;
     }
 
     row = clampi(row + in->enc[PE_SELECT], 0, SETTINGS - 1);
@@ -173,6 +174,6 @@ bool project_frame(const PlatInput *in)
     }
     plat_led_btn(PB_PLAY, player_playing());
     gfx_frame(draw);
-    return !PRESSED(PB_GLO);
+    return PRESSED(PB_GLO) ? PROJECT_BACK : PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;
 #undef PRESSED
 }

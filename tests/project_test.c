@@ -85,7 +85,8 @@ int main(void)
 
     press(PB_SAVE);
     CHECK("SAVE saves", saves == 1);
-    CHECK("GLO leaves", !press(PB_GLO));
+    CHECK("FX goes to the MIXER", press(PB_FX) == PROJECT_MIXER);
+    CHECK("GLO leaves", press(PB_GLO) == PROJECT_BACK);
     printf("project test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

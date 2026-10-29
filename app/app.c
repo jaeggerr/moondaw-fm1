@@ -358,11 +358,29 @@ void app_frame(const PlatInput *real)
         if (!canvas_frame(in))
             leave_canvas();
     } else if (screen == AT_MIXER) {
-        if (!mixer_frame(in))
+        switch (mixer_frame(in)) {
+        case MIXER_BACK:
             back_to(mixer_from);
+            break;
+        case MIXER_PROJECT: /* across, and GLO still goes back where both came from */
+            screen = AT_PROJECT;
+            project_from = mixer_from;
+            project_open();
+            break;
+        }
     } else if (screen == AT_PROJECT) {
-        if (!project_frame(in))
+        switch (project_frame(in)) {
+        case PROJECT_BACK:
             back_to(project_from);
+            break;
+        case PROJECT_MIXER:
+            screen = AT_MIXER;
+            mixer_from = project_from;
+            mixer_open("PRJ", project_from == AT_PHRASE    ? phrase_entry()
+                              : project_from == AT_PATTERN ? pattern_entry()
+                                                           : songview_entry());
+            break;
+        }
     } else if (screen == AT_PHRASE) {
         switch (phrase_frame(in)) {
         case PHRASE_BACK:

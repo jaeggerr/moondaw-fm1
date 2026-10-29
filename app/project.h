@@ -11,7 +11,9 @@
 #include "../platform/platform.h"
 
 void project_open(void);
-/* One frame. False once the hand asked to leave (GLO). */
-bool project_frame(const PlatInput *in);
+/* One frame: GLO goes back, FX to the MIXER -- FX is the mixer everywhere
+ * but PATTERN (29/10). */
+enum { PROJECT_BACK, PROJECT_STAY, PROJECT_MIXER };
+int project_frame(const PlatInput *in);
 
 #endif

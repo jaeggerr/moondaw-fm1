@@ -1320,6 +1320,13 @@ by itself; `--` is silence, the switch still on. PLAY again, SEL or GLO
 turn it off; the PLAY light says it is on. The blocks have no names, so
 one is found by ear: this spares the press on each.
 
+## 2026-10-29 — FX on PROJECT, EDIT on MIXER
+
+FX did nothing on PROJECT (Jaeger expected the song's effects there: FX
+is the mixer everywhere but PATTERN). It goes to the MIXER now, and EDIT
+on the MIXER to PROJECT. The two are a pair across: GLO from either goes
+back to the screen that opened the first, never to the other one.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
