@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* PATTERN's hands, without a screen: inputs go in as the panel would
- * send them (three views, SEQ FX ENV, KNOB 1 the column, KNOB 2
+ * send them (three views, SEQ FX ENV, KNOB 1 the column, KNOB 3
  * the value) and the song is read back. */
 #include <stdio.h>
 #include <string.h>
@@ -59,17 +59,17 @@ int main(void)
     keys(1u << 16); keys(0);
     CHECK("OCT+ moves the keyboard an octave", st(2)->notes[0] == 81);
     press(PB_OCTDN);
-    enc(PE_K2, -2);
-    CHECK("KNOB 2 on a note is semitones", st(2)->notes[0] == 79);
+    enc(PE_K3, -2);
+    CHECK("KNOB 3 on a note is semitones", st(2)->notes[0] == 79);
     enc(PE_K1, 3);
     keys(1u << 0); keys(0);
     CHECK("KNOB 1 picks the note: a key writes into slot 4", st(2)->notes[3] == 53);
     enc(PE_K1, -3);
     enc(PE_SELECT, 1);
-    enc(PE_K2, 1);
+    enc(PE_K3, 1);
     CHECK("an empty slot starts from the note above", st(3)->notes[0] == 79);
-    enc(PE_K2, -100); /* a frame holds an int8_t of detents */
-    enc(PE_K2, -100);
+    enc(PE_K3, -100); /* a frame holds an int8_t of detents */
+    enc(PE_K3, -100);
     CHECK("all the way down: OFF, then empty", st(3)->notes[0] == NOTE_NONE);
 
     /* FX */
@@ -77,25 +77,25 @@ int main(void)
     press(PB_FX);
     CHECK("the effect GAT is in place", st(0)->fx[0].cmd == FX_GAT);
     enc(PE_K1, 1);
-    enc(PE_K3, 1);
-    CHECK("KNOB 3 on an effect: the first after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
-    enc(PE_K3, -1);
+    enc(PE_K4, 1);
+    CHECK("KNOB 4 on an effect: the first after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
+    enc(PE_K4, -1);
     {
         bool saw_gat = false;
         for (int i = 0; i < 40; i++) {
-            enc(PE_K3, 1);
+            enc(PE_K4, 1);
             saw_gat |= st(0)->fx[1].cmd == FX_GAT;
         }
         CHECK("an effect already on the row is stepped over", !saw_gat);
         CHECK("the list ends on WAV", st(0)->fx[1].cmd == FX_WAV);
     }
-    enc(PE_K3, -1);
+    enc(PE_K4, -1);
     CHECK("before WAV: VOL", st(0)->fx[1].cmd == FX_VOL);
-    enc(PE_K2, 100);
-    enc(PE_K2, 100);
-    CHECK("KNOB 2 is the value: VOL stops at 7F", st(0)->fx[1].val == 0x7F);
+    enc(PE_K3, 100);
+    enc(PE_K3, 100);
+    CHECK("KNOB 3 is the value: VOL stops at 7F", st(0)->fx[1].val == 0x7F);
     enc(PE_K1, -1);
-    enc(PE_K2, 50);
+    enc(PE_K3, 50);
     CHECK("GAT cannot outlast its step", st(0)->fx[0].val == song.ticks_per_step);
 
     /* SEL on an effect: the step's SYLLABLE (KEYS: G5 is M, F#3 is A) */
@@ -121,7 +121,7 @@ int main(void)
     press(PB_SEL);            /* from VOL's slot: the row's syllable, where it is */
     enc(PE_PRESET, 1);        /* WHEEL */
     enc(PE_K1, 2);
-    enc(PE_K2, 14);           /* - then A..N */
+    enc(PE_K3, 14);           /* - then A..N */
     press(PB_SEL);
     CHECK("the wheel adds a sign to the same syllable",
           st(0)->fx[1].cmd == FX_VOL && !strcmp(song_syl(&song, st(0)->fx[2].val), "MAN"));
@@ -141,9 +141,9 @@ int main(void)
     /* INS */
     press(PB_ENV);
     enc(PE_SELECT, 2);
-    enc(PE_K2, 3);
-    CHECK("KNOB 2 on INS picks the instrument", st(2)->instrument == 2);
-    enc(PE_K2, -10);
+    enc(PE_K3, 3);
+    CHECK("KNOB 3 on INS picks the instrument", st(2)->instrument == 2);
+    enc(PE_K3, -10);
     CHECK("and under 00 there is none", st(2)->instrument == INSTR_NONE);
     press(PB_SEL);            /* CHOOSE INSTRUMENT, on -- */
     enc(PE_SELECT, 2);
@@ -194,8 +194,8 @@ int main(void)
 
     /* the step's number */
     enc(PE_K1, -1);
-    enc(PE_K2, -4);
-    CHECK("KNOB 2 on the step's number is the block's length", song.patterns[0][0].length == 12);
+    enc(PE_K3, -4);
+    CHECK("KNOB 3 on the step's number is the block's length", song.patterns[0][0].length == 12);
 
     press(PB_SAVE);
     CHECK("SAVE asks the app to save, once", saves == 1);

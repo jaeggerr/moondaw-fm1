@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* MIXER's hands without a screen (the grid of 28/10: SELECT the track, KNOB 1 the
- * column or the number, KNOB 2 the value), and what MUTE and SOLO do to the sound. */
+ * column or the number, KNOB 3 the value), and what MUTE and SOLO do to the sound. */
 #include <stdio.h>
 #include <string.h>
 
@@ -58,51 +58,51 @@ int main(void)
     mixer_open("SONG", 0);
     go();                       /* the cursor starts on track 1, VOL */
 
-    enc(PE_K2, -30);
+    enc(PE_K3, -30);
     enc(PE_K1, 1);
-    enc(PE_K2, 10);
+    enc(PE_K3, 10);
     enc(PE_K1, 1);
-    enc(PE_K2, 40);
+    enc(PE_K3, 40);
     enc(PE_K1, 1);
-    enc(PE_K2, 25);
+    enc(PE_K3, 25);
     CHECK("on a track the columns are volume, pan, reverb, delay",
           T(0).volume == 70 && T(0).pan == -54 && T(0).send == 40 && T(0).echo == 25);
     enc(PE_K1, -2);
-    enc(PE_K2, -100);
+    enc(PE_K3, -100);
     CHECK("pan stops at hard left", T(0).pan == -64);
     enc(PE_K1, 1);
-    enc(PE_K2, -100);
+    enc(PE_K3, -100);
     enc(PE_K1, 1);
-    enc(PE_K2, -100);
+    enc(PE_K3, -100);
 
     enc(PE_SELECT, -1);         /* the returns' row, above track 1 */
     enc(PE_K1, -3);
-    enc(PE_K2, 10);
+    enc(PE_K3, 10);
     enc(PE_K1, 2);
-    enc(PE_K2, 100);
+    enc(PE_K3, 100);
     CHECK("on the returns: the room, and the delay stops at 96 ticks",
           app_song.reverb_size == 74 && app_song.delay_time == 96);
     enc(PE_K1, -5);
-    enc(PE_K2, 1);
+    enc(PE_K3, 1);
     CHECK("the returns' number is not a track: nothing to mute", !player_muted(0));
 
     player_play_song(0, false);
     listen();
     CHECK("both tracks sound, each on its side", left > 100000 && right > 100000);
     enc(PE_SELECT, 1);
-    enc(PE_K2, 1);              /* track 1: MUTE */
+    enc(PE_K3, 1);              /* track 1: MUTE */
     listen();
     listen();
-    CHECK("KNOB 2 on a track's number mutes it", player_muted(0) && left * 32 < right && right > 100000);
-    enc(PE_K2, -1);
+    CHECK("KNOB 3 on a track's number mutes it", player_muted(0) && left * 32 < right && right > 100000);
+    enc(PE_K3, -1);
     enc(PE_SELECT, 1);
-    enc(PE_K2, 2);              /* track 2: past MUTE, SOLO */
+    enc(PE_K3, 2);              /* track 2: past MUTE, SOLO */
     listen();
     listen();
     listen();
     CHECK("two notches: SOLO, the other silent without being muted",
           player_soloed(1) && !player_muted(1) && !player_muted(0) && left * 32 < right && right > 100000);
-    enc(PE_K2, -2);
+    enc(PE_K3, -2);
     for (int i = 0; i < 6; i++)
         listen();
     CHECK("and both are back when it is lifted", !player_soloed(1) && left > 100000 && right > 100000);

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SONG's hands, without a screen: the arrangement is edited as the
  * panel would (the grid of 28/10: SELECT the phrase, KNOB 1 the track or
- * the number, KNOB 2 the value, SEL the panel or the section, SEQ the
+ * the number, KNOB 3 the value, SEL the panel or the section, SEQ the
  * block) and read back. */
 #include <stdio.h>
 #include <string.h>
@@ -52,12 +52,15 @@ int main(void)
 
     /* the cursor starts on phrase 00, track 1 */
     enc(PE_K2, 1);
-    CHECK("KNOB 2 on a cell steps to the track's next block", E(0).pattern[0] == 1);
-    enc(PE_K2, 5);
+    CHECK("KNOB 2 moves to the next phrase, as SELECT does", songview_entry() == 1 && E(0).pattern[0] == 0);
+    enc(PE_K2, -1);
+    enc(PE_K3, 1);
+    CHECK("KNOB 3 on a cell steps to the track's next block", E(0).pattern[0] == 1);
+    enc(PE_K3, 5);
     CHECK("and stops one past the last block that holds something", E(0).pattern[0] == 2);
-    enc(PE_K2, -9);
+    enc(PE_K3, -9);
     CHECK("under block 00: --, and no further", E(0).pattern[0] == PATTERN_NONE);
-    enc(PE_K2, 1);
+    enc(PE_K3, 1);
     CHECK("back to block 00", E(0).pattern[0] == 0);
 
     press(PB_SEL);            /* the panel of track 1's blocks, on 00 */
@@ -118,11 +121,11 @@ int main(void)
           app_song.arrange_len == 3 && E(2).ref_target == 1);
 
     enc(PE_SELECT, -5);
-    enc(PE_K2, 1);
-    CHECK("KNOB 2 on the number: up from AUTO starts at the phrase's own length", E(0).steps == 16);
-    enc(PE_K2, -4);
+    enc(PE_K3, 1);
+    CHECK("KNOB 3 on the number: up from AUTO starts at the phrase's own length", E(0).steps == 16);
+    enc(PE_K3, -4);
     CHECK("and is then a number", E(0).steps == 12);
-    enc(PE_K2, -20);
+    enc(PE_K3, -20);
     CHECK("all the way down is AUTO again", E(0).steps == 0);
 
     press(PB_SEL);

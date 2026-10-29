@@ -80,22 +80,22 @@ int main(void)
     undo();
     CHECK("UNDO takes it back", step_is_empty(st(3)) && !undo_can());
 
-    /* a knob turned over several frames is one gesture: KNOB 2 on a note in PATTERN */
+    /* a knob turned over several frames is one gesture: KNOB 3 on a note in PATTERN */
     wait(2000);
     on = ON_PATTERN;
     pattern_open(&app_song, 0, 0);
     go();
     for (int i = 0; i < 12; i++)
-        enc(PE_K2, 1);
+        enc(PE_K3, 1);
     CHECK("twelve notches up", st(0)->notes[0] == 72);
     undo();
     CHECK("are taken back by one press", st(0)->notes[0] == 60 && !undo_can());
 
     /* the same place a second later is another gesture */
     wait(2000);
-    enc(PE_K2, 2);
+    enc(PE_K3, 2);
     wait(2000);
-    enc(PE_K2, 3);
+    enc(PE_K3, 3);
     undo();
     CHECK("a pause makes two gestures: the second goes first", st(0)->notes[0] == 62);
     undo();
@@ -107,18 +107,18 @@ int main(void)
     undo();
     CHECK("UNDO again after a REDO", st(0)->notes[0] == 62);
     wait(2000);
-    enc(PE_K2, 1);
+    enc(PE_K3, 1);
     CHECK("an edit after an UNDO forgets what could be done again", st(0)->notes[0] == 63 && !undo_can_redo());
     undo();
     undo();
     CHECK("and the journal goes back as before", st(0)->notes[0] == 60 && !undo_can());
 
     wait(2000);
-    enc(PE_K2, 100);
-    enc(PE_K2, 100);
+    enc(PE_K3, 100);
+    enc(PE_K3, 100);
     n = st(0)->notes[0];
     wait(2000);
-    enc(PE_K2, 100); /* against the stop: nothing changes */
+    enc(PE_K3, 100); /* against the stop: nothing changes */
     go();
     undo();
     CHECK("a knob against its stop is not a gesture", st(0)->notes[0] == 60);
@@ -126,11 +126,11 @@ int main(void)
 
     /* the pool hands back a chunk emptied by the knobs; the step still returns */
     wait(2000);
-    enc(PE_K2, -100);         /* the note: OFF, then nothing */
-    enc(PE_K2, -100);
+    enc(PE_K3, -100);         /* the note: OFF, then nothing */
+    enc(PE_K3, -100);
     wait(2000);
     press(PB_ENV);            /* INS */
-    enc(PE_K2, -10);          /* the instrument: none */
+    enc(PE_K3, -10);          /* the instrument: none */
     press(PB_SEQ);
     CHECK("the block's only step is empty", step_is_empty(st(0)));
     song_pool_compact(&app_song);
@@ -167,7 +167,7 @@ int main(void)
         enc(PE_SELECT, 1);
         for (int pass = 0; pass < 8; pass++) {
             wait(2000);
-            enc(PE_K2, pass == 0 || pass % 2 ? 1 : -1); /* stays clear of the top note */
+            enc(PE_K3, pass == 0 || pass % 2 ? 1 : -1); /* stays clear of the top note */
         }
     }
     CHECK("504 gestures written", st(63)->notes[0] != NOTE_NONE && undo_can());

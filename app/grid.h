@@ -6,8 +6,10 @@
  * cursor's cell hollowed out of it.
  *
  * One grammar goes with it: SELECT the row, KNOB 1 the column (left of
- * the first one, the row's number), KNOB 2 the value under the cursor,
- * SEL one level down, GLO one level up, HOME home. */
+ * the first one, the row's number), KNOB 3 the value under the cursor,
+ * SEL one level down, GLO one level up, HOME home. And KNOB 2 the row as
+ * well (29/10): KNOB 1 and 2 move, KNOB 3 and 4 change, the right hand
+ * alone moving the cursor; SELECT stays, for long runs. */
 #ifndef GRID_H
 #define GRID_H
 

@@ -14,7 +14,7 @@
  * the left, white on the beat; one column a track, the note it plays on
  * that step (-- when none), five tracks a screen.
  *
- *   SELECT  the step     KNOB 1  the track     the keys  write notes, OCT-/OCT+ their octave
+ *   SELECT, KNOB 2  the step   KNOB 1  the track     the keys  write notes, OCT-/OCT+ their octave
  *   SEL, EDIT  the block of that track, to edit   GLO  back to SONG
  *   FX      the MIXER    ALGO  UNDO left, REDO right     SAVE  PLAY  as printed */
 enum { CELL_W = 37, CELLS = 5 };
@@ -140,10 +140,10 @@ int phrase_frame(const PlatInput *in)
     prev_btns = in->btns;
     prev_keys = in->keys;
     playing = player_playing();
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1])
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2])
         said = 0;
 
-    row += in->enc[PE_SELECT];
+    row += in->enc[PE_SELECT] + in->enc[PE_K2]; /* KNOB 2 beside KNOB 1: one hand (29/10) */
     col += in->enc[PE_K1];
     measure();
     col = col < 0 ? 0 : col;

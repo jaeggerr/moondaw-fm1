@@ -12,8 +12,8 @@
 /* PROJECT, as validated on the panel on 28/10 (NOTES.md): one setting a
  * row, its name in grey at the left, its value at the right.
  *
- *   SELECT  the setting     KNOB 2  its value
- *   NAME    SEL opens it: one cell a letter, KNOB 1 the place, KNOB 2 the letter
+ *   SELECT, KNOB 2  the setting     KNOB 3  its value
+ *   NAME    SEL opens it: one cell a letter, KNOB 1 the place, KNOB 3 the letter
  *           (space, A-Z, 0-9, -); SEL keeps it, GLO goes back without it
  *   METER   beats in a bar, written x/4 (the file's beats_per_bar)
  *   STEP    what a step is worth as a note: 1/16 at 4 steps a beat, 1/12 at 3
@@ -143,7 +143,7 @@ int project_frame(const PlatInput *in)
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2])
+    if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
         said = 0;
 
     if (naming) {
@@ -156,9 +156,9 @@ int project_frame(const PlatInput *in)
         return PROJECT_STAY;
     }
 
-    row = clampi(row + in->enc[PE_SELECT], 0, SETTINGS - 1);
-    if (in->enc[PE_K2])
-        turn(row, in->enc[PE_K2]);
+    row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K2], 0, SETTINGS - 1);
+    if (in->enc[PE_K3])
+        turn(row, in->enc[PE_K3]);
     if (PRESSED(PB_SEL) && row == S_NAME) {
         namer_open(app_name, STORE_NAME);
         naming = true;

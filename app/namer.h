@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Typing a name on a machine with no letters, as validated with PROJECT on
- * 28/10: one cell a letter, KNOB 1 the place, KNOB 2 the letter (space,
+ * 28/10: one cell a letter, KNOB 1 the place, KNOB 3 the letter (space,
  * A-Z, 0-9, -); SEL keeps it, GLO goes back without it. PROJECT names the
  * song with it, INSTRUMENT an instrument. */
 #ifndef NAMER_H

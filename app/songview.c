@@ -12,8 +12,8 @@
  * its number fixed at the left, then the block each track plays, six
  * tracks a screen.
  *
- *   SELECT  the phrase          KNOB 1  the track; left of the first, the phrase's number
- *   KNOB 2  on a cell its block, -- below 00 and one new block past the last;
+ *   SELECT, KNOB 2  the phrase   KNOB 1  the track; left of the first, the phrase's number
+ *   KNOB 3  on a cell its block, -- below 00 and one new block past the last;
  *           on the number the phrase's length (AUTO, then steps)
  *   SEL     on a cell: CHOOSE PATTERN, the track's blocks (SELECT walks, PLAY listens:
  *           the block the cursor rests on plays alone; SEL takes it, GLO goes
@@ -77,7 +77,7 @@ static void set_block(int r, int t, uint8_t p)
     app_mark_dirty();
 }
 
-/* KNOB 2 on a cell: --, then the blocks; ON (a cell that plays nothing and
+/* KNOB 3 on a cell: --, then the blocks; ON (a cell that plays nothing and
  * cuts nothing, from moondaw's files) counts as -- when turned from. */
 static void turn_block(int d)
 {
@@ -87,7 +87,7 @@ static void turn_block(int d)
     set_block(row, col, v < 0 ? PATTERN_NONE : (uint8_t)v);
 }
 
-/* KNOB 2 on a phrase's number: how long it lasts. AUTO is one full cycle
+/* KNOB 3 on a phrase's number: how long it lasts. AUTO is one full cycle
  * of its blocks; turning up from AUTO starts at that length. */
 static void turn_steps(int d)
 {
@@ -344,7 +344,7 @@ static uint32_t usable(void)
 int songview_frame(const PlatInput *in, int *entry, int *track)
 {
     uint32_t btns = in->btns & ~prev_btns;
-    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2];
+    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3];
     int out = SONGVIEW_STAY;
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
@@ -379,20 +379,20 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
 
     /* DELETE asks; only a second LFO answers yes. */
-    if (ask_delete && (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] ||
+    if (ask_delete && (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] ||
                        (btns && !PRESSED(PB_LFO))))
         ask_delete = false;
 
-    row += in->enc[PE_SELECT];
+    row += in->enc[PE_SELECT] + in->enc[PE_K2]; /* KNOB 2 beside KNOB 1: one hand (29/10) */
     row = row < 0 ? 0 : row >= song->arrange_len ? song->arrange_len - 1 : row;
     col += in->enc[PE_K1];
     col = col < -1 ? -1 : col >= song->num_tracks ? song->num_tracks - 1 : col;
 
-    if (in->enc[PE_K2] && !is_ref(row)) {
+    if (in->enc[PE_K3] && !is_ref(row)) {
         if (col < 0)
-            turn_steps(in->enc[PE_K2]);
+            turn_steps(in->enc[PE_K3]);
         else
-            turn_block(in->enc[PE_K2]);
+            turn_block(in->enc[PE_K3]);
     }
     if (PRESSED(PB_SEL) && !is_ref(row)) {
         if (col < 0) {

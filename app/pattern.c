@@ -14,12 +14,12 @@
  * one track, in three views, a button each (29/10), each SONG's grid once
  * more -- one row a step, its number at the left, white on the beat.
  *
- *   NOTES  the four notes of a chord          KNOB 2 a semitone, under the lowest OFF then empty
- *   FX     the three effects                  KNOB 2 the value, KNOB 3 the effect
+ *   NOTES  the four notes of a chord          KNOB 3 a semitone, under the lowest OFF then empty
+ *   FX     the three effects                  KNOB 3 the value, KNOB 4 the effect
  *   INS    the instrument the step names, or --, then the name of the one that plays:
  *          white where the step names it, grey where it keeps the one in force (29/10)
  *
- *   SELECT  the step     KNOB 1  the column; left of the first, the step's number (KNOB 2 the
+ *   SELECT, KNOB 2  the step   KNOB 1  the column; left of the first, the step's number (KNOB 3 the
  *                        block's length)
  *   the keys  write the note under the cursor (a chord while one is held), OCT-/OCT+ their octave
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
@@ -90,7 +90,7 @@ static void turn_instr(int row, int d)
         st->instrument = v < 0 ? INSTR_NONE : (uint8_t)v;
 }
 
-/* KNOB 3 on an effect: the commands in alphabetical order, --- first. One
+/* KNOB 4 on an effect: the commands in alphabetical order, --- first. One
  * that would say the same thing twice on the row is stepped over. */
 static void turn_fx_cmd(int row, int slot, int d)
 {
@@ -475,7 +475,7 @@ bool pattern_open(Song *s, int e, int t)
     choosing = listening = writing_syl = selecting = false;
     sounding = -1;
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
-    /* KNOB 3's order: alphabetical, the empty slot first. */
+    /* KNOB 4's order: alphabetical, the empty slot first. */
     fx_count = 0;
     fx_order[fx_count++] = FX_NONE;
     for (int c = 1; c < FX_SYL; c++) {
@@ -521,7 +521,7 @@ int pattern_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     prev_keys = in->keys;
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] || in->enc[PE_K4])
         said = 0;
 
     if (choosing) {
@@ -572,7 +572,7 @@ int pattern_frame(const PlatInput *in)
         ch_open();
     if (PRESSED(PB_SEL) && view == V_FX && cur_col >= 0 && !selecting)
         syl_open();
-    cur_row += in->enc[PE_SELECT];
+    cur_row += in->enc[PE_SELECT] + in->enc[PE_K2]; /* KNOB 2 beside KNOB 1: one hand (29/10) */
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
     cur_col += in->enc[PE_K1];
     cur_col = cur_col < -1 ? -1 : cur_col >= view_cols[view] ? view_cols[view] - 1 : cur_col;
@@ -581,7 +581,7 @@ int pattern_frame(const PlatInput *in)
     if (btns & (1u << PB_OCTUP) && kbd_oct < 3)
         kbd_oct++;
 
-    if ((d = in->enc[PE_K2]) != 0 && !selecting) { /* selecting, the knobs only move */
+    if ((d = in->enc[PE_K3]) != 0 && !selecting) { /* selecting, the knobs only move */
         if (cur_col < 0)
             turn_len(d);
         else if (view == V_NOTES && !edit_turn_note(song, track, pat, cur_row, cur_col, d))
@@ -591,7 +591,7 @@ int pattern_frame(const PlatInput *in)
         else if (view == V_INS)
             turn_instr(cur_row, d);
     }
-    if ((d = in->enc[PE_K3]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
+    if ((d = in->enc[PE_K4]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
         turn_fx_cmd(cur_row, cur_col, d);
 
     /* The keys write notes: the first one in the slot under the cursor,

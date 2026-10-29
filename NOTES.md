@@ -1474,6 +1474,17 @@ design, built:
 - edit.c's clipboard (moondaw's): notes paste into the slots they came
   from, effects onto the cursor's slot.
 
+## 2026-10-29 — KNOB 2 moves, KNOB 3 changes
+
+SELECT is on the left of the panel, KNOB 1 on the right: moving the
+cursor in a grid took both hands, or a hand going back and forth (his
+complaint, playing). The knobs move by one: KNOB 1 the column, KNOB 2 the
+row as well as SELECT (the wheel for long runs, KNOB 2 for steps), KNOB 3
+the value, KNOB 4 the effect's type. The rule has no exception: KNOB 1
+and 2 move, KNOB 3 and 4 change -- on SONG, SECTION, PATTERN, MIXER,
+PROJECT, INSTRUMENT, the namer and SYLLABLE's wheel (KNOB 1 the slot,
+KNOB 3 the sign). HOME and the CHOOSE lists keep SELECT alone: no value.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

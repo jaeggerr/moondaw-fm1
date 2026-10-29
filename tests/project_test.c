@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* PROJECT's hands without a screen: each setting under KNOB 2, its stops,
+/* PROJECT's hands without a screen: each setting under KNOB 3, its stops,
  * the name typed letter by letter, and UNDO. */
 #include <stdio.h>
 #include <string.h>
@@ -44,22 +44,22 @@ int main(void)
     go();
 
     enc(PE_SELECT, 1);
-    enc(PE_K2, 20);
+    enc(PE_K3, 20);
     CHECK("BPM", S.bpm == 140 && app_dirty);
     enc(PE_SELECT, 1);
-    enc(PE_K2, 100);
+    enc(PE_K3, 100);
     CHECK("SWING stops at 75", S.swing == SWING_MAX);
     enc(PE_SELECT, 1);
-    enc(PE_K2, -1);
+    enc(PE_K3, -1);
     CHECK("METER: beats in a bar, 3 for a waltz", S.beats_per_bar == 3);
     enc(PE_SELECT, 1);
-    enc(PE_K2, -1);
+    enc(PE_K3, -1);
     CHECK("STEP: steps a beat, 3 for triplets", S.steps_per_beat == 3);
     enc(PE_SELECT, 1);
-    enc(PE_K2, 100);
+    enc(PE_K3, 100);
     CHECK("TICKS stops at its most", S.ticks_per_step == TICKS_MAX);
     enc(PE_SELECT, 1);
-    enc(PE_K2, -100);
+    enc(PE_K3, -100);
     CHECK("TRACKS stops at one", S.num_tracks == 1);
     enc(PE_ALGO, -1);
     CHECK("ALGO to the left takes the last setting back", S.num_tracks == 8);
@@ -73,21 +73,21 @@ int main(void)
     enc(PE_SELECT, -10);       /* NAME */
     press(PB_SEL);
     enc(PE_K1, 4);
-    enc(PE_K2, 2);             /* space -> A -> B */
+    enc(PE_K3, 2);             /* space -> A -> B */
     CHECK("GLO leaves the name as it was", press(PB_GLO) && !strcmp(app_name, "KIDS"));
     press(PB_SEL);
     enc(PE_K1, 4);
-    enc(PE_K2, 2);
+    enc(PE_K3, 2);
     press(PB_SEL);
     CHECK("SEL keeps it", !strcmp(app_name, "KIDSB"));
     press(PB_SEL);
     enc(PE_K1, 6);
-    enc(PE_K2, 1);             /* an A two places past the end: the gap becomes spaces */
+    enc(PE_K3, 1);             /* an A two places past the end: the gap becomes spaces */
     press(PB_SEL);
     CHECK("a letter past the end pulls spaces in", !strcmp(app_name, "KIDSB A"));
     press(PB_SEL);
     enc(PE_K1, 6);
-    enc(PE_K2, -1);            /* the A back to a space: trailing spaces are not kept */
+    enc(PE_K3, -1);            /* the A back to a space: trailing spaces are not kept */
     press(PB_SEL);
     CHECK("the spaces at the end are not kept", !strcmp(app_name, "KIDSB"));
 
