@@ -1735,6 +1735,20 @@ another step the other, a third forgets it (`loop_press`). The same
 cyan rule and LOOP 02-05 in the corner as PATTERN. PATTERN does the same
 with OP6 when no selection is anchored; with one, OP6 loops it.
 
+## 2026-10-29 — SYSTEM, and a version
+
+A SYSTEM row on HOME's root (his ask, with the samples to come in mind):
+what is FREE of the flash the songs share, the SONGS (how many, how much),
+SAMPLES (-- until the bank exists), a bar of it all (songs cyan, free
+green, the dark between them the files' headers and what unfinished
+saves left), the FIRMWARE's version and the CPU's worst block since the
+start. Read once when the page opens. The version is `app/version.h`,
+MOONDAW_VERSION "0.1" (it said "dev"); the identity stays FM-1_900.
+
+The flash is one pool, nothing set aside: samples will take room from
+the songs and give it back; the store's 31 song slots are the other
+limit, the sample bank to be one file of them.
+
 ## Open
 
 - The voice (VOX): the screens that do not know it sounds (above);

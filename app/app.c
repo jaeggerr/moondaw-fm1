@@ -21,6 +21,7 @@
 #include "gfx.h"
 #include "help.h"
 #include "settings.h"
+#include "system.h"
 #include "ui.h"
 #include "instrument.h"
 #include "menu.h"
@@ -49,7 +50,7 @@ int app_cpu, app_block, app_worst;
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
 static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS,
-              AT_HELP } screen;
+              AT_HELP, AT_SYSTEM } screen;
 /* The help of where one was: the topic of the last screen worked on, PATTERN's
  * SYLLABLE included -- HELP opens on it. */
 static int help_topic = HELP_GESTURES;
@@ -61,7 +62,7 @@ void app_mark_dirty(void) { app_dirty = true; }
 const char *app_screen(void)
 {
     static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
-                                        "CANVAS", "SETTINGS", "HELP" };
+                                        "CANVAS", "SETTINGS", "HELP", "SYSTEM" };
     return name[screen];
 }
 
@@ -393,6 +394,11 @@ void app_frame(const PlatInput *real)
     if (screen == AT_CANVAS) {
         if (!canvas_frame(in))
             leave_canvas();
+    } else if (screen == AT_SYSTEM) {
+        if (!system_frame(in)) {
+            screen = AT_MENU;
+            menu_open(MENU_SYSTEM);
+        }
     } else if (screen == AT_HELP) {
         if (!help_frame(in)) {
             screen = AT_MENU;
@@ -533,6 +539,10 @@ void app_frame(const PlatInput *real)
             screen = AT_SETTINGS;
             settings_open();
             break;
+        case MENU_TO_SYSTEM:
+            screen = AT_SYSTEM;
+            system_open();
+            break;
         case MENU_TO_HELP:
             screen = AT_HELP;
             help_open(help_topic);
@@ -552,7 +562,7 @@ void app_frame(const PlatInput *real)
     }
     if (screen == AT_MENU)
         ui_led_guide(menu_in_list() ? 1u << PB_EDIT : 0u); /* PROJECTS: EDIT, a project's panel */
-    if (screen == AT_CANVAS || screen == AT_HELP)
+    if (screen == AT_CANVAS || screen == AT_HELP || screen == AT_SYSTEM)
         ui_led_guide(0); /* the canvas: the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_state(PB_REC, false); /* REC is PATTERN's */

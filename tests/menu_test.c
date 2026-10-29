@@ -168,9 +168,17 @@ int main(void)
         CHECK("and SONG 01 opens again", !strcmp(app_name, "SONG 01") && app_slot >= 0);
     }
 
-    home();                   /* HELP, from the root: and back */
+    home();                   /* SYSTEM, from the root: and back */
     sel(-10);
     sel(3);
+    press(PB_SEL);
+    CHECK("SYSTEM opens from the root", !strcmp(app_screen(), "SYSTEM"));
+    press(PB_HOME);
+    CHECK("and HOME goes back to the root", !strcmp(app_screen(), "HOME"));
+
+    home();                   /* HELP, from the root: and back */
+    sel(-10);
+    sel(4);                   /* CONTINUE PROJECTS SETTINGS SYSTEM HELP */
     press(PB_SEL);
     CHECK("HELP opens from the root", !strcmp(app_screen(), "HELP"));
     press(PB_SEL);            /* a page */

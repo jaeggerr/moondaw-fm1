@@ -24,9 +24,7 @@
  * at the bottom of both. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 
-#ifndef MOONDAW_VERSION
-#define MOONDAW_VERSION "dev"
-#endif
+#include "version.h"
 
 /* The rows, read once when the screen opens and after each change: a
  * frame is drawn fifteen times and must not go to the flash. A song in
@@ -50,7 +48,7 @@ static int opt_cur, opt_row;    /* opt_row: the project the panel is about */
 static char new_name[STORE_NAME + 1];
 static const char *opt_said;
 static int item;     /* the root's cursor */
-static const char *const item_word[MENU_ITEMS] = { "CONTINUE", "PROJECTS", "SETTINGS", "HELP" };
+static const char *const item_word[MENU_ITEMS] = { "CONTINUE", "PROJECTS", "SETTINGS", "SYSTEM", "HELP" };
 
 static bool before(const char *a, const char *b)
 {
@@ -416,6 +414,8 @@ int menu_frame(const PlatInput *in)
                 scroll_to(open_row >= 0 ? open_row : 0, true);
             } else if (item == MENU_SETTINGS)
                 to = MENU_TO_SETTINGS;
+            else if (item == MENU_SYSTEM)
+                to = MENU_TO_SYSTEM;
             else if (item == MENU_HELP)
                 to = MENU_TO_HELP;
         }
