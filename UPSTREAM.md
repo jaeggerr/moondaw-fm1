@@ -21,7 +21,7 @@ engines only the drum voices (below, "Felucca's DRUM").
 | `firmware/src/firmware.c` | `firmware/src/felucca.c`, `main.c`, `master.c` | rewritten around them: same boot order, TIMER5 interrupt, boot guard, UBOOT and update entries |
 | `tools/build.py`, `build.sh` | same | generated headers and the minsize pass removed, outputs renamed, one retry under Docker |
 | `tools/fm1pkg_make.py`, `lz4blk.py`, `fm1_install.py`, `get_toolchain.sh` | `tools/` | verbatim |
-| `web/installer/` | `web/fm1pkg.js`, `fm1ota.js`, `index_pkg.html`, `make_site.py` | verbatim, **not yet adapted or run** |
+| `web/installer/` | `web/fm1pkg.js`, `fm1ota.js`, `index_pkg.html`, `make_site.py` | adapted to MOONDAW (the page rewritten as `index.html`, `fm1ota.js` step for step as `fm1_install.py`, a song backup in `mdlink.js`); not yet run on a device |
 | `platform/web/` | — | new code; the design (everything in the AudioWorklet, audio as the device clock) follows `web/emu/felucca_web.c` and `worklet.js` |
 | `LICENSE`, `LICENSES/`, `docs/FELUCCA-LICENSING.md` | `LICENSE`, `LICENSES/`, `LICENSING.md` | verbatim |
 
