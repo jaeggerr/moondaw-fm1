@@ -15,7 +15,8 @@
  *
  *   NOTES  the four notes of a chord          KNOB 2 a semitone, under the lowest OFF then empty
  *   FX     the three effects                  KNOB 2 the value, KNOB 3 the effect
- *   INS    the instrument, by name; grey where the step keeps the one in force
+ *   INS    the instrument the step names, or --, then the name of the one that plays:
+ *          white where the step names it, grey where it keeps the one in force (29/10)
  *
  *   SELECT  the step     KNOB 1  the column; left of the first, the step's number (KNOB 2 the
  *                        block's length)
@@ -138,23 +139,19 @@ static void draw_cell(int v, int r, int c, bool band)
         tw = gfx_text_w(F_COND20, fx_name(f.cmd)) + 4 + gfx_text_w(F_COND20, grid_hex2(s, f.val));
         tx = gfx_text(F_COND20, x + (w - tw) / 2, grid_base(v), fx_name(f.cmd), grid_ink(band, on, C_FX));
         gfx_text(F_COND20, tx + 4, grid_base(v), s, grid_ink(band, on, C_TEXT));
-    } else { /* the instrument in force, by name: white where this step names it */
+    } else { /* the instrument the step names, or --; then the name of the one that plays:
+              * white where the step names it, grey where it keeps the one in force */
         bool named = st->instrument != INSTR_NONE, sounds = false;
         int k = edit_instr_at(song, track, pat, r), tx;
-        uint16_t ink;
         for (int i = 0; i < STEP_MAX_NOTES; i++)
             sounds |= st->notes[i] <= NOTE_MAX;
-        if (!named && !sounds) {
-            if (on)
-                grid_hollow(v, x, w);
-            gfx_text(F_COND20, x + 10, grid_base(v), "--", grid_ink(band, on, C_DIM));
-            return;
-        }
         if (on)
             grid_hollow(v, x, w);
-        ink = grid_ink(band, on, named ? C_TEXT : C_DIM);
-        tx = gfx_text(F_COND20, x + 10, grid_base(v), grid_hex2(s, k), ink);
-        gfx_text(F_COND20, tx + 10, grid_base(v), song->instruments[k % SONG_MAX_INSTR].name, ink);
+        tx = gfx_text(F_COND20, x + 10, grid_base(v), named ? grid_hex2(s, k) : "--",
+                      grid_ink(band, on, named ? C_TEXT : C_DIM));
+        if (named || sounds)
+            gfx_text(F_COND20, x + 42 > tx + 10 ? x + 42 : tx + 10, grid_base(v),
+                     song->instruments[k % SONG_MAX_INSTR].name, grid_ink(band, on, named ? C_TEXT : C_DIM));
     }
 }
 

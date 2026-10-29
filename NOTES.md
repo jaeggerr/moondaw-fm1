@@ -1327,6 +1327,18 @@ is the mixer everywhere but PATTERN). It goes to the MIXER now, and EDIT
 on the MIXER to PROJECT. The two are a pair across: GLO from either goes
 back to the screen that opened the first, never to the other one.
 
+## 2026-10-29 — PATTERN's INS: what is written, and what plays
+
+Jaeger read the INS view's grey names as "the instrument written on every
+step" -- it was the one in force, a shade apart from a written one, which
+the panel does not show. Writing a note never wrote an instrument; a step
+without one keeps the one above. Now the shape says it (his idea, against
+mine of -- everywhere and the one in force in the head; prototype
+`tools/protos/ins_column.py`): on the left the number the step names, or
+--; on the right the name of the instrument that plays, white where the
+step names it, grey where it keeps the one in force. A step with no note
+shows -- alone.
+
 ## Open
 
 - The voice (VOX): writing syllables on the device, and the screens
