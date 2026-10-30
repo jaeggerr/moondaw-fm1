@@ -11,7 +11,8 @@
 #include "ui.h"
 #include "version.h"
 
-enum { LABEL_X = 14, VALUE_X = 112, BAR_Y = 112, BAR_H = 12 };
+enum { LABEL_X = 14, VALUE_X = 112, RIGHT_X = PLAT_W - LABEL_X, BAR_Y = 112, BAR_H = 12 };
+#define NO_COUNT (-1)
 
 /* Read once when the screen opens: a frame is drawn fifteen times, and
  * must not go to the flash. */
@@ -49,16 +50,19 @@ static void row(int y, const char *label, const char *value, uint16_t ink)
     gfx_text(F_COND20, VALUE_X, y, value, ink);
 }
 
-/* "3 / 103 KB" */
-static void count_kb(char *s, int n, uint32_t bytes)
+/* "SONGS    12      91 KB": the count in its own column, the size ending
+ * on the right edge, so FREE's, SONGS' and SAMPLES' sizes line up and
+ * can be read against one another. It was "12 / 91 KB" until 30/10 and
+ * he read it as 12 KB out of 91 -- a slash promises a ratio, and this
+ * screen has a real one right below in the bar. Nothing stands between
+ * the two numbers now. NO_COUNT for FREE, which is a size alone. */
+static void size_row(int y, const char *label, int n, const char *value, uint16_t ink)
 {
-    char t[12], *p = ui_dec(s, n);
-    while (*p)
-        p++;
-    p[0] = ' ', p[1] = '/', p[2] = ' ', p[3] = 0;
-    kb(t, bytes);
-    for (int i = 0; t[i]; i++)
-        p[3 + i] = t[i], p[4 + i] = 0;
+    char t[12];
+    gfx_text(F_COND20, LABEL_X, y, label, C_DIM);
+    if (n != NO_COUNT)
+        gfx_text(F_COND20, VALUE_X, y, ui_dec(t, n), ink);
+    gfx_text(F_COND20, RIGHT_X - gfx_text_w(F_COND20, value), y, value, ink);
 }
 
 static void draw(void)
@@ -72,12 +76,15 @@ static void draw(void)
     grid_clear();
     grid_corner("SYSTEM", C_DIM, 0, 0);
     kb(s, avail);
-    row(44, "FREE", s, C_TEXT);
-    count_kb(s, songs, used);
-    row(72, "SONGS", s, C_TEXT);
-    if (bank)
-        count_kb(s, samples, bank);
-    row(100, "SAMPLES", bank ? s : "--", bank ? C_TEXT : C_DIM);
+    size_row(44, "FREE", NO_COUNT, s, C_TEXT);
+    kb(s, used);
+    size_row(72, "SONGS", songs, s, C_TEXT);
+    if (bank) {
+        kb(s, bank);
+        size_row(100, "SAMPLES", samples, s, C_TEXT);
+    } else {
+        size_row(100, "SAMPLES", NO_COUNT, "--", C_DIM);
+    }
     /* the flash at a glance: songs, the sample bank after them, then what
      * is free; the rest of it is the files' own headers and what an
      * unfinished save left */

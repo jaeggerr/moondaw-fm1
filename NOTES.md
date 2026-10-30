@@ -2311,16 +2311,30 @@ the Mac -- `tests/fm_render.c` never had a bank, so every SMPL track in
   computer before it is sent. `begin`, `loop` and `ping` ride in the
   file and are not played.
 
-## 2026-10-30 — the piano sounded like a Casio, and it was the zones
+## 2026-10-30 — the piano's zones: what was measured, and what was not
 
 His words after the first listen: the kalimba really good, the piano "a
-bit less pro, like a small Casio, a cheap one for children". He was
-hearing something real. The demo gave the piano three zones where
-moondaw gives it nine, so a note could be played from a sample a whole
+bit less pro, like a small Casio, a cheap one for children" -- and, in
+the same breath, "it's nice, it isn't bothering me, honestly it's cool".
+He was describing a timbre, not reporting a fault. I read a complaint
+into it and offered a repair; he said to try it. **Said plainly so the
+record is right: he never asked for this, and afterwards he could not
+tell whether it was better, nor can I.**
+
+What is true is that the demo gave the piano three zones where moondaw
+gives it nine, so a note could be played from a sample a whole
 **tritone** away -- the F# of the fourth bar was a C stretched down six
 semitones. Transposing a piano that far moves its whole attack spectrum
-in one block: the pitch stays right and the timbre does not, which is
-exactly the economy a cheap keyboard makes.
+in one block: the pitch stays right and the timbre does not. That is a
+real artefact of resampling and the reason for the five zones.
+
+**But the measurement below proves a change, not an improvement**, and I
+presented the two as one thing when I first wrote this up. "The
+difference is as loud as the signal" says the output moved a lot. There
+is no number here for better, and for a piano under drums and bass, at
+-10 dBFS, already through 4-bit ADPCM, the predicted gain may simply not
+survive to the speaker. Worth remembering the next time a figure is
+reached for to back a judgement of sound.
 
 - **Five zones now** (`pf_gb3`, `pf_gb4` added, moondaw's own spacing):
   no note of the song is more than three semitones from its sample. The
@@ -2339,6 +2353,34 @@ exactly the economy a cheap keyboard makes.
   ADPCM encodes cleanly; the piano is the worst case for both limits.
   Longer samples and loops would buy more than CHOOSE SAMPLE would, and
   zone spacing is worth a screen of its own before either.
+
+## 2026-10-30 — the SYSTEM line read as a ratio
+
+His, from the panel: SAMPLES said `20 / 159 KB` and he read it as 20 KB
+used out of 159 available. SONGS had it worse -- `12 / 91 KB`, where both
+numbers are plausible as sizes. The slash promises a ratio, and this
+screen has a real one right below it in the bar, so the eye arrives
+expecting one.
+
+- **Shown on the panel before choosing**, four ways at once on a canvas
+  driven from the computer (`fm1_ctl.py canvas`, a throwaway script):
+  today's slash, A three columns with no sign, B a comma, C the count
+  folded into the label (`20 SAMPLES   159 KB`). Each screen carried his
+  real figures and, under them, the worst the format allows -- 31 songs,
+  128 samples, 291 KB -- which is the only place the line can crowd. He
+  flipped with SEL and **chose A**; I had come round to C while drawing
+  them, and said so, and he took A anyway. His screen.
+- **A, as built** (`app/system.c`): `row` stays for FIRMWARE and CPU MAX;
+  `size_row` takes a count (NO_COUNT for FREE) at VALUE_X and puts the
+  size against the right edge with `gfx_text_w`, so FREE's, SONGS' and
+  SAMPLES' sizes line up under one another and can be read against each
+  other -- which the old layout did not allow either. `count_kb` is gone.
+- **The canvas is ASCII only** (`Canvas.text` encodes with `replace`), so
+  the middle dot I had suggested in chat is not available: B was a comma.
+- **Checked** in the simulator filled to look like his machine (20
+  samples 159 KB, 11 songs 85 KB) rather than on the device, the panel
+  having already served for the choice; `menu_test` and the sim selftest
+  pass.
 
 ## Open
 
