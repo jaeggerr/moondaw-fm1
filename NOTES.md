@@ -2047,6 +2047,39 @@ on 01: the first render brings the playhead to 00, and 2.9 s later (past
 the 16 steps of that phrase) it is still there instead of having moved on.
 Checked by hand that the test fails with the player's hook taken out.
 
+## 2026-10-30 — SONG on the panel, driven from the computer
+
+Installed on the FM-1 (`./build.sh`, then `fm1_install.py`: 610 257 B,
+FM-1_900) and tried on the device itself with `fm1_ctl.py`, on an empty
+song made in memory -- nothing of his was opened, nothing written to the
+flash, and SONG 01 was put back from it at the end. What the panel shows,
+screen by screen:
+
+- The new block: KNOB 3 one notch past the last gives it, NEW stands in
+  the corner in amber, and the cell under the cursor keeps the cursor's
+  green -- which is why the corner carries the word, as drawn.
+- The ear: on a block that holds notes the phrase starts by itself, the
+  track soloed (the other track's number goes dim, the play mark comes up
+  at the left). On the fresh blank block nothing starts, as it should.
+- PLAY ends the audition, the PLAY after it plays the song. With the song
+  running, turning KNOB 3 changed the cell and did not interrupt it: the
+  step went on counting and no track was soloed. That was the rule to get
+  right, and it holds on the machine.
+- The SELECTION: rows 00-02 by tracks 1-2 in C_SEL, the cursor row keeping
+  its green outside the selected columns and the cursor's own cell hollowed
+  with a white frame. It reads at a glance.
+- OP6 and the loop: the phrase numbers turn cyan, the rule runs down the
+  left edge, LOOP 00-02 sits in the corner, and the song played 02 -> 00
+  -> 01 (never 03). The phrases go round on the device.
+
+One nit, and it is PATTERN's too: the word OP6 says for a moment, "LOOP",
+comes out red -- `grid_said_ink` gives C_MUTE to anything it does not know,
+and red means muted everywhere else. The LOOP 00-02 that follows is cyan.
+
+Not judged here: the sound itself, the 200 ms before the ear takes a block
+(SETTLE), and whether C_FX is the right amber for an empty block. His call,
+on the panel.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
