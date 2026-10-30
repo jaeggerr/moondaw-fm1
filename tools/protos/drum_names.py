@@ -148,8 +148,11 @@ def draw_grid(c, st, lane, full, bars):
         pitch, cw, x0, gap = 5, 4, 52, 3
     at = lambda s: x0 + (s // 4) * (4 * pitch + gap) + (s % 4) * pitch
 
+    # The view's name is short on purpose: the panel showed "DRUM 1 BAR"
+    # starting at x 174 and the fourth beat's number sitting at 184, under it.
+    # The left corner already carries the variant's letter.
     corner(c, "01  %s" % ("B" if bars == 1 else "C"),
-           "FULL" if full else ("DRUM 1 BAR" if bars == 1 else "DRUM 2 BARS"),
+           "FULL" if full else ("1 BAR" if bars == 1 else "2 BARS"),
            "red" if full else "white")
     for s in range(n):
         if s % 4:
