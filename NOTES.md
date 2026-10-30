@@ -2311,6 +2311,35 @@ the Mac -- `tests/fm_render.c` never had a bank, so every SMPL track in
   computer before it is sent. `begin`, `loop` and `ping` ride in the
   file and are not played.
 
+## 2026-10-30 — the piano sounded like a Casio, and it was the zones
+
+His words after the first listen: the kalimba really good, the piano "a
+bit less pro, like a small Casio, a cheap one for children". He was
+hearing something real. The demo gave the piano three zones where
+moondaw gives it nine, so a note could be played from a sample a whole
+**tritone** away -- the F# of the fourth bar was a C stretched down six
+semitones. Transposing a piano that far moves its whole attack spectrum
+in one block: the pitch stays right and the timbre does not, which is
+exactly the economy a cheap keyboard makes.
+
+- **Five zones now** (`pf_gb3`, `pf_gb4` added, moondaw's own spacing):
+  no note of the song is more than three semitones from its sample. The
+  piano track alone differs from the old render by as much as the signal
+  itself (difference RMS 1069 against 1047), so this is a different
+  sound and not a tweak; its RMS fell 1.2 dB, the upward shifts having
+  been what pushed energy up. Bank 104 -> 126 KB, 26 -> 32 sectors.
+- **On the FM-1**: 20 samples, 14.3 s, **12 KB free** -- the ceiling is
+  in sight, and `tr9_crash` and `tr9_rim` (12 KB) are the only samples
+  no song on the device plays. CPU unchanged, 23 to 39 % on the intro:
+  zones cost nothing, a voice is a voice.
+- **The marimba has the same flaw**, two zones and up to five semitones,
+  and he has not complained about it. `marimba_gb4` is 11 KB if he does.
+- **What this says about stage 2**: the pleasant sounds here (kalimba,
+  marimba) are short plucked ones that fit in a second and that 4-bit
+  ADPCM encodes cleanly; the piano is the worst case for both limits.
+  Longer samples and loops would buy more than CHOOSE SAMPLE would, and
+  zone spacing is worth a screen of its own before either.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

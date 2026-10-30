@@ -2,7 +2,7 @@
 # SMPL-DEMO: five sampled instruments in one song, to hear the sampler.
 # Every track is SMPL and nothing else: a 909 kit (kick, snare, hat,
 # clap), a Precision bass, the Iowa piano, a marimba and a kalimba --
-# twelve samples of the bank, 104 KB. The bank it wants, and how to
+# fourteen samples of the bank, 126 KB. The bank it wants, and how to
 # hear it here or on the device: docs/sampler-demo/README.md.
 #
 # Every sample is cut to one second and normalised to -1 dBFS by the
@@ -28,6 +28,8 @@ smp 08 piano9/pf_c5.wav
 smp 09 marimba/marimba_c4.wav
 smp 0A marimba/marimba_c5.wav
 smp 0B kalimba/kalimba_c5.wav
+smp 0C piano9/pf_gb3.wav
+smp 0D piano9/pf_gb4.wav
 
 inst 00 engine SMPL timbre 0 adsr 0 0 255 12 gain 4 name KICK909
 zone 00 C-0 G-9 root C-4 smp 00
@@ -41,9 +43,11 @@ inst 04 engine SMPL timbre 0 adsr 0 0 255 20 gain 2 filter 190 0 64 name PBASS
 zone 04 C-0 B-2 root E-2 smp 04 tune 3
 zone 04 C-3 G-9 root E-3 smp 05 tune -4
 inst 05 engine SMPL timbre 0 adsr 0 179 0 45 gain 0 name PIANO9
-zone 05 C-0 F-3 root C-3 smp 06
-zone 05 F#3 F-4 root C-4 smp 07
-zone 05 F#4 G-9 root C-5 smp 08
+zone 05 C-0 D#3 root C-3 smp 06
+zone 05 E-3 A-3 root F#3 smp 0C
+zone 05 A#3 D#4 root C-4 smp 07
+zone 05 E-4 A-4 root F#4 smp 0D
+zone 05 A#4 G-9 root C-5 smp 08
 inst 06 engine SMPL timbre 0 adsr 0 0 255 45 gain 0 name MARIMBA
 zone 06 C-0 F-4 root C-4 smp 09
 zone 06 F#4 G-9 root C-5 smp 0A
