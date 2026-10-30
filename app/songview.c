@@ -483,9 +483,12 @@ static void ch_close(bool take)
 static void ch_frame(const PlatInput *in, uint32_t btns)
 {
 #define PRESSED(b) ((btns >> (b)) & 1u)
-    ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1]; /* as every list: SELECT, KNOB 1 */
+    /* PRESETS walks it too, and exactly as the others do, the ear included:
+     * what opens a list keeps driving it, or the hand is made to change
+     * knob for nothing (30/10). SELECT and KNOB 1 stay what they were. */
+    ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1] + in->enc[PE_PRESET];
     grid_follow(&ch_cur, &ch_top, ch_rows(), CH_ROWS);
-    if (in->enc[PE_SELECT] || in->enc[PE_K1])
+    if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_PRESET])
         settle = SETTLE;
     if (PRESSED(PB_PLAY)) {
         listening = !listening;
@@ -744,6 +747,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         if (trying)
             player_note_off(), trying = false;
         ch_open();
+        gfx_frame(ch_draw); /* the detent that opened it does not also walk it */
+        return SONGVIEW_STAY;
     }
     if (choosing) {
         ch_frame(in, btns);

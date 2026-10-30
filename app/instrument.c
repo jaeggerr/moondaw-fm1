@@ -683,6 +683,13 @@ int instrument_frame(const PlatInput *in)
 
     grid_follow(&row, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, previewing);
+    /* A kit in front: the keys that are its drums are lit and the rest are
+     * dark, as PATTERN's are (30/10). This is where a kit is auditioned, so
+     * it is where the question is asked first -- the lit keys are the kit.
+     * Eight of them, or eleven for the two kits that name their congas
+     * apart: never the whole keyboard, whose other keys are the same drums
+     * retuned and say nothing new. 0 on any other engine: all of it plays. */
+    ui_led_keys(edit_key_drums(&app_song, inst), 0, 0);
     ui_led_guide(1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP); /* the PROJECT, the keys' octave */
     gfx_frame(draw);
     if (PRESSED(PB_HOME) || PRESSED(PB_GLO)) {

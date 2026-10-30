@@ -3037,3 +3037,32 @@ Both from him, on the panel, within the hour of the last entry.
   the other knobs did nothing, under a line that promised they would.
   "quand tu dis anything else ça doit être anything else non?" -- it does
   now. A screen that states a rule has to keep it.
+
+## 2026-10-30 — five more from the panel, in one sitting
+
+All five his, found by using the machine rather than by reading it.
+
+- **FX before the instrument column** on the KNOB 2 strip. "on change plus
+  souvent les FX que l'instrument", so the order follows how often the hand
+  goes there and the rare one sits at the far end. `strip_order` and the
+  marker's `view_next` are the whole change; the strip's own code did not
+  move, which is what making the cursor the only truth bought us.
+- **PRESETS keeps driving the list it opened**, in CHOOSE PATTERN and in
+  CHOOSE INSTRUMENT, exactly as SELECT and KNOB 1 do, ear included. What
+  opens a thing should keep driving it, or the hand is made to change knob
+  for nothing. The detent that opens the list no longer walks it as well --
+  SONG returned early for that; PATTERN already ran its list before the
+  opener, so it needed nothing.
+- **A kit's keys are lit on INSTRUMENT too**, as they are in PATTERN:
+  `edit_key_drums` was already there and `ui_led_keys` only had to stop
+  being cleared for that screen in `app.c`. This is where a kit is
+  auditioned, so it is where the question is asked first.
+- **DELETE is red in PROJECTS' EDIT panel** wherever the cursor is, not
+  only under it: the one row of that panel that does not come back.
+- **The namer is KNOB 1 and KNOB 2**: the letter, then what it is. They sat
+  a knob further along to keep SELECT and KNOB 1 the cursor as every list
+  has them -- "je sais la logique que tu as implémentée [...] mais ce n'est
+  pas intuitif car KNOB 1 ne fait rien, tout est décalé". On a row of
+  letters the first knob is the one the hand reaches for. Three test files
+  drove the old knobs; one of them, PROJECT's "HOME leaves the name as it
+  was", would have passed by typing nothing at all.

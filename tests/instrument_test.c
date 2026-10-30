@@ -164,8 +164,8 @@ int main(void)
     /* the name */
     enc(PE_SELECT, -20);
     press(PB_SEL);
-    enc(PE_K2, 6);
-    enc(PE_K3, 2);            /* a B after CHORDS */
+    enc(PE_K1, 6);            /* KNOB 1 the letter, KNOB 2 changes it (30/10) */
+    enc(PE_K2, 2);            /* a B after CHORDS */
     press(PB_SEL);
     CHECK("SEL on NAME types it; seven letters at most", !strcmp(I3.name, "CHORDSB"));
 

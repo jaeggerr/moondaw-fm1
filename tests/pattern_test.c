@@ -294,58 +294,58 @@ int main(void)
     }
     press(PB_SEQ);
 
-    /* KNOB 2 through the whole step, across the views (30/10): the four
-     * notes, the instrument, the three effects, and round to the notes
-     * again. Where the cursor stands is read back from what the knobs and
-     * the keys do there -- a key writes in its own note slot, KNOB 3 names
-     * the instrument and the effect, and on a step's number KNOB 3 is
-     * the block's length. Going right the numbers are stepped over, going
-     * left they are walked into, one group at a time. */
+    /* KNOB 2 through the whole step, across the views: the four notes, the
+     * three effects, the instrument, and round to the notes again -- the
+     * effects before the column since 30/10, the hand going there far more
+     * often. Where the cursor stands is read back from what the knobs and
+     * the keys do there: a key writes in its own note slot, KNOB 3 names the
+     * effect and the instrument, and on a step's number KNOB 3 is the
+     * block's length. Going right the numbers are stepped over, going left
+     * they are walked into, one group at a time. */
     {
         int len0 = pat_len_of();
         enc(PE_K1, 8);            /* row 10, clear of the rows the rest of this test works on */
-        enc(PE_K2, 3);            /* the fourth note, with a note in it to find later */
+        enc(PE_K2, -100);         /* the far left: the first number, where the knob stops */
+        enc(PE_K2, 4);            /* the fourth note, with a note in it to find later */
         keys(1u << 16);
         keys(0);
         enc(PE_K2, 1);
-        enc(PE_K3, 3);
-        CHECK("right from the fourth note: the instrument column, not the step's number",
-              st(10)->instrument == 2 && pat_len_of() == len0);
-        enc(PE_K2, 1);
         enc(PE_K3, 1);
-        CHECK("right from the instrument: the first effect, not the step's number",
+        CHECK("right from the fourth note: the first effect, not the step's number",
               st(10)->fx[0].cmd != FX_NONE && pat_len_of() == len0);
-        enc(PE_K2, 2);            /* the third effect, the far end of the strip */
+        enc(PE_K2, 2);            /* on to the third effect */
         enc(PE_K3, 1);
         CHECK("and on to the third effect", st(10)->fx[2].cmd != FX_NONE);
         enc(PE_K2, 1);
+        enc(PE_K3, 3);
+        CHECK("right from the last effect: the instrument column, not the step's number",
+              st(10)->instrument == 2 && pat_len_of() == len0);
+        enc(PE_K2, 1);
         keys(1u << 19);
         keys(0);
-        CHECK("past the last effect it comes round to the first note", st(10)->notes[0] == 72);
-        enc(PE_K2, 5);            /* the first effect again, the four notes and the instrument passed */
+        CHECK("past the instrument it comes round to the first note", st(10)->notes[0] == 72);
+        enc(PE_K2, 7);            /* the instrument again, the notes and the effects passed */
         enc(PE_K2, -1);
         enc(PE_K3, -1);
-        CHECK("left from the first effect: the step's number", pat_len_of() == len0 - 1);
+        CHECK("left from the instrument: that group's own number", pat_len_of() == len0 - 1);
         enc(PE_K2, -1);
         enc(PE_K3, -10);
-        CHECK("and only the turn after it crosses: the instrument column", st(10)->instrument == INSTR_NONE);
-        enc(PE_K2, -1);
+        CHECK("and only the turn after it crosses: the third effect", st(10)->fx[2].cmd == FX_NONE);
+        enc(PE_K2, -3);           /* the second effect, the first, then that group's number */
         enc(PE_K3, -1);
         CHECK("left again: that group's own number", pat_len_of() == len0 - 2);
         enc(PE_K2, -1);
         enc(PE_K3, -100);         /* a frame holds an int8_t of detents */
         enc(PE_K3, -100);
         CHECK("and across it, the fourth note, where the note was left", st(10)->notes[3] == NOTE_NONE);
-        /* the row and the block left as they were found. The two effects go
-         * the last one first: KNOB 3's list steps over what the row already
-         * holds, so the first one taken off would move the other's place in it. */
-        enc(PE_K2, -3);
+        /* the row and the block left as they were found */
+        enc(PE_K2, -3);           /* from the fourth note to the first */
         enc(PE_K3, -100);
         enc(PE_K3, -100);
-        enc(PE_K2, 7);            /* the third effect */
-        enc(PE_K3, -1);
-        enc(PE_K2, -2);           /* the first */
-        enc(PE_K3, -1);
+        enc(PE_K2, 4);            /* the first effect */
+        enc(PE_K3, -10);
+        enc(PE_K2, 3);            /* the second, the third, then the instrument */
+        enc(PE_K3, -10);
         CHECK("the row is left as it was found", step_is_empty(st(10)));
         enc(PE_K2, -1);           /* that group's number */
         enc(PE_K3, 2);
