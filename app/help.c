@@ -51,7 +51,8 @@ static const Item song_items[] = {
     { "OCT- OCT+", "the keyboard's octave" },
     { "FX", "the mixer" },
     { "GLO", "the project" },
-    { "PLAY", "the song" },
+    { "PLAY", "the song, from the cursor" },
+    { "  again", "stop, the cursor there" },
     { "ALGO", "undo left, redo right" },
     { "HOME", "back to the menu" },
 };

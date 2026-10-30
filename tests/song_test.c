@@ -184,6 +184,20 @@ int main(void)
     CHECK("and the song goes round them instead of running on", player_playing() && player_entry() == 0);
     press(PB_PLAY);
     pump();
+
+    /* STOP leaves the cursor on the phrase that was playing (30/10): the song
+     * runs from phrase 01 while the hand walks back to 00 */
+    loop_clear();             /* the loop set above would hold the song on phrase 00 */
+    enc(PE_K1, -20);          /* wherever the cursor was left: on phrase 00, then 01 */
+    enc(PE_K1, 1);
+    press(PB_PLAY);
+    pump();
+    CHECK("PLAY starts from the cursor's phrase", player_playing() && player_entry() == 1);
+    enc(PE_K1, -1);
+    CHECK("the cursor moves while it plays, the song is not followed", songview_entry() == 0);
+    press(PB_PLAY);
+    pump();
+    CHECK("STOP puts the cursor where the song stopped", !player_playing() && songview_entry() == 1);
     enc(PE_K1, -1);
 
     enc(PE_K2, -1);           /* the phrase's number */

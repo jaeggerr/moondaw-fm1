@@ -33,7 +33,8 @@
  *   keys    on a cell: play the track's instrument -- the first the block names --
  *           and write nothing; OCT- OCT+ the keyboard's octave (30/10)
  *   PLAY    the song from the cursor's phrase; with the hand still 1.5 s the view
- *           follows the phrase that plays, a page at a time (30/10)
+ *           follows the phrase that plays, a page at a time. PLAY again stops it
+ *           and leaves the cursor on the phrase it stopped in (30/10)
  *   FX      the MIXER      GLO   the PROJECT: what is GLObal (HOME goes home)
  *   ALGO    UNDO left, REDO right     SAVE  PLAY  as printed
  * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
@@ -597,10 +598,17 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         settle = 0;
         if (audition) /* the ear first: the song is what the next PLAY plays */
             audition_end();
-        else if (playing)
+        else if (playing) {
+            /* STOP leaves the cursor where the song stopped, not where it was
+             * when PLAY was pressed: the hand carries on from what it heard
+             * last, and the view is already there (30/10) */
+            int at = player_entry();
             player_stop();
-        else
+            if (at >= 0 && at < song->arrange_len)
+                row = at;
+        } else {
             player_play_song(row, false);
+        }
     }
     if (PRESSED(PB_FX))
         out = SONGVIEW_MIXER;

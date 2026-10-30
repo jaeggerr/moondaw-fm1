@@ -2099,6 +2099,20 @@ picture comes back a row at a time over SysEx, so a capture taken while
 the grid scrolls can hold two pages at once (numbers out of order). The
 screen itself is fine -- stop, or capture a screen that is not scrolling.
 
+## 2026-10-30 — STOP leaves the cursor where the song stopped
+
+His find, on SONG: the song plays, PLAY stops it, and the cursor is still
+where it was when PLAY was pressed -- at the top of the song, most of the
+time, because that is where one starts it. The hand then has to walk back
+to the passage it was just listening to. Now STOP puts the cursor on the
+phrase the song stopped in (`player_entry()` read before `player_stop()`).
+
+It goes with the autoscroll of this morning rather than against it: while
+it plays, the view follows and the cursor stays put; at the stop the
+cursor comes to where the view already is, and because a button press
+gives the view back to the cursor, nothing jumps. The audition is not
+concerned -- the block it plays is the one under the cursor already.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
