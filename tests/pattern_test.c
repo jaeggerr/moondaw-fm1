@@ -7,6 +7,7 @@
 
 #include "../app/pattern.h"
 #include "../app/loop.h"
+#include "../app/undo.h"
 #include "../app/ui.h"
 #include "../core/player.h"
 #include "../core/trk.h"
@@ -169,18 +170,127 @@ int main(void)
     CHECK("KNOB 3 on INS picks the instrument", st(2)->instrument == 2);
     enc(PE_K3, -10);
     CHECK("and under 00 there is none", st(2)->instrument == INSTR_NONE);
-    press(PB_SEL);            /* CHOOSE INSTRUMENT, on -- */
+    /* The ear on the column (30/10): the hand rests and the step sounds with
+     * the instrument it has just been given. Nothing else is playing here,
+     * so what the player renders is the audition and silence says there was
+     * none. */
+    {
+        static int16_t audio[1024 * 2];
+        bool quiet = true, heard = false;
+        player_note_off();
+        for (int i = 0; i < 40; i++)
+            player_render(audio, 1024);
+        for (int i = 0; i < 1024 * 2; i++)
+            quiet &= audio[i] == 0;
+        CHECK("nothing sounds before the knob is turned", quiet);
+        enc(PE_K3, 1);        /* instrument 00 on the step */
+        for (int i = 0; i < 20; i++)
+            go();             /* the hand rests: past SETTLE */
+        player_render(audio, 1024);
+        for (int i = 0; i < 1024 * 2; i++)
+            heard |= audio[i] != 0;
+        CHECK("KNOB 3 on INS is heard on the step", heard);
+        CHECK("and the knob still writes the instrument", st(2)->instrument == 0);
+        for (int i = 0; i < 80; i++) /* it rings for a while and stops by itself */
+            go(), player_render(audio, 1024);
+        quiet = true;
+        for (int i = 0; i < 1024 * 2; i++)
+            quiet &= audio[i] == 0;
+        CHECK("and nothing is left hanging", quiet);
+        enc(PE_K3, -10);
+        CHECK("under 00 there is none again", st(2)->instrument == INSTR_NONE);
+    }
+    { /* a step holding no note is still heard in its place, on the nearest
+       * note above or below it in the column */
+        static int16_t audio[1024 * 2];
+        bool heard = false;
+        enc(PE_K1, 9);
+        CHECK("the step further down holds no note", step_is_empty(st(11)));
+        player_note_off();
+        for (int i = 0; i < 40; i++)
+            player_render(audio, 1024);
+        enc(PE_K3, 1);
+        for (int i = 0; i < 20; i++)
+            go();
+        player_render(audio, 1024);
+        for (int i = 0; i < 1024 * 2; i++)
+            heard |= audio[i] != 0;
+        CHECK("and the nearest note in the column is what sounds", heard);
+        enc(PE_K3, -10);      /* the step names none again */
+        enc(PE_K1, -9);
+        for (int i = 0; i < 80; i++)
+            go(), player_render(audio, 1024);
+    }
+    /* CHOOSE INSTRUMENT is the PRESETS knob's now (30/10) */
+    enc(PE_PRESET, 1);        /* the list, on -- */
     enc(PE_K1, 2);
     press(PB_HOME);
     CHECK("HOME leaves the list and changes nothing", st(2)->instrument == INSTR_NONE);
-    press(PB_SEL);
+    enc(PE_PRESET, 1);
     enc(PE_K1, 2);
     press(PB_SEL);
     CHECK("SEL takes the instrument from the list", st(2)->instrument == 1);
-    press(PB_SEL);
+    enc(PE_PRESET, -1);       /* the knob either way opens it */
     enc(PE_K1, -2);
     press(PB_SEL);
     CHECK("and -- names none again", st(2)->instrument == INSTR_NONE);
+    { /* PLAY in the list is the instrument's own preview phrase, not the
+       * step's note: it sounds on a step that names none and holds none */
+        static int16_t audio[1024 * 2];
+        bool heard = false, quiet = true;
+        player_note_off();
+        for (int i = 0; i < 40; i++)
+            player_render(audio, 1024);
+        enc(PE_PRESET, 1);
+        enc(PE_K1, 1);        /* instrument 00 */
+        press(PB_PLAY);
+        for (int i = 0; i < 20; i++) {
+            in.ms += 16;
+            go();
+        }
+        player_render(audio, 1024);
+        for (int i = 0; i < 1024 * 2; i++)
+            heard |= audio[i] != 0;
+        CHECK("PLAY in the list plays the sound's own preview phrase", heard);
+        press(PB_PLAY);       /* and PLAY again hushes it */
+        for (int i = 0; i < 60; i++) {
+            in.ms += 16;
+            go(), player_render(audio, 1024);
+        }
+        for (int i = 0; i < 1024 * 2; i++)
+            quiet &= audio[i] == 0;
+        CHECK("PLAY again stops it", quiet);
+        press(PB_HOME);
+    }
+    { /* + NEW, the last row of the list: the first free slot, on the step,
+       * through the journal as the screen's other edits are */
+        undo_reset(&song);    /* the journal does nothing until it knows the song */
+        enc(PE_PRESET, 1);
+        enc(PE_K1, 100);      /* all the way down */
+        press(PB_SEL);
+        CHECK("+ NEW takes the first free slot and names the step", st(2)->instrument == 1);
+        CHECK("the slot it took is neutral and unnamed",
+              !song.instruments[1].name[0] && song.instruments[1].sustain == 255);
+        in.btns = 1u << PB_SEL;
+        CHECK("and the list is gone: SEL asks for that instrument's screen",
+              pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 1);
+        in.btns = 0;
+        pattern_resume();
+        go();
+        enc(PE_ALGO, -1);
+        CHECK("ALGO takes the new instrument back off the step", st(2)->instrument == INSTR_NONE);
+    }
+    { /* every slot named: the + NEW row says FULL, and takes nothing */
+        for (int i = 1; i < SONG_MAX_INSTR; i++)
+            song.instruments[i].name[0] = 'X', song.instruments[i].name[1] = 0;
+        enc(PE_PRESET, 1);
+        enc(PE_K1, 100);
+        press(PB_SEL);
+        CHECK("with no slot free + NEW takes nothing", st(2)->instrument == INSTR_NONE);
+        press(PB_HOME);
+        for (int i = 1; i < SONG_MAX_INSTR; i++)
+            song.instruments[i].name[0] = 0;
+    }
     press(PB_SEQ);
 
     /* SELECTION: EDIT in, SELECT stretches, the black keys OP1-4 */
@@ -334,6 +444,8 @@ int main(void)
     enc(PE_K2, 1);            /* a note column, so a key writes where the cursor is */
     enc(PE_K1, -20);
     enc(PE_K1, 5);            /* the cursor on row 5 */
+    player_stop();            /* at rest: the REC test's phrase is really stopped */
+    pump();
     press(PB_PLAY);
     pump();
     press(PB_PLAY);           /* stop, the playhead still on row 0 */

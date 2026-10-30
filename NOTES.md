@@ -2608,6 +2608,70 @@ three at once: "there are only three, I will learn them quickly".
   at the last column instead of wrapping into the next view. He raised
   that and left it undecided, to judge from use.
 
+## 2026-10-30 — picking an instrument by ear, in PATTERN's INS column
+
+His taste, and it had already won once that morning: in SONG the panel of
+blocks that stood between the hand and the ear is gone, "KNOB 3 chooses
+and the ear says which" (`app/songview.c`). The instrument column now
+works the same way, and the full-screen list it used to need is on a
+knob of its own.
+
+**KNOB 3 is heard.** It already walked the song's instruments; what was
+missing was the sound. The hand rests twelve frames (200 ms, SONG's own
+SETTLE) and the step under the cursor sounds with the instrument it has
+just been given, rings 400 ms and stops by itself -- the audition never
+outlives the gesture that asked for it. While the song plays nothing is
+struck at all: the transport is not fought, the music speaks.
+
+**What sounds is the step, not a note.** A step holds up to four notes
+and `player_note_on` has only ever carried one, so the audition track now
+takes a chord: `player_note_chord`, which strikes the step's notes
+together exactly as `trigger_step` does, through the same `voice_start`
+and one `chain_note_on`. A step that names no note of its own is still
+heard in its place, on the nearest note above or below it in the track's
+column -- above first, since an empty step carries on the note before it.
+An OFF is not a note, so the search goes past it; with no note anywhere
+in the block, nothing sounds.
+
+**SEL on the slot opens INSTRUMENT.** He found reaching it by pressing
+ENV twice counter-intuitive, and SEL was free the moment the list moved
+off it. **The ENV-twice way still works**: he has not asked for it to go,
+and taking it out is one line on the day he does.
+
+**The list is the PRESETS knob's.** Nothing else on this screen used
+PRESETS -- it walks from sound to sound in INSTRUMENT and turns SYLLABLE
+between its keys and its wheel, and in PATTERN it did nothing at all. A
+notch either way opens CHOOSE INSTRUMENT on the step.
+
+**PLAY in the list plays the sound's own preview phrase**, the one
+INSTRUMENT's PLAY plays: C E G C an octave up, a note every 250 ms, a
+rest, round and round, and a kit plays its drums instead. One note is too
+short to judge a sound by, which is the whole reason the list is still
+worth opening. Starting it stops the song, as INSTRUMENT's PLAY does.
+
+**+ NEW**, the last row, as INSTRUMENT's `+ LAY` is the last of its
+layers: it takes the first instrument slot no step of any block names and
+nobody has named, puts it back to neutral (`song_instr_init`, now shared
+with `song_init`), writes it on the step and leaves the list -- one SEL
+more and its INSTRUMENT screen is open. The row carries the number it
+would take, so he can see it before pressing; with all 64 gone it says
+FULL in red and SEL takes nothing, rather than failing silently. The
+whole thing goes through the journal: one ALGO notch takes the slot and
+the step back together. The wording and the shape went to the sibling
+session putting a list of blocks on SONG's own PRESETS knob, so that the
+two lists read as one idea.
+
+Left alone deliberately: the SELECTION and its ops, SEL on FX (the
+step's syllable), what the keys do, and the list's own `--` row with the
+marker that says what the step names now.
+
+One thing the testing turned up that is not about instruments:
+`pattern_test`'s STOP check used to pass because the player had never
+actually started -- the command queue (eight slots, main loop to audio)
+had overflowed long before and `CMD_PLAY_ENTRY` was dropped. The new
+audition tests render audio, which drains the queue, and the test now
+says out loud that the transport is at rest before it checks STOP.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

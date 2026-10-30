@@ -38,6 +38,23 @@ void song_copy(Song *dst, const Song *src)
         *b++ = *a++;
 }
 
+/* One instrument slot, neutral: the sustained pulse song_init puts
+ * everywhere. What a slot taken fresh starts from. */
+void song_instr_init(Song *s, int i)
+{
+    InstrumentDef *in;
+    if (i < 0 || i >= SONG_MAX_INSTR)
+        return;
+    in = &s->instruments[i];
+    zero(in, sizeof *in);
+    in->timbre = 2;
+    in->sustain = 255;
+    in->release = 10;
+    in->cutoff = FILTER_OPEN;
+    in->filt_env = FILTER_ENV_NONE;
+    in->filt_vel = FILTER_ENV_NONE;
+}
+
 void song_init(Song *s)
 {
     zero(s, sizeof(*s));
@@ -61,15 +78,8 @@ void song_init(Song *s)
     }
     /* A neutral sustained pulse everywhere. moondaw puts ten presets in
      * the first slots; they are not carried yet. */
-    for (int i = 0; i < SONG_MAX_INSTR; i++) {
-        InstrumentDef *in = &s->instruments[i];
-        in->timbre = 2;
-        in->sustain = 255;
-        in->release = 10;
-        in->cutoff = FILTER_OPEN;
-        in->filt_env = FILTER_ENV_NONE;
-        in->filt_vel = FILTER_ENV_NONE;
-    }
+    for (int i = 0; i < SONG_MAX_INSTR; i++)
+        song_instr_init(s, i);
     for (int i = 0; i < SONG_ARRANGE_LEN; i++) {
         SongEntry *e = &s->arrangement[i];
         for (int t = 0; t < SONG_MAX_TRACKS; t++) {
