@@ -46,6 +46,7 @@ Song app_song
 char app_name[STORE_NAME + 1] = "DEMO";
 int app_slot = -1;
 bool app_dirty;
+bool app_loaded;
 int app_cpu, app_block, app_worst;
 
 static TrkReport report;       /* what the last load could not carry */
@@ -128,6 +129,7 @@ static void adopt(int slot, bool dirty)
     undo_reset(&app_song); /* another song: nothing of the last one to take back */
     app_slot = slot;
     app_dirty = dirty;
+    app_loaded = true;
     ready = 1;
     if (screen == AT_MENU) {
         menu_reload();
@@ -135,6 +137,22 @@ static void adopt(int slot, bool dirty)
     }
     screen = AT_MENU;
     menu_open(MENU_CONTINUE);
+}
+
+/* HOME puts the song down (30/10): the root stands on nothing, so no
+ * unsaved work can be carried around unseen -- which is how a flash once
+ * took his. The name and the slot stay: they are what CONTINUE picks up. */
+void app_unload(void)
+{
+    player_stop();
+    player_note_off();
+    ready = 0;
+    loop_clear();
+    song_init(&app_song);
+    edit_clip_reset();
+    undo_reset(&app_song);
+    app_dirty = false;
+    app_loaded = false;
 }
 
 /* ------------------------------------------------------------ flash --- */
@@ -328,6 +346,32 @@ static void draw_receiving(void)
 }
 
 /* Back from MIXER or PROJECT to the screen that opened it, as it was left. */
+static int root_from = AT_SONG; /* where the question's "stay" sends the hand back */
+
+static void back_to(int from);
+
+/* The root, reached by HOME held or by stepping back out of SONG: the song
+ * is put down there. Changed, it is asked about first -- leaving is the one
+ * moment the question can still be answered (30/10). */
+static void go_root(void)
+{
+    player_note_off();
+    root_from = screen == AT_MENU ? AT_SONG : screen;
+    screen = AT_MENU;
+    loop_clear();
+    /* Changed, or never written at all -- a new song has no place in flash
+     * to be picked up from, so putting it down without a word would lose
+     * it outright. Both are "not saved" to the hand holding it. */
+    if (app_loaded && (app_dirty || app_slot < 0)) {
+        song_pool_compact(&app_song);
+        menu_open(MENU_CONTINUE);
+        menu_ask_home();
+    } else {
+        app_unload();
+        menu_open(MENU_CONTINUE);
+    }
+}
+
 static void back_to(int from)
 {
     screen = from;
@@ -379,18 +423,16 @@ void app_frame(const PlatInput *real)
          * GLO was "back" before: its label says global, not back. */
         static int held;
         held = in->btns >> PB_HOME & 1u ? held + 1 : 0;
-        if (held == HOME_HOLD) {
+        /* Not from the root itself: the question put up there is answered by
+         * a hold of its own, and this one would keep asking it again (30/10). */
+        if (held == HOME_HOLD && screen != AT_MENU) {
             if (screen == AT_SETTINGS)
                 settings_close();
             if (screen == AT_SONG)
                 songview_cancel(); /* a block being previewed goes back to what it was */
             if (screen == AT_CANVAS)
                 canvas_frame(in); /* its last frame: the hand's gestures stay collected */
-            player_note_off();
-            song_pool_compact(&app_song);
-            screen = AT_MENU;
-            loop_clear();
-            menu_open(MENU_CONTINUE);
+            go_root();
         }
     }
 
@@ -529,11 +571,7 @@ void app_frame(const PlatInput *real)
             phrase_open(entry, track);
             break;
         case SONGVIEW_BACK:
-            player_note_off();
-            song_pool_compact(&app_song);
-            screen = AT_MENU;
-            loop_clear();
-            menu_open(MENU_CONTINUE);
+            go_root();
             break;
         default:
             break;
@@ -555,6 +593,9 @@ void app_frame(const PlatInput *real)
         case MENU_TO_HELP:
             screen = AT_HELP;
             help_open(help_topic);
+            break;
+        case MENU_BACK: /* the question answered "stay": back into the song */
+            back_to(root_from);
             break;
         }
     }

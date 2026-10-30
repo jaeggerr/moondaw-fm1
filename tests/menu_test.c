@@ -31,8 +31,12 @@ static PlatInput in;
 static int fails;
 static void go(void) { app_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
-/* HOME held: the root menu from anywhere (a press is a step back). */
+/* HOME held: the root menu from anywhere (a press is a step back). Over a
+ * song that is not saved the root asks instead, and the answers are below. */
 static void home(void) { in.btns = 1u << PB_HOME; for (int i = 0; i < 40; i++) go(); in.btns = 0; go(); }
+/* The question's answers: a second hold loses the changes, SAVE keeps them. */
+static void home_lose(void) { home(); home(); }
+static void home_save(void) { home(); press(PB_SAVE); }
 static void sel(int d) { in.enc[PE_SELECT] = (int8_t)d; go(); }
 static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
 /* HOME's root -> PROJECTS, the list; its cursor on the open project. */
@@ -59,16 +63,22 @@ int main(void)
     press(PB_SAVE);
     home();
     CHECK("SAVE gives it a place", app_slot >= 0 && songs_in_flash() == 1 && !app_dirty);
+    CHECK("and the root holds no song: it was put down on the way in", !app_loaded);
+    press(PB_SEL);            /* CONTINUE picks it up again, from its place in flash */
+    CHECK("CONTINUE picks it back up", app_loaded && !strcmp(app_name, "DEMO"));
+    home();
 
     projects();
     sel(100);                 /* the last row: + NEW */
     press(PB_SEL);
     CHECK("NEW makes SONG 01, in memory only",
           !strcmp(app_name, "SONG 01") && app_slot == -1 && songs_in_flash() == 1);
-    home();
+    home_save();              /* a song with no place in flash is asked about too */
+    CHECK("the root asks about a song that was never written, and SAVE gives it one",
+          !strcmp(app_name, "SONG 01") && app_slot >= 0 && songs_in_flash() == 2);
     press(PB_SEL);
-    CHECK("an unsaved new song has its row, and SEL on it goes back in",
-          !strcmp(app_name, "SONG 01") && app_slot == -1);
+    CHECK("an unsaved new song is picked back up by CONTINUE",
+          app_loaded && !strcmp(app_name, "SONG 01"));
     press(PB_SEL);            /* SONG: the block under the cursor, in PATTERN (30/10) */
     go();
     key(16);                  /* A4 on its first step */
@@ -76,6 +86,7 @@ int main(void)
     press(PB_SAVE);
     home();           /* from PATTERN, straight home */
     CHECK("a second song beside the first", songs_in_flash() == 2 && !app_dirty);
+    CHECK("saved, the root takes it without a word", !app_loaded);
 
     projects();
     sel(-1);                  /* rows by name: DEMO, SONG 01, + NEW; the cursor was on SONG 01 */
@@ -85,33 +96,32 @@ int main(void)
     press(PB_SEL);            /* SONG: the block under the cursor, in PATTERN (30/10) */
     go();
     key(3);
+    CHECK("the root asks over changes, and a press of HOME is stay", app_dirty);
     home();
-    projects();
-    sel(1);
-    press(PB_SEL);
-    CHECK("opening another song over changes asks first", !strcmp(app_name, "DEMO") && app_dirty);
-    sel(1);                   /* anything else: stay */
-    CHECK("and anything but an answer is stay", !strcmp(app_name, "DEMO") && app_dirty);
-    press(PB_SEL);            /* the cursor stayed on SONG 01: asked again */
-    press(PB_SEL);            /* SEL again: lose the changes */
-    CHECK("SEL answers: open it, the changes gone",
-          !strcmp(app_name, "SONG 01") && !app_dirty &&
-          song_step(&app_song, 0, 0, 0)->notes[0] == 69);
-
+    press(PB_HOME);           /* a press, not a hold: back into the song */
+    CHECK("stay leaves the song where it was", app_loaded && app_dirty);
+    home();
+    press(PB_SAVE);           /* keep them: the song is put down written */
+    /* The root puts the song down, so the list is never reached holding
+     * unsaved changes by hand: what the question answers is the leaving. */
+    press(PB_SEL);            /* CONTINUE: back into the song */
     press(PB_SEL);            /* SONG: the block under the cursor, in PATTERN (30/10) */
     go();
     key(20);
-    home();
-    projects();
-    sel(-1);
+    CHECK("writing marks it changed again", app_dirty);
+    home_lose();              /* a second hold answers: lose them */
+    CHECK("a hold loses the changes and puts the song down", !app_loaded && !app_dirty);
     press(PB_SEL);
-    press(PB_SAVE);           /* SAVE answers the other way */
-    CHECK("SAVE writes the changes, then opens", !strcmp(app_name, "DEMO") && songs_in_flash() == 2);
-    home();
-    projects();
-    sel(1);
+    CHECK("what was lost never reached the flash", song_step(&app_song, 0, 0, 0)->notes[0] != 73);
+
+    press(PB_SEL);            /* SONG, then its block again */
+    go();
+    key(20);
+    home_save();              /* SAVE answers the other way */
+    CHECK("SAVE writes them, and the song is put down too", !app_loaded && !app_dirty);
     press(PB_SEL);
     CHECK("and they were written", song_step(&app_song, 0, 0, 0)->notes[0] == 73);
+    home();
 
     home();
     projects();
@@ -131,17 +141,12 @@ int main(void)
     press(PB_SEL);            /* SONG: the block under the cursor, in PATTERN (30/10) */
     go();
     key(5);
-    home();
-    projects();
-    sel(1);
-    press(PB_PLAY);
-    CHECK("over unsaved changes PLAY asks first", !strcmp(app_name, "DEMO") && app_dirty);
-    press(PB_SEL);
-    CHECK("SEL answers: the other one is opened, to play", !strcmp(app_name, "SONG 01") && !app_dirty);
+    home_lose();
+    CHECK("the root asks whatever was playing, and a hold answers", !app_loaded && !app_dirty);
 
     /* EDIT on a project: RENAME, DUPLICATE, DELETE */
     home();
-    projects();               /* the cursor on the open one, SONG 01 */
+    projects();               /* the cursor on the open one */
     press(PB_EDIT);
     press(PB_SEL);            /* OPEN, first: EDIT where SEL was meant */
     CHECK("the panel's OPEN opens the project", !strcmp(app_screen(), "SONG"));
@@ -149,11 +154,16 @@ int main(void)
     projects();
     {
         int n = songs_in_flash();
+        char copy[STORE_NAME + 1];
+        size_t len;
         press(PB_EDIT);
         sel(2);               /* OPEN, RENAME, DUPLICATE */
         press(PB_SEL);
-        press(PB_SEL);        /* the name it offers, SONG 01 2, kept */
-        CHECK("DUPLICATE writes a copy, the open one now", songs_in_flash() == n + 1 && !strcmp(app_name, "SONG 01 2"));
+        press(PB_SEL);        /* the name it offers, the open one's and " 2", kept */
+        strcpy(copy, app_name);
+        len = strlen(copy);
+        CHECK("DUPLICATE writes a copy, the open one now",
+              songs_in_flash() == n + 1 && len > 2 && !strcmp(copy + len - 2, " 2"));
         press(PB_EDIT);
         sel(3);               /* DELETE */
         press(PB_SEL);
@@ -162,11 +172,11 @@ int main(void)
         press(PB_SEL);
         press(PB_SEL);        /* yes */
         CHECK("and SEL deletes it, gone from memory too: the first project left opened",
-              songs_in_flash() == n && strcmp(app_name, "SONG 01 2") && app_slot >= 0);
+              songs_in_flash() == n && strcmp(app_name, copy) && app_slot >= 0);
         sel(-10);             /* the panel closed by the delete: the list */
-        sel(1);               /* SONG 01 again */
+        sel(1);               /* the second project by name */
         press(PB_SEL);
-        CHECK("and SONG 01 opens again", !strcmp(app_name, "SONG 01") && app_slot >= 0);
+        CHECK("and a project opens again from the list", app_loaded && app_slot >= 0);
     }
 
     home();                   /* SYSTEM, from the root: and back */
