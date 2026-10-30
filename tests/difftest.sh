@@ -6,6 +6,9 @@
 # made silent in the reference as they are on the FM-1; DRUM ones (moondaw has no DRUM yet) on both
 # sides. Both engines then render the SAME file,
 # reverb and delay included -- the voice too: VOX, its syllables, tract and accent are carried.
+#
+# Both engines give their echo the tempo's own tick, the swing left out of it (30/10, NOTES.md). A
+# song with swing and delay agrees far better for it: DAFT-PUNK-EN went from -14.1 dB to -35.6.
 set -e
 cd "$(dirname "$0")/.."
 M="${MOONDAW:-../moondaw}"

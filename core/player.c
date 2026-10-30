@@ -1579,17 +1579,25 @@ static void player_tick(void)
 /* Samples in a tick: FS * 60 / (bpm * 4 steps * ticks), which is
  * FS * 15 / (bpm * ticks). Swing stretches the even step of each pair
  * and shrinks the odd one by the same amount. */
-static int32_t tick_samples(void)
+/* How long a tick lasts, in samples. `swung` asks for the swing to be in
+ * it: one tick long, the next short, which is where the notes fall. What
+ * is counted in seconds rather than in steps -- the echo's line -- asks
+ * for the tempo's own tick instead: the swing moves a note, it is not a
+ * change of tempo, and a line that breathes with it drags the tail
+ * through a pitch bend twice a step (30/10, NOTES.md). */
+static int32_t tick_samples_of(bool swung)
 {
     uint32_t num = (uint32_t)FS * 15u, den = (uint32_t)bpm * song->ticks_per_step;
     int32_t n;
-    if (playing && song->swing > SWING_MIN && song->swing <= SWING_MAX) {
+    if (swung && playing && song->swing > SWING_MIN && song->swing <= SWING_MAX) {
         num *= tick_parity == 0 ? song->swing : 100u - song->swing;
         den *= 50u;
     }
     n = (int32_t)(num / (den ? den : 1));
     return n > 0 ? n : 1;
 }
+
+static int32_t tick_samples(void) { return tick_samples_of(true); }
 
 /* =========================================================== render === */
 uint32_t (*player_clock)(void);
@@ -1876,7 +1884,7 @@ static void render_tracks(int32_t *out, int frames)
     }
     prof(PROF_REV);
     if (ln->fed_echo || echo_ringing()) {
-        echo_set(song->delay_time, song->delay_fb, tick_samples());
+        echo_set(song->delay_time, song->delay_fb, tick_samples_of(false));
         echo_process(ln->fed_echo ? ln->echo : 0, out, frames);
     }
     prof(PROF_ECHO);
