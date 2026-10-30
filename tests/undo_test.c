@@ -159,6 +159,18 @@ int main(void)
     undo();
     CHECK("and UNDO removes it", app_song.arrange_len == 3 && !undo_can());
 
+    /* NEW in CHOOSE PATTERN writes twice -- the block's length and the cell
+     * that names it -- and one press takes both back (30/10) */
+    wait(2000);
+    enc(PE_K2, 1);            /* the cursor on a cell again */
+    enc(PE_PRESET, 1);        /* CHOOSE PATTERN */
+    enc(PE_SELECT, 20);       /* its last row: NEW */
+    press(PB_SEL);
+    CHECK("NEW put the first free block in the cell", app_song.arrangement[2].pattern[0] == 2);
+    undo();
+    CHECK("and one UNDO takes it back out",
+          app_song.arrangement[2].pattern[0] == 0 && !undo_can());
+
     /* more gestures than the journal holds: the oldest are forgotten, the last are right */
     on = ON_PATTERN;
     pattern_open(&app_song, 0, 0);
