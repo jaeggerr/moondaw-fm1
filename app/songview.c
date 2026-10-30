@@ -21,6 +21,8 @@
  *           lands on is heard by itself once the hand rests, unless the song is
  *           playing -- then it is not interrupted (30/10). PLAY ends the audition
  *           on the number the phrase's length (AUTO, then steps)
+ *   PRESETS on a cell: CHOOSE PATTERN, the track's blocks with what each one
+ *           holds and NEW on the first free number (30/10)
  *   SEL     on a cell: its block, in PATTERN; on the number: the SECTION
  *   EDIT    tapped: the SELECTION of blocks, locked on until another tap (on the
  *           phrase's number it takes whole phrases); held: its commands for as long
@@ -39,6 +41,7 @@
  *   ALGO    UNDO left, REDO right     SAVE  PLAY  as printed
  * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
 enum { CELL_W = 31, CELLS = 6 };
+enum { CH_TOP = 24, CH_ROWS = 7 }; /* CHOOSE PATTERN, as CHOOSE INSTRUMENT's */
 
 #define song (&app_song)
 
@@ -98,22 +101,33 @@ static int cell_instr(void)
 }
 
 /* ------------------------------------------------------------ edits --- */
+/* A number the track already has: a block with something written in it, or
+ * one the arrangement names somewhere. The rest of the sixteen are free --
+ * what CHOOSE PATTERN lists, and what NEW takes the first of.
+ *
+ * `except_cell`: a blank block only the cursor's own cell names is the
+ * fresh one being tried, not one the song holds -- turning on past it
+ * makes no second new block, and turning back leaves nothing behind
+ * (30/10). The list counts it, being where the cursor is. */
+static bool block_used(int t, int p, bool except_cell)
+{
+    if (!song_pattern_blank(song, t, p))
+        return true;
+    for (int i = 0; i < song->arrange_len; i++)
+        if (song->arrangement[i].pattern[t] == p && !(except_cell && i == row && t == col))
+            return true;
+    return false;
+}
+
 /* One past the last block of the track that holds something or is played
  * somewhere: turning past the last block gives a fresh one, and no
  * further. */
 static int block_limit(int t)
 {
     int last = -1;
-    for (int p = 0; p < TRACK_MAX_PATTERNS; p++) {
-        bool used = !song_pattern_blank(song, t, p);
-        /* a blank block only the cursor's own cell names is the fresh one
-         * being tried, not one the song holds: turning on past it makes no
-         * second new block, and turning back leaves nothing behind (30/10) */
-        for (int i = 0; i < song->arrange_len && !used; i++)
-            used = song->arrangement[i].pattern[t] == p && !(i == row && t == col);
-        if (used)
+    for (int p = 0; p < TRACK_MAX_PATTERNS; p++)
+        if (block_used(t, p, true))
             last = p;
-    }
     return last + 1 < TRACK_MAX_PATTERNS ? last + 1 : TRACK_MAX_PATTERNS - 1;
 }
 
@@ -348,6 +362,158 @@ static void audition_end(void)
     audition_track = -1;
 }
 
+/* --------------------------------------------------- choose pattern --- */
+/* CHOOSE PATTERN, which the PRESETS knob opens (30/10). A panel of blocks
+ * stood between the hand and the cell until the 30th and was taken out
+ * because its list of bare numbers said nothing KNOB 3 does not -- and
+ * KNOB 3 still chooses, the ear saying which. This one is not that list:
+ * it says what each number holds, and it has NEW, which takes the first
+ * number the track does not use yet. Working out which block is free was
+ * the one thing the cell could not do.
+ *
+ * Its rows: --, then the track's blocks, then NEW. */
+static bool choosing;
+static int ch_cur, ch_top, ch_n, ch_free, ch_orig;
+static uint8_t ch_num[TRACK_MAX_PATTERNS]; /* the numbers it lists, ascending */
+
+static int ch_rows(void) { return ch_n + 2; }
+static bool ch_is_new(int k) { return k == ch_n + 1; }
+static uint8_t ch_block(int k) { return k == 0 ? PATTERN_NONE : ch_num[k - 1]; }
+
+/* NEW: the first number the track does not use, as long as a fresh block
+ * is and with nothing in it -- a block shortened once keeps what lies past
+ * its length, and a block called new must not sing it. Then it goes in the
+ * cell: that is the whole point, the hand never works out which is free.
+ * Both writes are one gesture of the journal, so one UNDO takes the new
+ * block back out of the cell. */
+static void new_block(int p)
+{
+    Pattern *pt = &song->patterns[col][p];
+    undo_bytes(&pt->length, sizeof pt->length);
+    pt->length = PATTERN_DEF_STEPS;
+    edit_erase_range(song, col, p, 0, PATTERN_DEF_STEPS, EDIT_CLIP_ALL);
+    set_block(row, col, (uint8_t)p);
+}
+
+static void ch_open(void)
+{
+    ch_n = 0;
+    ch_free = -1;
+    for (int p = 0; p < TRACK_MAX_PATTERNS; p++) {
+        if (block_used(col, p, false))
+            ch_num[ch_n++] = (uint8_t)p;
+        else if (ch_free < 0)
+            ch_free = p;
+    }
+    ch_orig = entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS ? entry_at(row)->pattern[col] : -1;
+    ch_cur = ch_top = 0;
+    for (int k = 0; k < ch_n; k++)
+        if (ch_num[k] == ch_orig)
+            ch_cur = k + 1;
+    grid_follow(&ch_cur, &ch_top, ch_rows(), CH_ROWS);
+    choosing = true;
+    gfx_invalidate();
+}
+
+/* SEL takes what the cursor is on; HOME leaves and changes nothing. */
+static void ch_close(bool take)
+{
+    if (take && ch_is_new(ch_cur)) {
+        if (ch_free < 0)
+            said = "ALL SIXTEEN USED"; /* a track has sixteen blocks, and this one has them all */
+        else
+            new_block(ch_free);
+    } else if (take && ch_block(ch_cur) != entry_at(row)->pattern[col]) {
+        set_block(row, col, ch_block(ch_cur));
+    }
+    choosing = false;
+    gfx_invalidate();
+}
+
+static void ch_frame(const PlatInput *in, uint32_t btns)
+{
+#define PRESSED(b) ((btns >> (b)) & 1u)
+    ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1]; /* as every list: SELECT, KNOB 1 */
+    grid_follow(&ch_cur, &ch_top, ch_rows(), CH_ROWS);
+    if (PRESSED(PB_SEL))
+        ch_close(true);
+    else if (PRESSED(PB_HOME) || PRESSED(PB_GLO))
+        ch_close(false);
+    ui_led_guide(0); /* SEL takes, HOME goes back: nothing of this screen's */
+#undef PRESSED
+}
+
+static void ch_hint(int x, const char *key, const char *word, bool right)
+{
+    int w = gfx_text_w(F_COND14, key) + 5 + gfx_text_w(F_COND14, word);
+    if (right)
+        x -= w;
+    x = gfx_text(F_COND14, x, PLAT_H - 6, key, C_TEXT);
+    gfx_text(F_COND14, x + 5, PLAT_H - 6, word, C_DIM);
+}
+
+/* The whole screen, nothing of the grid behind it: drawn over the grid it
+ * read as a grid of one track (29/10). */
+static void ch_draw(void)
+{
+    int n = ch_rows(), bar = n > CH_ROWS ? 6 : 0;
+    char s[24] = "PHR ", h[3], d[12];
+
+    grid_hex2(s + 4, row);
+    s[6] = ' ', s[7] = '/', s[8] = ' ', s[9] = 'T', s[10] = 'R', s[11] = 'K', s[12] = ' ';
+    s[13] = (char)('1' + col), s[14] = 0;
+    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
+    gfx_text(F_COND14, 6, 17, "CHOOSE PATTERN", C_TITLE);
+    gfx_text(F_COND12, PLAT_W - 6 - gfx_text_w(F_COND12, s), 17, s, C_DIM);
+    gfx_fill(0, CH_TOP - 3, PLAT_W, 1, C_TRACK, 255);
+    for (int r = 0; r < CH_ROWS && ch_top + r < n; r++) {
+        int k = ch_top + r, y = CH_TOP + r * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent, x;
+        bool here = k == ch_cur, fresh = ch_is_new(k);
+        uint8_t b = ch_block(k);
+        bool blank = !fresh && k > 0 && song_pattern_blank(song, col, b);
+        uint16_t ink = here      ? C_ON_ACC
+                       : fresh   ? (ch_free < 0 ? C_DIM : C_FX) /* C_FX: what is not written yet */
+                       : k == 0  ? C_DIM
+                       : blank   ? C_DIM
+                                 : C_TEXT;
+        if (here)
+            gfx_slab(4, y + 1, PLAT_W - 8 - bar, GRID_ROW - 2, C_ACCENT, 255);
+        if (!fresh && k > 0 && b == ch_orig) /* the block in the cell now, as HOME marks the open project */
+            gfx_fill(6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        x = gfx_text(F_COND20, 16, base, fresh ? "NEW" : k == 0 ? "--" : grid_hex2(h, b), ink);
+        if (fresh && ch_free >= 0) { /* which number it will take: the question the cell could not answer */
+            int x2 = gfx_text(F_COND14, x + 8, base, "block", ink);
+            gfx_text(F_COND20, x2 + 6, base, grid_hex2(h, ch_free), ink);
+        } else if (fresh) {
+            gfx_text(F_COND14, x + 8, base, "all sixteen used", ink);
+        } else if (k == 0) {
+            gfx_text(F_COND14, x + 8, base, "silent", ink);
+        } else {
+            int w;
+            if (blank) /* what it holds: the first thing a bare number never said */
+                gfx_text(F_COND14, x + 8, base, "empty", ink);
+            {   /* how long it is: "16 steps", the other thing a number never said */
+                int j = 0;
+                ui_dec(d, song->patterns[col][b].length);
+                while (d[j])
+                    j++;
+                for (const char *t = " steps"; *t; t++)
+                    d[j++] = *t;
+                d[j] = 0;
+            }
+            w = gfx_text_w(F_COND14, d);
+            gfx_text(F_COND14, PLAT_W - 10 - bar - w, base, d, ink);
+        }
+    }
+    if (n > CH_ROWS) {
+        int hh = CH_ROWS * GRID_ROW * CH_ROWS / n, y = CH_TOP + CH_ROWS * GRID_ROW * ch_top / n;
+        gfx_fill(PLAT_W - 4, CH_TOP, 2, CH_ROWS * GRID_ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
+    }
+    ch_hint(6, "SEL", "TAKE", false);
+    ch_hint(PLAT_W - 6, "HOME", "BACK", true);
+}
+
 /* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
@@ -457,6 +623,7 @@ void songview_open(bool reset_cursor)
     if (col >= song->num_tracks)
         col = song->num_tracks - 1;
     ask_delete = false;
+    choosing = false;
     selecting = anchored = false;
     said = 0;
     settle = still = 0;
@@ -489,7 +656,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
 {
     uint32_t keys;
     uint32_t btns = in->btns & ~prev_btns;
-    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3];
+    bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
+                 in->enc[PE_PRESET];
     int out = SONGVIEW_STAY;
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
@@ -499,6 +667,22 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     loop_keep(-1); /* a loop a phrase's steps carried is not this screen's */
     if (acted)
         said = 0;
+
+    /* PRESETS, which this screen had no use for, opens CHOOSE PATTERN on the
+     * cell under the cursor. KNOB 3 is untouched: it is the ear (30/10). */
+    if (in->enc[PE_PRESET] && !choosing && !selecting && !is_ref(row) && col >= 0) {
+        audition_end(); /* the ear's block and a key held on the way in */
+        settle = 0;
+        if (trying)
+            player_note_off(), trying = false;
+        ch_open();
+    }
+    if (choosing) {
+        ch_frame(in, btns);
+        play_row = playing ? player_entry() : -1;
+        gfx_frame(choosing ? ch_draw : draw);
+        return SONGVIEW_STAY;
+    }
 
     /* DELETE asks; only a second LFO answers yes. */
     if (ask_delete && (in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||

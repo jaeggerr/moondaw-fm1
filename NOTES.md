@@ -2533,6 +2533,41 @@ does sing syllables.
   moondaw now say one word for one thing. A label the file already
   writes is always the better label.
 
+## 2026-10-30 — SONG: a list of blocks again, behind PRESETS, for NEW
+
+The panel of blocks that stood between the hand and the cell came out
+this morning: its rows were bare numbers and said nothing KNOB 3 does
+not. KNOB 3 still chooses and the ear still says which -- none of that
+moved. What was missing was elsewhere: **a fresh block meant working out
+which number was free**. A list that only names numbers is not worth a
+screen; a list with somewhere to put NEW is, and he said so in those
+words.
+
+- **PRESETS opens it**, the one knob this screen had no use for. On the
+  phrase's number, where there is no cell, it does nothing. SEL still
+  opens the block in PATTERN and KNOB 3 is untouched.
+- **Its rows: `--`, the track's blocks, then NEW.** A block is listed
+  when it holds something or when the arrangement names it somewhere --
+  the same reckoning KNOB 3's last block is made of (`block_used`), so
+  the knob and the list never disagree about what this track has.
+- **Beside each number, the two things a number never said**: `empty`
+  when nothing is written in it, and how long it is, `16 steps` or
+  `64 steps`. The tick at the left marks the block the cell holds now,
+  as HOME marks the open project.
+- **NEW takes the first number the track does not use.** A block
+  shortened once keeps what lies past its length and never saves it, so
+  the block it hands over is set to `PATTERN_DEF_STEPS` and rubbed out
+  over that whole length first: new must mean empty. Both writes are one
+  gesture of the journal -- one UNDO takes the new block back out of the
+  cell.
+- **With all sixteen used it says so.** The row reads `NEW all sixteen
+  used` in grey, and SEL on it leaves `ALL SIXTEEN USED` in the corner,
+  red. Nothing fails quietly.
+- **HOME or GLO leaves and changes nothing.** The shape is CHOOSE
+  INSTRUMENT's, down to the title line, the rule, the rows of 28 and the
+  hints at the foot: where two screens do the same thing they say it the
+  same way.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

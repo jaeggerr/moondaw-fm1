@@ -242,6 +242,55 @@ int main(void)
     CHECK("EDIT on the number takes whole phrases: OP4 clears every track of it",
           E(0).pattern[0] == PATTERN_NONE && E(0).pattern[1] == PATTERN_NONE);
 
+
+    /* CHOOSE PATTERN, which PRESETS opens (30/10): the list came back for
+     * what a bare number never said and for NEW; KNOB 3 is untouched. */
+    tap_edit();               /* the SELECTION off */
+    enc(PE_K2, 1);            /* the cursor on track 1's cell */
+    enc(PE_K3, -30);
+    CHECK("the cell is empty to start with", E(0).pattern[0] == PATTERN_NONE);
+    enc(PE_K2, -1);           /* the phrase's number: no cell, no list */
+    enc(PE_PRESET, 1);
+    press(PB_HOME);
+    CHECK("PRESETS on the phrase's number opens nothing", last == SONGVIEW_BACK);
+    go();
+    enc(PE_K2, 1);
+    enc(PE_PRESET, 1);        /* the list: --, 00, 01, NEW */
+    press(PB_HOME);
+    CHECK("HOME leaves the list, and leaves the cell as it was",
+          last == SONGVIEW_STAY && E(0).pattern[0] == PATTERN_NONE);
+    enc(PE_PRESET, 1);
+    enc(PE_SELECT, 1);        /* its second row: block 00 */
+    press(PB_SEL);
+    CHECK("SEL takes the block the cursor is on and closes the list",
+          last == SONGVIEW_STAY && E(0).pattern[0] == 0);
+    CHECK("blocks 00 and 01 hold something and 02 does not",
+          !song_pattern_blank(&app_song, 0, 0) && !song_pattern_blank(&app_song, 0, 1) &&
+              song_pattern_blank(&app_song, 0, 2));
+    {
+        bool named = false;
+        for (int i = 0; i < app_song.arrange_len; i++)
+            named = named || E(i).pattern[0] == 2;
+        CHECK("and no phrase names 02", !named);
+    }
+    {   /* a block shortened once keeps what lies past its length and never
+         * saves it: a block called new must not hand it back */
+        Step *ghost = song_step_w(&app_song, 0, 2, 10);
+        if (ghost)
+            ghost->notes[0] = 72;
+        app_song.patterns[0][2].length = 8;
+        CHECK("block 02 is blank within its length, with a ghost past it",
+              song_pattern_blank(&app_song, 0, 2));
+    }
+    enc(PE_PRESET, 1);
+    enc(PE_SELECT, 20);       /* its last row, however long the list is: NEW */
+    press(PB_SEL);
+    CHECK("NEW takes the first number the track does not use", E(0).pattern[0] == 2);
+    CHECK("as long as a fresh block and with nothing in it, the ghost rubbed out",
+          app_song.patterns[0][2].length == PATTERN_DEF_STEPS && song_pattern_blank(&app_song, 0, 2) &&
+              step_is_empty(song_step(&app_song, 0, 2, 10)));
+    /* what one UNDO takes back of it: undo_test, where the clock runs */
+
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }
