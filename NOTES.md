@@ -2567,6 +2567,26 @@ words.
   INSTRUMENT's, down to the title line, the rule, the rows of 28 and the
   hints at the foot: where two screens do the same thing they say it the
   same way.
+- **PLAY listens, after all.** It was left out at first -- the ear on this
+  screen is KNOB 3 on the grid, and the panel had just been taken out for
+  saying nothing new. He remembered that the old panel could preview and
+  said that was what he missed, which settles it: the reason to remove it
+  was the bare numbers, never the ear. So the preview of 29/10 comes back
+  as it was, `preview_here` and all: PLAY turns the listening on, the block the
+  cursor has rested SETTLE frames on plays alone and round and round, a
+  quick walk down the list starts nothing on the way, `--`, an empty
+  block and NEW are silence, and each row that can be heard carries its
+  own play sign.
+- **The ear borrows the cell and gives it back.** The player plays
+  phrases, never a block on its own, so listening writes the block into
+  the cell for real -- that is how the old panel did it and there is no
+  other way. None of it is journalled: `ch_hush` puts the cell's own byte
+  back on every way out, `ON` included (`ch_was`, not the block number --
+  `ON` is not a block and would have come back as `--`), and
+  `songview_cancel` is one of those ways out: holding HOME from the list
+  restores it too. A solo MONO had put on is left alone, as the grid's ear
+  already does. `dirty` stays 0 through a whole audition, checked on the
+  simulator.
 
 ## Open
 

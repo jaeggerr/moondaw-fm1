@@ -22,7 +22,8 @@
  *           playing -- then it is not interrupted (30/10). PLAY ends the audition
  *           on the number the phrase's length (AUTO, then steps)
  *   PRESETS on a cell: CHOOSE PATTERN, the track's blocks with what each one
- *           holds and NEW on the first free number (30/10)
+ *           holds and NEW on the first free number; PLAY listens to the one the
+ *           cursor rests on (30/10)
  *   SEL     on a cell: its block, in PATTERN; on the number: the SECTION
  *   EDIT    tapped: the SELECTION of blocks, locked on until another tap (on the
  *           phrase's number it takes whole phrases); held: its commands for as long
@@ -375,10 +376,51 @@ static void audition_end(void)
 static bool choosing;
 static int ch_cur, ch_top, ch_n, ch_free, ch_orig;
 static uint8_t ch_num[TRACK_MAX_PATTERNS]; /* the numbers it lists, ascending */
+/* PLAY turns the listening on: from then on the block the cursor rests on
+ * plays by itself, once it has rested SETTLE frames (a quick walk down the
+ * list starts nothing on the way); PLAY again, SEL or HOME turn it off.
+ * The panel of 29/10 did exactly this and it is what he missed when it
+ * went (30/10). */
+static bool listening;
+static int ch_heard = -1; /* the row sounding, -1 for none */
+static bool ch_solo;      /* and this screen is what soloed the track */
+static uint8_t ch_was;    /* the cell's own byte, to put back: ON is not a block and must survive */
 
 static int ch_rows(void) { return ch_n + 2; }
 static bool ch_is_new(int k) { return k == ch_n + 1; }
 static uint8_t ch_block(int k) { return k == 0 ? PATTERN_NONE : ch_num[k - 1]; }
+
+/* The ear goes quiet and the cell gets back what it held. The block is put
+ * in the cell to be heard -- the player plays phrases, never a block on its
+ * own -- so nothing of this is journalled: it is undone here, on every way
+ * out of the list. */
+static void ch_hush(void)
+{
+    if (ch_heard < 0)
+        return;
+    player_stop();
+    if (ch_solo && player_soloed(col)) /* a solo MONO had put on is left alone */
+        player_toggle_solo(col);
+    entry_at(row)->pattern[col] = ch_was;
+    ch_heard = -1;
+    ch_solo = false;
+}
+
+/* The block under the cursor, alone and round and round. -- is silence and
+ * so is an empty block: nothing is started for them, and NEW has no block
+ * to start yet. */
+static void ch_listen(void)
+{
+    ch_hush();
+    if (ch_is_new(ch_cur) || ch_block(ch_cur) == PATTERN_NONE ||
+        song_pattern_blank(song, col, ch_block(ch_cur)))
+        return;
+    entry_at(row)->pattern[col] = ch_block(ch_cur);
+    if (!player_soloed(col))
+        player_toggle_solo(col), ch_solo = true;
+    player_play_entry(row);
+    ch_heard = ch_cur;
+}
 
 /* NEW: the first number the track does not use, as long as a fresh block
  * is and with nothing in it -- a block shortened once keeps what lies past
@@ -405,12 +447,17 @@ static void ch_open(void)
         else if (ch_free < 0)
             ch_free = p;
     }
-    ch_orig = entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS ? entry_at(row)->pattern[col] : -1;
+    ch_was = entry_at(row)->pattern[col];
+    ch_orig = ch_was < TRACK_MAX_PATTERNS ? ch_was : -1;
     ch_cur = ch_top = 0;
     for (int k = 0; k < ch_n; k++)
         if (ch_num[k] == ch_orig)
             ch_cur = k + 1;
     grid_follow(&ch_cur, &ch_top, ch_rows(), CH_ROWS);
+    listening = false;
+    ch_heard = -1;
+    ch_solo = false;
+    settle = 0;
     choosing = true;
     gfx_invalidate();
 }
@@ -418,6 +465,9 @@ static void ch_open(void)
 /* SEL takes what the cursor is on; HOME leaves and changes nothing. */
 static void ch_close(bool take)
 {
+    listening = false;
+    ch_hush(); /* the cell holds what it held before the ear borrowed it */
+    settle = 0;
     if (take && ch_is_new(ch_cur)) {
         if (ch_free < 0)
             said = "ALL SIXTEEN USED"; /* a track has sixteen blocks, and this one has them all */
@@ -435,10 +485,22 @@ static void ch_frame(const PlatInput *in, uint32_t btns)
 #define PRESSED(b) ((btns >> (b)) & 1u)
     ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1]; /* as every list: SELECT, KNOB 1 */
     grid_follow(&ch_cur, &ch_top, ch_rows(), CH_ROWS);
+    if (in->enc[PE_SELECT] || in->enc[PE_K1])
+        settle = SETTLE;
+    if (PRESSED(PB_PLAY)) {
+        listening = !listening;
+        if (listening)
+            ch_listen();
+        else
+            ch_hush();
+    } else if (listening && settle > 0 && --settle == 0 && ch_cur != ch_heard) {
+        ch_listen();
+    }
     if (PRESSED(PB_SEL))
         ch_close(true);
     else if (PRESSED(PB_HOME) || PRESSED(PB_GLO))
         ch_close(false);
+    ui_led_state(PB_PLAY, listening);
     ui_led_guide(0); /* SEL takes, HOME goes back: nothing of this screen's */
 #undef PRESSED
 }
@@ -502,7 +564,10 @@ static void ch_draw(void)
                 d[j] = 0;
             }
             w = gfx_text_w(F_COND14, d);
-            gfx_text(F_COND14, PLAT_W - 10 - bar - w, base, d, ink);
+            gfx_text(F_COND14, PLAT_W - 32 - bar - w, base, d, ink);
+            if (!blank) /* what can be heard has its PLAY; an empty block is silence */
+                grid_play_sign(PLAT_W - 26 - bar, y + 8,
+                               here ? C_ON_ACC : k == ch_heard ? C_ACCENT : C_DIM, k == ch_heard);
         }
     }
     if (n > CH_ROWS) {
@@ -511,6 +576,7 @@ static void ch_draw(void)
         gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
     }
     ch_hint(6, "SEL", "TAKE", false);
+    ch_hint(96, "PLAY", "LISTEN", false);
     ch_hint(PLAT_W - 6, "HOME", "BACK", true);
 }
 
@@ -633,6 +699,8 @@ void songview_open(bool reset_cursor)
 
 void songview_cancel(void)
 {
+    if (choosing) /* a block being listened to goes back to what the cell held */
+        ch_close(false);
     audition_end();
 }
 

@@ -264,6 +264,27 @@ int main(void)
     press(PB_SEL);
     CHECK("SEL takes the block the cursor is on and closes the list",
           last == SONGVIEW_STAY && E(0).pattern[0] == 0);
+    /* PLAY in the list: the block the cursor rests on, alone -- the ear the
+     * panel of 29/10 had, which is what he missed when it went (30/10) */
+    enc(PE_PRESET, 1);        /* it opens on block 00, the cell's own */
+    enc(PE_SELECT, 1);        /* block 01, which the cell does not hold */
+    press(PB_PLAY);
+    pump();
+    CHECK("PLAY listens to the block the cursor is on, the track alone",
+          player_playing() && player_soloed(0));
+    press(PB_HOME);
+    pump();
+    CHECK("HOME ends the ear and gives the cell back what it held",
+          !player_playing() && !player_soloed(0) && E(0).pattern[0] == 0);
+    enc(PE_PRESET, 1);
+    enc(PE_SELECT, 1);
+    press(PB_PLAY);
+    pump();
+    press(PB_SEL);
+    pump();
+    CHECK("SEL while it sounds takes that block and ends the ear",
+          !player_playing() && !player_soloed(0) && E(0).pattern[0] == 1);
+
     CHECK("blocks 00 and 01 hold something and 02 does not",
           !song_pattern_blank(&app_song, 0, 0) && !song_pattern_blank(&app_song, 0, 1) &&
               song_pattern_blank(&app_song, 0, 2));
