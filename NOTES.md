@@ -2956,3 +2956,25 @@ question can still be answered, so the question is asked there.
 
 Not done: choosing the answer with the SELECT knob, which he also asked
 for. The buttons are in; the knob and its cursor are not.
+
+## 2026-10-30 — the effects' two knobs, and the question made plainer
+
+Both from him, on the panel, within the hour of the last entry.
+
+- In FX, KNOB 3 turned the value and KNOB 4 the effect; the cell reads the
+  other way round. "j'aurais fait l'inverse vu qu'en ordre d'affichage
+  c'est d'abord le type d'effet puis la valeur." Swapped -- and it is more
+  than reading order: KNOB 3 now says *what* the cell holds in all three
+  views (the note, the instrument, the effect) and KNOB 4 *how much*.
+- The hold to lose changes, written an hour earlier as the rule for every
+  confirmation to come, is already gone. "le home maintenu est inutile vu
+  que de toute façon tous les autres boutons annulent déjà." He is right
+  that eleven buttons of twelve already cancel; the hold bought one thing,
+  the reflex of tapping HOME twice when the first press seems not to have
+  worked, and that is the one case it now costs. His machine, his call.
+  So: SAVE keeps, HOME again leaves without keeping, anything else stays.
+  Nothing counts until the HOME that reached the root has been let go.
+- "anything else" was only the buttons and the SELECT knob: the keys and
+  the other knobs did nothing, under a line that promised they would.
+  "quand tu dis anything else ça doit être anything else non?" -- it does
+  now. A screen that states a rule has to keep it.

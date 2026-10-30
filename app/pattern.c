@@ -16,7 +16,7 @@
  * more -- one row a step, its number at the left, white on the beat.
  *
  *   NOTES  the four notes of a chord          KNOB 3 a semitone, under the lowest OFF then empty
- *   FX     the three effects                  KNOB 3 the value, KNOB 4 the effect
+ *   FX     the three effects                  KNOB 3 the effect, KNOB 4 its value
  *   INS    the instrument the step names, or --, then the name of the one that plays:
  *          white where the step names it, grey where it keeps the one in force (29/10)
  *          KNOB 3 walks the song's instruments and the step is heard as it turns, so
@@ -275,7 +275,7 @@ static void turn_instr(int row, int d)
         st->instrument = v < 0 ? INSTR_NONE : (uint8_t)v;
 }
 
-/* KNOB 4 on an effect: the commands in alphabetical order, --- first. One
+/* KNOB 3 on an effect: the commands in alphabetical order, --- first. One
  * that would say the same thing twice on the row is stepped over. */
 static void turn_fx_cmd(int row, int slot, int d)
 {
@@ -962,7 +962,7 @@ int pattern_frame(const PlatInput *in)
         else if (view == V_NOTES && !edit_turn_note(song, track, pat, cur_row, cur_col, d))
             said = "POOL FULL";
         else if (view == V_FX)
-            turn_fx_val(cur_row, cur_col, d);
+            turn_fx_cmd(cur_row, cur_col, d);
         else if (view == V_INS) {
             turn_instr(cur_row, d);
             /* the ear, once the hand rests; the song playing, it keeps quiet */
@@ -972,7 +972,7 @@ int pattern_frame(const PlatInput *in)
         }
     }
     if ((d = in->enc[PE_K4]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
-        turn_fx_cmd(cur_row, cur_col, d);
+        turn_fx_val(cur_row, cur_col, d);
 
     if (PRESSED(PB_REC)) { /* armed, or not; stopping it stops the count */
         au_hush();

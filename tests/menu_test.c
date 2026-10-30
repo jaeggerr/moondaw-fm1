@@ -34,8 +34,8 @@ static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 /* HOME held: the root menu from anywhere (a press is a step back). Over a
  * song that is not saved the root asks instead, and the answers are below. */
 static void home(void) { in.btns = 1u << PB_HOME; for (int i = 0; i < 40; i++) go(); in.btns = 0; go(); }
-/* The question's answers: a second hold loses the changes, SAVE keeps them. */
-static void home_lose(void) { home(); home(); }
+/* The question's answers: HOME again loses the changes, SAVE keeps them. */
+static void home_lose(void) { home(); press(PB_HOME); }
 static void home_save(void) { home(); press(PB_SAVE); }
 static void sel(int d) { in.enc[PE_SELECT] = (int8_t)d; go(); }
 static void key(int k) { in.keys = 1u << k; go(); in.keys = 0; go(); }
@@ -96,9 +96,9 @@ int main(void)
     press(PB_SEL);            /* SONG: the block under the cursor, in PATTERN (30/10) */
     go();
     key(3);
-    CHECK("the root asks over changes, and a press of HOME is stay", app_dirty);
+    CHECK("the root asks over changes", app_dirty);
     home();
-    press(PB_HOME);           /* a press, not a hold: back into the song */
+    press(PB_SEQ);            /* anything but SAVE or HOME: back into the song */
     CHECK("stay leaves the song where it was", app_loaded && app_dirty);
     home();
     press(PB_SAVE);           /* keep them: the song is put down written */
@@ -109,8 +109,8 @@ int main(void)
     go();
     key(20);
     CHECK("writing marks it changed again", app_dirty);
-    home_lose();              /* a second hold answers: lose them */
-    CHECK("a hold loses the changes and puts the song down", !app_loaded && !app_dirty);
+    home_lose();              /* HOME again answers: lose them */
+    CHECK("HOME again loses the changes and puts the song down", !app_loaded && !app_dirty);
     press(PB_SEL);
     CHECK("what was lost never reached the flash", song_step(&app_song, 0, 0, 0)->notes[0] != 73);
 
@@ -142,7 +142,7 @@ int main(void)
     go();
     key(5);
     home_lose();
-    CHECK("the root asks whatever was playing, and a hold answers", !app_loaded && !app_dirty);
+    CHECK("the root asks whatever was playing, and HOME again answers", !app_loaded && !app_dirty);
 
     /* EDIT on a project: RENAME, DUPLICATE, DELETE */
     home();
