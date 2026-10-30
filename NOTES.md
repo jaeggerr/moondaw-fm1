@@ -1905,6 +1905,148 @@ PATTERN's KNOB 4 used to walk `1 .. FX_SYL`, which is why nothing after
 SYL could be reached; it walks the whole list now and leaves out the two
 that are written elsewhere (SYL on its screen, SMP in the sample table).
 
+## 2026-10-30 — SEQ to SONG from MIXER and PROJECT
+
+The two screens that hang off every other one had one way out, HOME,
+and it goes back where they were opened from -- from PATTERN to the
+pattern, from SONG to the song. SEQ was free on both: it says the
+sequence, so it now goes to SONG, wherever the screen was opened from
+(his words: "retourner dans la vue Song via SEQ, ca aurait plus de
+sens"). HOME is untouched -- a step back, as on every screen; MIX from
+a pattern still goes back to that pattern.
+
+`MIXER_SONG` and `PROJECT_SONG`, taken by `back_to(AT_SONG)` in app.c:
+the song as it was left, the loop of a phrase cleared. The guide lights
+SEQ on both, and HELP's MIXER and PROJECT pages say it.
+
+## 2026-10-30 — EDIT as a CAPS LOCK, and the keys play in SONG
+
+His rule, one for every screen that has the alternate keyboard: EDIT held
+down is the shift and nothing else -- let it go and the mode goes with it
+-- while a quick tap locks it on, as a CAPS LOCK, and another tap takes
+it off. `ui_shift` counts the frames EDIT has been down (`frames`), and
+the screens that lock a mode on ask for the tap to be quick as well,
+`frames < EDIT_TAP` (15 frames, 0.25 s). Before, holding EDIT in PATTERN,
+changing one's mind and letting go opened the SELECTION. MIXER and
+INSTRUMENT, where the tap only goes to the PROJECT, take any press.
+
+And the keys play in SONG: the first instrument the block under the
+cursor names (the song's first when it names none), the note written
+nowhere -- what a track sounds like, heard without opening its block, and
+a line tried over the arrangement. OCT- and OCT+ move the keyboard as
+everywhere else, the guide lights them where there is something to play,
+and the note stops when the screen is left. On a REF row, on the phrase's
+number or on a cell with no block there is nothing to play; EDIT held,
+the keys are commands, not notes.
+
+To come, in this order: SEL opens the block (CHOOSE PATTERN goes), KNOB 3
+auditions what it lands on -- without stopping a song that is playing,
+the block is already in the cell and comes round on its own -- then
+EDIT's selection of blocks with OP1-4, and the loop over phrases (new
+work in the player: `loop.c` counts in steps of one phrase).
+
+## 2026-10-30 — CHOOSE PATTERN goes: SEL opens the block, KNOB 3 is the ear
+
+The panel of a track's blocks is gone, and with it `pop`, its drawing, its
+PLAY-to-listen and the cell it borrowed to preview (`preview_here` put the
+block in the cell for real and put the old one back on the way out). What
+it showed was a column of numbers -- `--  silent`, `00`, `01`, the last
+one `new` -- and KNOB 3 says all three of those by itself (his call: "ça
+ne dit rien d'intéressant"). So:
+
+- SEL goes in, wherever the cursor is: the SECTION on the phrase's number,
+  the block itself in PATTERN on a cell. One rule with PATTERN, where SEL
+  has always been the way into what is under the cursor. An empty cell has
+  no block to open. EDIT still does the same on a cell; EDIT's own job, the
+  selection of blocks, is the next step.
+- KNOB 3 chooses the block and the ear follows: what it lands on plays by
+  itself, the track soloed, once the hand has rested SETTLE frames (200 ms
+  -- a quick turn through the blocks starts nothing on the way, the rule
+  the panel already had). PLAY ends the audition, and the PLAY after it
+  plays the song. Moving the cursor ends it too, as does leaving the
+  screen; a solo MONO had put on is left alone.
+- And a song that is playing is never interrupted (his rule): the block is
+  already in its cell, so it comes round on its own at the next pass. That
+  keeps the gesture that matters while arranging -- the song runs, the hand
+  changes the block of a phrase that has not come yet.
+
+The new block, his find: turning past the last one makes a fresh block, and
+nothing says so once the list is gone. It wears C_FX in the grid (the
+theme's colour for what is not written) and the corner says NEW while the
+cursor is on it -- the cell under the cursor wears the cursor's own green,
+so the colour alone would not reach it. And it is not kept: `block_limit`
+no longer counts a blank block that only the cursor's own cell names, so
+turning on past it makes no second new block (the walk that grew the
+panel's list, 29/10), and turning back leaves nothing behind. A blank block
+is silence, so the ear starts nothing for it.
+
+`song_test` pumps a short `player_render` where it asks what is playing:
+PLAY and STOP are commands the audio side takes, as on the machine.
+
+## 2026-10-30 — EDIT in SONG: the SELECTION of blocks
+
+EDIT does in SONG what it does in PATTERN, which is what he asked for: a
+quick tap locks the SELECTION on, the cursor stretches it from where it
+was tapped, another tap takes it off, and held it gives the commands for
+as long as it is down. The black keys are the same three groups as in
+PATTERN (`UI_OP_*`, moved to ui.h so the two screens read one set of
+numbers): OP1 copy, OP2 paste, OP3 cut, OP4 clear, MONO solo and mute.
+On the phrase's number the rectangle is the whole row, every track.
+
+What a cell holds is its block and the level it plays at, and that is
+what the clipboard takes -- the arrangement, not the notes: pasting puts
+the same blocks somewhere else in the song. 32 rows by 8 tracks of it,
+`clip_pat` and `clip_lvl` in songview.c (PATTERN's clipboard is steps,
+and lives in edit.c because PHRASE shares it; this one is SONG's alone).
+A reference has no cells of its own: it is passed over, never written.
+Every write goes through `undo_bytes`, so ALGO takes a whole op back.
+
+OP1 collapses the SELECTION onto the cursor, as it does in PATTERN -- that
+is what makes copy, move, paste one gesture, and the C_FX frame showing
+where OP2 would land is drawn the same way. While the SELECTION is on the
+knobs only move: KNOB 3 and KNOB 4 do not change a cell under it, so no
+block is altered and nothing is auditioned by accident. HOME takes a step
+out of the SELECTION before it leaves the screen, as in PATTERN.
+
+EDIT no longer opens a block (SEL does that since this morning), so the
+guide lights EDIT everywhere on this screen now, a reference row included.
+The loop over a selection of phrases (OP6) is still to come: `loop.c`
+counts in steps of one phrase, and a song-level loop is new work in the
+player.
+
+## 2026-10-30 — the loop over phrases: OP6 in SONG
+
+The last of the four steps. OP6 on a SELECTION of phrases makes them the
+loop PLAY goes round, the same phrases again forget it, and with nothing
+stretched it sets one end at the cursor and then the other -- PATTERN's
+gesture, phrase for step.
+
+One loop still, for the three screens: `loop.c` keeps `of_entry`, and -1
+is the song itself. `tell_player` sends `player_set_song_loop(a, b)` for
+that one and `player_set_loop(a, b - a + 1)` for a phrase's steps, so the
+two can never both hold; `loop_clear` tells the player both are off.
+SONG calls `loop_keep(-1)` each frame -- a loop a phrase's steps carried
+is not this screen's -- and clears the loop on its way out, so PATTERN
+and SECTION never draw phrase numbers as steps. The cyan rule at the left
+edge, the cyan numbers and LOOP 02-05 in the corner are drawn as PATTERN
+draws them.
+
+In the player, `song_loop_word` beside `loop_word`: `from | (to + 1) << 16`
+in one word, so the audio side never reads half of it, and the + 1 so that
+a loop on phrase 00 alone is not 0. It bites in two places, both in
+`player_tick` and both only in `song_mode`: at a step's edge the playhead
+is brought into the loop if it is outside (PLAY starts in it, and a loop
+set while the song runs takes at once), and where the last phrase of the
+loop ends -- its references exhausted, as `advance_entry` tests it -- the
+playhead goes to the loop's first phrase instead of advancing. `song_once`
+still stops at the song's end first. A `to` past the end is taken as the
+last phrase, so an edit under the playhead cannot send it nowhere.
+
+`song_test` plays the song with a loop on phrase 00 while the cursor sits
+on 01: the first render brings the playhead to 00, and 2.9 s later (past
+the 16 steps of that phrase) it is still there instead of having moved on.
+Checked by hand that the test fails with the player's hook taken out.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

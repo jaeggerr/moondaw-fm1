@@ -1,13 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SONG's hands, without a screen: the arrangement is edited as the
  * panel would (the grid of 28/10: SELECT the phrase, KNOB 2 the track or
- * the number, KNOB 3 the value, SEL the panel or the section, SEQ the
- * block) and read back. */
+ * the number, KNOB 3 the value, SEL the block or the section, SEQ a copy of
+ * the phrase) and read back. */
 #include <stdio.h>
 #include <string.h>
 
 #include "../app/app.h"
+#include "../app/loop.h"
 #include "../app/songview.h"
+#include "../app/ui.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 
@@ -42,6 +44,14 @@ static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static void press(int b) { int r; in.btns = 1u << b; go(); r = last; in.btns = 0; go(); last = r; }
 /* EDIT is also a shift: it answers at the release */
 static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
+static void keys(uint32_t held) { in.keys = held; go(); }
+/* the player takes PLAY and STOP in its render, as on the machine: a short
+ * one makes what the hands just asked for true */
+static void pump(void)
+{
+    static int16_t pcm[256 * 2];
+    player_render(pcm, 256);
+}
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 #define E(i) (app_song.arrangement[i])
 
@@ -69,64 +79,113 @@ int main(void)
     enc(PE_K3, 1);
     CHECK("back to block 00", E(0).pattern[0] == 0);
 
-    press(PB_SEL);            /* the panel of track 1's blocks, on 00 */
-    enc(PE_SELECT, 1);
-    press(PB_HOME);
-    CHECK("HOME closes the panel, not SONG", last == SONGVIEW_STAY);
-    CHECK("HOME closes the panel and changes nothing", E(0).pattern[0] == 0);
     press(PB_SEL);
-    enc(PE_SELECT, 1);
-    press(PB_PLAY);
-    CHECK("PLAY in the panel plays that block alone, in the phrase",
-          E(0).pattern[0] == 1 && player_soloed(0));
-    press(PB_HOME);
-    CHECK("and HOME puts back what was there", E(0).pattern[0] == 0 && !player_soloed(0));
-    press(PB_SEL);            /* listening: the cursor's block plays once it rests */
-    press(PB_PLAY);
-    CHECK("PLAY listens from the block under the cursor", E(0).pattern[0] == 0 && player_soloed(0));
-    enc(PE_SELECT, 1);
+    CHECK("SEL on a cell opens its block, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
+    go();
+
+    /* KNOB 3 chooses the block, and the ear follows it at rest: the panel of
+     * blocks that stood in between is gone (30/10) */
+    enc(PE_K3, 1);
     for (int i = 0; i < 5; i++)
         go();
-    CHECK("passing over a block starts nothing yet", E(0).pattern[0] == 0);
+    pump();
+    CHECK("a block passed over is not played yet", !player_playing());
     for (int i = 0; i < 12; i++)
         go();
-    CHECK("resting on it plays it", E(0).pattern[0] == 1 && player_soloed(0));
-    enc(PE_SELECT, -2);
-    for (int i = 0; i < 12; i++)
-        go();
-    CHECK("-- is silence, the listening still on", E(0).pattern[0] == 0 && !player_soloed(0));
+    pump();
+    CHECK("the block the hand rests on plays by itself", player_playing() && player_soloed(0));
     press(PB_PLAY);
-    enc(PE_SELECT, 2);
-    for (int i = 0; i < 12; i++)
+    pump();
+    CHECK("PLAY ends the audition, the track back among the others", !player_playing() && !player_soloed(0));
+    press(PB_PLAY);
+    pump();
+    CHECK("and the PLAY after it plays the song", player_playing() && !player_soloed(0));
+    enc(PE_K3, -1);
+    for (int i = 0; i < 20; i++)
         go();
-    CHECK("PLAY again: the cursor plays nothing", E(0).pattern[0] == 0 && !player_soloed(0));
-    press(PB_PLAY);           /* listening, down past the new block */
-    for (int k = 0; k < 6; k++) {
-        enc(PE_SELECT, 1);
-        for (int i = 0; i < 12; i++)
-            go();
-    }
-    press(PB_SEL);            /* the list did not grow: its last row is the one new block, 02 */
-    CHECK("listening never makes a block", E(0).pattern[0] == 2);
-    press(PB_SEL);
-    enc(PE_SELECT, -10);
-    enc(PE_SELECT, 1);        /* 00 back in the cell */
-    press(PB_SEL);
-    press(PB_HOME);
-    press(PB_SEL);
-    enc(PE_SELECT, -1);
-    press(PB_SEL);
-    CHECK("SEL takes the row: -- first", E(0).pattern[0] == PATTERN_NONE);
-    press(PB_SEL);
-    enc(PE_SELECT, 1);
-    press(PB_SEL);
-    CHECK("and a block", E(0).pattern[0] == 0);
+    pump();
+    CHECK("KNOB 3 while the song plays never interrupts it",
+          player_playing() && !player_soloed(0) && E(0).pattern[0] == 0);
+    press(PB_PLAY);
+    pump();
+
+    /* the new block: one only, and nothing kept while nothing is written in it */
+    enc(PE_K3, 9);
+    CHECK("KNOB 3 stops one past the last block that holds something", E(0).pattern[0] == 2);
+    enc(PE_K3, 9);
+    CHECK("and turning on from it makes no second new block", E(0).pattern[0] == 2);
+    for (int i = 0; i < 14; i++)
+        go();
+    pump();
+    CHECK("an empty block is silence: nothing is played for it", !player_playing());
+    enc(PE_K3, -2);
+    CHECK("turning back from it leaves nothing behind",
+          E(0).pattern[0] == 0 && song_pattern_blank(&app_song, 0, 2));
 
     press(PB_SEQ);
     CHECK("SEQ on a block does nothing", last == SONGVIEW_STAY);
-    tap_edit();
-    CHECK("EDIT on a block asks for it, in PATTERN", last == SONGVIEW_PATTERN && entry == 0 && track == 0);
+    /* EDIT: the SELECTION of blocks, the black keys its commands (30/10) */
+    tap_edit();               /* on, anchored on phrase 00 / track 1 */
+    enc(PE_K3, 1);
+    CHECK("the knobs only move while the SELECTION is on", E(0).pattern[0] == 0);
+    enc(PE_K1, 1);            /* stretched over phrases 00 and 01 */
+    keys(1u << UI_OP_CLEAR);
+    keys(0);
+    CHECK("OP4 clears every cell the SELECTION covers",
+          E(0).pattern[0] == PATTERN_NONE && E(1).pattern[0] == PATTERN_NONE);
+    tap_edit();               /* off */
+    enc(PE_K3, 1);
+    CHECK("and the knobs are the cell's again", E(1).pattern[0] == 0);
+    tap_edit();               /* on, anchored on phrase 01 */
+    keys(1u << UI_OP_COPY);   /* OP1 takes the cells and collapses on the cursor, as PATTERN's */
+    keys(0);
+    enc(PE_K1, -1);
+    keys(1u << UI_OP_PASTE);
+    keys(0);
+    CHECK("OP2 puts what OP1 took where the cursor is", E(0).pattern[0] == 0);
+    tap_edit();               /* off */
+
+    /* EDIT held: its commands while it is down, and no SELECTION left behind */
+    in.btns = 1u << PB_EDIT;
     go();
+    keys(1u << UI_OP_CLEAR);
+    keys(0);
+    in.btns = 0;
+    go();
+    CHECK("EDIT held gives the commands", E(0).pattern[0] == PATTERN_NONE);
+    enc(PE_K3, 1);
+    CHECK("and leaves no SELECTION on when it is let go", E(0).pattern[0] == 0);
+
+    /* OP6: the phrases PLAY goes round (30/10) */
+    tap_edit();               /* on, anchored on phrase 00 */
+    enc(PE_K1, 1);            /* stretched over phrases 00 and 01 */
+    keys(1u << UI_KEY_LOOP);
+    keys(0);
+    CHECK("OP6 makes the SELECTION's phrases the loop",
+          loop_state() == LOOP_SET && loop_from() == 0 && loop_to() == 1);
+    keys(1u << UI_KEY_LOOP);  /* nothing stretched any more: the third press forgets it */
+    keys(0);
+    CHECK("and OP6 again forgets it", loop_state() == LOOP_NONE);
+    enc(PE_K1, -1);
+    keys(1u << UI_KEY_LOOP);  /* one end, at the cursor */
+    keys(0);
+    CHECK("with nothing stretched, OP6 sets one end", loop_state() == LOOP_ONE_END && loop_from() == 0);
+    keys(1u << UI_KEY_LOOP);  /* the other, the same phrase: 00 alone */
+    keys(0);
+    CHECK("and the press after it closes the loop",
+          loop_state() == LOOP_SET && loop_from() == 0 && loop_to() == 0);
+    tap_edit();               /* off */
+    enc(PE_K1, 1);            /* the cursor on phrase 01, outside the loop */
+    press(PB_PLAY);           /* the song, from where the cursor is */
+    pump();
+    CHECK("PLAY with a loop over phrases starts in it", player_entry() == 0);
+    for (int i = 0; i < 500; i++) /* 2.9 s: past the 16 steps of phrase 00 */
+        pump();
+    CHECK("and the song goes round them instead of running on", player_playing() && player_entry() == 0);
+    press(PB_PLAY);
+    pump();
+    enc(PE_K1, -1);
+
     enc(PE_K2, -1);           /* the phrase's number */
     press(PB_SEQ);
     CHECK("SEQ on the number copies the phrase right below, without its name",
@@ -161,10 +220,13 @@ int main(void)
     CHECK("GLO asks for the PROJECT", last == SONGVIEW_PROJECT);
     go();
     press(PB_HOME);
-    CHECK("HOME, the panel closed, goes back to HOME's root", last == SONGVIEW_BACK);
+    CHECK("HOME goes back to HOME's root", last == SONGVIEW_BACK);
     go();
     tap_edit();
-    CHECK("EDIT on the number asks for the SECTION", last == SONGVIEW_PHRASE);
+    keys(1u << UI_OP_CLEAR);
+    keys(0);
+    CHECK("EDIT on the number takes whole phrases: OP4 clears every track of it",
+          E(0).pattern[0] == PATTERN_NONE && E(0).pattern[1] == PATTERN_NONE);
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

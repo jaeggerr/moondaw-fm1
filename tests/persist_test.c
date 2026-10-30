@@ -61,7 +61,7 @@ int main(void)
     go();
     before = note_on_flash();   /* nothing saved yet */
     press(PB_SEL);              /* HOME: open it, SONG */
-    press(PB_EDIT);             /* PATTERN, phrase 0 track 1, at EDIT's release */
+    press(PB_SEL);              /* SONG: the block under the cursor, in PATTERN (30/10) */
     go();
     in.enc[PE_K1] = 5;          /* KNOB 1: the column kept (SELECT would go to the number) */
     go();
@@ -75,7 +75,7 @@ int main(void)
     app_init();                 /* the machine switched off and on */
     go();
     press(PB_SEL);
-    press(PB_EDIT);           /* PATTERN opens at EDIT's release: a frame for it */
+    press(PB_SEL);              /* SONG, then the block in PATTERN */
     go();
     press(PB_SAVE);             /* saved again, untouched: still there */
     again = note_on_flash();

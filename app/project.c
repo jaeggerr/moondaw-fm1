@@ -18,7 +18,7 @@
  *   METER   beats in a bar, written x/4 (the file's beats_per_bar)
  *   STEP    what a step is worth as a note: 1/16 at 4 steps a beat, 1/12 at 3
  *           (the file's steps_per_beat)
- *   HOME    back where it was opened from     FX  the MIXER
+ *   HOME    back where it was opened from     SEQ  SONG     FX  the MIXER
  *   ALGO    UNDO left, REDO right     SAVE  as printed */
 enum { S_NAME, S_BPM, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
 enum { LABEL_X = 14, VALUE_X = 120 };
@@ -173,8 +173,12 @@ int project_frame(const PlatInput *in)
             player_play_song(0, false);
     }
     ui_led_state(PB_PLAY, player_playing());
-    ui_led_guide(1u << PB_FX); /* the MIXER */
+    ui_led_guide(1u << PB_FX | 1u << PB_SEQ); /* the MIXER, SONG */
     gfx_frame(draw);
-    return PRESSED(PB_HOME) ? PROJECT_BACK : PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;
+    if (PRESSED(PB_HOME))
+        return PROJECT_BACK;
+    if (PRESSED(PB_SEQ)) /* SEQ: SONG, wherever this came from (30/10) */
+        return PROJECT_SONG;
+    return PRESSED(PB_FX) ? PROJECT_MIXER : PROJECT_STAY;
 #undef PRESSED
 }

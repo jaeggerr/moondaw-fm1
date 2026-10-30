@@ -51,20 +51,39 @@ void ui_led_guide_again(void);
  * `lit`: a key's state, lit as PLAY's is (MONO while the track in front
  * plays alone), unless LEDS is OFF. */
 void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half);
-enum { UI_KEY_LOOP = 13, UI_KEY_MONO = 20 }; /* the black keys read OP1-6, PIT, GLO, MONO, POLY */
+/* The black keys read OP1-6, PIT, GLO, MONO, POLY. The commands EDIT gives
+ * them are the same wherever a screen has them (PATTERN's steps, SONG's
+ * blocks): the clipboard in the first three, clearing in OP4, listening in
+ * OP6 (29/10, NOTES.md). */
+enum {
+    UI_OP_COPY = 1,
+    UI_OP_PASTE = 3,
+    UI_OP_CUT = 5,
+    UI_OP_CLEAR = 8,
+    UI_KEY_LOOP = 13,
+    UI_KEY_MONO = 20
+};
 
 /* EDIT as a shift (29/10), shared by the screens where a track is in front
  * (PATTERN, SONG, SECTION, MIXER): while EDIT is down the black keys are
  * commands; MONO tapped puts the track alone (solo, cumulative), or back to
  * normal from solo or mute; MONO held MONO_HOLD frames mutes it. A tap of
  * EDIT with no key meanwhile is the screen's own EDIT, given at the
- * release. `track` -1: none in front. */
+ * release. `track` -1: none in front.
+ *
+ * The screens where EDIT locks a mode on (PATTERN's and SONG's SELECTION)
+ * ask for the tap to be a quick one as well, `frames < EDIT_TAP`: held
+ * down, EDIT is the shift and nothing else, and letting it go after a
+ * long press leaves the mode as it was -- a quick tap locks it, as a CAPS
+ * LOCK, and another takes it off (30/10). MIXER and INSTRUMENT, where the
+ * tap only goes to the PROJECT, take it however long it was. */
 typedef struct {
     bool held, used;  /* EDIT down; a key used while it was */
+    int frames;       /* frames EDIT has been down, read at the release */
     int mono;         /* frames MONO has been down, 0 when up */
     bool muted;       /* this MONO press already muted */
 } UiShift;
-enum { MONO_HOLD = 30 }; /* 0.5 s */
+enum { MONO_HOLD = 30, EDIT_TAP = 15 }; /* 0.5 s; a tap at most 0.25 s */
 /* One frame, with the buttons and keys pressed this frame; `ops` true
  * where the keys are commands anyway (PATTERN's SELECTION). True when
  * EDIT was tapped. `*said` the corner's word when MONO acted. */

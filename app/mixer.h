@@ -12,8 +12,9 @@
 /* `back` names where it was opened from (unused since the grid: GLO says
  * it); `entry` the phrase PLAY starts the song from. */
 void mixer_open(const char *back, int entry);
-/* One frame: HOME goes back, EDIT or GLO to the PROJECT (29/10). */
-enum { MIXER_BACK, MIXER_STAY, MIXER_PROJECT };
+/* One frame: HOME goes back where it was opened from, SEQ to SONG
+ * (30/10), EDIT or GLO to the PROJECT (29/10). */
+enum { MIXER_BACK, MIXER_STAY, MIXER_PROJECT, MIXER_SONG };
 int mixer_frame(const PlatInput *in);
 
 #endif

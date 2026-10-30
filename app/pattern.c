@@ -76,7 +76,8 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
  * clipboard's outline following it to show where OP2 puts it. */
 /* The black keys by their groups under the hand: the clipboard in the first
  * three, clearing in the two after (OP5 free), listening in the next three. */
-enum { OP_COPY = 1, OP_PASTE = 3, OP_CUT = 5, OP_CLEAR = 8, OP_LOOP = 13, OP_MONO = UI_KEY_MONO };
+enum { OP_COPY = UI_OP_COPY, OP_PASTE = UI_OP_PASTE, OP_CUT = UI_OP_CUT, OP_CLEAR = UI_OP_CLEAR,
+       OP_LOOP = UI_KEY_LOOP, OP_MONO = UI_KEY_MONO };
 static bool selecting, anchored;
 static UiShift shift; /* EDIT held: the keys are commands (ui.h) */
 /* REC (29/10): armed, PLAY counts a bar in, then what the keys play is
@@ -656,10 +657,11 @@ int pattern_frame(const PlatInput *in)
         if (cur_col >= 0)
             cur_col = 0;
     }
-    /* EDIT: a tap takes the SELECTION in or out (at the release); held, it
-     * is a shift -- the keys are commands while it is down, the SELECTION
-     * left as it was. MONO, in either: the track alone, or muted (ui.h). */
-    if (ui_shift(&shift, in, btns, keys, selecting, track, &said)) {
+    /* EDIT: a quick tap takes the SELECTION in or out (at the release), and
+     * it stays, as a CAPS LOCK; held, it is a shift -- the keys are commands
+     * while it is down and the SELECTION is left as it was, whether the hand
+     * used one or not (30/10). MONO, in either: the track alone, or muted (ui.h). */
+    if (ui_shift(&shift, in, btns, keys, selecting, track, &said) && shift.frames < EDIT_TAP) {
         selecting = !selecting;
         anchored = selecting;
         an_row = cur_row, an_col = cur_col;

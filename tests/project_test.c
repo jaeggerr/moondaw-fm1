@@ -94,6 +94,7 @@ int main(void)
     press(PB_SAVE);
     CHECK("SAVE saves", saves == 1);
     CHECK("FX goes to the MIXER", press(PB_FX) == PROJECT_MIXER);
+    CHECK("SEQ goes to SONG", press(PB_SEQ) == PROJECT_SONG);
     CHECK("HOME leaves", press(PB_HOME) == PROJECT_BACK);
     printf("project test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

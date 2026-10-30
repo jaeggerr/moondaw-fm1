@@ -423,11 +423,17 @@ void app_frame(const PlatInput *real)
             project_from = mixer_from;
             project_open();
             break;
+        case MIXER_SONG: /* SEQ: the song, wherever the mixer was opened from (30/10) */
+            back_to(AT_SONG);
+            break;
         }
     } else if (screen == AT_PROJECT) {
         switch (project_frame(in)) {
         case PROJECT_BACK:
             back_to(project_from);
+            break;
+        case PROJECT_SONG: /* SEQ: the song, as the mixer's (30/10) */
+            back_to(AT_SONG);
             break;
         case PROJECT_MIXER:
             screen = AT_MIXER;

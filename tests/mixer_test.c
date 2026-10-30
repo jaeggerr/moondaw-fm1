@@ -130,6 +130,10 @@ int main(void)
     CHECK("EDIT goes to the PROJECT", mixer_frame(&in) == MIXER_PROJECT);
     in.btns = 0;
     go();
+    in.btns = 1u << PB_SEQ;
+    CHECK("SEQ goes to SONG", mixer_frame(&in) == MIXER_SONG);
+    in.btns = 0;
+    go();
     in.btns = 1u << PB_HOME;
     CHECK("HOME leaves", mixer_frame(&in) == MIXER_BACK);
     printf("mixer test: %s\n", fails ? "FAIL" : "ok");

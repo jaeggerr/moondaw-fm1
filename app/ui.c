@@ -127,7 +127,9 @@ bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, 
 {
     bool tapped = false;
     if (pressed & 1u << PB_EDIT)
-        s->held = true, s->used = false;
+        s->held = true, s->used = false, s->frames = 0;
+    if (s->held && (in->btns & 1u << PB_EDIT))
+        s->frames++;
     if (s->held && keys)
         s->used = true;
     if (track >= 0 && (s->held || ops || s->mono) && (keys >> UI_KEY_MONO & 1u))

@@ -22,6 +22,12 @@ void player_stop(void);
  * phrase. A listening tool: never in the file, ignored when the song
  * plays, cleared by player_init. */
 void player_set_loop(int from, int len);
+/* The same for the song played by player_play_song: it goes round the
+ * phrases [from, to] instead of running on, at once, even mid-playback;
+ * `from` < 0 = the whole song. A listening tool as the one above, and as
+ * apart from the file: ignored while one phrase plays on its own, cleared
+ * by player_init. A `to` past the song's end is taken as its last phrase. */
+void player_set_song_loop(int from, int to);
 /* A note outside the song, on an instrument of the song: what a key
  * does on the INSTRUMENT screen, and the note PATTERN just wrote. One
  * at a time; the next one replaces it. */

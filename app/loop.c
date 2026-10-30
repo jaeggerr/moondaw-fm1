@@ -5,10 +5,21 @@
 
 static int state, of_entry, a, b;
 
+/* Whichever of the two it was, it is off: the player is told both. */
 void loop_clear(void)
 {
     state = LOOP_NONE;
     player_set_loop(0, 0);
+    player_set_song_loop(-1, -1);
+}
+
+/* The loop as the player takes it: the song's phrases, or one phrase's steps. */
+static void tell_player(void)
+{
+    if (of_entry < 0)
+        player_set_song_loop(a, b);
+    else
+        player_set_loop(a, b - a + 1);
 }
 
 void loop_keep(int entry)
@@ -32,7 +43,7 @@ void loop_press(int entry, int row)
             b = row;
         }
         state = LOOP_SET;
-        player_set_loop(a, b - a + 1);
+        tell_player();
     } else {
         loop_clear();
     }
@@ -48,7 +59,7 @@ void loop_set(int entry, int from, int to)
     of_entry = entry;
     a = from, b = to;
     state = LOOP_SET;
-    player_set_loop(a, b - a + 1);
+    tell_player();
 }
 
 int loop_state(void) { return state; }

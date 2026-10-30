@@ -7,6 +7,7 @@
 
 #include "../app/pattern.h"
 #include "../app/loop.h"
+#include "../app/ui.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 
@@ -222,6 +223,18 @@ int main(void)
         enc(PE_K2, 1);
         CHECK("and in a note column they write", (keys(1u << 1), keys(0), st(6)->notes[0] != NOTE_NONE));
         enc(PE_K2, -1);
+        /* EDIT held past a tap and let go, no key used: the SELECTION is left
+         * as it was -- only a quick tap locks it on or off (30/10) */
+        press(PB_EDIT);
+        in.btns = 1u << PB_EDIT;
+        for (int i = 0; i < EDIT_TAP + 2; i++)
+            go();
+        in.btns = 0;
+        go();
+        keys(1u << 8);        /* OP4: the selection's still, it was not closed */
+        keys(0);
+        CHECK("EDIT held and let go leaves the SELECTION as it was", step_is_empty(st(6)));
+        press(PB_EDIT);       /* out */
         enc(PE_K1, -6);
     }
 

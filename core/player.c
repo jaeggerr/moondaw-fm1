@@ -431,6 +431,9 @@ static int32_t lim_gain = LIM_ONE;
 static int click_left, click_half, click_phase;
 static volatile uint8_t mute_mask, solo_mask;
 static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio side never sees half of it */
+/* The phrases the song goes round: from | (to + 1) << 16, 0 for none -- one
+ * word again, and the + 1 so that a loop on phrase 00 alone is not 0 (30/10). */
+static volatile uint32_t song_loop_word;
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
 enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL };
@@ -1486,6 +1489,18 @@ static bool loop_bounds(uint16_t cycle, uint16_t *lo, uint16_t *hi)
     return true;
 }
 
+/* The phrases a looped song is kept to, when there is a loop and its first
+ * phrase is still in the song. Both ends are played, `hi` included. */
+static bool song_loop_bounds(uint16_t *lo, uint16_t *hi)
+{
+    uint32_t w = song_loop_word, from = w & 0xFFFFu, to = (w >> 16) - 1;
+    if (!song_mode || w == 0 || from >= song->arrange_len)
+        return false;
+    *lo = (uint16_t)from;
+    *hi = (uint16_t)(to >= song->arrange_len ? song->arrange_len - 1 : to);
+    return true;
+}
+
 static void player_tick(void)
 {
     uint16_t lo, hi;
@@ -1502,6 +1517,14 @@ static void player_tick(void)
     } else if (arr_play >= song->arrange_len ||
                song_entry_resolve(song, arr_pos, ref_nth) != (int)arr_play) {
         entry_enter(ref_nth);
+    }
+    /* PLAY with a loop over phrases starts in it, and one set while the song
+     * runs takes at once: the playhead is brought into it at a step's edge. */
+    if (tick_in_step == 0 && song_loop_bounds(&lo, &hi) && (arr_pos < lo || arr_pos > hi)) {
+        arr_pos = lo;
+        entry_step = 0;
+        entry_enter(0);
+        release_unmapped();
     }
     e = &song->arrangement[arr_play];
     cycle = song_entry_cycle(song, e);
@@ -1529,6 +1552,11 @@ static void player_tick(void)
                 playing = false;
                 song_once = false;
                 ui_playing = 0;
+            } else if (song_loop_bounds(&lo, &hi) && arr_pos >= hi &&
+                       song_entry_resolve(song, arr_pos, ref_nth + 1) < 0) {
+                arr_pos = lo; /* the last phrase of the loop: round to its first */
+                entry_enter(0);
+                release_unmapped();
             } else {
                 advance_entry();
             }
@@ -1967,6 +1995,7 @@ MAIN_LOOP void player_init(Song *s)
     ui_row = ui_entry = 0;
     mute_mask = solo_mask = 0;
     loop_word = 0;
+    song_loop_word = 0;
 }
 
 MAIN_LOOP void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
@@ -1975,6 +2004,11 @@ MAIN_LOOP void player_stop(void) { cmd_push(CMD_STOP, 0, 0); }
 MAIN_LOOP void player_set_loop(int from, int len)
 {
     loop_word = from < 0 || len <= 0 ? 0 : ((uint32_t)from & 0xFFFFu) | ((uint32_t)len & 0xFFFFu) << 16;
+}
+
+MAIN_LOOP void player_set_song_loop(int from, int to)
+{
+    song_loop_word = from < 0 || to < from ? 0 : ((uint32_t)from & 0xFFFFu) | (((uint32_t)to + 1) & 0xFFFFu) << 16;
 }
 MAIN_LOOP void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
 MAIN_LOOP void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }

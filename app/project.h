@@ -11,9 +11,9 @@
 #include "../platform/platform.h"
 
 void project_open(void);
-/* One frame: HOME goes back, FX to the MIXER -- FX is the mixer everywhere
- * but PATTERN (29/10). */
-enum { PROJECT_BACK, PROJECT_STAY, PROJECT_MIXER };
+/* One frame: HOME goes back, SEQ to SONG (30/10), FX to the MIXER -- FX is
+ * the mixer everywhere but PATTERN (29/10). */
+enum { PROJECT_BACK, PROJECT_STAY, PROJECT_MIXER, PROJECT_SONG };
 int project_frame(const PlatInput *in);
 
 #endif
