@@ -2520,6 +2520,19 @@ the code actually draws and he could hold it against his own screen.
   before the rule (his first complaint), ZONE 36, FILTER 49, OPEN 37 for
   33, tr9_kick 60 for 66, KICK909 61.
 
+## 2026-10-30 — LYR read as "lyrics", so the layer rows say LAY
+
+From the panel: the rows were `+ LYR` and `LYR 1`..`LYR 4`, and he read
+LYR as lyrics -- a fair reading on a machine whose voice engine really
+does sing syllables.
+
+- **`LAY`, not `LAYER`**: `LAY` is 41 px and the label column has 53
+  before its rule, where `+ LAYER` is 59 and does not fit. The same
+  measurement that settled SAMPLE, ZONE and OPEN.
+- **It is the `.trk` file's own keyword**, so the screen, the format and
+  moondaw now say one word for one thing. A label the file already
+  writes is always the better label.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

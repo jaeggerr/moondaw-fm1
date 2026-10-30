@@ -20,7 +20,7 @@
  *   FILTER  CUT RES ENV VEL         LEVEL   GAIN LEVEL VIB
  *   VOICE   TRACT ACCENT (a VOX instrument only)
  *   DRUM    TUNE TONE DECAY SNAP (a DRUM kit only: 64 as designed)
- *   LYR n   SOUND SEMI FINE GAIN, one row a layer; + LYR makes one (KNOB 3 up)
+ *   LAY n   SOUND SEMI FINE GAIN, one row a layer; + LAY makes one (KNOB 3 up)
  *
  *   SELECT, KNOB 1  the row     KNOB 2  the column     KNOB 3  the value
  *   PLAY    the preview: a few notes up, round and round, until PLAY again
@@ -155,7 +155,7 @@ static int own_row(void)
 }
 
 /* The rows as drawn: the fixed ones, the engine's own, a row a layer,
- * and + LYR while there is room for one more. */
+ * and + LAY while there is room for one more. */
 static int nrows(void)
 {
     return L_VOICE + (own_row() >= 0) + I()->nlayers + (I()->nlayers < INSTR_MAX_LAYERS);
@@ -170,7 +170,7 @@ static int kind(int r)
     return L_LAYER;
 }
 
-/* The layer row r stands for, nlayers for + LYR. */
+/* The layer row r stands for, nlayers for + LAY. */
 static int layer_of(int r) { return r - L_VOICE - (own_row() >= 0); }
 
 /* How many columns the row really has. A cell that can hold nothing is
@@ -434,7 +434,7 @@ static void turn(int d)
         }
     } else {
         int j = layer_of(row);
-        if (j >= in->nlayers) { /* + LYR: turning up makes the layer */
+        if (j >= in->nlayers) { /* + LAY: turning up makes the layer */
             if (d <= 0)
                 return;
             j = in->nlayers++;
@@ -519,9 +519,15 @@ static void draw(void)
         {
             static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE",
                                                  "DRUM", "ZONE" };
-            char lyr[6] = "LYR 1";
+            /* LAY, not LYR: he read the old one as "lyrics", which on a
+             * machine that does have a singing voice with syllables is a
+             * fair reading (30/10). LAY is the file's own keyword, so the
+             * screen, the format and moondaw say the same word, and it is
+             * 41 px against the 53 the label column has -- "+ LAYER" is 59
+             * and does not fit. */
+            char lyr[6] = "LAY 1";
             lyr[4] = (char)('1' + layer_of(r));
-            gfx_text(F_COND20, LABEL_X, grid_base(v), k != L_LAYER ? label[k] : adder ? "+ LYR" : lyr,
+            gfx_text(F_COND20, LABEL_X, grid_base(v), k != L_LAYER ? label[k] : adder ? "+ LAY" : lyr,
                      band ? C_ON_ACC : C_DIM);
         }
         if (k == L_NAME) {

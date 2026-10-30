@@ -126,10 +126,10 @@ int main(void)
     enc(PE_K3, -3);
     CHECK("and back to WAVE", I3.engine == ENGINE_WAVE);
 
-    /* the layers: + LYR is the row after LEVEL */
+    /* the layers: + LAY is the row after LEVEL */
     enc(PE_SELECT, 9);
     enc(PE_K3, 2);
-    CHECK("KNOB 3 up on + LYR makes a layer", I3.nlayers == 1 && I3.layers[0].engine == ENGINE_PULSE &&
+    CHECK("KNOB 3 up on + LAY makes a layer", I3.nlayers == 1 && I3.layers[0].engine == ENGINE_PULSE &&
           I3.layers[0].timbre == 1);
     enc(PE_K2, 1);
     enc(PE_K3, -12);
@@ -141,7 +141,7 @@ int main(void)
           I3.layers[0].transpose == -12 && I3.layers[0].detune == 7 && I3.layers[0].gain == -6);
     enc(PE_SELECT, 9);
     enc(PE_K3, 9);
-    CHECK("the next + LYR makes a second, one knob for engine and timbre",
+    CHECK("the next + LAY makes a second, one knob for engine and timbre",
           I3.nlayers == 2 && I3.layers[1].engine == ENGINE_WAVE && I3.layers[1].timbre == 2);
     enc(PE_SELECT, -1);
     enc(PE_K2, -3);
