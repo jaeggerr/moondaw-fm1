@@ -588,6 +588,12 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
                 player_note_on(instr, (uint8_t)n), trying = true;
         }
     }
+    {   /* A MIDI keyboard plays that same instrument at its own pitch, and
+         * is no command while EDIT is down (ui.h) */
+        int instr = cell_instr();
+        if (instr >= 0)
+            ui_midi_play(in, instr);
+    }
     if (undo_turn(in->enc[PE_ALGO], &said)) {
         if (row >= song->arrange_len)
             row = song->arrange_len - 1;

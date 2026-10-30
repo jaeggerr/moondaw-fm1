@@ -194,6 +194,9 @@ int phrase_frame(const PlatInput *in)
         player_note_on(edit_instr_at(song, col, blk(col), prow(col, row)), (uint8_t)n);
         chord_next++;
     }
+    /* A MIDI keyboard plays the track's instrument and writes nothing (ui.h) */
+    if (has(col))
+        ui_midi_play(in, edit_instr_at(song, col, blk(col), prow(col, row)));
 
     if (undo_turn(in->enc[PE_ALGO], &said)) {
         if (entry >= song->arrange_len)

@@ -36,7 +36,9 @@ Decisions and traps, newest section last. The FM-1 arrived on 28 October
 - **The MIDI IN ring must be drained.** `usb.c` NAKs EP1 while fewer than
   24 slots are free, and the update's SysEx arrives on EP1. A firmware
   that ignores MIDI and never empties the ring locks itself out of
-  updates. The main loop does `mi_r = mi_w` every frame.
+  updates. The main loop empties it every frame -- into the notes a
+  keyboard plays since 30/10 (`midi_drain`), a plain `mi_r = mi_w`
+  before that.
 - **Three ways back in are kept from Felucca**, all in `firmware.c`: the
   M-UPGRADE entry over USB, OCT- + OCT+ held 5 s → UBOOT, and the boot
   guard (two boots that die within 30 s → UBOOT). Do not remove any of
@@ -2140,6 +2142,64 @@ Done through each screen's guide mask rather than `ui_led_state`, so that
 no screen can leave the light on behind it: every `ui_led_guide` writes
 it. One consequence: with SETTINGS' LEDS on STATE, where only PLAY's
 state shows, the CAPS LOCK light does not.
+
+## 2026-10-30 — a MIDI keyboard plays it
+
+The FM-1 is a USB **device**, not a host: nothing plugs into it. A
+keyboard therefore reaches it one of two ways, and both end in the same
+ring (`usb.c`, `midi_in_q`): through the computer it is plugged into,
+which forwards its notes to the device's port (`tools/fm1_midi.py`), or
+straight into the 3.5 mm TRS MIDI jack -- that one is not read yet, the
+HAL being there (`hal/fm1_uart.h`, RX verified on hardware) and the
+parser it names never written.
+
+- **The instrument is the screen's, not the channel's.** Every screen
+  already turns one of its keys into a note on the instrument the cursor
+  is on (`edit_instr_at`); a MIDI note is given that same instrument, so
+  the sound follows the cursor and there is nothing to set up. The channel
+  is not read at all. His call, and the right one: a channel would say
+  nothing about a machine whose instrument is where the hand is. Should a
+  channel pick a track one day, this stays the default.
+- **The pitch is the keyboard's.** A MIDI note goes neither through
+  `edit_key_note` nor through OCT- / OCT+: a keyboard has its own octaves,
+  and the 27 keys' window is the panel's business. On a DRUM kit the note
+  picks the drum off the General MIDI map, which is what the keys do too.
+- **One voice, and the two hands share it.** The audition is monophonic
+  (`player_note_on`, one at a time, the next replacing it), so a chord on
+  the keyboard sounds its last note and a panel key let go takes the voice
+  with it. That is the panel's own rule, not a MIDI compromise; polyphony
+  there is a change to `player.c` and nothing to do with this.
+- **A MIDI note is never a command.** EDIT held turns the panel's black
+  keys into commands; the keyboard's notes play on regardless.
+- **Nothing is written.** They play, and they do not land in a step --
+  not under REC either. Writing from the keyboard is the next step, if he
+  wants it: the screens' writing is still the panel's.
+- **The ring must still be emptied every frame** (the rule above):
+  `midi_drain` does it now, at the top of the loop where `mi_r = mi_w`
+  was, and a frame that cannot hold what arrived lets every note go
+  rather than leave one hanging.
+- **One parser for the three streams** (`platform/midi_parse.h`):
+  USB-MIDI's event packets, CoreMIDI's packets in the simulator, the TRS
+  jack's bytes later. Running status lives there and nowhere else, and
+  only notes come out of it -- the MiniLab's knobs and pads send
+  controllers while it plays, and they are stepped over.
+- **The simulator plays it too**: every CoreMIDI source on the Mac is
+  listened to (`platform/sdl/main.c`), which is how this was written
+  before the device had it.
+- Verified: `tests/midi_test.c` (the parser, and on PATTERN a note that
+  sounds, stops, keeps its pitch across OCT+ and takes the cursor's
+  instrument), the host tests, and the firmware builds.
+- **On the machine (30/10)**: installed with `fm1_install.py`, then played
+  with no keyboard at all -- an arpeggio sent from the computer to the
+  device's own port, heard on SONG on the cell the cursor was on. A cell
+  with no block stays silent, which is the rule and not a fault: no
+  instrument there, no note (`cell_instr` < 0). It cost an hour to learn
+  that **the profile cannot answer this**: one voice costs less than the
+  microsecond `status --profile` counts in, so O and R move by noise
+  alone and only an ear settles it.
+- Not tried yet: the MiniLab itself through `tools/fm1_midi.py` (the
+  notes above were sent by a script), and nothing has been played into
+  the TRS jack, which is not read.
 
 ## Open
 

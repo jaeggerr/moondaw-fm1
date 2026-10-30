@@ -14,6 +14,8 @@
  *             A and ' are OCT- and OCT+; SPACE is PLAY too; or click
  *   keys      Z S X D C F V B H N J M , L . ; /     F3..A4 (the home row: sharps)
  *             7 U I 9 O 0 P [ = ]                   A#4..G5
+ *   MIDI      a MIDI keyboard plugged into the Mac plays notes too, at the
+ *             pitch it sends: every CoreMIDI source is listened to
  *   encoders  wheel over a knob, or drag it up and down;
  *             the arrows are SELECT (up, down) and ALGORITHM (left, right)
  *
@@ -34,6 +36,7 @@
 #include <string.h>
 
 #include "../platform.h"
+#include "../midi_parse.h"
 #include "../udp_sysex.h"
 #include "../../app/font/font8x8_basic.h"
 #include "../../app/splash.h"
@@ -278,12 +281,86 @@ static void turn(int knob, int steps)
     }
 }
 
+/* ----------------------------------------------------- MIDI IN --- */
+/* A MIDI keyboard on the Mac, straight into the simulator: every source
+ * CoreMIDI knows is listened to, so plugging the keyboard in is the whole
+ * of it, and its notes land in the same PlatInput.midi the machine fills
+ * from its cable -- through the same parser (platform/midi_parse.h), so
+ * what is tried here is what the device does.
+ *
+ * CoreMIDI reads on a thread of its own: the notes parsed there go through
+ * a ring the frame empties. Elsewhere than macOS the simulator has no MIDI
+ * in yet (the browser has Web MIDI, and the device its cable). */
+#ifdef __APPLE__
+#include <CoreMIDI/CoreMIDI.h>
+
+#define MIDI_Q 64u
+static PlatMidi midi_q[MIDI_Q];
+static volatile uint32_t midi_w, midi_r;
+
+static void midi_read(const MIDIPacketList *pl, void *a, void *b)
+{
+    static MidiParse p; /* the read thread's own: running status is per stream */
+    const MIDIPacket *pk = &pl->packet[0];
+    (void)a;
+    (void)b;
+    for (UInt32 i = 0; i < pl->numPackets; i++) {
+        p.n = 0;
+        midi_parse_bytes(&p, pk->data, pk->length);
+        for (uint8_t k = 0; k < p.n; k++) {
+            if (midi_w - midi_r >= MIDI_Q)
+                break; /* the frames have stopped coming: dropped, as the device's ring drops */
+            midi_q[midi_w % MIDI_Q] = p.q[k];
+            __sync_synchronize();
+            midi_w++;
+        }
+        pk = MIDIPacketNext(pk);
+    }
+}
+
+static void midi_open(void)
+{
+    MIDIClientRef cl;
+    MIDIPortRef port;
+    ItemCount n, i;
+    if (MIDIClientCreate(CFSTR("MOONDAW"), 0, 0, &cl) != noErr ||
+        MIDIInputPortCreate(cl, CFSTR("IN"), midi_read, 0, &port) != noErr)
+        return;
+    n = MIDIGetNumberOfSources();
+    for (i = 0; i < n; i++) {
+        MIDIEndpointRef src = MIDIGetSource(i);
+        CFStringRef nm = 0;
+        char name[64] = "?";
+        if (MIDIObjectGetStringProperty(src, kMIDIPropertyDisplayName, &nm) == noErr && nm) {
+            CFStringGetCString(nm, name, sizeof name, kCFStringEncodingUTF8);
+            CFRelease(nm);
+        }
+        if (MIDIPortConnectSource(port, src, 0) == noErr)
+            printf("MIDI IN: %s\n", name);
+    }
+    if (!n)
+        printf("MIDI IN: no keyboard (plug one in and start again)\n");
+}
+
+static void midi_frame(PlatInput *in)
+{
+    while (midi_r != midi_w && in->midi_n < PLAT_MIDI_MAX) {
+        in->midi[in->midi_n++] = midi_q[midi_r % MIDI_Q];
+        midi_r++;
+    }
+}
+#else
+static void midi_open(void) {}
+static void midi_frame(PlatInput *in) { (void)in; }
+#endif
+
 static void frame(uint32_t ms)
 {
     PlatInput in = { .keys = kb_keys | mouse_keys, .btns = kb_btns | mouse_btns,
                      .master = (uint16_t)master, .ms = ms };
     memcpy(in.enc, enc_step, sizeof enc_step);
     memset(enc_step, 0, sizeof enc_step);
+    midi_frame(&in);
     app_frame(&in);
     paint(in.keys, in.btns);
 }
@@ -545,6 +622,7 @@ int main(int argc, char **argv)
     splash_show(); /* a frame long here: the FM-1 is the one that waits on its panel */
     app_init();
     udp_sysex_open(); /* songs from tools/fm1_send.py --udp */
+    midi_open();      /* a MIDI keyboard on the Mac */
     if (argc == 2 && !load_song(argv[1], dev))
         SDL_Log("%s: not a version 3 .trk", argv[1]);
     SDL_PauseAudioDevice(dev, 0);

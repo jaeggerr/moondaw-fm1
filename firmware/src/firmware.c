@@ -60,6 +60,7 @@ struct { uint32_t magic, failed, pending; } bootguard __attribute__((section(".n
 #include "libc.c"
 #include "lcd.c"
 #include "../../platform/platform.h"
+#include "../../platform/midi_parse.h"
 #include "../../app/term.h"      /* the crash and update screens draw with the app's text cells */
 #include "../../app/splash.h"    /* and the mark, into the window the panel's wake-up already costs */
 
@@ -202,6 +203,29 @@ void plat_led_level(int led, int level)
 
 static int32_t master_knob = 512 * 16;   /* the pot x16, smoothed per frame (Felucca's master.c) */
 
+/* MIDI IN: a keyboard's notes, from usb.c's ring into the frame the app
+ * reads (PlatInput.midi). It runs at the top of the loop because the ring
+ * has to be emptied whatever listens -- a full one NAKs EP1, and the
+ * update's SysEx comes in through EP1 -- and what one frame cannot hold
+ * lets every note go rather than leave one hanging (midi_parse.h). */
+static MidiParse midi_in;
+
+static void midi_drain(void)
+{
+    while (mi_r != mi_w) {
+        uint32_t pkt;
+        RING_PUBLISH();                 /* the ISR (producer) can preempt us: */
+        pkt = midi_in_q[mi_r % MQ];     /* slot read strictly between the index checks */
+        RING_PUBLISH();
+        mi_r++;
+        midi_parse_usb(&midi_in, pkt);
+    }
+    if (midi_in_overflow) {             /* the ring filled: a broken stream, and nothing stays down */
+        midi_parse_release(&midi_in);
+        midi_in_overflow = 0;
+    }
+}
+
 static void input_read(PlatInput *in)
 {
     uint32_t i, raw = fm1_in.buttons;
@@ -219,6 +243,10 @@ static void input_read(PlatInput *in)
     }
     in->master = (uint16_t)(master_knob / 16);
     in->ms = fm1_ms;
+    for (i = 0; i < midi_in.n; i++)   /* the notes midi_drain took at the top of the loop */
+        in->midi[i] = midi_in.q[i];
+    in->midi_n = midi_in.n;
+    midi_in.n = 0;
 }
 
 /* ---------------------------------------------------- interrupts --- */
@@ -452,8 +480,7 @@ static void fm1_main(void)
             bootguard.pending = 0;
             bootguard.failed = 0;
         }
-        mi_r = mi_w;                            /* MIDI IN: nobody listens yet. Drained all the same -- a full
-                                                 * ring NAKs EP1, and the update's SysEx comes in through EP1 */
+        midi_drain();                           /* MIDI IN: a keyboard's notes, for the frame further down */
         mo_r = mo_w;
         {   /* OCT- + OCT+ held 5 s: enter UBOOT, as Felucca does (the way back in whatever the app is doing) */
             static uint32_t t0;

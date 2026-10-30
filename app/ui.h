@@ -98,6 +98,20 @@ bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, 
 /* MONO's LED for the track in front: lit alone, half muted. */
 void ui_led_mono(int track, uint32_t usable);
 
+/* The notes a MIDI keyboard sent this frame (PlatInput.midi), played on
+ * `instr` -- the instrument the screen would give its own keys, so what
+ * the keyboard sounds like follows the cursor. The pitch is the
+ * keyboard's: no octave button, no 27-key window.
+ *
+ * A MIDI note is never a command, whatever EDIT is doing: a screen gives
+ * them its instrument every frame and the hand is free to hold EDIT, pick
+ * a step or write nothing at all.
+ *
+ * One note at a time, as the panel's keys are -- the audition is a single
+ * voice (core/player.h) and both hands share it: the last note pressed
+ * wins, and a panel key let go takes the voice with it. */
+void ui_midi_play(const PlatInput *in, int instr);
+
 /* What a button of the map is, this frame. */
 enum {
     UI_BTN_NONE,  /* does nothing on this screen: an empty cell */

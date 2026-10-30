@@ -397,6 +397,12 @@ int instrument_frame(const PlatInput *in)
     if (!in->keys && prev_keys && prev_keys != 0xFFFFFFFFu && !previewing)
         player_note_off();
     prev_keys = in->keys;
+    /* And a MIDI keyboard, on the sound in front: it stops the preview as a
+     * key does, and its pitch is its own -- on a kit, the note picks the
+     * drum off the General MIDI map, as the keys do (ui.h) */
+    if (in->midi_n)
+        previewing = false;
+    ui_midi_play(in, inst);
 
     if (PRESSED(PB_PLAY)) { /* the preview, not the song */
         if (player_playing())

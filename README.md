@@ -21,6 +21,11 @@ has not been through many hands yet.
 - **Writing**: the keyboard writes notes, REC records what you play over a
   count-in, a selection copies, pastes, cuts and clears, a loop plays a
   passage round, UNDO and REDO on the ALGO knob.
+- **A MIDI keyboard**: its notes play the instrument of the screen you are
+  on -- the one the cursor is on -- at the pitch the keyboard sends. The
+  FM-1 is a USB device, not a host, so the keyboard goes through the
+  computer it is plugged into (`tools/fm1_midi.py` forwards it); the 3.5 mm
+  MIDI jack is not read yet.
 - **Playing**: MIXER (volume, pan, sends, mute and solo), per-cell levels
   in SONG, solo and mute from any screen with a track in front.
 - **On the device**: HELP, a page for every screen and every effect; the

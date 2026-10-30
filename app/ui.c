@@ -163,6 +163,31 @@ bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, 
     return tapped;
 }
 
+/* The MIDI keyboard, screen by screen: ui.h says the rules. The note
+ * sounding is kept here, so that a note let go only stops the voice if it
+ * is still its own. */
+static int midi_note = -1;
+
+void ui_midi_play(const PlatInput *in, int instr)
+{
+    for (int i = 0; i < in->midi_n; i++) {
+        unsigned n = in->midi[i].note;
+        if (n == PLAT_MIDI_RELEASE || n > NOTE_MAX) { /* everything let go */
+            if (midi_note >= 0)
+                player_note_off();
+            midi_note = -1;
+        } else if (!in->midi[i].vel) {
+            if ((int)n == midi_note) {
+                player_note_off();
+                midi_note = -1;
+            }
+        } else if (n >= NOTE_MIN) { /* under the lowest note the engines play: dropped */
+            player_note_on(instr, (uint8_t)n);
+            midi_note = (int)n;
+        }
+    }
+}
+
 void ui_led_guide(uint32_t usable)
 {
     static int lit_at = -1;

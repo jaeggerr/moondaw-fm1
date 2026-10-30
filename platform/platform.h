@@ -42,12 +42,36 @@ enum {
     PE_SELECT, PE_ALGO, PE_PRESET, PE_K1, PE_K2, PE_K3, PE_K4, PLAT_ENCS
 };
 
+/* A MIDI keyboard's notes, as they arrived since the last frame: over the
+ * cable (USB-MIDI, firmware/src/usb.c) or, later, the TRS jack, which
+ * shares the same ring. Absolute notes: they go neither through the 27
+ * keys' window nor through OCT- / OCT+, because a keyboard has its own
+ * octaves.
+ *
+ * The channel is not read. What a note plays is the instrument of the
+ * screen in front -- the one its own keys would play, so the sound
+ * follows the cursor (app/ui.h, ui_midi_play).
+ *
+ * `vel` 0 is the note let go. `note` PLAT_MIDI_RELEASE is everything let
+ * go, whatever was pressed: the keyboard asked for it (all notes off), or
+ * the stream broke and no note is left hanging. More notes in one frame
+ * than this holds is such a break (platform/midi_parse.h). */
+#define PLAT_MIDI_MAX 16
+#define PLAT_MIDI_RELEASE 0xFFu
+
+typedef struct {
+    uint8_t note; /* 0..127, or PLAT_MIDI_RELEASE */
+    uint8_t vel;  /* 1..127, 0 = let go */
+} PlatMidi;
+
 typedef struct {
     uint32_t keys;          /* held note keys */
     uint32_t btns;          /* held buttons, bit = PB_* */
     int8_t enc[PLAT_ENCS];  /* detents since the last frame, + = clockwise */
     uint16_t master;        /* 0..1023 */
     uint32_t ms;            /* since boot */
+    PlatMidi midi[PLAT_MIDI_MAX]; /* a MIDI keyboard's notes this frame, in order */
+    uint8_t midi_n;         /* how many; 0 where a backend has no MIDI in */
 } PlatInput;
 
 /* w*h pixels at x,y. The buffer is the caller's again on return. */

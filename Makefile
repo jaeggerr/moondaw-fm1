@@ -12,6 +12,8 @@ CC      ?= cc
 CFLAGS  += -std=c11 -O2 -g -Wall -Wextra
 APP     ?= app
 MOONDAW ?= ../moondaw
+# A MIDI keyboard into the simulator is CoreMIDI, on macOS (platform/sdl/main.c).
+MIDILIBS := $(if $(filter Darwin,$(shell uname -s)),-framework CoreMIDI -framework CoreFoundation,)
 CORE    := core/song.c core/trk.c core/store.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c core/bank.c
 ifeq ($(APP),hello)
 SRCS    := app/hello.c app/term.c
@@ -29,7 +31,7 @@ sim: build/sim/moondaw-fm1
 build/sim/moondaw-fm1: platform/sdl/main.c $(SRCS) $(HDRS)
 	@mkdir -p build/sim
 	$(CC) $(CFLAGS) $(shell pkg-config --cflags sdl2) platform/sdl/main.c $(SRCS) \
-	    -o $@ $(shell pkg-config --libs sdl2)
+	    -o $@ $(shell pkg-config --libs sdl2) $(MIDILIBS)
 
 web:
 	APP=$(APP) platform/web/build.sh
@@ -52,6 +54,8 @@ test: sim web
 	build/pattern_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/store_test.c core/store.c -o build/store_test
 	build/store_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/midi_test.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/midi_test
+	build/midi_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/persist_test.c app/app.c $(UI) $(CORE) -o build/persist_test
 	build/persist_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/song_test

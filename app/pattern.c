@@ -767,6 +767,9 @@ int pattern_frame(const PlatInput *in)
         player_note_on(edit_instr_at(song, track, pat, cur_row), (uint8_t)n); /* heard as written */
         chord_next = slot + 1;
     }
+    /* A MIDI keyboard plays the instrument the cursor is on and writes
+     * nothing: the pitch is the keyboard's own (ui.h) */
+    ui_midi_play(in, edit_instr_at(song, track, pat, cur_row));
 
     if (PRESSED(PB_SAVE))
         said = app_save() == 0 ? "SAVED" : "NOT SAVED";
