@@ -293,6 +293,100 @@ int main(void)
     }
     press(PB_SEQ);
 
+    /* KNOB 2 through the whole step, across the views (30/10): the four
+     * notes, the instrument, the three effects, and round to the notes
+     * again. Where the cursor stands is read back from what the knobs and
+     * the keys do there -- a key writes in its own note slot, KNOB 3 names
+     * the instrument, KNOB 4 the effect, and on a step's number KNOB 3 is
+     * the block's length. Going right the numbers are stepped over, going
+     * left they are walked into, one group at a time. */
+    {
+        int len0 = pat_len_of();
+        enc(PE_K1, 8);            /* row 10, clear of the rows the rest of this test works on */
+        enc(PE_K2, 3);            /* the fourth note, with a note in it to find later */
+        keys(1u << 16);
+        keys(0);
+        enc(PE_K2, 1);
+        enc(PE_K3, 3);
+        CHECK("right from the fourth note: the instrument column, not the step's number",
+              st(10)->instrument == 2 && pat_len_of() == len0);
+        enc(PE_K2, 1);
+        enc(PE_K4, 1);
+        CHECK("right from the instrument: the first effect, not the step's number",
+              st(10)->fx[0].cmd != FX_NONE && pat_len_of() == len0);
+        enc(PE_K2, 2);            /* the third effect, the far end of the strip */
+        enc(PE_K4, 1);
+        CHECK("and on to the third effect", st(10)->fx[2].cmd != FX_NONE);
+        enc(PE_K2, 1);
+        keys(1u << 19);
+        keys(0);
+        CHECK("past the last effect it comes round to the first note", st(10)->notes[0] == 72);
+        enc(PE_K2, 5);            /* the first effect again, the four notes and the instrument passed */
+        enc(PE_K2, -1);
+        enc(PE_K3, -1);
+        CHECK("left from the first effect: the step's number", pat_len_of() == len0 - 1);
+        enc(PE_K2, -1);
+        enc(PE_K3, -10);
+        CHECK("and only the turn after it crosses: the instrument column", st(10)->instrument == INSTR_NONE);
+        enc(PE_K2, -1);
+        enc(PE_K3, -1);
+        CHECK("left again: that group's own number", pat_len_of() == len0 - 2);
+        enc(PE_K2, -1);
+        enc(PE_K3, -100);         /* a frame holds an int8_t of detents */
+        enc(PE_K3, -100);
+        CHECK("and across it, the fourth note, where the note was left", st(10)->notes[3] == NOTE_NONE);
+        /* the row and the block left as they were found. The two effects go
+         * the last one first: KNOB 4's list steps over what the row already
+         * holds, so the first one taken off would move the other's place in it. */
+        enc(PE_K2, -3);
+        enc(PE_K3, -100);
+        enc(PE_K3, -100);
+        enc(PE_K2, 7);            /* the third effect */
+        enc(PE_K4, -1);
+        enc(PE_K2, -2);           /* the first */
+        enc(PE_K4, -1);
+        CHECK("the row is left as it was found", step_is_empty(st(10)));
+        enc(PE_K2, -1);           /* that group's number */
+        enc(PE_K3, 2);
+        CHECK("and the block's length too", pat_len_of() == len0);
+        enc(PE_K1, -8);
+    }
+    /* The SELECTION does not cross: half a block of notes and half of
+     * effects is nothing one could paste, and the clipboard's fields are a
+     * view's (30/10). The knob there still stops at the edges of the group,
+     * which is what it clears that says. */
+    {
+        enc(PE_K1, 9);            /* row 11, its own */
+        press(PB_SEQ);
+        enc(PE_K2, -10);
+        enc(PE_K2, 1);
+        keys(1u << 16);
+        keys(0);                  /* a note, to see it survive */
+        enc(PE_K2, 5);            /* the first effect */
+        enc(PE_K4, 1);            /* an effect, to see it go */
+        press(PB_EDIT);           /* in, the anchor on it */
+        enc(PE_K2, 10);           /* right, hard: loose, the strip would come round to the notes */
+        keys(1u << 8);            /* OP4: clear */
+        keys(0);
+        press(PB_EDIT);           /* out */
+        CHECK("selecting, the knob stays in the view: the effects go and the note stays",
+              st(11)->fx[0].cmd == FX_NONE && st(11)->notes[0] == 69);
+        press(PB_FX);             /* the first effect, an effect on it again */
+        enc(PE_K4, 1);
+        press(PB_EDIT);
+        enc(PE_K2, -10);          /* left, hard: no further than its own number */
+        keys(1u << 8);            /* OP4: clear -- whole steps, from a number */
+        keys(0);
+        press(PB_EDIT);
+        CHECK("and left it stops at that group's number: the whole step", step_is_empty(st(11)));
+        enc(PE_K2, 1);
+        enc(PE_K4, 1);
+        CHECK("and the view under it never turned over", st(11)->fx[0].cmd != FX_NONE);
+        enc(PE_K4, -1);
+        enc(PE_K1, -9);
+        press(PB_SEQ);
+    }
+
     /* SELECTION: EDIT in, SELECT stretches, the black keys OP1-4 */
     press(PB_SEQ);            /* NOTES, the cursor on row 2 */
     enc(PE_K2, -10);

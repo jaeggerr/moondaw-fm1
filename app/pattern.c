@@ -22,8 +22,10 @@
  *          KNOB 3 walks the song's instruments and the step is heard as it turns, so
  *          the ear chooses (30/10), as SONG's KNOB 3 does with blocks
  *
- *   SELECT, KNOB 1  the step   KNOB 2  the column; left of the first, the step's number (KNOB 3 the
- *                        block's length)
+ *   SELECT, KNOB 1  the step   KNOB 2  the column, through the whole step and across the
+ *                        views (30/10): the four notes, the instrument, the three effects,
+ *                        round again; the step's number at the head of each group (KNOB 3
+ *                        the block's length), walked into going left, stepped over going right
  *   the keys  write the note under the cursor in NOTES (a chord while one is held), OCT-/OCT+
  *             their octave; on the step's number, in FX and INS they only play
  *   SELECT also brings the cursor to the step's number: the step as a whole
@@ -58,10 +60,14 @@ static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
 static const char *const view_next[VIEWS] = { "INS ->", "SEQ ->", "FX ->" };
 static const int view_cols[VIEWS] = { STEP_MAX_NOTES, STEP_MAX_FX, 1 };
 static const int view_w[VIEWS] = { 38, 60, 180 };
+/* and the order of the strip the cursor runs along (below), the marker's own. */
+static const int strip_order[VIEWS] = { V_NOTES, V_INS, V_FX };
+enum { STRIP_N = VIEWS + STEP_MAX_NOTES + 1 + STEP_MAX_FX }; /* a number heading each group, then its columns */
 
 static Song *song;
 static int entry, track, pat;
-static int view, cur_row, cur_col, top; /* cur_col -1: the step's number */
+static int cur_at;                      /* where the cursor stands in the strip: the whole truth of it */
+static int view, cur_row, cur_col, top; /* view and cur_col are cur_at read back; cur_col -1: the step's number */
 static int kbd_oct;                     /* octaves the keyboard is moved by */
 static bool trying;                     /* a key plays without writing (the cursor in no note column) */
 static int chord_next;                  /* the note slot the next held key fills, 0 = none held */
@@ -115,6 +121,85 @@ static int ch_free = -1; /* the slot + NEW would take, -1 when the song holds no
 enum { AU_SETTLE = SETTLE, AU_HOLD = 24 };
 static int au_settle, au_hold;
 static bool au_sounding;
+
+/* ---------------------------------------------------------- strip --- */
+/* KNOB 2 runs along one strip, the whole step in the order the marker at
+ * the top right promises, with the step's number at the head of each group,
+ * where the screen itself puts it -- at the left of the grid:
+ *
+ *   #  N1 N2 N3 N4   #  INSTRUMENT   #  FX1 FX2 FX3
+ *
+ * Where the cursor stands in that strip is the only truth there is (30/10):
+ * `view` and `cur_col` are read back from it, so the knob crosses a
+ * frontier and the grid turns over under it on its own, instead of the
+ * cursor being held inside the view it started in. Two states to keep
+ * agreeing with each other were one too many.
+ *
+ * The two directions are not the same, and he asked for both in the same
+ * breath (30/10). Rightwards the numbers are stepped over: the fourth note
+ * reaches the instrument, the instrument reaches FX 1, and the last effect
+ * comes round to the first note -- going right is going further into the
+ * step, and the number lies at the far left of the screen, so landing on it
+ * would read as a jump backwards. Leftwards they are walked into: FX 1
+ * reaches the number, which is the left edge of the grid in front, and only
+ * the turn after that crosses to the group before it, arriving at its last
+ * column. So the step as a whole is still one detent from the first column
+ * of wherever one is, as it was. The first number is the end of the strip
+ * and the knob stops there. */
+static int strip_first(int v) /* where a view's group begins: its number */
+{
+    int p = 0;
+    for (int i = 0; i < VIEWS && strip_order[i] != v; i++)
+        p += 1 + view_cols[strip_order[i]];
+    return p;
+}
+
+static int strip_view(int p)
+{
+    for (int i = 0; i < VIEWS - 1; i++) {
+        int n = 1 + view_cols[strip_order[i]];
+        if (p < n)
+            return strip_order[i];
+        p -= n;
+    }
+    return strip_order[VIEWS - 1];
+}
+
+static int strip_col(int p) { return p - strip_first(strip_view(p)) - 1; }
+
+/* the strip read back -- nothing else writes view or cur_col */
+static void strip_read(void)
+{
+    view = strip_view(cur_at);
+    cur_col = strip_col(cur_at);
+}
+
+static void strip_go(int p)
+{
+    cur_at = p;
+    strip_read();
+}
+
+static void strip_turn(int d) /* a detent at a time: the two directions differ */
+{
+    for (; d > 0; d--) {
+        cur_at = cur_at + 1 < STRIP_N ? cur_at + 1 : 1; /* past the last effect: the first note */
+        if (strip_col(cur_at) < 0)                      /* a number is not turned into, going right */
+            cur_at++;
+    }
+    for (; d < 0; d++)
+        cur_at = cur_at > 0 ? cur_at - 1 : 0;
+    strip_read();
+}
+
+/* The SELECTION is the one place the knob still stops at the view's edge:
+ * half a block of notes and half of effects is nothing one could paste, and
+ * the clipboard's fields are a view's (edit.h, 30/10). */
+static void strip_turn_sel(int d)
+{
+    int lo = strip_first(view), hi = lo + view_cols[view], p = cur_at + d;
+    strip_go(p < lo ? lo : p > hi ? hi : p);
+}
 
 /* ----------------------------------------------------------- data --- */
 static int pat_len(void) { return song->patterns[track][pat].length; }
@@ -722,8 +807,8 @@ bool pattern_open(Song *s, int e, int t)
     entry = e;
     track = t;
     pat = s->arrangement[e].pattern[t];
-    cur_row = top = cur_col = 0;
-    view = V_NOTES;
+    cur_row = top = 0;
+    strip_go(strip_first(V_NOTES) + 1); /* the first note */
     said = 0;
     choosing = listening = writing_syl = selecting = trying = false;
     rec_armed = counting = recording = false;
@@ -811,10 +896,10 @@ int pattern_frame(const PlatInput *in)
     }
     if (PRESSED(PB_SEQ) || PRESSED(PB_FX) || PRESSED(PB_ENV)) { /* a button a view */
         au_hush(); /* another view: nothing of the ear's is left sounding */
-        view = PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS;
         selecting = false; /* its columns were the other view's */
-        if (cur_col >= 0)
-            cur_col = 0;
+        /* a jump to the head of the group, which is its first column, or its
+         * number when the cursor was on one: the buttons keep their role */
+        strip_go(strip_first(PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS) + (cur_col < 0 ? 0 : 1));
     }
     /* EDIT: a quick tap takes the SELECTION in or out (at the release), and
      * it stays, as a CAPS LOCK; held, it is a shift -- the keys are commands
@@ -859,9 +944,13 @@ int pattern_frame(const PlatInput *in)
     cur_row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
     if (in->enc[PE_SELECT]) /* SELECT: the step as a whole, the cursor on its number (29/10) */
-        cur_col = -1;
-    cur_col += in->enc[PE_K2];
-    cur_col = cur_col < -1 ? -1 : cur_col >= view_cols[view] ? view_cols[view] - 1 : cur_col;
+        strip_go(strip_first(view));
+    if (in->enc[PE_K2]) {
+        if (selecting)
+            strip_turn_sel(in->enc[PE_K2]);
+        else
+            strip_turn(in->enc[PE_K2]);
+    }
     if (btns & (1u << PB_OCTDN) && kbd_oct > -3)
         kbd_oct--;
     if (btns & (1u << PB_OCTUP) && kbd_oct < 3)

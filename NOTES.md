@@ -2804,6 +2804,62 @@ no instrument library to edit, and the page edits a song file.
   and `ping` are carried and not shown, since the FM-1 does not play
   them.
 
+## 2026-10-30 — KNOB 2 goes through the whole step, across the views
+
+The marker at the top right has been promising an order since this
+morning -- the notes, the instrument column, the effects, round again --
+and KNOB 2 stopped at the edge of whichever view it was in. That was left
+undecided then, to judge from use; he has now asked for it twice. His
+words: "si on a le curseur sur le quatrième slot de note et qu'on tourne
+encore un coup à droite, on passe dans le slot d'instrument, et si on
+tourne encore le curseur à droite on passe dans les FX".
+
+**One strip, and the cursor's place in it is the only truth there is.**
+
+    #  N1 N2 N3 N4   #  INSTRUMENT   #  FX1 FX2 FX3
+
+`cur_at` is that place; `view` and `cur_col` are read back from it and
+nothing else writes them (`strip_read`). The clamp that held the cursor
+inside its view is gone rather than widened, and with it a whole class of
+disagreement between the two states it used to take to say where the
+cursor was. The three views and their tables stay as they were: a view is
+now which part of the strip the screen is showing.
+
+**The step's number heads every group, and the two directions are not the
+same.** This is the part he dictated on top, in the same breath as the
+rest: going right the numbers are stepped over -- the fourth note reaches
+the instrument, the instrument reaches `FX 1`, and the last effect comes
+round to the first note -- and going left they are walked into, `FX 1`
+reaching the number first and only the turn after it crossing to the
+group before, where it arrives on that group's last column. It reads as
+the screen does: the number is drawn at the left edge of the grid in
+front, so one walks into it on the way out to the left, while turning
+right is going further into the step and landing on the far left would
+be a jump backwards. And the step as a whole stays one detent to the left
+of the first column of wherever one is, as it always was.
+
+**The three buttons keep their role**: SEQ, FX and ENV jump to the head
+of their group, which is its first column, or its number when the cursor
+was already on one -- exactly what they did before.
+
+**The SELECTION does not cross.** While it is on, KNOB 2 still stops at
+the edges of the group, its number included. Half a block of notes and
+half of effects is nothing one could paste, and the clipboard's fields
+are per view (`EDIT_CLIP_N1 << c`, `EDIT_CLIP_FX1 << c`,
+`EDIT_CLIP_INSTR`). My call, told to him; he can contradict it.
+
+**Verified in `tests/pattern_test.c`**, which reads the cursor's place
+back from what the knobs and the keys do there -- a key writes in its own
+note slot, KNOB 3 names the instrument, KNOB 4 the effect, and on a
+number KNOB 3 is the block's length -- walking the strip right across the
+two frontiers and round, then left through both numbers, and showing the
+SELECTION held inside the effects (what it clears is the effects, the
+note beside them surviving). Thirteen checks, of which eleven fail
+against the previous `app/pattern.c` -- so they are about this and not
+about the harness; the two that pass there pass for want of anything to
+say, not by agreeing. Not on an FM-1: the device was out of bounds (another session
+held the MIDI port) and he judges it on the panel himself.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
