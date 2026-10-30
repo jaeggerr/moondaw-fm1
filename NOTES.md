@@ -2533,6 +2533,36 @@ does sing syllables.
   moondaw now say one word for one thing. A label the file already
   writes is always the better label.
 
+## 2026-10-30 — PATTERN says which view is next
+
+Nothing on PATTERN said the three views existed. He spent a long while
+looking for how to change a step's sound while the instrument column was
+one button away, and the chooser (SEL there, with audition, and KNOB 3)
+one more -- he found neither, because nothing told him the column was
+there. So the top right of the header now names the view the next press
+reaches: `INS ->`, `FX ->`, `SEQ ->`. He chose this over showing all
+three at once: "there are only three, I will learn them quickly".
+
+- **The order is his, not the enum's.** He thinks notes, then the
+  instrument column, then the effects, round again; the enum is
+  `V_NOTES, V_FX, V_INS`, so the marker is a second table and never the
+  enum's neighbour -- from the notes it says `INS ->`, from the column
+  `FX ->`, from the effects `SEQ ->`.
+- **`SEQ` for the notes**, because it is printed on the button one
+  presses to get back there, and because `NOTES` is 28 px in the header
+  font and there is nowhere near that much room. `INS` is his word.
+- **The width that decided the type.** The FX view all but fills the
+  line: `FX 3` ends at x 209 and `PLAT_W - 4` is 236, so there are 27 px.
+  In the header's own CONDENSED 12 `SEQ ->` is 27 px exactly -- it would
+  start on the pixel where `FX 3` ends, and on the panel the two read as
+  one word, `FX 3 SEQ ->`. In CONDENSED 9 it is 21 px, starting at 215,
+  six clear of the head; and being the smallest type on the screen it
+  reads as furniture, which is what it is. The other two views have room
+  to spare (the notes head `4` ends at 186, `INSTRUMENT` at 168).
+- **Display only.** Nothing was wired: in particular KNOB 2 still stops
+  at the last column instead of wrapping into the next view. He raised
+  that and left it undecided, to judge from use.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
