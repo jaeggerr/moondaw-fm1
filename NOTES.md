@@ -2197,9 +2197,37 @@ parser it names never written.
   that **the profile cannot answer this**: one voice costs less than the
   microsecond `status --profile` counts in, so O and R move by noise
   alone and only an ear settles it.
-- Not tried yet: the MiniLab itself through `tools/fm1_midi.py` (the
-  notes above were sent by a script), and nothing has been played into
-  the TRS jack, which is not read.
+- Not tried yet: the MiniLab itself, either way -- the notes above were
+  sent by a script, and the DIN-to-jack cable is not on the desk. The
+  cable's arpeggio was heard again after the UART arrived, so the jack's
+  init disturbs nothing USB does.
+- A keyboard cannot be plugged into the FM-1 over USB, whatever the
+  power: its USB0 is a device controller and the firmware has no host
+  stack, so two devices face each other and nothing enumerates. He
+  tried it the same evening; it is worth saying out loud before
+  anyone else does.
+
+- **The 3.5 mm MIDI jack, the same day.** UART1 on PH8 at 31250 baud, the
+  DMA writing into a 256-byte ring (`hal/fm1_uart.h`, Felucca's, RX
+  verified on hardware; nothing else used it). `midi_drain` empties it
+  every frame beside the USB ring, a byte at a time into a parser of its
+  own -- running status belongs to one stream, and the two know nothing
+  of each other -- and both queues go into the one frame the app reads.
+  A keyboard with its own MIDI output then plays the FM-1 with no
+  computer anywhere, though it still needs its own power: MIDI carries
+  none, and the FM-1's jack is an input.
+- **The MiniLab 3's MIDI out is a 5-pin DIN**, not a mini-jack (I said
+  the opposite twice, from memory, before checking Arturia's own pages).
+  Its one big jack, marked CONTROL, is the 6.35 mm pedal input. So the
+  cable into the FM-1 is DIN to 3.5 mm TRS, and the adapter in the
+  keyboard's box goes the other way. Which TRS standard the FM-1's jack
+  follows, A or B, is still unknown -- an adapter settles it, and no
+  code changes either way.
+- **The one thing hardware alone can settle**: `fm1_uart1_rx_take()` is
+  documented as the bytes the DMA wrote since the last call, and the
+  drain trusts that word. If it turned out to be an absolute count the
+  jack would read noise while USB stayed perfect -- the first thing to
+  look at if a cable gives nothing.
 
 ## Open
 

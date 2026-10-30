@@ -42,9 +42,10 @@ enum {
     PE_SELECT, PE_ALGO, PE_PRESET, PE_K1, PE_K2, PE_K3, PE_K4, PLAT_ENCS
 };
 
-/* A MIDI keyboard's notes, as they arrived since the last frame: over the
- * cable (USB-MIDI, firmware/src/usb.c) or, later, the TRS jack, which
- * shares the same ring. Absolute notes: they go neither through the 27
+/* A MIDI keyboard's notes, as they arrived since the last frame, by the
+ * cable (USB-MIDI, firmware/src/usb.c) or by the 3.5 mm MIDI jack: which
+ * one it was is not said here, a note being a note. Absolute: they go
+ * neither through the 27
  * keys' window nor through OCT- / OCT+, because a keyboard has its own
  * octaves.
  *

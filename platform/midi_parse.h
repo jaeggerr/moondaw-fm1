@@ -2,9 +2,9 @@
 /* A stream of MIDI bytes to the notes a keyboard plays. Three streams
  * carry the same thing and all three come through here: the event packets
  * of USB-MIDI over the cable (midi_parse_usb, firmware/src/usb.c's ring),
- * CoreMIDI's packets in the simulator and, later, the TRS jack's 31250
- * baud (midi_parse_bytes). Running status is understood in one place,
- * this one.
+ * the 3.5 mm MIDI jack's 31250 baud, a byte at a time as the UART's DMA
+ * leaves them, and CoreMIDI's packets in the simulator (midi_parse_bytes).
+ * Running status is understood in one place, this one.
  *
  * Only notes come out, into PlatInput.midi (platform.h): note on, note
  * off -- a note on at velocity 0 is one -- and the two controllers that

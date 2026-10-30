@@ -7,6 +7,7 @@
  *   fm1_uart1_midi_init(ring, len)   len a power of two, ring aligned 16;
  *                                    before TIMER5 starts (PORTH RMW)
  *   fm1_uart1_rx_take()              bytes DMA'd since the last call
+ *   fm1_uart1_rx_sync()              ssync before reading the ring
  */
 #pragma once
 #include <stdint.h>
@@ -50,6 +51,8 @@ FM1_INLINE void fm1_uart1_midi_init(volatile uint8_t *ring, uint32_t len)
     __asm__ volatile("csync" ::: "memory");
     FM1_UT1_CON0 |= 1u;                                /* UTEN last */
 }
+
+FM1_INLINE void fm1_uart1_rx_sync(void) { __asm__ volatile("ssync" ::: "memory"); }
 
 FM1_INLINE uint32_t fm1_uart1_rx_take(void)
 {

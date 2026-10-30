@@ -21,8 +21,11 @@ channel is not read. Ctrl-C ends it, letting every note go.
 With no --from, the first port that is not the FM-1 itself is taken; with
 no --to, the first that is. --list says what this computer can see.
 
-A MiniLab 3 can also go straight into the FM-1's 3.5 mm MIDI jack, with
-no computer at all -- but the firmware does not read that jack yet.
+A keyboard with a MIDI output of its own can go straight into the FM-1's
+3.5 mm MIDI jack instead, with no computer at all: the firmware reads
+that jack too. It still needs its own power -- MIDI carries none -- and,
+where its output is a 5-pin DIN as the MiniLab 3's is, a DIN to 3.5 mm
+TRS cable.
 
 MIDI needs python-rtmidi.
 """

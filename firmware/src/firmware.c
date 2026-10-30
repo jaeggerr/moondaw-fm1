@@ -47,6 +47,7 @@
 #include "fm1_timer.h"
 #include "fm1_audio.h"
 #include "fm1_adc.h"
+#include "fm1_uart.h"
 #include "fm1_lcd_hw.h"
 #if FM1_CPU1
 #include "fm1_cpu1.h"
@@ -203,26 +204,49 @@ void plat_led_level(int led, int level)
 
 static int32_t master_knob = 512 * 16;   /* the pot x16, smoothed per frame (Felucca's master.c) */
 
-/* MIDI IN: a keyboard's notes, from usb.c's ring into the frame the app
- * reads (PlatInput.midi). It runs at the top of the loop because the ring
- * has to be emptied whatever listens -- a full one NAKs EP1, and the
- * update's SysEx comes in through EP1 -- and what one frame cannot hold
- * lets every note go rather than leave one hanging (midi_parse.h). */
-static MidiParse midi_in;
+/* MIDI IN: a keyboard's notes, from the two ways in into the frame the app
+ * reads (PlatInput.midi) -- the cable (usb.c's ring) and the 3.5 mm MIDI
+ * jack (UART1 at 31250 baud, DMA into trs_ring; hal/fm1_uart.h). A parser
+ * each, because running status belongs to one stream and these two know
+ * nothing of each other, and one frame for both: a note plays the same
+ * whichever way it came in.
+ *
+ * It runs at the top of the loop because the USB ring has to be emptied
+ * whatever listens -- a full one NAKs EP1, and the update's SysEx comes in
+ * through EP1 -- and what one frame cannot hold lets every note go rather
+ * than leave one hanging (midi_parse.h). */
+static MidiParse midi_usb, midi_trs;
+
+#define TRS_RING 256u                   /* 31250 baud is 47 bytes a frame: room to spare */
+static volatile uint8_t trs_ring[TRS_RING] __attribute__((aligned(16)));
+static uint32_t trs_r;
 
 static void midi_drain(void)
 {
+    uint32_t n;
     while (mi_r != mi_w) {
         uint32_t pkt;
         RING_PUBLISH();                 /* the ISR (producer) can preempt us: */
         pkt = midi_in_q[mi_r % MQ];     /* slot read strictly between the index checks */
         RING_PUBLISH();
         mi_r++;
-        midi_parse_usb(&midi_in, pkt);
+        midi_parse_usb(&midi_usb, pkt);
     }
     if (midi_in_overflow) {             /* the ring filled: a broken stream, and nothing stays down */
-        midi_parse_release(&midi_in);
+        midi_parse_release(&midi_usb);
         midi_in_overflow = 0;
+    }
+    n = fm1_uart1_rx_take();            /* the jack: what the DMA wrote since the last frame */
+    fm1_uart1_rx_sync();                /* it wrote the ring behind the cache's back */
+    if (n >= TRS_RING) {                /* a frame late enough to lose bytes: let go rather than hang */
+        midi_parse_release(&midi_trs);
+        trs_r += n;
+        return;
+    }
+    while (n--) {
+        uint8_t b = trs_ring[trs_r % TRS_RING];
+        trs_r++;
+        midi_parse_bytes(&midi_trs, &b, 1u);
     }
 }
 
@@ -243,10 +267,12 @@ static void input_read(PlatInput *in)
     }
     in->master = (uint16_t)(master_knob / 16);
     in->ms = fm1_ms;
-    for (i = 0; i < midi_in.n; i++)   /* the notes midi_drain took at the top of the loop */
-        in->midi[i] = midi_in.q[i];
-    in->midi_n = midi_in.n;
-    midi_in.n = 0;
+    in->midi_n = 0;                   /* the notes midi_drain took at the top of the loop, the cable's first */
+    for (i = 0; i < midi_usb.n && in->midi_n < PLAT_MIDI_MAX; i++)
+        in->midi[in->midi_n++] = midi_usb.q[i];
+    for (i = 0; i < midi_trs.n && in->midi_n < PLAT_MIDI_MAX; i++)
+        in->midi[in->midi_n++] = midi_trs.q[i];
+    midi_usb.n = midi_trs.n = 0;
 }
 
 /* ---------------------------------------------------- interrupts --- */
@@ -458,6 +484,7 @@ static void fm1_main(void)
     }
     audio_init();
     usb_start();
+    fm1_uart1_midi_init(trs_ring, TRS_RING);    /* the 3.5 mm MIDI jack, before TIMER5 (PORTH RMW) */
     fm1_timer5_start(isr_timer5, 4);            /* above ALNK0 (3) */
     fm1_guard_lock_top();
     fm1_irq_enable_all();

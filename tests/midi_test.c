@@ -10,13 +10,15 @@
  *   5. clock, SysEx, program change and pitch bend are stepped over, and
  *      none of them swallows the note that follows;
  *   6. more notes in a frame than it holds: everything let go, once;
- *   7. USB-MIDI event packets say the same as the bytes do.
+ *   7. USB-MIDI event packets say the same as the bytes do;
+ *   8. and so does a stream arriving a byte at a time, which is how
+ *      the 3.5 mm jack's UART leaves it (firmware.c, midi_drain).
  *
  * Then what a note does on a screen, through the player (app/ui.h):
- *   8. it sounds, and lets go when the keyboard does;
- *   9. its pitch is the keyboard's, whatever OCT- / OCT+ say;
- *  10. it plays the instrument the cursor is on, not a channel's;
- *  11. it writes nothing: the step under the cursor is left alone.
+ *   9. it sounds, and lets go when the keyboard does;
+ *  10. its pitch is the keyboard's, whatever OCT- / OCT+ say;
+ *  11. it plays the instrument the cursor is on, not a channel's;
+ *  12. it writes nothing: the step under the cursor is left alone.
  *
  *   midi_test        exit 1 if any fails */
 #include <stdio.h>
@@ -106,6 +108,14 @@ static void parser(void)
         midi_parse_usb(&p, 0x0Bu | 0xB0u << 8 | 123u << 16);
         CHECK("all notes off over USB", p.n == 1 && ev(0, PLAT_MIDI_RELEASE, 0));
     }
+    {   /* 8 -- the jack arrives a byte at a time, as the UART's DMA leaves them */
+        static const uint8_t b[] = { 0x90, 60, 100, 64, 90, 0x80, 60, 0 };
+        memset(&p, 0, sizeof p);
+        for (unsigned i = 0; i < sizeof b; i++)
+            midi_parse_bytes(&p, &b[i], 1u);
+        CHECK("a byte at a time says the same thing",
+              p.n == 3 && ev(0, 60, 100) && ev(1, 64, 90) && ev(2, 60, 0));
+    }
 }
 
 /* ------------------------------------------- a note on a screen --- */
@@ -182,7 +192,7 @@ static void screen(void)
     for (r = 0; r < PATTERN_MAX_STEPS; r++)
         was[r] = st(r)->notes[0];
 
-    /* 8 -- A-4 on the PULSE the cursor is on */
+    /* 9 -- A-4 on the PULSE the cursor is on */
     midi(69, 100);
     player_render(pcm, 4096);
     held = loudness();
@@ -194,7 +204,7 @@ static void screen(void)
     gone = loudness();
     CHECK("let go on the keyboard, it stops", gone < held / 4);
 
-    /* 9 -- the octave buttons are the panel's keyboard, not this one */
+    /* 10 -- the octave buttons are the panel's keyboard, not this one */
     press(PB_OCTUP);
     press(PB_OCTUP);
     midi(69, 100);
@@ -204,7 +214,7 @@ static void screen(void)
           after_oct > tone - 4 && after_oct < tone + 4);
     midi(69, 0);
 
-    /* 10 -- the step at row 8 says i01, a NOISE: the same note, another voice */
+    /* 11 -- the step at row 8 says i01, a NOISE: the same note, another voice */
     CHECK("the song names the second instrument at row 8", st(8)->instrument == 1);
     enc(PE_K1, 9); /* the cursor past it: the instrument in force is still i01 */
     midi(69, 100);
@@ -213,7 +223,7 @@ static void screen(void)
     CHECK("the instrument is the one the cursor is on, not a channel's", hiss > 4 * tone);
     midi(69, 0);
 
-    /* 11 */
+    /* 12 */
     for (r = 0; r < PATTERN_MAX_STEPS; r++)
         same = same && st(r)->notes[0] == was[r];
     CHECK("a MIDI note writes nothing", same);
