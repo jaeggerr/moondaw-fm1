@@ -174,7 +174,7 @@ int mixer_frame(const PlatInput *in)
     vis = row + 1; /* rows as drawn: the returns first */
     grid_follow(&vis, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, player_playing());
-    ui_led_guide(1u << PB_EDIT | 1u << PB_GLO | 1u << PB_SEQ); /* the PROJECT, SONG */
+    ui_led_guide(1u << PB_GLO | 1u << PB_SEQ); /* the PROJECT (EDIT does it too, unlit: ui.h), SONG */
     ui_led_mono(row, row >= 0 ? 1u << UI_KEY_MONO : 0u); /* MONO usable, lit alone, half muted */
     gfx_frame(draw);
     if (PRESSED(PB_HOME))

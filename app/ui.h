@@ -30,6 +30,12 @@ int ui_loop_slot(int x, int y);
  * screen gives its own once a frame; HOME and the canvas have none.
  * `usable` is a PB_* mask.
  *
+ * EDIT is not lit either, for the same reason as SEL: it is a shift, the
+ * same on every screen that has it, not a feature of the one in front. The
+ * exception is the screens where a quick tap locks its mode on (PATTERN's
+ * and SONG's SELECTION): there the light says the mode is on, as a CAPS
+ * LOCK's does, and it goes out when the mode does (30/10).
+ *
  * SETTINGS says how much of it: LEDS OFF (none, PLAY's state either),
  * STATE (PLAY's alone), GUIDE (the default); and how bright the guide
  * is, ui_light a PLAT_LED_* level -- 50 % by default: the glow is worse

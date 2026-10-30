@@ -220,7 +220,8 @@ int phrase_frame(const PlatInput *in)
     else
         grid_follow(&row, &top, steps, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
-    ui_led_guide(1u << PB_FX | 1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP | (has(col) ? 1u << PB_EDIT : 0u));
+    /* SEL opens the track's block and EDIT does the same: neither is lit (ui.h) */
+    ui_led_guide(1u << PB_FX | 1u << PB_GLO | 1u << PB_OCTDN | 1u << PB_OCTUP);
     ui_led_mono(col, shift.held ? 1u << UI_KEY_MONO : 0u); /* MONO: lit alone, half muted */
     gfx_frame(draw);
 

@@ -781,6 +781,14 @@ int pattern_frame(const PlatInput *in)
     }
     if (PRESSED(PB_PLAY)) {
         if (playing || counting) {
+            /* STOP leaves the cursor on the step it stopped on, as SONG's does
+             * with the phrase: the hand carries on from what it heard last and
+             * the view is already there (30/10) */
+            if (playing && player_entry() == entry) {
+                int at = player_row() % len;
+                if (at >= 0 && at < len)
+                    cur_row = at;
+            }
             player_stop();
             counting = recording = false;
         } else if (rec_armed && ui_count_in) { /* armed: the bars counted in first */
@@ -809,8 +817,12 @@ int pattern_frame(const PlatInput *in)
         grid_follow(&cur_row, &top, len, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
+    /* EDIT is lit only while the SELECTION is locked on, as a CAPS LOCK is:
+     * held, it is a shift the hand has under its finger, and a shift is no more
+     * this screen's own than SEL or HOME are (ui.h, 30/10) */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
-                 1u << PB_EDIT | 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
+                 (selecting ? 1u << PB_EDIT : 0u) | 1u << PB_GLO |
+                 (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
     ui_led_mono(track, !selecting && !shift.held ? 0u
                                                  : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |

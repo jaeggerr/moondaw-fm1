@@ -15,7 +15,8 @@ void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)
 void plat_led_key(int k, int on) { (void)k; (void)on; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
-void plat_led_level(int l, int v) { (void)l; (void)v; }
+static int led[PLAT_BTNS]; /* the guide, as the panel would have it */
+void plat_led_level(int l, int v) { if (l >= 0 && l < PLAT_BTNS) led[l] = v; }
 int plat_audio_load(int *worst) { *worst = -1; return -1; }
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { (void)o; (void)d; (void)n; return -1; }
 const uint8_t *plat_flash_map(void) { return 0; }
@@ -42,6 +43,12 @@ static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
 static int pat_len_of(void) { return song.patterns[0][song.arrangement[0].pattern[0]].length; }
 static const Step *st(int row) { return song_step(&song, 0, song.arrangement[0].pattern[0], row); }
+/* the player takes PLAY and STOP in its render, as on the machine */
+static void pump(void)
+{
+    static int16_t pcm[256 * 2];
+    player_render(pcm, 256);
+}
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 
 int main(void)
@@ -310,6 +317,32 @@ int main(void)
     enc(PE_K2, -1);
     enc(PE_K3, -4);
     CHECK("KNOB 3 on the step's number is the block's length", song.patterns[0][0].length == 12);
+
+    /* EDIT is lit only while the SELECTION is locked on, as a CAPS LOCK (30/10) */
+    go();
+    CHECK("EDIT is dark with no SELECTION", led[PB_EDIT] == PLAT_LED_OFF);
+    press(PB_EDIT);
+    go();
+    CHECK("and lit once a tap locks it on", led[PB_EDIT] != PLAT_LED_OFF);
+    press(PB_EDIT);
+    go();
+    CHECK("and dark again when the tap takes it off", led[PB_EDIT] == PLAT_LED_OFF);
+
+    /* STOP leaves the cursor on the step it stopped on (30/10): the phrase
+     * plays from its top while the cursor waits further down */
+    enc(PE_K2, -10);
+    enc(PE_K2, 1);            /* a note column, so a key writes where the cursor is */
+    enc(PE_K1, -20);
+    enc(PE_K1, 5);            /* the cursor on row 5 */
+    press(PB_PLAY);
+    pump();
+    press(PB_PLAY);           /* stop, the playhead still on row 0 */
+    pump();
+    keys(1u << 16);
+    keys(0);
+    CHECK("STOP puts the cursor on the step it stopped on", st(0)->notes[0] == 69);
+    for (int i = 0; i < 2; i++)
+        enc(PE_ALGO, -1);     /* that note taken back */
 
     press(PB_SAVE);
     CHECK("SAVE asks the app to save, once", saves == 1);

@@ -2113,6 +2113,34 @@ cursor comes to where the view already is, and because a button press
 gives the view back to the cursor, nothing jumps. The audition is not
 concerned -- the block it plays is the one under the cursor already.
 
+## 2026-10-30 — PATTERN stops where it played, and EDIT stops shouting
+
+Two of his, in the same breath.
+
+**STOP in PATTERN** does what SONG's does since an hour: it leaves the
+cursor on the step it stopped on, instead of where the hand had left it
+before PLAY. Same reading as there -- the view has been following the
+playhead, so the cursor comes to where the eye already is and nothing
+jumps. `player_row() % len`, read before `player_stop()` and only while
+this screen's own phrase is the one playing. SECTION has the same grid
+and the same PLAY and has NOT been changed: he asked for PATTERN.
+
+**EDIT is no longer lit by the guide.** His words: it is not a button of
+the screen in front, it is a shift, "un peu comme le bouton de selection"
+-- and SEL has never lit (ui.h, 29/10). So EDIT joins HOME, SAVE and SEL
+in the set the guide leaves dark, with one exception: where a quick tap
+locks its mode on (PATTERN's and SONG's SELECTION) the light says the
+mode is on, as a CAPS LOCK's does, and goes out with it. MIXER and
+SECTION, where EDIT only repeats what GLO or SEL already do, light it no
+more. PROJECTS keeps its EDIT lit: there it opens that list's panel
+(rename, duplicate, delete) and is nobody's shift -- the one screen where
+EDIT is the screen's own.
+
+Done through each screen's guide mask rather than `ui_led_state`, so that
+no screen can leave the light on behind it: every `ui_led_guide` writes
+it. One consequence: with SETTINGS' LEDS on STATE, where only PLAY's
+state shows, the CAPS LOCK light does not.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

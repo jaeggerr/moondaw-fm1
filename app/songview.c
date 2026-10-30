@@ -472,7 +472,9 @@ void songview_cancel(void)
 /* What can be pressed where the cursor is: the guide's glow (ui.h). */
 static uint32_t usable(void)
 {
-    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE | 1u << PB_EDIT;
+    /* EDIT lights only while the SELECTION is locked on (ui.h, 30/10) */
+    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE |
+                 (selecting ? 1u << PB_EDIT : 0u);
     if (is_ref(row))
         return u | (col < 0 ? 1u << PB_LFO : 0u);
     u |= 1u << PB_SEL;
