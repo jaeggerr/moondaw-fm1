@@ -89,13 +89,13 @@ int main(void)
     press(PB_FX);
     CHECK("the effect GAT is in place", st(0)->fx[0].cmd == FX_GAT);
     enc(PE_K2, 1);
-    enc(PE_K4, 1);
-    CHECK("KNOB 4 on an effect: the first after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
-    enc(PE_K4, -1);
+    enc(PE_K3, 1);
+    CHECK("KNOB 3 on an effect: the first after --- is ARP", st(0)->fx[1].cmd == FX_ARP);
+    enc(PE_K3, -1);
     {
         bool saw_gat = false;
         for (int i = 0; i < 40; i++) {
-            enc(PE_K4, 1);
+            enc(PE_K3, 1);
             saw_gat |= st(0)->fx[1].cmd == FX_GAT;
         }
         CHECK("an effect already on the row is stepped over", !saw_gat);
@@ -104,23 +104,23 @@ int main(void)
     { /* PRB, the one effect of this firmware's own */
         bool found = false;
         for (int i = 0; i < 40 && !found; i++) {
-            enc(PE_K4, -1);
+            enc(PE_K3, -1);
             found = st(0)->fx[1].cmd == FX_PRB;
         }
-        CHECK("PRB is in KNOB 4's list", found);
-        enc(PE_K3, 100); /* the knob is an int8_t: 7F in two turns */
-        enc(PE_K3, 100);
+        CHECK("PRB is in KNOB 3's list", found);
+        enc(PE_K4, 100); /* the knob is an int8_t: 7F in two turns */
+        enc(PE_K4, 100);
         CHECK("PRB stops at 7F", st(0)->fx[1].val == 0x7F);
-        enc(PE_K4, 40); /* back to the end of the list */
+        enc(PE_K3, 40); /* back to the end of the list */
         CHECK("SYL and SMP are not in the list", st(0)->fx[1].cmd == FX_WAV);
     }
-    enc(PE_K4, -1);
+    enc(PE_K3, -1);
     CHECK("before WAV: VOL", st(0)->fx[1].cmd == FX_VOL);
-    enc(PE_K3, 100);
-    enc(PE_K3, 100);
-    CHECK("KNOB 3 is the value: VOL stops at 7F", st(0)->fx[1].val == 0x7F);
+    enc(PE_K4, 100);
+    enc(PE_K4, 100);
+    CHECK("KNOB 4 is the value: VOL stops at 7F", st(0)->fx[1].val == 0x7F);
     enc(PE_K2, -1);
-    enc(PE_K3, 50);
+    enc(PE_K4, 50);
     CHECK("GAT cannot outlast its step", st(0)->fx[0].val == song.ticks_per_step);
 
     /* SEL on an effect: the step's SYLLABLE (KEYS: G5 is M, F#3 is A) */
@@ -297,7 +297,7 @@ int main(void)
      * notes, the instrument, the three effects, and round to the notes
      * again. Where the cursor stands is read back from what the knobs and
      * the keys do there -- a key writes in its own note slot, KNOB 3 names
-     * the instrument, KNOB 4 the effect, and on a step's number KNOB 3 is
+     * the instrument and the effect, and on a step's number KNOB 3 is
      * the block's length. Going right the numbers are stepped over, going
      * left they are walked into, one group at a time. */
     {
@@ -311,11 +311,11 @@ int main(void)
         CHECK("right from the fourth note: the instrument column, not the step's number",
               st(10)->instrument == 2 && pat_len_of() == len0);
         enc(PE_K2, 1);
-        enc(PE_K4, 1);
+        enc(PE_K3, 1);
         CHECK("right from the instrument: the first effect, not the step's number",
               st(10)->fx[0].cmd != FX_NONE && pat_len_of() == len0);
         enc(PE_K2, 2);            /* the third effect, the far end of the strip */
-        enc(PE_K4, 1);
+        enc(PE_K3, 1);
         CHECK("and on to the third effect", st(10)->fx[2].cmd != FX_NONE);
         enc(PE_K2, 1);
         keys(1u << 19);
@@ -336,15 +336,15 @@ int main(void)
         enc(PE_K3, -100);
         CHECK("and across it, the fourth note, where the note was left", st(10)->notes[3] == NOTE_NONE);
         /* the row and the block left as they were found. The two effects go
-         * the last one first: KNOB 4's list steps over what the row already
+         * the last one first: KNOB 3's list steps over what the row already
          * holds, so the first one taken off would move the other's place in it. */
         enc(PE_K2, -3);
         enc(PE_K3, -100);
         enc(PE_K3, -100);
         enc(PE_K2, 7);            /* the third effect */
-        enc(PE_K4, -1);
+        enc(PE_K3, -1);
         enc(PE_K2, -2);           /* the first */
-        enc(PE_K4, -1);
+        enc(PE_K3, -1);
         CHECK("the row is left as it was found", step_is_empty(st(10)));
         enc(PE_K2, -1);           /* that group's number */
         enc(PE_K3, 2);
@@ -363,7 +363,7 @@ int main(void)
         keys(1u << 16);
         keys(0);                  /* a note, to see it survive */
         enc(PE_K2, 5);            /* the first effect */
-        enc(PE_K4, 1);            /* an effect, to see it go */
+        enc(PE_K3, 1);            /* an effect, to see it go */
         press(PB_EDIT);           /* in, the anchor on it */
         enc(PE_K2, 10);           /* right, hard: loose, the strip would come round to the notes */
         keys(1u << 8);            /* OP4: clear */
@@ -372,7 +372,7 @@ int main(void)
         CHECK("selecting, the knob stays in the view: the effects go and the note stays",
               st(11)->fx[0].cmd == FX_NONE && st(11)->notes[0] == 69);
         press(PB_FX);             /* the first effect, an effect on it again */
-        enc(PE_K4, 1);
+        enc(PE_K3, 1);
         press(PB_EDIT);
         enc(PE_K2, -10);          /* left, hard: no further than its own number */
         keys(1u << 8);            /* OP4: clear -- whole steps, from a number */
@@ -380,9 +380,9 @@ int main(void)
         press(PB_EDIT);
         CHECK("and left it stops at that group's number: the whole step", step_is_empty(st(11)));
         enc(PE_K2, 1);
-        enc(PE_K4, 1);
+        enc(PE_K3, 1);
         CHECK("and the view under it never turned over", st(11)->fx[0].cmd != FX_NONE);
-        enc(PE_K4, -1);
+        enc(PE_K3, -1);
         enc(PE_K1, -9);
         press(PB_SEQ);
     }
