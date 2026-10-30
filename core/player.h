@@ -34,6 +34,10 @@ void player_set_song_loop(int from, int to);
 void player_note_on(int instr, uint8_t note);
 /* The same, a VOX instrument singing `syl` (the SYLLABLE screen). */
 void player_note_sing(int instr, uint8_t note, const char *syl);
+/* The same, a whole step: `n` notes struck together, as the step would
+ * sound them (PATTERN's INS column auditions the step under the cursor).
+ * One audition at a time, as above; `n` past a step's notes is clamped. */
+void player_note_chord(int instr, const uint8_t *notes, int n);
 void player_note_off(void);
 void player_toggle_mute(int track);
 void player_set_master(int pot);   /* 0..1023 */

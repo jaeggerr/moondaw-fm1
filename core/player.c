@@ -436,9 +436,11 @@ static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio 
 static volatile uint32_t song_loop_word;
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
-enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL };
+enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL, CMD_NOTE_CHORD };
 /* What a CMD_NOTE_SYL sings: written before the command is queued. */
 static char audition_syl[VOX_SYL_LEN];
+/* What a CMD_NOTE_CHORD strikes, the same way; its `b` is how many. */
+static uint8_t audition_chord[STEP_MAX_NOTES];
 static volatile struct { uint8_t type, a, b; } cmd_q[8];
 static volatile uint8_t cmd_w, cmd_r;
 
@@ -1449,21 +1451,29 @@ static void handle_cmds(void)
             song_once = false;
         } else if (type == CMD_STOP) {
             stop_play();
-        } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL) {
+        } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL || type == CMD_NOTE_CHORD) {
             /* The audition: one note and its layers, at the level moondaw
-             * previews at, outside the song and its sends. */
+             * previews at, outside the song and its sends. A chord strikes
+             * the notes of a step together, as trigger_step does -- what
+             * the step itself would sound (30/10). */
             Track *tr = &tracks[AUDITION];
+            const uint8_t one = b;
+            const uint8_t *notes = type == CMD_NOTE_CHORD ? audition_chord : &one;
+            int n = type == CMD_NOTE_CHORD ? b : 1, waves, maxn;
             if (type == CMD_NOTE_SYL) { /* a VOX instrument sings this syllable */
                 syl_copy(tr->fx.syl, audition_syl);
                 tr->fx.syl_written = true;
             }
             const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
+            waves = instr_waves(in);
+            maxn = TRACK_MAX_VOICES / waves;
             tr->last_inst = a;
             tr->fx.smp = -1; /* a key plays the zones */
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
-            voice_start(tr, in, in->timbre, 0, b, false);
+            for (int i = 0; i < n && i < maxn; i++)
+                voice_start(tr, in, in->timbre, i, notes[i], false);
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 osc_set_cents(&tr->voices[v].osc, tr->voices[v].detune);
             tr->chain.pan = 0;
@@ -2024,6 +2034,15 @@ MAIN_LOOP void player_note_sing(int instr, uint8_t note, const char *syl)
 {
     syl_copy(audition_syl, syl);
     cmd_push(CMD_NOTE_SYL, (uint8_t)instr, note);
+}
+MAIN_LOOP void player_note_chord(int instr, const uint8_t *notes, int n)
+{
+    n = n > STEP_MAX_NOTES ? STEP_MAX_NOTES : n;
+    if (n <= 0)
+        return;
+    for (int i = 0; i < n; i++)
+        audition_chord[i] = notes[i];
+    cmd_push(CMD_NOTE_CHORD, (uint8_t)instr, (uint8_t)n);
 }
 MAIN_LOOP void player_toggle_mute(int track)
 {

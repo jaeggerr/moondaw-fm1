@@ -210,6 +210,9 @@ typedef struct {
 
 void song_init(Song *s);
 void song_copy(Song *dst, const Song *src);
+/* One instrument slot back to neutral -- what song_init puts everywhere,
+ * and what a slot taken fresh starts from (PATTERN's + NEW). */
+void song_instr_init(Song *s, int i);
 
 /* Reading never allocates: a step nobody wrote reads as the empty one. */
 const Step *song_step(const Song *s, int track, int pat, int row);

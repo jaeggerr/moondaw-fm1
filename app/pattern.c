@@ -19,6 +19,8 @@
  *   FX     the three effects                  KNOB 3 the value, KNOB 4 the effect
  *   INS    the instrument the step names, or --, then the name of the one that plays:
  *          white where the step names it, grey where it keeps the one in force (29/10)
+ *          KNOB 3 walks the song's instruments and the step is heard as it turns, so
+ *          the ear chooses (30/10), as SONG's KNOB 3 does with blocks
  *
  *   SELECT, KNOB 1  the step   KNOB 2  the column; left of the first, the step's number (KNOB 3 the
  *                        block's length)
@@ -32,8 +34,11 @@
  *         was pressed (left of the first column: whole steps); the black keys
  *         OP1 copy, OP2 paste at the cursor, OP3 cut, OP4 clear
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
- *   SEL   on INS: CHOOSE INSTRUMENT, a list of them for the step (PLAY listens: the one
- *         the cursor rests on sounds the step's note; SEL takes it, GLO goes back)
+ *   SEL   on INS: the INSTRUMENT screen of the one that plays on the step -- reaching it
+ *         by pressing ENV twice read as counter-intuitive (30/10); that way still works
+ *   PRESETS on INS: CHOOSE INSTRUMENT, the list of them for the step (PLAY plays the
+ *         instrument's own preview phrase, one note being too short to judge a sound by;
+ *         SEL takes the one the cursor rests on, + NEW makes one, HOME goes back)
  *   HOME  back where it was opened from (out of the SELECTION first)   GLO  the PROJECT
  *   REC   armed, or not: PLAY then counts SETTINGS' COUNT-IN in (a bar by default, or
  *         none) and records what the keys play
@@ -61,10 +66,13 @@ static uint8_t fx_order[FX_COUNT]; /* alphabetical, --- first; SYL and SMP
 static int fx_count;
 static int play_row = -1;
 static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_IDLE the view follows PLAY */
-/* CHOOSE INSTRUMENT: its rows are --, then the instruments. While it
- * listens, the one the cursor rests on SETTLE frames sounds the step's
- * note, struck again every AGAIN frames. */
-enum { CH_TOP = 24, CH_ROWS = 7, CH_N = SONG_MAX_INSTR + 1, SETTLE = 12, AGAIN = 45 };
+/* CHOOSE INSTRUMENT: its rows are --, then the instruments, then + NEW.
+ * While it listens, the one the cursor rests on SETTLE frames plays its
+ * own preview phrase, round and round, as INSTRUMENT's PLAY does.
+ * + NEW takes the first free slot of the song, puts it on the step and
+ * leaves: a new sound should take no hunting for an empty number
+ * (30/10). */
+enum { CH_TOP = 24, CH_ROWS = 7, CH_NEW = SONG_MAX_INSTR + 1, CH_N = SONG_MAX_INSTR + 2, SETTLE = 12 };
 static bool choosing, listening;
 static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 /* SELECTION (29/10): EDIT in and out; the rectangle from the anchor to the
@@ -90,7 +98,17 @@ static int rec_row = -1; /* the step the keys held now were written on */
 static int rec_slot;     /* the next slot of that step's chord */
 static int an_row, an_col, clip_cols;
 static int syl_slot;
-static int ch_cur, ch_top, ch_orig, settle, again, sounding = -1;
+static int ch_cur, ch_top, ch_orig, settle, sounding = -1;
+static uint32_t pv_t0; /* the preview phrase: when it started, and the note it is on */
+static int pv_at;
+static int ch_free = -1; /* the slot + NEW would take, -1 when the song holds none */
+/* The ear on the INS column (30/10): the hand rested AU_SETTLE frames on
+ * a step whose instrument it has just turned, and the step sounds -- its
+ * own notes, for AU_HOLD frames. The song playing, the music speaks and
+ * nothing is struck over it. */
+enum { AU_SETTLE = SETTLE, AU_HOLD = 24 };
+static int au_settle, au_hold;
+static bool au_sounding;
 
 /* ----------------------------------------------------------- data --- */
 static int pat_len(void) { return song->patterns[track][pat].length; }
@@ -106,6 +124,53 @@ static Step *step_w(int row)
     else
         app_mark_dirty();
     return st;
+}
+
+/* The ear forgets what it was about to do; au_hush also stops what it
+ * started, so no audition is left hanging. */
+static void au_quiet(void)
+{
+    au_settle = au_hold = 0;
+    au_sounding = false;
+}
+
+static void au_hush(void)
+{
+    if (au_sounding)
+        player_note_off();
+    au_quiet();
+}
+
+/* What the audition strikes on `row`: the step's own notes, all of them,
+ * as the step would sound them. A step naming none is still heard in its
+ * place, on the nearest note above or below it in the track's column --
+ * above first, an empty step carrying on the note before it. An OFF is
+ * no note, so the search goes past it. None anywhere: nothing sounds. */
+static int au_notes(int row, uint8_t out[STEP_MAX_NOTES])
+{
+    int len = pat_len(), n = 0;
+    for (int d = 0; d < len && n == 0; d++)
+        for (int s = 0; s < 2 && n == 0; s++) {
+            int r = s ? row + d : row - d;
+            if (r < 0 || r >= len || (d == 0 && s))
+                continue;
+            for (int i = 0; i < STEP_MAX_NOTES; i++)
+                if (step_at(r)->notes[i] <= NOTE_MAX)
+                    out[n++] = step_at(r)->notes[i];
+        }
+    return n;
+}
+
+static void au_sound(void)
+{
+    uint8_t ns[STEP_MAX_NOTES];
+    int n = au_notes(cur_row, ns);
+    au_settle = 0;
+    if (n == 0 || player_playing())
+        return;
+    player_note_chord(edit_instr_at(song, track, pat, cur_row), ns, n);
+    au_sounding = true;
+    au_hold = AU_HOLD;
 }
 
 static void turn_instr(int row, int d)
@@ -372,19 +437,43 @@ static void write_syl(void)
 /* ------------------------------------------------- choose instrument --- */
 static int ch_instr(int k) { return k == 0 ? edit_instr_at(song, track, pat, cur_row) : k - 1; }
 
-static void ch_sound(void)
-{
-    const Step *st = step_at(cur_row);
-    player_note_on(ch_instr(ch_cur), st->notes[0] <= NOTE_MAX ? st->notes[0] : 60);
-    sounding = ch_cur;
-    again = AGAIN;
-}
-
 static void ch_hush(void)
 {
     if (sounding >= 0)
         player_note_off();
     sounding = -1;
+}
+
+/* PLAY in the list plays the instrument's own preview phrase, as
+ * INSTRUMENT's PLAY does: one note is too short to judge a sound by
+ * (30/10). C E G C an octave on, a note every 250 ms, a rest, again; a
+ * kit plays its drums instead. The phrase starts afresh on the row the
+ * cursor comes to rest on; + NEW has nothing to play. */
+static void ch_listen(uint32_t ms)
+{
+    ch_hush();
+    if (ch_cur == CH_NEW)
+        return;
+    sounding = ch_cur;
+    pv_t0 = ms;
+    pv_at = -1;
+}
+
+static void ch_preview(uint32_t ms)
+{
+    static const uint8_t tune[] = { 60, 64, 67, 72, 0, 0 };
+    static const uint8_t kit[] = { 36, 42, 38, 46, 36, 39, 48, 45, 0, 0 };
+    int k = ch_instr(sounding);
+    bool drum = song->instruments[k % SONG_MAX_INSTR].engine == ENGINE_DRUM;
+    int at = drum ? (int)((ms - pv_t0) / 125u % sizeof kit) : (int)((ms - pv_t0) / 250u % sizeof tune);
+    uint8_t n = drum ? kit[at] : tune[at];
+    if (at == pv_at)
+        return;
+    pv_at = at;
+    if (n)
+        player_note_on(k, n);
+    else
+        player_note_off();
 }
 
 static void ch_close(bool take)
@@ -398,6 +487,44 @@ static void ch_close(bool take)
     gfx_invalidate();
 }
 
+/* The first instrument slot the song has not taken: no step of any
+ * block names it and the hand has not named it. -1 when all 64 are
+ * taken -- the list says so on the + NEW row rather than doing nothing
+ * silently. */
+static int ch_free_instr(void)
+{
+    bool taken[SONG_MAX_INSTR] = { false };
+    for (int t = 0; t < SONG_MAX_TRACKS; t++)
+        for (int p = 0; p < TRACK_MAX_PATTERNS; p++) {
+            if (song_pattern_blank(song, t, p))
+                continue;
+            for (int r = 0; r < song->patterns[t][p].length; r++) {
+                uint8_t k = song_step(song, t, p, r)->instrument;
+                if (k < SONG_MAX_INSTR)
+                    taken[k] = true;
+            }
+        }
+    for (int i = 0; i < SONG_MAX_INSTR; i++)
+        if (!taken[i] && !song->instruments[i].name[0])
+            return i;
+    return -1;
+}
+
+/* + NEW: the free slot, back to neutral, named by the step, and the
+ * list is done -- SEL on the slot then opens its INSTRUMENT screen. */
+static void ch_new(void)
+{
+    Step *st;
+    if (ch_free < 0) /* the row says FULL: nothing to take */
+        return;
+    if ((st = step_w(cur_row)) == 0)
+        return; /* POOL FULL, said by step_w: the slot is left as it was */
+    undo_bytes(&song->instruments[ch_free], sizeof song->instruments[ch_free]);
+    song_instr_init(song, ch_free);
+    st->instrument = (uint8_t)ch_free;
+    ch_close(false);
+}
+
 static void ch_open(void)
 {
     const Step *st = step_at(cur_row);
@@ -407,6 +534,7 @@ static void ch_open(void)
     listening = false;
     settle = 0;
     sounding = -1;
+    ch_free = ch_free_instr();
     grid_follow(&ch_cur, &ch_top, CH_N, CH_ROWS);
     choosing = true;
 }
@@ -419,19 +547,24 @@ static void ch_frame(const PlatInput *in, uint32_t btns)
     if (in->enc[PE_SELECT] || in->enc[PE_K1])
         settle = SETTLE;
     if (PRESSED(PB_PLAY)) {
+        if (player_playing()) /* the phrase, not the song: as INSTRUMENT's PLAY does */
+            player_stop();
         listening = !listening;
         if (listening)
-            ch_sound();
+            ch_listen(in->ms);
         else
             ch_hush();
     } else if (listening && settle > 0 && --settle == 0 && ch_cur != sounding) {
-        ch_sound();
-    } else if (listening && sounding >= 0 && --again == 0) {
-        ch_sound();
+        ch_listen(in->ms);
     }
-    if (PRESSED(PB_SEL))
-        ch_close(true);
-    else if (PRESSED(PB_HOME))
+    if (listening && sounding >= 0)
+        ch_preview(in->ms);
+    if (PRESSED(PB_SEL)) {
+        if (ch_cur == CH_NEW)
+            ch_new();
+        else
+            ch_close(true);
+    } else if (PRESSED(PB_HOME))
         ch_close(false);
     ui_led_state(PB_PLAY, listening);
 #undef PRESSED
@@ -462,13 +595,19 @@ static void ch_draw(void)
     gfx_fill(0, CH_TOP - 3, PLAT_W, 1, C_TRACK, 255);
     for (int r = 0; r < CH_ROWS && ch_top + r < CH_N; r++) {
         int k = ch_top + r, y = CH_TOP + r * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent;
-        bool here = k == ch_cur;
-        const char *name = song->instruments[ch_instr(k)].name;
+        bool here = k == ch_cur, adder = k == CH_NEW;
+        const char *name = adder ? "" : song->instruments[ch_instr(k)].name;
         uint16_t ink = here ? C_ON_ACC : k == 0 || !name[0] ? C_DIM : C_TEXT;
         if (here)
             gfx_slab(4, y + 1, PLAT_W - 14, GRID_ROW - 2, C_ACCENT, 255);
-        if (k - 1 == ch_orig) /* what the step says now, as HOME marks the open project */
+        if (!adder && k - 1 == ch_orig) /* what the step says now, as HOME marks the open project */
             gfx_fill(6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        if (adder) { /* + NEW, as INSTRUMENT's + LAY: then the slot it would take, or FULL */
+            gfx_text(F_COND20, 16, base, "+ NEW", here ? C_ON_ACC : C_TEXT);
+            gfx_text(F_COND20, 84, base, ch_free >= 0 ? grid_hex2(h, ch_free) : "FULL",
+                     here ? C_ON_ACC : ch_free >= 0 ? C_DIM : C_MUTE);
+            continue;
+        }
         gfx_text(F_COND20, 16, base, k == 0 ? "--" : grid_hex2(h, k - 1), ink);
         if (k == 0) /* none named: the one in force plays */
             gfx_text(F_COND14, 48, base, "keep", ink);
@@ -480,7 +619,7 @@ static void ch_draw(void)
         gfx_fill(PLAT_W - 4, CH_TOP, 2, CH_ROWS * GRID_ROW, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
     }
-    ch_hint(6, "SEL", "TAKE", false);
+    ch_hint(6, "SEL", ch_cur == CH_NEW ? "MAKE" : "TAKE", false);
     ch_hint(96, "PLAY", "LISTEN", false);
     ch_hint(PLAT_W - 6, "HOME", "BACK", true);
 }
@@ -575,6 +714,7 @@ bool pattern_open(Song *s, int e, int t)
     rec_row = -1;
     shift = (UiShift){ 0 };
     sounding = -1;
+    au_quiet();
     prev_btns = prev_keys = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     /* KNOB 4's order: alphabetical, the empty slot first. */
     fx_count = 0;
@@ -626,7 +766,8 @@ int pattern_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     prev_keys = in->keys;
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] || in->enc[PE_K4])
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
+        in->enc[PE_K4] || in->enc[PE_PRESET])
         said = 0;
 
     if (choosing) {
@@ -648,10 +789,12 @@ int pattern_frame(const PlatInput *in)
         return PATTERN_STAY;
     }
     if (PRESSED(PB_ENV) && view == V_INS) { /* ENV twice: from the column into the instrument */
+        au_quiet();
         player_note_off();
         return PATTERN_INSTR;
     }
     if (PRESSED(PB_SEQ) || PRESSED(PB_FX) || PRESSED(PB_ENV)) { /* a button a view */
+        au_hush(); /* another view: nothing of the ear's is left sounding */
         view = PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS;
         selecting = false; /* its columns were the other view's */
         if (cur_col >= 0)
@@ -679,10 +822,24 @@ int pattern_frame(const PlatInput *in)
             sel_op(OP_LOOP);
         keys = 0; /* the keyboard is the ops' here: no note is written */
     }
-    if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0 && !selecting)
-        ch_open();
+    /* SEL on the instrument slot goes into the INSTRUMENT screen of the one
+     * that plays there: ENV pressed twice read as counter-intuitive, and SEL
+     * is free here now that the list is the PRESETS knob's (30/10). */
+    if (PRESSED(PB_SEL) && view == V_INS && cur_col >= 0 && !selecting) {
+        au_quiet();
+        player_note_off();
+        return PATTERN_INSTR;
+    }
     if (PRESSED(PB_SEL) && view == V_FX && cur_col >= 0 && !selecting)
         syl_open();
+    /* PRESETS on the slot: CHOOSE INSTRUMENT, where a whole sound can be
+     * heard before it is taken. Nothing else on this screen used the knob. */
+    if (in->enc[PE_PRESET] && view == V_INS && cur_col >= 0 && !selecting) {
+        au_hush();
+        ch_open();
+    }
+    if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]) /* the hand left the step */
+        au_hush();
     cur_row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
     if (in->enc[PE_SELECT]) /* SELECT: the step as a whole, the cursor on its number (29/10) */
@@ -701,13 +858,19 @@ int pattern_frame(const PlatInput *in)
             said = "POOL FULL";
         else if (view == V_FX)
             turn_fx_val(cur_row, cur_col, d);
-        else if (view == V_INS)
+        else if (view == V_INS) {
             turn_instr(cur_row, d);
+            /* the ear, once the hand rests; the song playing, it keeps quiet */
+            au_hush();
+            if (!playing)
+                au_settle = AU_SETTLE;
+        }
     }
     if ((d = in->enc[PE_K4]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
         turn_fx_cmd(cur_row, cur_col, d);
 
     if (PRESSED(PB_REC)) { /* armed, or not; stopping it stops the count */
+        au_hush();
         rec_armed = !rec_armed;
         recording = rec_armed && playing;
         rec_live = recording;
@@ -783,6 +946,7 @@ int pattern_frame(const PlatInput *in)
         }
     }
     if (PRESSED(PB_PLAY)) {
+        au_hush();
         if (playing || counting) {
             /* STOP leaves the cursor on the step it stopped on, as SONG's does
              * with the phrase: the hand carries on from what it heard last and
@@ -808,10 +972,17 @@ int pattern_frame(const PlatInput *in)
     }
     ui_led_state(PB_REC, rec_armed);
 
+    if (playing) /* the transport is not fought: the music speaks */
+        au_hush();
+    else if (au_settle > 0 && --au_settle == 0)
+        au_sound();
+    else if (au_sounding && au_hold > 0 && --au_hold == 0)
+        au_hush(); /* the step has rung: nothing is left hanging */
+
     len = pat_len();
     play_row = playing && player_entry() == entry ? player_row() % len : -1;
     still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] ||
-                    in->enc[PE_K4]
+                    in->enc[PE_K4] || in->enc[PE_PRESET]
                 ? 0
                 : still < GRID_FOLLOW_IDLE ? still + 1 : still;
     if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with what plays */
@@ -837,11 +1008,13 @@ int pattern_frame(const PlatInput *in)
         return PATTERN_STAY;
     }
     if (PRESSED(PB_HOME)) {
+        au_quiet();
         player_note_off();
         song_pool_compact(song);
         return PATTERN_BACK;
     }
     if (PRESSED(PB_GLO)) {
+        au_quiet();
         player_note_off();
         return PATTERN_PROJECT;
     }
