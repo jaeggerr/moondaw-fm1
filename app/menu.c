@@ -259,7 +259,10 @@ static void draw_opts(void)
         bool here = i == opt_cur;
         if (here)
             gfx_slab(2, y + 1, PLAT_W - 4, ROW - 2, i == OPT_DELETE ? C_MUTE : C_ACCENT, 255);
-        gfx_text(F_COND20, TEXT_X, base, opt_word[i], here ? C_ON_ACC : C_TEXT);
+        /* DELETE is red wherever the cursor is, not only under it: the one
+         * row of the panel that does not come back (30/10). */
+        gfx_text(F_COND20, TEXT_X, base, opt_word[i],
+                 here ? C_ON_ACC : i == OPT_DELETE ? C_MUTE : C_TEXT);
     }
     if (opt_said)
         gfx_text(F_COND14, TEXT_X, PLAT_H - 30, opt_said, C_FX);

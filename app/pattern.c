@@ -54,15 +54,19 @@
 enum { V_NOTES, V_FX, V_INS, VIEWS };
 static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
 /* The view the next press reaches, said at the top right so the three are
- * found at all: in the owner's order, the notes, then the instrument
- * column, then the effects, round again -- not the enum's, where FX sits
- * second. SEQ is what one presses to come back to the notes, and it is
- * printed on the panel; INS is the column, as he calls it. */
-static const char *const view_next[VIEWS] = { "INS ->", "SEQ ->", "FX ->" };
+ * found at all: the notes, then the effects, then the instrument column,
+ * round again. The effects came after the column until he had both under
+ * the thumb (30/10): "la vue FX devrait venir avant instrument quand on
+ * scroll avec KNOB 2 car on change plus souvent les FX que l'instrument".
+ * The order follows how often the hand goes there, not how the step is
+ * laid out, so the rare one sits at the far end. SEQ is what one presses to
+ * come back to the notes, and it is printed on the panel; INS is the
+ * column, as he calls it. */
+static const char *const view_next[VIEWS] = { "FX ->", "INS ->", "SEQ ->" };
 static const int view_cols[VIEWS] = { STEP_MAX_NOTES, STEP_MAX_FX, 1 };
 static const int view_w[VIEWS] = { 38, 60, 180 };
 /* and the order of the strip the cursor runs along (below), the marker's own. */
-static const int strip_order[VIEWS] = { V_NOTES, V_INS, V_FX };
+static const int strip_order[VIEWS] = { V_NOTES, V_FX, V_INS };
 enum { STRIP_N = VIEWS + STEP_MAX_NOTES + 1 + STEP_MAX_FX }; /* a number heading each group, then its columns */
 
 static Song *song;
@@ -128,7 +132,7 @@ static bool au_sounding;
  * the top right promises, with the step's number at the head of each group,
  * where the screen itself puts it -- at the left of the grid:
  *
- *   #  N1 N2 N3 N4   #  INSTRUMENT   #  FX1 FX2 FX3
+ *   #  N1 N2 N3 N4   #  FX1 FX2 FX3   #  INSTRUMENT
  *
  * Where the cursor stands in that strip is the only truth there is (30/10):
  * `view` and `cur_col` are read back from it, so the knob crosses a
@@ -138,7 +142,7 @@ static bool au_sounding;
  *
  * The two directions are not the same, and he asked for both in the same
  * breath (30/10). Rightwards the numbers are stepped over: the fourth note
- * reaches the instrument, the instrument reaches FX 1, and the last effect
+ * reaches FX 1, the last effect reaches the instrument, and the instrument
  * comes round to the first note -- going right is going further into the
  * step, and the number lies at the far left of the screen, so landing on it
  * would read as a jump backwards. Leftwards they are walked into: FX 1
@@ -656,9 +660,11 @@ static void ch_open(void)
 static void ch_frame(const PlatInput *in, uint32_t btns)
 {
 #define PRESSED(b) ((btns >> (b)) & 1u)
-    ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1];
+    /* PRESETS walks it too, the ear included: what opens a list keeps
+     * driving it (30/10). SELECT and KNOB 1 stay what they were. */
+    ch_cur += in->enc[PE_SELECT] + in->enc[PE_K1] + in->enc[PE_PRESET];
     grid_follow(&ch_cur, &ch_top, CH_N, CH_ROWS);
-    if (in->enc[PE_SELECT] || in->enc[PE_K1])
+    if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_PRESET])
         settle = SETTLE;
     if (PRESSED(PB_PLAY)) {
         if (player_playing()) /* the phrase, not the song: as INSTRUMENT's PLAY does */

@@ -49,9 +49,16 @@ static void take(void)
 int namer_frame(const PlatInput *in, uint32_t pressed)
 {
     int n = (int)sizeof letters - 1;
-    at = clampi(at + in->enc[PE_K2], 0, len - 1);
-    if (in->enc[PE_K3]) {
-        int i = (letter_index(draft[at] ? draft[at] : ' ') + in->enc[PE_K3]) % n;
+    /* KNOB 1 walks the letters, KNOB 2 changes the one under the cursor.
+     * They sat a knob further along, to keep SELECT and KNOB 1 the cursor
+     * as every list has them, which left KNOB 1 with nothing to do here and
+     * everything shifted: "ce n'est pas intuitif car KNOB 1 ne fait rien,
+     * tout est décalé" (30/10). On a row of letters the first knob is the
+     * one the hand reaches for. SELECT walks it too, as it walks every
+     * cursor on this machine. */
+    at = clampi(at + in->enc[PE_K1] + in->enc[PE_SELECT], 0, len - 1);
+    if (in->enc[PE_K2]) {
+        int i = (letter_index(draft[at] ? draft[at] : ' ') + in->enc[PE_K2]) % n;
         for (int j = 0; j < at; j++) /* a letter after the end pulls spaces in before it */
             if (!draft[j])
                 draft[j] = ' ';
@@ -87,6 +94,7 @@ void namer_draw(void)
             gfx_fill(x + 3, Y + GRID_ROW - 2, CELL - 6, 1, C_DIM, 255); /* where a letter goes */
         gfx_text_mid(F_COND20, x, CELL, Y + 2 + FONTS[F_COND20].ascent, s, here ? C_ON_ACC : C_TEXT);
     }
+    gfx_text_mid(F_COND12, 0, PLAT_W, Y + GRID_ROW + 26, "KNOB 1  LETTER    KNOB 2  CHANGE IT", C_DIM);
     hint(14, "SEL", "OK", false);
     hint(PLAT_W - 14, "HOME", "BACK", true);
 }
