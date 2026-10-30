@@ -1,8 +1,10 @@
-# The day the FM-1 arrives
+# The day the FM-1 arrived
 
-The order of operations, written before having the device. Nothing in this
-repository has ever run on a real FM-1: the firmware compiles, links, passes
-Felucca's checks, and that is all we know.
+The order of operations, written before having the device and ticked off as it
+happened. **The device arrived on 28/10/2026 and everything below was done**:
+MOONDAW has run on a real FM-1 every day since. What this page is kept for is
+the backup, the rescue path that needs no extra hardware (section 2), and where
+the official V15 file comes from.
 
 Two rules above everything else:
 
@@ -33,7 +35,9 @@ To rebuild:
 cd ~/Documents/Code/FM-1-transporter && ninja -C build
 ```
 
-Still to do:
+Still to do (and never needed: the backup and the way back were done
+without a XIAO, section 2; these three stay for the one case section 2 cannot
+reach, a device that does not even enter the ROM loader):
 
 - [ ] A **Seeed XIAO RP2040** (not another board: the other RP2040s are
       untested, the Waveshare RP2350-USB-A does not work).
@@ -72,7 +76,9 @@ Wiring, three wires and not one more:
 - [x] V15's MIDI port: `USB Composite Device`. Felucca's handshake
       answers on it the first time.
 - [ ] **Measure the screen diagonal** (or its visible width, with
-      calipers). It is the missing figure for setting the height of a line.
+      calipers). Never done, and no longer the missing figure: the line
+      heights and the fonts were settled on the device itself, by reading
+      it.
 - [x] The layout matches `proto/pattern.html`: four knobs to the
       left of the screen, four to the right, two rows of six buttons, OCT−
       and OCT+ under the left knobs.
@@ -210,14 +216,21 @@ apart from `hello` (both `FM-1_900`); `fm1_send.py --ping` does:
       huge; the planned fallbacks are not needed.
 - [x] EDIT opens PATTERN: **unreadable**. "Horrible, too small";
       the interface has to be rethought from A to Z (NOTES.md, 28/10).
-- [ ] Write a note, SAVE, power off, power on: the note is there. Put
-      off for later: navigating is too painful as it stands.
+- [ ] Write a note, SAVE, power off, power on: the note is there. Never
+      ticked in this form. The store has been written on the device every
+      day since instead, and `store_test` cuts the power at each of its 13
+      flash operations.
 - [ ] During SAVE the sound stops (expected: a sector erase blocks
       interrupts for around fifty milliseconds).
 
 If the CPU does not keep up, the fallbacks are in `NOTES.md`: fewer voices per
 track, the filter at half rate, a cheaper kernel for the WAVE engine,
-fewer bands redrawn per frame.
+fewer bands redrawn per frame. They were not needed.
+
+PATTERN being unreadable is where the interface as it stands comes from: it
+was rebuilt from A to Z over the days after, and the screens the firmware has
+now (SONG, SECTION, PATTERN, INSTRUMENT, MIXER, PROJECTS, HELP) all follow
+from that one line. `NOTES.md` carries it day by day.
 
 ## 7. The songs
 
@@ -245,17 +258,38 @@ left free. The device only accepts on the home screen ("busy" otherwise,
 without writing anything). Names are upper-cased and cut to 12
 characters (`PIANO-VELOCI`).
 
-If no MIDI port is found, the tool lists the ones it sees:
-`--port` with part of the right name. **This MIDI path has never run**:
-everything else in the transfer is checked without a device, but the port name
-and the real throughput are to be discovered on the day.
+If no MIDI port is found, the tool lists the ones it sees: `--port` with part
+of the right name. The port is called `Felucca` under MOONDAW and `USB
+Composite Device` under V15, and the throughput was the expected one: the 13
+songs went over it in one pass.
 
-## What we do not know and will know on the day
+## What we did not know, and the answers
 
-- The processor's frequency, so what eight tracks really cost.
-- The size of the screen, so whether eleven steps per screen are readable.
-- Whether Felucca's button table holds for this unit.
-- Whether sending a song by SysEx goes at the expected rate (V15's
-  port is called `USB Composite Device`; MOONDAW's remains to be seen).
-- Whether our package's `FM-1_900` identity is accepted as it is by
-  the installer (it is the one of Felucca's development builds).
+- **The processor's frequency, so what eight tracks really cost.** The demo
+  takes under 1 % on average (MAX 0 to 7 % of a 2.9 ms half). The heaviest
+  thing the firmware has since run, eight sample tracks with their chains,
+  sits at 54 to 63 % and peaks at 77. Nothing had to be given up for it.
+- **The size of the screen, so whether eleven steps per screen are
+  readable.** They were not, and that is the one thing the day went badly
+  on (section 6). The interface was rebuilt around what the panel can
+  actually show.
+- **Whether Felucca's button table holds for this unit.** It does
+  (`PANEL_DEFAULT`, section 5).
+- **Whether sending a song by SysEx goes at the expected rate.** It does
+  (section 7).
+- **Whether our package's `FM-1_900` identity is accepted as it is by the
+  installer.** It is (section 5). It is also the identity of `hello` and of
+  Felucca's development builds, so nothing that reads it can tell the three
+  apart; `fm1_send.py --ping` can.
+
+## What is still not known
+
+- Which TRS standard the 3.5 mm MIDI jack follows, A or B. An adapter
+  settles it and no code changes either way.
+- Whether `fm1_uart1_rx_take()` really returns the bytes since the last
+  call, as the HAL documents and the MIDI drain trusts. A cable into the
+  jack that gives nothing while USB stays perfect is the first sign it does
+  not.
+- The web installer's remaining paths: the return to V15, the install from
+  V15, a cable pulled mid-write, and anything outside Chrome on macOS
+  (`web/installer/README.md` keeps that list).

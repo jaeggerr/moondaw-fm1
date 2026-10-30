@@ -11,8 +11,12 @@ engines only the drum voices (below, "Felucca's DRUM").
 
 | Here | From Felucca | State |
 | --- | --- | --- |
-| `firmware/hal/` (18 files) | `firmware/hal/` | verbatim |
-| `firmware/crt0.S`, `firmware/app.ld` | same | verbatim (memory map not yet recut) |
+| `firmware/hal/` (18 files) | `firmware/hal/` | verbatim but for the three below; `fm1_irq.h`, `fm1_sys.h` and `fm1_vec.S` also carry the second core's additions (felucca-bsp, further down) |
+| `firmware/hal/fm1_input.h` | same | `fm1_led_duty[4][]` added: four steady LED levels between the mid level and lit (50, 62.5, 75, 87.5 % of lit), with their frame phase in `FM1__LIT` and `fm1_input_tick` |
+| `firmware/hal/fm1_guard.h` | same | the PC guard's RAM-code window runs to `_ra_end` instead of `_rt_end`, so the audio core in `.ram_audio` is inside it |
+| `firmware/hal/fm1_uart.h` | same | `fm1_uart1_rx_sync()` added (the build refuses inline asm outside `hal/`); the file was Felucca's and unused until the MIDI jack was read |
+| `firmware/crt0.S` | same | verbatim |
+| `firmware/app.ld` | same | the memory map recut (28/10): RAMTEXT moved to the top of the SRAM and grown to 0x8000, POOL shortened by as much, `.ram_audio` (the audio core run from RAM) and `.c1_text` (the second core's idle loop) added, `.text` excluding their objects |
 | `firmware/loader/` | `firmware/loader/` | verbatim |
 | `firmware/src/libc.c`, `lcd.c`, `storage_hw.c`, `ota.c`, `usb.c` | `firmware/src/` | verbatim |
 | `firmware/src/panel.c` | `firmware/src/panel.c` | cut after `panel_enc`: the palette, HOLD and LEDS settings are gone |
@@ -20,8 +24,9 @@ engines only the drum voices (below, "Felucca's DRUM").
 | `firmware/src/ota_hw.c` | `firmware/src/ota_hw.c` | `ota_show` redrawn with the text cells |
 | `firmware/src/firmware.c` | `firmware/src/felucca.c`, `main.c`, `master.c` | rewritten around them: same boot order, TIMER5 interrupt, boot guard, UBOOT and update entries |
 | `tools/build.py`, `build.sh` | same | generated headers and the minsize pass removed, outputs renamed, one retry under Docker |
-| `tools/fm1pkg_make.py`, `lz4blk.py`, `fm1_install.py`, `get_toolchain.sh` | `tools/` | verbatim |
-| `web/installer/` | `web/fm1pkg.js`, `fm1ota.js`, `index_pkg.html`, `make_site.py` | adapted to MOONDAW (the page rewritten as `index.html`, `fm1ota.js` step for step as `fm1_install.py`, a song backup in `mdlink.js`); not yet run on a device |
+| `tools/fm1pkg_make.py`, `lz4blk.py`, `get_toolchain.sh` | `tools/` | verbatim |
+| `tools/fm1_install.py` | `tools/` | verbatim but one line: `fm1` added to `PORT_RE`, which did not match the `FM1 …` port names this device shows |
+| `web/installer/` | `web/fm1pkg.js`, `fm1ota.js`, `index_pkg.html`, `make_site.py` | adapted to MOONDAW (the page rewritten as `index.html`, `fm1ota.js` step for step as `fm1_install.py`, a song backup in `mdlink.js`); run on a device on 29/10 (Chrome, macOS): Connect, Save songs and Install over MOONDAW. The return to V15, the install from V15, a cable pulled mid-write, Windows, Linux and Edge are still untried |
 | `platform/web/` | — | new code; the design (everything in the AudioWorklet, audio as the device clock) follows `web/emu/felucca_web.c` and `worklet.js` |
 | `LICENSE`, `LICENSES/`, `docs/FELUCCA-LICENSING.md` | `LICENSE`, `LICENSES/`, `LICENSING.md` | verbatim |
 
@@ -42,7 +47,9 @@ Not Felucca's:
   same `.trk` files; its `FORMAT.md` is the specification.
 
 To compare with a later Felucca: `diff -ru Felucca/firmware/hal firmware/hal`,
-and the same for each verbatim file.
+and the same for each verbatim file. The six HAL files named above, `app.ld`
+and `fm1_install.py` will differ, and the three `fm1_cpu1*` files are not
+Felucca's at all (felucca-bsp, below); nothing else should.
 
 ## Felucca's DRUM (29/10/2026)
 

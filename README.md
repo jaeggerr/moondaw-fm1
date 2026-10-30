@@ -15,9 +15,10 @@ has not been through many hands yet.
 - **Songs**: an arrangement of phrases (SONG), each phrase the blocks its
   tracks play (SECTION), each block its steps (PATTERN): up to four notes,
   an instrument and three effects a step, 8 tracks.
-- **Sounds**: PULSE, NOISE and WAVE chip voices, VOX (a singing voice that
-  sings the syllables you write) and DRUM (Felucca's drum voices), with an
-  envelope, a filter, layers, reverb and delay sends, and a master limiter.
+- **Sounds**: PULSE, NOISE and WAVE chip voices, SMPL (your own samples),
+  VOX (a singing voice that sings the syllables you write) and DRUM
+  (Felucca's drum voices), with an envelope, a filter, layers, reverb and
+  delay sends, and a master limiter.
 - **Writing**: the keyboard writes notes, REC records what you play over a
   count-in, a selection copies, pastes, cuts and clears, a loop plays a
   passage round, UNDO and REDO on the ALGO knob.
@@ -61,6 +62,29 @@ python3 tools/fm1_send.py --get NAME -o song.trk   # a song back
 
 The device holds 31 songs; a song is a plain-text `.trk` file, the same as
 the other MOONDAW apps read and write (the format is MOONDAW's `FORMAT.md`).
+
+## Samples
+
+SMPL plays short one-shots read from the flash. They are prepared and sent
+from the computer:
+
+```
+python3 tools/fm1_samples.py add kick.wav snare.wav   # into the bank
+python3 tools/fm1_samples.py list                     # what is in it
+python3 tools/fm1_samples.py remove tr9_kick          # one out
+```
+
+`add` takes any WAV and makes it what the device plays: mixed to mono,
+resampled to 22 050 Hz, IMA ADPCM, the silence cut at both ends, a second
+at most, normalised to -1 dBFS. A sample is named after its file, and a
+song calls it by that name: `smp 00 tr909/tr9_kick.wav` plays the sample
+named `tr9_kick`. A song carries its own instruments, so the zones that
+spread samples across the keys travel in the `.trk`.
+
+The bank is one file in the store, beside the songs, and it is rewritten
+whole each time: a sample more is a song less, and SYSTEM on the device
+says how much of each there is. A bank is taken on the home screen, as a
+song is.
 
 ## Building
 
