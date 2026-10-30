@@ -173,11 +173,22 @@ static int kind(int r)
 /* The layer row r stands for, nlayers for + LYR. */
 static int layer_of(int r) { return r - L_VOICE - (own_row() >= 0); }
 
+/* How many columns the row really has. A cell that can hold nothing is
+ * not drawn at all, nor its head: his, from the panel (30/10) -- a "--"
+ * under a head is for a value one could set and has not, not for one
+ * this engine does not have. SMPL has no timbre; the zone row has
+ * nothing to set until the instrument has exactly one zone. */
 static int ncols(int r)
 {
     static const int n[] = { 0, 2, 4, 4, 3, 2, 4, 4 };
     int k = kind(r);
-    return k == L_LAYER ? (layer_of(r) < I()->nlayers ? 4 : 1) : n[k];
+    if (k == L_LAYER)
+        return layer_of(r) < I()->nlayers ? 4 : 1;
+    if (k == L_SOUND && engine_timbre_max(I()->engine) == 0)
+        return 1;
+    if (k == L_SAMPLE && zone_count() != 1)
+        return 1;
+    return n[k];
 }
 
 static int span(int r, int c)
@@ -374,8 +385,10 @@ static void turn(int d)
         in->drum[col] = (int8_t)clampi(in->drum[col] + d, -64, 63);
     } else if (k == L_SAMPLE) {
         Zone *z = zone_first();
-        if (zone_count() > 1) /* several zones: this row does not touch them */
+        if (zone_count() > 1) { /* several zones: this row does not touch them */
+            said = "MANY ZONES: ON THE COMPUTER";
             return;
+        }
         if (col == 0) {
             int n = bank_count(), at, slot;
             if (n <= 0) /* nothing in the bank to choose from */
@@ -468,7 +481,9 @@ static void draw(void)
         namer_draw();
         return;
     }
-    if (layer_of(row) < in->nlayers || kind(row) != L_LAYER) /* the column names: this row's */
+    /* the column names: this row's -- but a word in the corner is drawn on
+     * the same line and runs into them, so it has the line while it lasts */
+    if (!said && (layer_of(row) < in->nlayers || kind(row) != L_LAYER))
         for (int c = 0; c < ncols(row); c++)
             grid_head(col_x(row, c), span(row, c) * CELL_W, heads[kind(row)][c], c == col);
     for (int v = 0; v < GRID_ROWS && top + v < n; v++) {
@@ -481,7 +496,7 @@ static void draw(void)
                 gfx_fill(PLAT_W - 16 + i, grid_y(v) + 8 + i, 1, 12 - 2 * i, band ? C_ON_ACC : C_TITLE, 255);
         {
             static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE",
-                                                 "DRUM", "SAMPLE" };
+                                                 "DRUM", "ZONE" };
             char lyr[6] = "LYR 1";
             lyr[4] = (char)('1' + layer_of(r));
             gfx_text(F_COND20, LABEL_X, grid_base(v), k != L_LAYER ? label[k] : adder ? "+ LYR" : lyr,
@@ -496,8 +511,13 @@ static void draw(void)
         if (adder)
             continue;
         for (int c = 0; c < ncols(r); c++) {
-            bool on = band && c == col, silent = k == L_SOUND && c == 0 && inst_mute(in);
-            grid_cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, silent ? C_FX : C_TEXT);
+            bool on = band && c == col;
+            /* the engine of an instrument that makes no sound, and the zone
+             * cell of one this row will not touch: neither is an edit */
+            uint16_t ink = k == L_SOUND && c == 0 && inst_mute(in)  ? C_FX
+                           : k == L_SAMPLE && c == 0 && zone_count() > 1 ? C_DIM
+                                                                         : C_TEXT;
+            grid_cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, ink);
         }
     }
     gfx_fill(CELL_X - 5, GRID_HEAD, 1, (n < GRID_ROWS ? n : GRID_ROWS) * GRID_ROW, C_DIM, 255);
@@ -532,7 +552,8 @@ int instrument_frame(const PlatInput *in)
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
-    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3])
+    if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
+        in->enc[PE_PRESET]) /* PRESETS too: a word about this instrument is not about the next */
         said = 0;
 
     if (naming) {

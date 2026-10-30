@@ -194,6 +194,11 @@ int main(void)
           app_song.instruments[4].engine == ENGINE_VOX);
     enc(PE_K3, -1);
     CHECK("and a turn back returns it to SMPL", app_song.instruments[4].engine == ENGINE_SAMPLE);
+    enc(PE_K2, 1);
+    enc(PE_K3, 1);
+    CHECK("SMPL has no timbre: there is no column to move to, and the knob still turns the engine",
+          app_song.instruments[4].engine == ENGINE_VOX);
+    enc(PE_K3, -1);
 
     /* the SAMPLE row (30/10): one zone over the whole keyboard, edited here */
     enc(PE_SELECT, 4);

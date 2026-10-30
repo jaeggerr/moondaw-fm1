@@ -2456,6 +2456,44 @@ GAIN**, the knob on SAMPLE walking the bank's names.
   or remove a zone; `begin`, `loop` and `ping` still carried and not
   played.
 
+## 2026-10-30 — INSTRUMENT, from the panel: what he found testing it
+
+He tried the SAMPLE row on the machine and sent a list. Every item was
+right, and three were fixed at once.
+
+- **The label ran into the rule.** "SAMPLE" at LABEL_X 8 is wider than
+  the 55 px before the rule at CELL_X - 3, and its E crossed it. The row
+  is called **ZONE** now, which is shorter and truer: sample, root, tune
+  and gain together are a zone, and it explains the "2 ZONES" in the cell.
+- **A cell that can hold nothing is no longer drawn, nor its head.** His
+  rule, and a good one: a "--" under a head means a value one could set
+  and has not; it must not mean one this engine does not have. `ncols()`
+  answers 1 for SOUND when `engine_timbre_max` is 0 (only SMPL), and 1
+  for the zone row until the instrument has exactly one zone. The column
+  cursor was already clamped against `ncols`, so nothing else moved.
+- **The refusal says why.** Turning on a "N ZONES" cell did nothing at
+  all and he could not tell whether he had even pressed something. It
+  sets the corner word now -- `MANY ZONES: ON THE COMPUTER` -- and the
+  cell is drawn in C_DIM, not in the editable ink.
+- **Which uncovered the same bug as his first**: the corner word is drawn
+  on the line the column heads use, so a long one ran straight through
+  them (`MANY ZONES: ON TSAMPLEPUTER` on the panel). The heads give up
+  the line while a word is showing. Seen, fixed, seen again.
+- **And one more**: the word did not clear when PRESETS stepped to the
+  next instrument, so it hung over an instrument it was not about.
+  `PE_PRESET` joins the encoders that clear it.
+- **Not done, his to decide**: the values are centred in their cells
+  (`grid_cell` -> `gfx_text_mid`) while the instrument's name is flush
+  left, so the left edges disagree down the screen. Making them agree
+  touches every row here and `grid_cell`, which MIXER and PHRASE share,
+  so it is a change to show him on the panel first rather than to make.
+- **Two things to remember from installing**: his song was `dirty=1` and
+  the install restarted the device, which lost what he had not saved --
+  the state is worth reading before flashing. And one `build.sh` failed
+  (`pi32v2/bin/clang failed`, transient) while `fm1_install.py` went on
+  to install the **previous** package without complaint: a build that
+  fails must stop the install, or the machine quietly runs old code.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
