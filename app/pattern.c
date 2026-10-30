@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "pattern.h"
 
+#include "../core/drum.h"
 #include "../core/player.h"
 #include "app.h"
 #include "edit.h"
@@ -325,6 +326,28 @@ static void turn_len(int d)
  * (PROJECT's STEP), not 4 by hand. */
 static int beat(void) { return song->steps_per_beat ? song->steps_per_beat : 4; }
 
+/* What a step's note is called. On a kit a pitch says nothing -- knowing
+ * that F#2 is the snare is a thing to learn and then to keep remembering
+ * (30/10) -- so the cell names the drum the note plays: BD SD CH, the two
+ * letters core/drum.c already had. A note the kit does not offer on a key
+ * is one of its pieces retuned; it reads as that piece with a + or a -,
+ * since the name alone could not tell it apart. */
+static const char *step_note_name(int r, uint8_t n, char buf[4])
+{
+    const InstrumentDef *in = &song->instruments[edit_instr_at(song, track, pat, r) % SONG_MAX_INSTR];
+    uint8_t notes[DRUM_MAX_DRUMS];
+    int at;
+    if (in->engine != ENGINE_DRUM)
+        return note_name(n, buf);
+    at = drum_drum_of(in->timbre, n);
+    drum_drums(in->timbre, notes);
+    buf[0] = drum_note_abbr(in->timbre, n)[0];
+    buf[1] = drum_note_abbr(in->timbre, n)[1];
+    buf[2] = n == notes[at] ? '\0' : n > notes[at] ? '+' : '-';
+    buf[3] = '\0';
+    return buf;
+}
+
 static void draw_cell(int v, int r, int c, bool band)
 {
     const Step *st = step_at(r);
@@ -334,7 +357,7 @@ static void draw_cell(int v, int r, int c, bool band)
 
     if (view == V_NOTES) {
         uint8_t n = st->notes[c];
-        grid_cell(v, x, w, n <= NOTE_MAX ? note_name(n, s) : n == NOTE_OFF ? "OFF" : "---", band, on,
+        grid_cell(v, x, w, n <= NOTE_MAX ? step_note_name(r, n, s) : n == NOTE_OFF ? "OFF" : "---", band, on,
                   n <= NOTE_MAX ? (r == play_row ? C_TITLE : C_TEXT) : C_DIM);
     } else if (view == V_FX) {
         StepFx f = st->fx[c];
@@ -1102,9 +1125,12 @@ int pattern_frame(const PlatInput *in)
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
                  (selecting ? 1u << PB_EDIT : 0u) | 1u << PB_GLO |
                  (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
-    /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied */
-    ui_led_mono(track, !selecting && !shift.held ? 0u
-                                                 : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
+    /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied.
+     * Otherwise, on a kit, the keys that are drums -- the only thing on the machine that says
+     * where the snare is, and the eight or eleven lit are the whole kit (30/10) */
+    ui_led_mono(track, !selecting && !shift.held
+                           ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
+                           : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
                                                        1u << OP_LOOP | 1u << OP_MONO |
                                                        (edit_clip_len() ? 1u << OP_PASTE : 0u));
     gfx_frame(choosing ? ch_draw : draw);

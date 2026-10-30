@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "edit.h"
 
+#include "../core/drum.h"
 #include "app.h"
 #include "undo.h"
 
@@ -42,9 +43,24 @@ bool edit_turn_note(Song *s, int track, int pat, int row, int k, int d)
 {
     uint8_t n = song_step(s, track, pat, row)->notes[k];
     int v = n <= NOTE_MAX ? n : n == NOTE_OFF ? NOTE_MIN - 1 : NOTE_MIN - 2;
+    const InstrumentDef *in = &s->instruments[edit_instr_at(s, track, pat, row) % SONG_MAX_INSTR];
     Step *st;
 
-    if (v < NOTE_MIN && d > 0)
+    if (in->engine == ENGINE_DRUM) {
+        /* On a kit a semitone means nothing: 128 notes hold 8 or 11 pieces
+         * and the rest are those retuned or folded, so two notches out of
+         * three used to change nothing one could hear. The knob steps from
+         * one piece to the next instead, with OFF and --- under the first. */
+        uint8_t notes[DRUM_MAX_DRUMS];
+        int cnt = drum_drums(in->timbre, notes);
+        int off = k == 0 ? 1 : 0; /* OFF is the first slot's alone, so only it has that rung:
+                                   * elsewhere the knob would write OFF, the step would refuse
+                                   * it and put --- back, and --- is where it would stay */
+        int at = n <= NOTE_MAX ? drum_drum_of(in->timbre, n) + 1 + off : n == NOTE_OFF ? 1 : 0;
+        at += d;
+        at = at < 0 ? 0 : at > cnt + off ? cnt + off : at;
+        v = at > off ? notes[at - 1 - off] : at ? NOTE_MIN - 1 : NOTE_MIN - 2;
+    } else if (v < NOTE_MIN && d > 0)
         v = default_note(s, track, pat, row, k) + d - 1;
     else
         v += d;
@@ -102,10 +118,33 @@ int edit_instr_at(const Song *s, int track, int pat, int row)
     return 0;
 }
 
+/* A kit's keys are its drums, one a key, in the map's rising order: eight
+ * of the twenty-seven, eleven for Felucca's own, and the rest play nothing
+ * (the screens light the ones that do). The octave does not move them --
+ * there is nothing above or below to go and find, which is the point. Note
+ * 29 and its octaves used to be the first key, and gm_note() folded
+ * anything under 35 back into 36..47: keys 0..5 played exactly what keys
+ * 12..17 played, and a drum at its own pitch could sit out of reach. */
 int edit_key_note(const Song *s, int instr, int oct, int k)
 {
-    bool kit = s->instruments[instr % SONG_MAX_INSTR].engine == ENGINE_DRUM;
-    return (kit ? 29 : 53) + oct * 12 + k;
+    const InstrumentDef *in = &s->instruments[instr % SONG_MAX_INSTR];
+    if (in->engine == ENGINE_DRUM) {
+        uint8_t notes[DRUM_MAX_DRUMS];
+        int n = drum_drums(in->timbre, notes);
+        return k < n ? notes[k] : -1;
+    }
+    return 53 + oct * 12 + k;
+}
+
+/* Which keys a kit's keyboard answers to, as a bit a key: the screens
+ * light exactly these and leave the rest dark. 0 when the instrument is
+ * not a kit -- there the whole keyboard plays. */
+uint32_t edit_key_drums(const Song *s, int instr)
+{
+    uint8_t notes[DRUM_MAX_DRUMS];
+    if (s->instruments[instr % SONG_MAX_INSTR].engine != ENGINE_DRUM)
+        return 0;
+    return (1u << drum_drums(s->instruments[instr % SONG_MAX_INSTR].timbre, notes)) - 1u;
 }
 
 /* ------------------------------------------------------ the clipboard --- */

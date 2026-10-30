@@ -9,6 +9,7 @@
 #include "../app/loop.h"
 #include "../app/undo.h"
 #include "../app/ui.h"
+#include "../core/drum.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 
@@ -16,8 +17,8 @@ void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)
 void plat_led_key(int k, int on) { (void)k; (void)on; }
 void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
-static int led[PLAT_BTNS]; /* the guide, as the panel would have it */
-void plat_led_level(int l, int v) { if (l >= 0 && l < PLAT_BTNS) led[l] = v; }
+static int led[PLAT_BTNS + PLAT_KEYS]; /* the guide, as the panel would have it: buttons then keys */
+void plat_led_level(int l, int v) { if (l >= 0 && l < PLAT_BTNS + PLAT_KEYS) led[l] = v; }
 int plat_audio_load(int *worst) { *worst = -1; return -1; }
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { (void)o; (void)d; (void)n; return -1; }
 const uint8_t *plat_flash_map(void) { return 0; }
@@ -549,6 +550,52 @@ int main(void)
     CHECK("STOP puts the cursor on the step it stopped on", st(0)->notes[0] == 69);
     for (int i = 0; i < 2; i++)
         enc(PE_ALGO, -1);     /* that note taken back */
+
+    /* A KIT -- the keyboard is its drums and nothing else, the knob steps
+     * from one drum to the next, and the lit keys say which are which
+     * (30/10). Instrument 00 is the one every row names. */
+    {
+        uint8_t drums[DRUM_MAX_DRUMS];
+        int n = drum_drums(2, drums), lit = 0;
+        song.instruments[0].engine = ENGINE_DRUM;
+        song.instruments[0].timbre = 2; /* 80 */
+        press(PB_SEQ);                  /* NOTES */
+        enc(PE_K2, -20);                /* the left end: the step's number */
+        enc(PE_K2, 1);                  /* and into the first note */
+        enc(PE_K1, -40);
+        enc(PE_K1, 5);                  /* a step of its own */
+        CHECK("the kit 80 has eight drums", n == 8);
+        keys(1u << 0); keys(0);
+        CHECK("the first key is the kit's first drum", st(5)->notes[0] == drums[0]);
+        keys(1u << 7); keys(0);
+        CHECK("the eighth key is its last", st(5)->notes[0] == drums[7]);
+        keys(1u << 8); keys(0);
+        CHECK("the ninth plays nothing: the kit has no ninth drum", st(5)->notes[0] == drums[7]);
+        press(PB_OCTUP);
+        keys(1u << 0); keys(0);
+        CHECK("the octave does not move a kit's keys", st(5)->notes[0] == drums[0]);
+        press(PB_OCTDN);
+        for (int k = 0; k < PLAT_KEYS; k++)
+            lit += led[PLAT_BTNS + k] != PLAT_LED_OFF;
+        CHECK("and the keys that are drums are the ones lit", lit == n);
+        enc(PE_K3, 1);
+        CHECK("KNOB 3 steps to the next drum, not up a semitone", st(5)->notes[0] == drums[1]);
+        enc(PE_K3, 100);
+        CHECK("the list ends on the last drum", st(5)->notes[0] == drums[n - 1]);
+        enc(PE_K3, -n);  /* one notch a drum: the last one down to the rung under the first */
+        CHECK("one notch below the first drum: OFF", st(5)->notes[0] == NOTE_OFF);
+        enc(PE_K3, -1);
+        CHECK("and one more: empty", st(5)->notes[0] == NOTE_NONE);
+        /* OFF belongs to the first slot alone. Giving the others that rung
+         * would wall them in: the knob writes OFF, the step puts --- back,
+         * and --- is where the cursor stays however long one turns. */
+        enc(PE_K2, 1);
+        enc(PE_K3, 1);
+        CHECK("another slot leaves --- on one notch", st(5)->notes[1] == drums[0]);
+        enc(PE_K3, -1);
+        CHECK("and goes back to it, without an OFF of its own", st(5)->notes[1] == NOTE_NONE);
+        song.instruments[0].engine = ENGINE_PULSE;
+    }
 
     press(PB_SAVE);
     CHECK("SAVE asks the app to save, once", saves == 1);

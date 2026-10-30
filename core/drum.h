@@ -38,4 +38,15 @@ bool drum_rings(int track);
 const char *drum_kit_name(uint8_t kit);
 const char *drum_note_abbr(uint8_t kit, uint8_t note);
 
+/* The kit's drums: its pieces, each at the pitch it was designed for.
+ * Eight, or eleven for Felucca's own two kits (STD and ROUND), which name
+ * their congas, claves and cymbals apart. The map's 47 notes are these
+ * pieces retuned; the keyboard gives the pieces, a key each, and KNOB 3
+ * walks them. `drum_drums` fills `notes` and returns how many; the order
+ * is the General MIDI map's, which rises in pitch. `drum_drum_of` says
+ * which of them a note plays -- any note, retuned or not. */
+#define DRUM_MAX_DRUMS 11
+int drum_drums(uint8_t kit, uint8_t notes[DRUM_MAX_DRUMS]);
+int drum_drum_of(uint8_t kit, uint8_t note);
+
 #endif
