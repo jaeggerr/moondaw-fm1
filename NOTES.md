@@ -2533,6 +2533,51 @@ does sing syllables.
   moondaw now say one word for one thing. A label the file already
   writes is always the better label.
 
+## 2026-10-30 — a voice made on the machine sings in English
+
+He asked for it plainly: an instrument he turns into a VOX on the device
+should start on the English accent, not the French one. Asked whether the
+**file's** meaning should move with it, he said no -- and that no is the
+whole of this entry.
+
+- **What changed**: one place, `turn()` in `app/instrument.c`, the ENGINE
+  knob's own branch. It is the only place on the device where an
+  instrument becomes a voice by his hand: nothing else in `app/` writes
+  `engine` (PATTERN only reads instrument names, there is no
+  new-instrument action and no presets -- `PRESETS` steps to the next
+  instrument, it does not make one).
+- **What deliberately did not**: `song_init`, `core/trk.c`, and the
+  `VOX_ACCENT_*` values. A `.trk` writes ` accent EN` only for an English
+  voice, so **the absence of the line means French** -- and that is how
+  every song written until today was written. Had the default moved to
+  where loading reads it, his old songs and moondaw's alike would have
+  started singing English without a word, and the two engines would have
+  disagreed where they agree today. `tests/difftest.sh` would have been
+  the one to say so: robot-demo -25.8 dB, LEOMOTEUR -28.9 dB, unmoved by
+  this change because loading was not touched.
+- **"Only when it was not already a voice" needed more than it sounds**:
+  `accent` is one byte whose zero is FR, so a voice that chose French and
+  a fresh instrument that never chose anything look identical; and the
+  ENGINE knob can never land on VOX while already on VOX (VOX sits
+  mid-list, between SMPL and DRUM), so comparing the engine before and
+  after the turn can never catch the case it was meant to catch -- the
+  guard reads well and does nothing. Hence `voiced` in
+  `app/instrument.c`: a bit an instrument, seeded at `instrument_open`
+  from the song's own voices and set whenever this screen makes one. A
+  voice **made** here gets English; one that already had an accent keeps
+  it, so turning away from VOX and back loses nothing. Those bits live in
+  the screen for as long as it is open and go into no file.
+- **One edge, recorded rather than fixed**: `undo_bytes` snapshots the
+  whole instrument, so UNDO puts the engine and the accent back -- but not
+  the bit. Making the voice again then keeps the restored accent instead
+  of English. The bit says "this instrument has been a voice", and after
+  an undo that is still true; clearing it would mean clearing it when the
+  engine leaves VOX too, which is the case the bit exists to protect.
+- Locked by three checks in `tests/instrument_test.c`: the knob onto VOX
+  gives EN, ROBOT (the fixture's voice, written with no `accent` line)
+  loads FR and is FR still after a turn away and back, and the ACCENT
+  knob itself still works both ways.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

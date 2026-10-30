@@ -44,6 +44,28 @@ static int preview_at;
 static InstrumentDef *I(void) { return &app_song.instruments[inst]; }
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 
+/* ---------------------------------------------------------- accents ---
+ * A voice made on the ENGINE knob sings in English (30/10, his): the
+ * phoneme set is one alphabet and the accent only says how it is read,
+ * and what he writes on the machine he writes in English.
+ *
+ * Only a voice MADE here, though. `accent` is one byte and FR is its
+ * zero, so a voice that chose French and a fresh instrument that never
+ * chose anything look alike -- and the engine knob can never land on VOX
+ * while already on it (VOX sits mid-list), so "was it a voice a moment
+ * ago" cannot tell them apart either. Hence this: the instruments that
+ * already carry an accent somebody chose, which is the voices of the song
+ * as the screen opened it, plus any this screen has since made a voice.
+ * Turning away from VOX and back therefore keeps the FR a file gave it or
+ * he set by hand; it holds for as long as the screen is open.
+ *
+ * Nothing of this reaches a file. A `.trk` with no `accent` line still
+ * means French, `core/trk.c` still reads and writes it that way, and
+ * every song written before today sings as it always did. */
+static uint8_t voiced[(SONG_MAX_INSTR + 7) / 8];
+static bool voiced_get(int i) { return (voiced[i >> 3] >> (i & 7)) & 1u; }
+static void voiced_set(int i) { voiced[i >> 3] |= (uint8_t)(1u << (i & 7)); }
+
 /* ----------------------------------------------------------- zones ---
  * The SAMPLE row edits ONE zone over the whole keyboard: what a one-shot
  * wants, and what every drum of SMPL-DEMO already is. An instrument that
@@ -383,6 +405,11 @@ static void turn(int d)
         in->engine = engines[at < 0 ? 0 : clampi(at + d, 0, (int)sizeof engines - 1)];
         if (in->timbre > engine_timbre_max(in->engine))
             in->timbre = engine_timbre_max(in->engine);
+        if (in->engine == ENGINE_VOX) { /* made a voice here: English, unless it had an accent already */
+            if (!voiced_get(inst))
+                in->accent = VOX_ACCENT_EN;
+            voiced_set(inst);
+        }
     } else if (k == L_SOUND) {
         in->timbre = (uint8_t)clampi(in->timbre + d, 0, engine_timbre_max(in->engine));
     } else if (k == L_ENV) {
@@ -562,6 +589,12 @@ void instrument_open(int instr, int e)
 {
     (void)e; /* PLAY is the preview here, not the phrase */
     inst = instr < 0 || instr >= SONG_MAX_INSTR ? 0 : instr;
+    /* the song's own voices already have their accent; see `voiced` above */
+    for (uint32_t i = 0; i < sizeof voiced; i++)
+        voiced[i] = 0;
+    for (int i = 0; i < SONG_MAX_INSTR; i++)
+        if (app_song.instruments[i].engine == ENGINE_VOX)
+            voiced_set(i);
     row = col = top = 0;
     naming = previewing = false;
     said = 0;
