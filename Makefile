@@ -3,6 +3,7 @@
 #
 #   make sim        the FM-1 simulated in an SDL2 window  -> build/sim/moondaw-fm1 [song.trk]
 #   make web        the same in the browser               -> build/web/
+#   make songedit   the song editor's audition engine     -> build/songedit/
 #   make test       both, headless, the song file reader, and the voice through the app
 #   make difftest   the engine against moondaw's own, on real songs (needs ../moondaw, built)
 #
@@ -36,6 +37,10 @@ build/sim/moondaw-fm1: platform/sdl/main.c $(SRCS) $(HDRS)
 web:
 	APP=$(APP) platform/web/build.sh
 
+# The song editor's audition engine: the core alone, no app (web/songedit/).
+songedit:
+	web/songedit/build.sh
+
 app/fonts.h: tools/gen_fonts.py
 	python3 tools/gen_fonts.py > $@
 
@@ -47,7 +52,7 @@ core/drum_tables.h: tools/gen_drum_tables.c
 	@mkdir -p build
 	$(CC) tools/gen_drum_tables.c -lm -o build/gen_drum_tables && build/gen_drum_tables > $@
 
-test: sim web
+test: sim web songedit
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy build/sim/moondaw-fm1 --selftest build/sim/selftest.bmp $(SELFTEST_SONG)
 	node platform/web/test.mjs
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
@@ -90,6 +95,7 @@ test: sim web
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck
 	@if ls $(MOONDAW)/songs/*.trk >/dev/null 2>&1; then build/trkcheck $(MOONDAW)/songs/*.trk | cut -c1-72; \
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
+	node web/songedit/test/roundtrip.mjs | tail -4
 
 difftest:
 	MOONDAW=$(MOONDAW) tests/difftest.sh 30 $(MOONDAW)/songs/*.trk tests/vox-styles.trk
@@ -97,4 +103,4 @@ difftest:
 clean:
 	rm -rf build
 
-.PHONY: sim web test difftest clean
+.PHONY: sim web songedit test difftest clean

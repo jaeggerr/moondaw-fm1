@@ -2608,11 +2608,93 @@ three at once: "there are only three, I will learn them quickly".
   at the last column instead of wrapping into the next view. He raised
   that and left it undecided, to judge from use.
 
+## 2026-10-30 — a page to build sampled instruments on the computer
+
+Making a sampled instrument meant writing `inst`, `smp` and `zone` lines
+by hand in a `.trk`. `web/songedit/` is the page that does it instead:
+open a song, edit an instrument, drag its zones over a keyboard, hear it,
+write the file back or send it to the FM-1. It is deliberately the
+computer side only -- the device's own zone editing is a separate
+question, and a 240x240 panel will never show a zone map the way a
+browser can.
+
+It rests on the division taken today: **samples are global, instruments
+are not.** The bank is the machine's and holds raw sounds; an instrument
+is the song's private configuration and lives nowhere else. So there is
+no instrument library to edit, and the page edits a song file.
+
+- **`trk.js` is a port of `core/trk.c`, not a reader of it.** The page
+  writes the file itself, so the port can drift, so it is held against
+  the C by `web/songedit/test/roundtrip.mjs` (in `make test`), the way
+  `tools/installer_compare.py` holds `fm1ota.js` against
+  `fm1_install.py`. Every `.trk` here and in `../moondaw/songs` -- 18
+  files, 275 B to 27 726 B -- must come out of `trk.js` byte for byte as
+  `build/trkdump` gives it. It did on the first run and the truncations
+  are what made it: `cutoff` is a `uint8_t` and `filt_env` is `& 0x7F`,
+  a field absent from an `inst` line keeps what the struct had (so a
+  slot written twice carries the first line's `timbre`), and a `timbre`
+  past `engine_timbre_max` is clamped on the way in -- a page that set
+  one anyway would write a file that came back changed.
+- **The test also edits.** Canonical is not enough: it proves the page
+  can read, not that it can write something new. So each song is edited
+  the way the page edits -- every played instrument's envelope, filter,
+  gain, level, name, and for each SMPL one a sample swapped, a zone
+  moved, one added, one dropped -- and the result must come back out of
+  `core/trk.c` unchanged. 31 SMPL instruments across the corpus. The
+  edited SMPL-DEMO goes through the real `build/trkdump` as well, not
+  only through `trk.js`.
+- **The page says the three things the file does not.** An instrument no
+  step plays is not written at all (`trk_write`'s own rule) -- shown
+  dashed. A zone naming a sample the bank has not got is silent and
+  never an error (`core/bank.h`) -- shown red, once a bank is known. And
+  the first zone holding a note wins, so the table's order is the
+  priority and the rest of an overlapped zone will never sound -- that
+  is the red on the map and the `6 of 46` in the KEYS column, which is
+  the one thing the panel could never draw.
+- **The audition is the core alone, not the firmware.** `platform/web/`
+  already runs the whole machine in a browser, and that is the wrong
+  instrument here: auditioning one zone means playing a chosen note on a
+  chosen instrument, which through the panel would mean steering the
+  screens. `web/songedit/audition.c` links `player.c`, `synth.c`,
+  `fx.c`, `drum.c`, `sampler.c` and nothing else -- 455 KB of wasm, no
+  app, no flash, no `platform.h` -- and exports a song, a bank and
+  `player_note_on`. `core/bank.c` is the one piece not linked, because
+  it reads the index through the store's sector map; the 60 lines of it
+  the engine needs are in `audition.c`, and `bank_find`'s rules are
+  copied word for word. Those two copies are checked against each other
+  over 16 names (the folder, the `.wav`, the case, 23 and 24 characters)
+  in the same test.
+- **The bank twice over.** The index read over the link (`INFO`/`READ`
+  on slot 32, as `fm1_samples.py list`) says which names resolve, and is
+  enough to mark the zones. It is not enough to hear them: the bytes are
+  160 KB and stay on the device. So a packed bank file from
+  `fm1_samples.py pack` is asked for separately, and the page says which
+  of the two it has.
+- **Checked here, not on the device.** The page opens SMPL-DEMO, swaps a
+  sample in the piano's five zones, moves one, drags a handle; the file
+  it writes is 2 714 B and `build/trkcheck` reports `ok ... dropped: smp
+  0 zone 0 ref 0 syl 0 fSMP 0 shaping 0 preview 0 cutsteps 0 lost 0`,
+  with `trkdump` reproducing it byte for byte. The engine plays the song
+  and single notes with the demo bank's 14 samples mounted. **Nothing of
+  this has been on an FM-1**: the send path is `fm1_send.py`'s messages
+  in `mdlink.js` and has never had a device answer it.
+- **What it does not do.** No patterns, no arrangement, no song
+  settings: they are carried through untouched and edited on the machine
+  or in a text editor. No undo. No sending samples to the bank --
+  `tools/fm1_samples.py` keeps that. A sample entry's `begin`, `loop`
+  and `ping` are carried and not shown, since the FM-1 does not play
+  them.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
   calls a SMPL instrument silent (`engine_sounds`) and cannot edit zones;
-  `begin`, `loop` and `ping` carried, not played.
+  `begin`, `loop` and `ping` carried, not played. On the computer
+  `web/songedit/` now does the zones (30/10), which is where the map
+  belongs; the device's own editing is the open part.
+- `web/songedit/`: the editor page, lossless against `core/trk.c` over
+  18 songs in `make test`. Never run against an FM-1: sending a song and
+  reading the bank's index over the link are untried on hardware.
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
 - DRUM in moondaw (the same `drum_voice.inc`), then its songs on it;

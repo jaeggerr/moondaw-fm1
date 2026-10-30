@@ -1,0 +1,204 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOONDAW song editor</title>
+<meta name="description" content="Edit a MOONDAW song's instruments and sample zones in the browser, and send it to the FM-1 over USB-MIDI.">
+<style>
+  /* The installer's palette and type, so the two pages are one project. */
+  :root { --bg: #fff; --fg: #000; --dim: #6b6b6b; --line: #ddd; --bad: #b00020; --good: #1b6e2a; --fill: #f6f6f6; --kbw: #fff; --kbb: #333; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #000; --fg: #fff; --dim: #999; --line: #333; --bad: #ff6b81; --good: #6fd38a; --fill: #141414; --kbw: #c6c6c6; --kbb: #2a2a2a; }
+  }
+  :root[data-theme="dark"] { --bg: #000; --fg: #fff; --dim: #999; --line: #333; --bad: #ff6b81; --good: #6fd38a; --fill: #141414; --kbw: #c6c6c6; --kbb: #2a2a2a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px; letter-spacing: .02em; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--dim);
+       margin: 36px 0 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+  h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 6px; }
+  p { margin: 0 0 12px; }
+  a { color: inherit; }
+  button { font: inherit; background: var(--fg); color: var(--bg); border: 0; padding: 7px 18px; cursor: pointer; }
+  button.ghost { background: none; color: var(--fg); border: 1px solid var(--fg); padding: 6px 14px; }
+  button.tiny { padding: 1px 7px; font-size: 13px; line-height: 1.5; }
+  button:disabled { opacity: .3; cursor: default; }
+  input, select { font: inherit; font-size: 14px; background: var(--bg); color: var(--fg);
+                  border: 1px solid var(--line); padding: 3px 6px; max-width: 100%; }
+  input[type=file] { border: 0; padding: 0; }
+  input.num { width: 5.5em; }
+  input.note { width: 4.5em; font-family: ui-monospace, Menlo, monospace; text-transform: uppercase; }
+  input.bad, select.bad { border-color: var(--bad); color: var(--bad); }
+  label.f { display: inline-flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--dim);
+            text-transform: uppercase; letter-spacing: .05em; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; margin: 0 0 14px; }
+  .small { color: var(--dim); font-size: 14px; }
+  .bad { color: var(--bad); }
+  .good { color: var(--good); }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+  #drop { border: 1px dashed var(--line); padding: 20px; text-align: center; }
+  #drop.over { border-color: var(--fg); background: var(--fill); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim);
+       font-weight: 600; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr.silent td { color: var(--bad); }
+  tr.cursor td { background: var(--fill); }
+  #instlist { display: flex; flex-wrap: wrap; gap: 6px; }
+  #instlist button { font-family: ui-monospace, Menlo, monospace; font-size: 13px; padding: 4px 10px;
+                     background: none; color: var(--fg); border: 1px solid var(--line); text-align: left; }
+  #instlist button.on { border-color: var(--fg); background: var(--fill); font-weight: 600; }
+  #instlist button.unused { color: var(--dim); border-style: dashed; }
+  #ruler { width: 100%; height: 124px; display: block; touch-action: none; cursor: crosshair;
+           border: 1px solid var(--line); background: var(--bg); }
+  .note-list { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--dim); }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-size: 14px; color: var(--dim); }
+  progress { width: 100%; height: 4px; margin-top: 10px; accent-color: var(--fg); }
+  .hide { display: none; }
+  footer { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MOONDAW song editor</h1>
+  <p>A song's instruments, and above all its <strong>sampled</strong> ones: the engine, the envelope, the filter, the
+    layers, and the sample zones over the keyboard. Samples are global on the FM-1 — one bank for the whole machine —
+    and an instrument is not: it lives inside the song file and nowhere else. So this page edits a <code>.trk</code>,
+    writes it back exactly as the FM-1 would, and can send it to the device.</p>
+
+  <h2>1 · The song</h2>
+  <div id="drop">
+    <p><label>Open a <code>.trk</code>: <input id="file" type="file" accept=".trk,.txt"></label></p>
+    <p class="small">or drop one here. The FM-1's own songs come off the device with the
+      <a href="../installer/">installer page</a> (“Save the songs on the FM-1”).</p>
+    <p class="small">Served from the repository, the demo is one click away:
+      <a href="?song=../../docs/sampler-demo/songs/SMPL-DEMO.trk&amp;bank=../../build/demo-bank.bin">SMPL-DEMO.trk</a>
+      — eight sampled instruments, from the drums' one zone to the piano's five.</p>
+  </div>
+  <p id="songinfo" class="small"></p>
+  <p id="songwarn" class="small bad"></p>
+
+  <div id="editor" class="hide">
+    <h2>2 · The sample bank</h2>
+    <p class="small">The bank is the machine's, not the song's: a zone names a sample by file name and the FM-1 plays
+      whatever its bank has under that name, ignoring the folder, the <code>.wav</code> and the case.
+      A name the bank has not got is <em>silent, never an error</em> — which is why this page wants to know the bank.</p>
+    <div class="row">
+      <label class="f">Packed bank file<input id="bankfile" type="file" accept=".bin"></label>
+      <button id="bankread" class="ghost">Read the index from the FM-1</button>
+    </div>
+    <p id="bankinfo" class="small"></p>
+    <details id="bankdetails" class="hide"><summary>What the bank holds</summary><div id="banklist" class="note-list"></div></details>
+
+    <h2>3 · The instruments</h2>
+    <p class="small">Only an instrument some step plays is written to the file — that is the FM-1's own rule
+      (<code>core/trk.c</code>), not this page's. The others are shown dashed: editing one changes nothing on disk.</p>
+    <div id="instlist"></div>
+
+    <div id="inst" class="hide">
+      <h2 id="insthead">4 · Instrument</h2>
+      <div class="row">
+        <label class="f">Name<input id="i-name" maxlength="7" style="width:7em" class="mono"></label>
+        <label class="f">Engine<select id="i-engine"></select></label>
+        <label class="f">Timbre<input id="i-timbre" class="num" type="number" min="0" step="1"></label>
+        <label class="f">Gain dB<input id="i-gain" class="num" type="number" min="-64" max="24" step="1"></label>
+        <label class="f">Level dB<input id="i-level" class="num" type="number" min="-64" max="24" step="1"></label>
+        <label class="f">Vib phase<input id="i-vibphase" class="num" type="number" min="0" max="255" step="1"></label>
+        <label class="small"><input id="i-vibfree" type="checkbox"> free</label>
+      </div>
+      <h3>Envelope</h3>
+      <div class="row">
+        <label class="f">Attack<input id="i-attack" class="num" type="number" min="0" max="255" step="1"></label>
+        <label class="f">Decay<input id="i-decay" class="num" type="number" min="0" max="255" step="1"></label>
+        <label class="f">Sustain<input id="i-sustain" class="num" type="number" min="0" max="255" step="1"></label>
+        <label class="f">Release<input id="i-release" class="num" type="number" min="0" max="255" step="1"></label>
+      </div>
+      <h3>Filter</h3>
+      <div class="row">
+        <label class="f">Cutoff<input id="i-cutoff" class="num" type="number" min="0" max="255" step="1"></label>
+        <label class="f">Resonance<input id="i-reso" class="num" type="number" min="0" max="127" step="1"></label>
+        <label class="f">Env<input id="i-filtenv" class="num" type="number" min="0" max="127" step="1"></label>
+        <label class="f">Velocity<input id="i-filtvel" class="num" type="number" min="0" max="127" step="1"></label>
+        <span class="small">255 open · env and velocity 64 = none</span>
+      </div>
+      <div class="row" id="voxrow">
+        <label class="f">Tract %<input id="i-tract" class="num" type="number" min="50" max="150" step="1"></label>
+        <label class="f">Accent<select id="i-accent"><option value="0">FR</option><option value="1">EN</option></select></label>
+      </div>
+      <div class="row" id="drumrow">
+        <label class="f">Tune<input id="i-drum0" class="num" type="number" min="0" max="127" step="1"></label>
+        <label class="f">Tone<input id="i-drum1" class="num" type="number" min="0" max="127" step="1"></label>
+        <label class="f">Decay<input id="i-drum2" class="num" type="number" min="0" max="127" step="1"></label>
+        <label class="f">Snap<input id="i-drum3" class="num" type="number" min="0" max="127" step="1"></label>
+        <span class="small">64 as the kit was designed</span>
+      </div>
+
+      <div id="zonebox">
+        <h2>5 · The zones</h2>
+        <p class="small">The first zone holding a note wins, so the order of the table is the priority: what an
+          earlier zone already answers is drawn <span class="bad">red</span> on the map and will never sound.
+          Drag the <strong>LO</strong> and <strong>HI</strong> tabs; the keys at the foot play.</p>
+        <canvas id="ruler"></canvas>
+        <table id="zonetable">
+          <thead><tr><th>#</th><th>Sample</th><th>Lo</th><th>Hi</th><th>Root</th><th>Tune</th><th>Gain dB</th><th>Keys</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="row" style="margin-top:12px"><button id="zoneadd" class="ghost">Add a zone</button>
+          <span id="zonenote" class="small"></span></p>
+      </div>
+
+      <h2>6 · The layers</h2>
+      <p class="small">Up to four, each a chip voice stacked on the instrument. A layer cannot be SMPL — the FM-1's
+        loader refuses that one.</p>
+      <table id="laytable">
+        <thead><tr><th>#</th><th>Engine</th><th>Timbre</th><th>Transpose</th><th>Detune</th><th>Gain dB</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p style="margin-top:12px"><button id="layadd" class="ghost">Add a layer</button></p>
+
+      <h2>7 · Listen</h2>
+      <p class="small">The FM-1's own core, compiled to WebAssembly: the engines, the envelopes, the filter, the
+        reverb and the delay are the device's, not a drawing of them. For a sampled instrument to sound, the
+        <em>packed bank file</em> must be loaded above — the index read over the link names the samples but does not
+        carry them.</p>
+      <div class="row">
+        <button id="start">Start the engine</button>
+        <button id="playnote" class="ghost" disabled>Play a note</button>
+        <label class="f">Note<input id="audnote" class="note" value="C-4"></label>
+        <button id="playsong" class="ghost" disabled>Play the song</button>
+        <button id="stop" class="ghost" disabled>Stop</button>
+        <label class="f">Master<input id="master" type="range" min="0" max="1023" value="700"></label>
+      </div>
+      <p id="audinfo" class="small"></p>
+
+      <h2>8 · Out</h2>
+      <div class="row">
+        <button id="download">Download the .trk</button>
+        <label class="f">Name on the FM-1<input id="sendname" class="mono" maxlength="12" style="width:9em"></label>
+        <button id="send" class="ghost">Send to the FM-1</button>
+        <label class="small"><input id="replace" type="checkbox" checked> replace a song of that name</label>
+      </div>
+      <progress id="bar" max="100" value="0"></progress>
+      <p id="out" role="status" aria-live="polite" class="small"></p>
+      <details><summary>The file this page would write</summary>
+        <p class="small">The bytes, as <code>core/trk.c</code> writes them. <code>build/trkcheck</code> and
+          <code>web/songedit/test/roundtrip.mjs</code> are what keep this honest.</p>
+        <textarea id="outtext" class="mono" readonly rows="18" style="width:100%;font-size:12px"></textarea></details>
+    </div>
+  </div>
+
+  <footer class="small">
+    <p>MOONDAW is GPL-3.0, with no warranty. The zone map follows the one in moondaw's own editor
+      (<code>web/ui/zones.js</code>): the C of each octave, every zone a block, the root marked, and the keys an
+      earlier zone takes first drawn out, because those are the ones that will never play.</p>
+    <p>M-VAVE and FM-1 are trademarks of their respective owners. This page is not made by or affiliated with M-VAVE.</p>
+  </footer>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
