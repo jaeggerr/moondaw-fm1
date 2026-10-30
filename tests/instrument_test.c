@@ -9,6 +9,7 @@
 #include "../app/instrument.h"
 #include "../core/player.h"
 #include "../core/trk.h"
+#include "ramflash.h"
 
 void plat_blit(int x, int y, int w, int h, const uint16_t *px) { (void)x; (void)y; (void)w; (void)h; (void)px; }
 void plat_led_key(int k, int on) { (void)k; (void)on; }
@@ -26,8 +27,10 @@ int app_not_carried(void) { return 0; }
 
 static const char trk[] =
     "version 3\nbpm 120\nticks 6\ntracks 1\n"
+    "smp 00 tr909/tr9_kick.wav\n"
     "inst 03 engine PULSE timbre 1 adsr 8 60 170 40 gain -4 filter 168 40 72 name CHORDS\n"
     "inst 04 engine SMPL timbre 0 adsr 0 0 255 12 name KICK\n"
+    "zone 04 C-0 G-9 root C-4 smp 00\n"
     "inst 05 engine VOX timbre 0 adsr 0 0 255 12 name ROBOT\n"
     "pat t0 00 len 16\n00 C-4 i03\narr 00 steps auto\nt0 00\n";
 
@@ -191,6 +194,25 @@ int main(void)
           app_song.instruments[4].engine == ENGINE_VOX);
     enc(PE_K3, -1);
     CHECK("and a turn back returns it to SMPL", app_song.instruments[4].engine == ENGINE_SAMPLE);
+
+    /* the SAMPLE row (30/10): one zone over the whole keyboard, edited here */
+    enc(PE_SELECT, 4);
+    enc(PE_K3, 1);
+    CHECK("with no bank mounted there is no sample to choose, and nothing moves",
+          song_zone(&app_song, 4, 60) && song_zone(&app_song, 4, 60)->smp == 0);
+    enc(PE_K2, 1);
+    enc(PE_K3, 2);
+    enc(PE_K2, 1);
+    enc(PE_K3, -5);
+    enc(PE_K2, 1);
+    enc(PE_K3, 3);
+    {
+        const Zone *z = song_zone(&app_song, 4, 60);
+        CHECK("ROOT, TUNE and GAIN write the instrument's own zone",
+              z && z->root == 62 && z->tune == -5 && z->gain == 3);
+        CHECK("and it still covers the whole keyboard", z && z->lo == NOTE_MIN && z->hi == NOTE_MAX);
+        CHECK("the song has the one zone, not a second", app_song.nzones == 1);
+    }
 
     CHECK("GLO asks for the PROJECT", press(PB_GLO) == INSTRUMENT_PROJECT);
     instrument_resume();

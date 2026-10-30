@@ -2413,6 +2413,49 @@ not written. But looking for it turned up something worse than missing.
   `bank_count`, `bank_entry`, `bank_find` -- so CHOOSE SAMPLE is a
   screen and a zone row, one screen at a time.
 
+## 2026-10-30 — CHOOSE SAMPLE, first screen: the SAMPLE row
+
+What he went looking for. A SMPL instrument now has its own row on
+INSTRUMENT, as VOX has VOICE and a kit has DRUM: **SAMPLE ROOT TUNE
+GAIN**, the knob on SAMPLE walking the bank's names.
+
+- **One zone over the whole keyboard**, made on the first turn
+  (`zone_make`: NOTE_MIN..NOTE_MAX, which is what a file writes as
+  C-0 G-9, so a zone made here and one read back from a save are the same
+  zone). That is what a one-shot wants and what every drum of SMPL-DEMO
+  already is.
+- **An instrument with several zones is not touched.** The cell reads
+  "N ZONES", the other three read "--", and every turn is refused: a
+  multisampled piano cannot be quietly collapsed into one zone by a knob.
+  Editing several is the next screen.
+- **Choosing writes the song's table, not the bank**: `smp_slot` looks
+  for an entry the song already has that resolves to the same bank
+  sample and reuses it, else takes a free one and writes the bare name
+  (`bank_find` reads the last part without `.wav`, so it resolves here
+  and in a file alike). Then `bank_resolve`, or the voice would still
+  play what the entry used to name. Seen end to end on the simulator:
+  KICK909 turned from `tr9_kick` to `pf_c3`, saved, fetched back, and the
+  file says `zone 00 C-0 G-9 root C-4 smp 06` pointing at the existing
+  `piano9/pf_c3.wav` -- no duplicate entry, and `tr909/tr9_kick.wav`
+  dropped out of the file by itself, no zone naming it any more.
+- **`inst_mute` got stricter**: a SMPL instrument is drawn as silent
+  until a zone of it names a sample **the bank actually has**. A zone
+  pointing at a missing name is not a sound, and the screen now says so.
+- **Two tables were missed at first**, both caught by the sanitiser in
+  `instrument_test` rather than by eye: `heads[][4]` took its new column
+  names, and the row *labels* `label[]` did not -- a global-buffer-overflow
+  read at `instrument.c` draw. Worth remembering that this screen keeps
+  its rows in three parallel tables (`label`, `heads`, `n`).
+- **Tests**: `instrument_test` gains the row (no bank mounted: nothing to
+  choose and nothing moves; ROOT, TUNE and GAIN write the zone; the zone
+  still spans the keyboard and no second one appears), and its Makefile
+  line now links `core/bank.c core/store.c` with `tests/ramflash.h`.
+  `menu_test`, `persist_test`, `song_test`, `undo_test`, `pattern_test`
+  and the sim selftest pass.
+- **Still missing**: `lo`/`hi`, so one zone a keyboard only; no way to add
+  or remove a zone; `begin`, `loop` and `ping` still carried and not
+  played.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

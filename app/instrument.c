@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "instrument.h"
 
+#include "../core/bank.h"
 #include "../core/drum.h"
 #include "../core/player.h"
 #include "app.h"
@@ -29,7 +30,7 @@
  *
  * Five cells of 33 px a row; a column takes one or two (an engine's name). */
 enum { LABEL_X = 8, CELL_X = 66, CELL_W = 33 };
-enum { L_NAME, L_SOUND, L_ENV, L_FILTER, L_LEVEL, L_VOICE, L_DRUM, L_LAYER };
+enum { L_NAME, L_SOUND, L_ENV, L_FILTER, L_LEVEL, L_VOICE, L_DRUM, L_SAMPLE, L_LAYER };
 
 static int inst, row, col, top, kbd_oct;
 static bool naming;
@@ -43,16 +44,101 @@ static int preview_at;
 static InstrumentDef *I(void) { return &app_song.instruments[inst]; }
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 
+/* ----------------------------------------------------------- zones ---
+ * The SAMPLE row edits ONE zone over the whole keyboard: what a one-shot
+ * wants, and what every drum of SMPL-DEMO already is. An instrument that
+ * came from a file with several (a multisampled piano) keeps every one of
+ * them -- the row shows and edits the first and never touches the rest,
+ * saying how many there are. Several zones on the machine is a screen of
+ * its own. */
+static Zone *zone_first(void)
+{
+    for (int z = 0; z < app_song.nzones; z++)
+        if (app_song.zones[z].inst == inst)
+            return &app_song.zones[z];
+    return 0;
+}
+
+static int zone_count(void)
+{
+    int n = 0;
+    for (int z = 0; z < app_song.nzones; z++)
+        if (app_song.zones[z].inst == inst)
+            n++;
+    return n;
+}
+
+/* The zone the row edits, made over the whole keyboard if the instrument
+ * has none. NULL when the song's list is full. Journals what it takes. */
+static Zone *zone_make(void)
+{
+    Zone *z = zone_first();
+    if (z)
+        return z;
+    if (app_song.nzones >= SONG_ZONE_MAX)
+        return 0;
+    undo_bytes(&app_song.nzones, sizeof app_song.nzones);
+    z = &app_song.zones[app_song.nzones];
+    undo_bytes(z, sizeof *z);
+    app_song.nzones++;
+    z->inst = (uint8_t)inst;
+    /* NOTE_MIN..NOTE_MAX, which is what a file writes as C-0 G-9: a zone
+     * made here and one read back from a save are the same zone. */
+    z->lo = NOTE_MIN, z->hi = NOTE_MAX, z->root = 60, z->smp = 0;
+    z->tune = 0, z->gain = 0;
+    return z;
+}
+
+/* The song's sample table entry naming bank entry `b`, made if the song
+ * does not name it yet; -1 when the table is full. The bare name is what
+ * is written: bank_find reads the last part without .wav, so it resolves
+ * here and in a saved file alike. */
+static int smp_slot(int b)
+{
+    char nm[BANK_NAME_LEN];
+    uint32_t frames;
+    int free_at = -1;
+
+    if (!bank_entry(b, nm, &frames))
+        return -1;
+    for (int i = 0; i < SONG_SMP_MAX; i++) {
+        if (!app_song.smp[i].name[0]) {
+            if (free_at < 0)
+                free_at = i;
+        } else if (bank_find(app_song.smp[i].name) == b) {
+            return i;
+        }
+    }
+    if (free_at < 0)
+        return -1;
+    undo_bytes(&app_song.smp[free_at], sizeof app_song.smp[free_at]);
+    for (int k = 0; k < SONG_SMP_NAME; k++)
+        app_song.smp[free_at].name[k] = k < BANK_NAME_LEN ? nm[k] : 0;
+    app_song.smp[free_at].name[SONG_SMP_NAME - 1] = 0;
+    app_song.smp[free_at].begin = app_song.smp[free_at].loop_start = app_song.smp[free_at].loop_end = 0;
+    app_song.smp[free_at].loop = 0;
+    return free_at;
+}
+
+/* Which bank entry the row sits on, -1 when the zone names none. */
+static int zone_bank_at(void)
+{
+    const Zone *z = zone_first();
+    return z && z->smp < SONG_SMP_MAX ? bank_find(app_song.smp[z->smp].name) : -1;
+}
+
 /* Whether this instrument would make no sound, for the colour its engine
  * is drawn in. PLUCK never does. SMPL does since 29/10, but only once a
  * zone sends a note to a sample: fresh off the knob it has none, and the
  * dim name says so rather than lying either way. */
 static bool inst_mute(const InstrumentDef *in)
 {
-    if (in->engine == ENGINE_SAMPLE) {
-        for (int z = 0; z < app_song.nzones; z++)
-            if (app_song.zones[z].inst == inst)
+    if (in->engine == ENGINE_SAMPLE) { /* a zone is not enough: the bank must have what it names */
+        for (int z = 0; z < app_song.nzones; z++) {
+            const Zone *zz = &app_song.zones[z];
+            if (zz->inst == inst && zz->smp < SONG_SMP_MAX && bank_find(app_song.smp[zz->smp].name) >= 0)
                 return false;
+        }
         return true;
     }
     return !engine_sounds(in->engine) && in->engine != ENGINE_VOX && in->engine != ENGINE_DRUM;
@@ -62,7 +148,10 @@ static bool inst_mute(const InstrumentDef *in)
 /* The engine's own row: VOICE for a voice, DRUM for a kit, none else. */
 static int own_row(void)
 {
-    return I()->engine == ENGINE_VOX ? L_VOICE : I()->engine == ENGINE_DRUM ? L_DRUM : -1;
+    return I()->engine == ENGINE_VOX    ? L_VOICE
+           : I()->engine == ENGINE_DRUM  ? L_DRUM
+           : I()->engine == ENGINE_SAMPLE ? L_SAMPLE
+                                          : -1;
 }
 
 /* The rows as drawn: the fixed ones, the engine's own, a row a layer,
@@ -86,7 +175,7 @@ static int layer_of(int r) { return r - L_VOICE - (own_row() >= 0); }
 
 static int ncols(int r)
 {
-    static const int n[] = { 0, 2, 4, 4, 3, 2, 4 };
+    static const int n[] = { 0, 2, 4, 4, 3, 2, 4, 4 };
     int k = kind(r);
     return k == L_LAYER ? (layer_of(r) < I()->nlayers ? 4 : 1) : n[k];
 }
@@ -94,7 +183,7 @@ static int ncols(int r)
 static int span(int r, int c)
 {
     int k = kind(r);
-    return (k == L_SOUND) || (k == L_LAYER && c == 0) ? 2 : 1;
+    return (k == L_SOUND) || ((k == L_LAYER || k == L_SAMPLE) && c == 0) ? 2 : 1;
 }
 
 static int col_x(int r, int c)
@@ -154,6 +243,41 @@ static void wave_set(Layer *l, int w)
     l->timbre = (uint8_t)(w < 5 ? w - 1 : w < 7 ? w - 5 : w - 7);
 }
 
+/* The SAMPLE cell: the bank name the zone plays, trimmed to the cell it
+ * is drawn in; "N ZONES" when the instrument has several, which this row
+ * leaves alone; "--" when it has none. A name the bank has not got is
+ * shown all the same -- it is what the song asks for, and the engine's
+ * own cell is already saying that nothing sounds. */
+static const char *zone_sample_word(void)
+{
+    static char w[BANK_NAME_LEN + 8];
+    const Zone *z = zone_first();
+    const char *nm, *key;
+    int n = zone_count(), len = 0;
+
+    if (n > 1) {
+        char *q = ui_dec(w, n);
+        while (*q)
+            q++;
+        q[0] = ' ', q[1] = 'Z', q[2] = 'O', q[3] = 'N', q[4] = 'E', q[5] = 'S', q[6] = 0;
+        return w;
+    }
+    if (!z || z->smp >= SONG_SMP_MAX || !app_song.smp[z->smp].name[0])
+        return "--";
+    nm = key = app_song.smp[z->smp].name;
+    for (const char *q = nm; *q; q++)
+        if (*q == '/' || *q == '\\')
+            key = q + 1;
+    while (key[len] && len < (int)sizeof w - 1)
+        w[len] = key[len], len++;
+    w[len] = 0;
+    if (len > 4 && w[len - 4] == '.')
+        w[len -= 4] = 0;
+    while (len > 1 && gfx_text_w(F_COND20, w) > 2 * CELL_W - 4)
+        w[--len] = 0;
+    return len ? w : "--";
+}
+
 static const char *value(int r, int c, char *b)
 {
     const InstrumentDef *in = I();
@@ -184,6 +308,16 @@ static const char *value(int r, int c, char *b)
         return b;
     case L_DRUM:
         return ui_dec(b, in->drum[c] + 64);
+    case L_SAMPLE: {
+        const Zone *z = zone_count() == 1 ? zone_first() : 0;
+        if (c == 0)
+            return zone_sample_word();
+        if (!z)
+            return "--";
+        if (c == 1)
+            return note_name(z->root, b);
+        return sdec(b, c == 2 ? z->tune : z->gain);
+    }
     default: {
         const Layer *l = &in->layers[layer_of(r)];
         if (c == 0)
@@ -238,6 +372,31 @@ static void turn(int d)
             in->accent = (uint8_t)clampi(in->accent + d, VOX_ACCENT_FR, VOX_ACCENT_EN);
     } else if (k == L_DRUM) {
         in->drum[col] = (int8_t)clampi(in->drum[col] + d, -64, 63);
+    } else if (k == L_SAMPLE) {
+        Zone *z = zone_first();
+        if (zone_count() > 1) /* several zones: this row does not touch them */
+            return;
+        if (col == 0) {
+            int n = bank_count(), at, slot;
+            if (n <= 0) /* nothing in the bank to choose from */
+                return;
+            at = zone_bank_at();
+            at = clampi(at < 0 ? 0 : at + d, 0, n - 1);
+            slot = smp_slot(at);
+            if (slot < 0 || !(z = zone_make()))
+                return;
+            undo_bytes(z, sizeof *z);
+            z->smp = (uint8_t)slot;
+            bank_resolve(&app_song); /* the table changed: what each entry plays */
+        } else if (z) {
+            undo_bytes(z, sizeof *z);
+            if (col == 1)
+                z->root = (uint8_t)clampi(z->root + d, NOTE_MIN, NOTE_MAX);
+            else if (col == 2)
+                z->tune = (int8_t)clampi(z->tune + d, -64, 63);
+            else
+                z->gain = (int8_t)clampi(z->gain + d, GAIN_MIN_DB, GAIN_MAX_DB);
+        }
     } else {
         int j = layer_of(row);
         if (j >= in->nlayers) { /* + LYR: turning up makes the layer */
@@ -294,7 +453,7 @@ static void draw(void)
     static const char *const heads[][4] = {
         { 0 }, { "ENGINE", "TIMBRE" }, { "ATK", "DEC", "SUS", "REL" }, { "CUT", "RES", "ENV", "VEL" },
         { "GAIN", "LEVEL", "VIB" }, { "TRACT", "ACCENT" }, { "TUNE", "TONE", "DECAY", "SNAP" },
-        { "SOUND", "SEMI", "FINE", "GAIN" },
+        { "SAMPLE", "ROOT", "TUNE", "GAIN" }, { "SOUND", "SEMI", "FINE", "GAIN" },
     };
     const InstrumentDef *in = I();
     char s[12];
@@ -321,7 +480,8 @@ static void draw(void)
             for (int i = 0; i < 6; i++)
                 gfx_fill(PLAT_W - 16 + i, grid_y(v) + 8 + i, 1, 12 - 2 * i, band ? C_ON_ACC : C_TITLE, 255);
         {
-            static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE", "DRUM" };
+            static const char *const label[] = { "NAME", "SOUND", "ENV", "FILTER", "LEVEL", "VOICE",
+                                                 "DRUM", "SAMPLE" };
             char lyr[6] = "LYR 1";
             lyr[4] = (char)('1' + layer_of(r));
             gfx_text(F_COND20, LABEL_X, grid_base(v), k != L_LAYER ? label[k] : adder ? "+ LYR" : lyr,
