@@ -7,11 +7,8 @@
 # sides. Both engines then render the SAME file,
 # reverb and delay included -- the voice too: VOX, its syllables, tract and accent are carried.
 #
-# KNOWN TO DIFFER since 30/10: a song that has BOTH swing and echo. moondaw gives its echo the swung
-# tick, so the line stretches and relaxes a step at a time and the tail is dragged through a pitch
-# bend; here the echo is given the tempo's own tick and stays put (NOTES.md, his find). That is
-# DAFT-PUNK-EN, DAFT-PUNK and LEOMOTEUR of the songs here, on their echo tracks only. The same one
-# line in moondaw's player_tick_samples would make them agree again.
+# Both engines give their echo the tempo's own tick, the swing left out of it (30/10, NOTES.md). A
+# song with swing and delay agrees far better for it: DAFT-PUNK-EN went from -14.1 dB to -35.6.
 set -e
 cd "$(dirname "$0")/.."
 M="${MOONDAW:-../moondaw}"

@@ -2169,11 +2169,15 @@ seconds asks for the tempo's own tick now: `tick_samples_of(false)` for
 the echo, `tick_samples()` (swung) for everything else. The notes do not
 move by a sample.
 
-moondaw does the same thing in `player_tick_samples` and has always done
-it, which is why he has always heard it. So `make difftest` now reports
-the three songs that have both swing and echo (DAFT-PUNK-EN, DAFT-PUNK,
-LEOMOTEUR), on their echo tracks only, and says so in its own header. One
-line in moondaw would make them agree again -- his call, it is his app.
+moondaw did the same thing in `player_tick_samples` and had always done
+it, which is why he had always heard it, and it has the same split now
+(`player_tick_samples_steady`, his call, his app; its own tests pass).
+The two engines agree better for it than they did before either was
+touched: of the three songs that have both swing and delay, DAFT-PUNK-EN
+goes from -14.1 dB of spectral difference to -35.6, DAFT-PUNK to -35.2,
+LEOMOTEUR to -28.6. The sliding read head was itself a source of
+divergence -- a glide counted in integers here and in floats there does
+not land on the same sample.
 
 ## Open
 
