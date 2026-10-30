@@ -45,6 +45,12 @@
  * FX is a view here, not the MIXER: FX shows the effects of where one is. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
 static const char *const view_name[VIEWS] = { "NOTES", "FX", "INS" };
+/* The view the next press reaches, said at the top right so the three are
+ * found at all: in the owner's order, the notes, then the instrument
+ * column, then the effects, round again -- not the enum's, where FX sits
+ * second. SEQ is what one presses to come back to the notes, and it is
+ * printed on the panel; INS is the column, as he calls it. */
+static const char *const view_next[VIEWS] = { "INS ->", "SEQ ->", "FX ->" };
 static const int view_cols[VIEWS] = { STEP_MAX_NOTES, STEP_MAX_FX, 1 };
 static const int view_w[VIEWS] = { 38, 60, 180 };
 
@@ -520,6 +526,16 @@ static void draw(void)
             h[0] = 'F', h[1] = 'X', h[2] = ' ', h[3] = (char)('1' + c);
         grid_head(GRID_CELL_X + c * w, w, view == V_INS ? "INSTRUMENT" : h, c == cur_col);
     }
+    /* and the next view, against the right edge of that same line. It has to
+     * clear the column names, and the FX view all but fills the line: "FX 3"
+     * ends at x 209, which leaves 27 px to PLAT_W - 4. In the header's own
+     * CONDENSED 12 "SEQ ->" is 27 px wide -- it would start exactly where
+     * "FX 3" ends, and the panel showed the two reading as one word, "FX 3
+     * SEQ ->". So the marker is set in CONDENSED 9, the smallest there is:
+     * 21 px, starting at 215, six clear of the head, and small enough that
+     * the eye takes it for what it is. Dim, like the rest of the header: a
+     * hint, not a control. */
+    gfx_text(F_COND9, PLAT_W - 4 - gfx_text_w(F_COND9, view_next[view]), GRID_HEAD - 3, view_next[view], C_DIM);
     for (int v = 0; v < GRID_ROWS && top + v < len; v++) {
         int r = top + v;
         bool band = r == cur_row;
