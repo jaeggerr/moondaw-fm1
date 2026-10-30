@@ -32,6 +32,8 @@
  *   LFO     on the number: delete the phrase (twice)
  *   keys    on a cell: play the track's instrument -- the first the block names --
  *           and write nothing; OCT- OCT+ the keyboard's octave (30/10)
+ *   PLAY    the song from the cursor's phrase; with the hand still 1.5 s the view
+ *           follows the phrase that plays, a page at a time (30/10)
  *   FX      the MIXER      GLO   the PROJECT: what is GLObal (HOME goes home)
  *   ALGO    UNDO left, REDO right     SAVE  PLAY  as printed
  * SEQ and LFO on the number, and ARP, have no mockup yet: provisional. */
@@ -47,6 +49,7 @@ static uint32_t prev_btns, prev_keys;
 static UiShift shift; /* EDIT held + MONO: the track under the cursor alone, or muted */
 static bool playing;
 static int play_row = -1;
+static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_IDLE the view follows PLAY */
 /* KNOB 3 on a cell: the block it lands on is heard by itself, the track
  * soloed, once the hand has rested SETTLE frames -- a quick turn through
  * the blocks starts nothing on the way (29/10, kept from the panel that
@@ -455,7 +458,7 @@ void songview_open(bool reset_cursor)
     ask_delete = false;
     selecting = anchored = false;
     said = 0;
-    settle = 0;
+    settle = still = 0;
     prev_btns = 0xFFFFFFFFu; /* what is held on the way in is not a press */
     gfx_invalidate();
 }
@@ -610,12 +613,19 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
 
     if (settle > 0 && --settle == 0)
         audition_start();
-    grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
+    play_row = playing ? player_entry() : -1;
+    still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] ||
+                    in->enc[PE_K4]
+                ? 0
+                : still < GRID_FOLLOW_IDLE ? still + 1 : still;
+    if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with the phrase that plays */
+        grid_follow_play(&top, play_row, song->arrange_len, GRID_ROWS);
+    else
+        grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
     {
         int t = col < 0 ? 0 : col;
         grid_follow(&t, &left, song->num_tracks, CELLS);
     }
-    play_row = playing ? player_entry() : -1;
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(usable());
     /* the SELECTION's commands: copy and cut on a stretched one, clear always,

@@ -2080,6 +2080,25 @@ Not judged here: the sound itself, the 200 ms before the ear takes a block
 (SETTLE), and whether C_FX is the right amber for an empty block. His call,
 on the panel.
 
+## 2026-10-30 — SONG follows what plays
+
+His ask: the autoscroll SONG did not have. The rule is PATTERN's and
+SECTION's, word for word (29/10) -- with the hand still GRID_FOLLOW_IDLE
+frames (90, 1.5 s) the view goes with the phrase that plays, a page at a
+time, and anything the hand does gives it back to the cursor at once. The
+cursor is never moved by it. `still` in songview.c, `grid_follow_play`.
+
+Tried on the device, on a song of twelve phrases made in memory: the page
+showed 00-07, the playhead reached 08 and the view went to the last page
+(04-0B, the clamp at the end of the song), the playing phrase cyan with
+its mark; a turn of KNOB 2 brought the view back to the cursor on 00 at
+once, the cursor still where it was left.
+
+And a thing to know about `fm1_ctl.py screen` while the song plays: the
+picture comes back a row at a time over SysEx, so a capture taken while
+the grid scrolls can hold two pages at once (numbers out of order). The
+screen itself is fine -- stop, or capture a screen that is not scrolling.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
