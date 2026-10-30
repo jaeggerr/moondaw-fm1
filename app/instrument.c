@@ -5,6 +5,7 @@
 #include "../core/drum.h"
 #include "../core/player.h"
 #include "app.h"
+#include "edit.h"
 #include "gfx.h"
 #include "grid.h"
 #include "namer.h"
@@ -648,8 +649,8 @@ int instrument_frame(const PlatInput *in)
     if (btns & (1u << PB_OCTUP) && kbd_oct < 3)
         kbd_oct++;
     /* The keys play the sound: the last one pressed, until all are up. */
-    for (int k = 0; k < PLAT_KEYS; k++) { /* as edit_key_note: a kit's first C is its kick */
-        int n = (I()->engine == ENGINE_DRUM ? 29 : 53) + kbd_oct * 12 + k;
+    for (int k = 0; k < PLAT_KEYS; k++) { /* edit_key_note's own: a kit's keys are its drums */
+        int n = edit_key_note(&app_song, inst, kbd_oct, k);
         if (((keys >> k) & 1u) && n >= NOTE_MIN && n <= NOTE_MAX) {
             previewing = false;
             player_note_on(inst, (uint8_t)n);

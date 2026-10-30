@@ -2891,6 +2891,65 @@ say, not by agreeing. Not on an FM-1: the device was out of bounds
 (another session held the MIDI port) and he judges it on the panel
 himself.
 
+## 2026-10-30 — a kit's step says which drum, not which pitch
+
+"Ecrire des noms de note qui font un effet de drum c'est assez penible.
+Comment je sais que F# = le snare?" The firmware already knew:
+`drum_note_abbr()` in `core/drum.c` turns a note into BD SD CP CH OH TM RS
+CB, and nothing in the tree had ever called it.
+
+Naming the cell is not enough on its own. `DV_TYPE_LANE` folds twelve drum
+types onto **eight lanes**, and `lane_for()` keys on the lane, so a lane is
+mono: in eight of the ten kits, fifteen different notes read `TM` because
+they are one drum at fifteen tunings, not fifteen drums. The honest unit is
+the lane — a kit is eight pieces, eleven for Felucca's own two, which name
+their congas, claves and cymbals apart from the lane they play on. Every
+piece of every kit has a note at the pitch it was designed for; the other
+47 notes are those pieces retuned. That is `drum_drums()` and
+`drum_drum_of()`, worked out once per kit and cached, with no C library in
+core (an abbreviation is two letters, so the comparison is two letters).
+
+**The keys are the kit's drums, one a key, and the lit ones say which.**
+`edit_key_note` based a kit at note 29 and `gm_note()` folded anything under
+35 back into 36..47 — the fold was bit-identical, so keys 0..5 played exactly
+what keys 12..17 played, only eight or nine drums were reachable from
+twenty-seven keys, and `CB` at its own pitch sat at note 56, out of reach
+without OCT+. A third of the keyboard was a lie, which is why nothing on the
+machine said where the snare was. Now key k is the kit's k-th drum, the
+octave does not move them (there is nothing above or below to find), and
+PATTERN passes the mask to `ui_led_mono`, so the eight or eleven that play
+are lit and the rest are dark. `app/instrument.c` had its own copy of the
+old arithmetic, commented "as edit_key_note"; it calls the function now.
+
+**KNOB 3 steps from one drum to the next.** It moved the MIDI note by one,
+so on a kit two notches out of three changed nothing audible: 128 notes hold
+39 pieces in the model kits (45 in STD), the rest retuned or folded, and
+`gm_note` brings the same twelve round three times. `OFF` keeps its rung
+under the first drum in the first note slot only — giving the other slots
+that rung walls them in, because the knob writes OFF, the step refuses it
+outside slot 0 and puts `---` back, and `---` is where the cursor stays
+however long one turns. `pattern_test` pins that, and fails without the
+guard.
+
+The cell reads the two letters, plus a `+` or a `-` when the note is one of
+the pieces retuned, since the name alone could not tell those apart: `TM+`
+is 29 px where the cell gives 34 and `C#3` took 30.
+
+**Chosen on the panel.** Three variants were drawn on the machine
+(`tools/protos/drum_names.py`, still there): A the strip with the drum
+named, B and C the eight lanes as rows against one bar and two. He took A —
+"on ne peut pas soudainement passer d'une vue verticale a horizontale". On
+this machine time descends everywhere, in PATTERN's steps and in SONG's
+blocks; B and C laid it across, so moving between the notes view and a drum
+view would have meant turning the head ninety degrees each way. A mockup
+judged on its own cannot show that cost; it is only paid in circulating.
+So the drum is never identified by its place, only by the name in the cell —
+which is why the name has to be right.
+
+Not fixed, and he knows: A names the drums, it does not change the flow. The
+four note columns are slots, not lanes, so `BD` still moves between them
+depending on what else the step holds.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

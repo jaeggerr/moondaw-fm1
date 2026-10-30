@@ -178,10 +178,65 @@ bool drum_rings(int track)
 
 const char *drum_kit_name(uint8_t kit) { return KIT_NAME[kit < DRUM_KITS ? kit : 0]; }
 
+/* --------------------------------------------------- a kit's drums --- */
+/* The GM map holds 47 notes but only 8 pieces (11 for Felucca's own kits,
+ * which name their congas, claves and cymbals apart from the lane they
+ * play on): the rest are those same pieces retuned, and a lane is mono, so
+ * a retuned tom cuts the tom before it. The keyboard and KNOB 3 offer the
+ * pieces, each at the pitch it was designed for -- the note whose offset
+ * is 0, which every piece of every kit has. In the map's own order, which
+ * is also rising pitch: going right on the keyboard goes up. */
+static uint8_t drums_kit = 0xFF, drums_n;
+static uint8_t drums_note[DRUM_MAX_DRUMS];
+
+/* An abbreviation is two letters, always: that is the whole comparison,
+ * and core keeps clear of the C library. */
+static bool same_drum(const char *a, const char *b) { return a[0] == b[0] && a[1] == b[1]; }
+
+static void drums_of(uint8_t kit)
+{
+    if (kit == drums_kit)
+        return; /* worked out once: the screen asks every frame */
+    drums_n = 0;
+    for (uint32_t n = 35; n <= 81 && drums_n < DRUM_MAX_DRUMS; n++) {
+        const char *a = drum_note_abbr(kit, (uint8_t)n);
+        bool had = false;
+        if (DRUM_GM[n - 35][1] != 0) /* the same piece, retuned */
+            continue;
+        for (int i = 0; i < drums_n; i++)
+            had |= same_drum(drum_note_abbr(kit, drums_note[i]), a);
+        if (!had)
+            drums_note[drums_n++] = (uint8_t)n;
+    }
+    drums_kit = kit;
+}
+
+int drum_drums(uint8_t kit, uint8_t notes[DRUM_MAX_DRUMS])
+{
+    drums_of(kit < DRUM_KITS ? kit : 0);
+    for (int i = 0; i < drums_n; i++)
+        notes[i] = drums_note[i];
+    return drums_n;
+}
+
+int drum_drum_of(uint8_t kit, uint8_t note)
+{
+    const char *a;
+    kit = kit < DRUM_KITS ? kit : 0;
+    drums_of(kit);
+    a = drum_note_abbr(kit, note);
+    for (int i = 0; i < drums_n; i++)
+        if (same_drum(drum_note_abbr(kit, drums_note[i]), a))
+            return i;
+    return 0; /* cannot happen: every note's piece is one of them */
+}
+
 const char *drum_note_abbr(uint8_t kit, uint8_t note)
 {
     static const char *const N[DV_NLANE] = {"BD", "SD", "CP", "CH", "OH", "TM", "RS", "CB"};
-    uint32_t n = gm_note(note), t = (uint32_t)DRUM_GM[n - 35u][0], lane = DV_TYPE_LANE[t];
+    uint32_t n, t, lane;
+    kit = kit < DRUM_KITS ? kit : 0; /* as drum_kit_name and drum_hit take it */
+    n = gm_note(note), t = (uint32_t)DRUM_GM[n - 35u][0], lane = DV_TYPE_LANE[t];
     uint32_t swap = kit >= 2 && kit < DRUM_KITS ? DK_SWAP[kit - 2u] : 0u;
     if (kit < 2) /* Felucca's own: the GM note's own piece */
         return t == DVT_CONGA ? "CG" : t == DVT_CLAVE ? "CL" : t == DVT_CYM ? "CY" : N[lane];
