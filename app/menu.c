@@ -36,7 +36,12 @@ static struct {
 } rows[APP_SONG_SLOTS + 1];
 static int nrows, open_row;
 static int cur, top, asking, pending; /* pending: the row the question is about */
-enum { ASK_NONE, ASK_OPEN, ASK_PLAY };   /* what the question leads to once answered */
+enum { ASK_NONE, ASK_OPEN, ASK_PLAY, ASK_HOME }; /* what the question leads to once answered */
+/* Losing changes is always a hold on this machine, never a press: a button
+ * hit on a question nobody read must not destroy (30/10). HOME's own hold. */
+enum { LOSE_HOLD = 36 };
+static int ask_held;   /* frames HOME has been down, once the question is armed */
+static bool ask_armed; /* HOME let go since the question opened -- it opened under a held HOME */
 static uint32_t prev_btns;
 static int peak; /* the worst block since PLAY, held */
 static bool listing; /* in PROJECTS, not the root */
@@ -64,7 +69,7 @@ static void refresh(void)
     for (int s = 0; s < APP_SONG_SLOTS; s++)
         if (store_info(s, rows[nrows].name, &bytes) == STORE_OK)
             rows[nrows++].slot = (int8_t)s;
-    if (app_slot < 0) {
+    if (app_slot < 0 && app_loaded) {
         rows[nrows].slot = -1;
         for (int i = 0; (rows[nrows].name[i] = app_name[i]) != 0; i++)
             ;
@@ -104,6 +109,20 @@ void menu_open(int at)
     listing = false;
     item = at;
     asking = ASK_NONE;
+    prev_btns = 0xFFFFFFFFu;
+    gfx_invalidate();
+}
+
+/* The root reached over changes: the question, before anything is put
+ * down. It opens under a held HOME -- the hold that got here -- so the
+ * next hold only counts once that one has been let go. */
+void menu_ask_home(void)
+{
+    opts = deleting = naming = listing = false;
+    asking = ASK_HOME;
+    pending = open_row;
+    ask_held = 0;
+    ask_armed = false;
     prev_btns = 0xFFFFFFFFu;
     gfx_invalidate();
 }
@@ -153,10 +172,12 @@ static void copy_name(const char *from)
 /* RENAME and DUPLICATE go through the song in memory, as SAVE does (the
  * flash cannot read one file while it writes another): the project is
  * opened first when it is not the open one -- not over unsaved changes. */
+static bool continue_song(void);
+
 static bool take_in_hand(void)
 {
-    if (opt_row == open_row)
-        return true;
+    if (opt_row == open_row) /* the root holds no song: pick it up to work on it */
+        return continue_song();
     if (app_dirty) {
         opt_said = "SAVE THE OPEN ONE FIRST";
         return false;
@@ -253,9 +274,11 @@ static void draw_question(void)
     gfx_text(F_COND20, TEXT_X, y, app_name, C_FX);
     gfx_text(F_COND20, TEXT_X, y += ROW, "is not saved.", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", C_TEXT);
-    gfx_text(F_COND20, TEXT_X, y += ROW, "SEL  lose them", C_TEXT);
+    gfx_text(F_COND20, TEXT_X, y += ROW, "HOME held  lose them", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", C_DIM);
-    {
+    if (asking == ASK_HOME) {
+        gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then puts the song down", C_DIM);
+    } else {
         const char *then = asking == ASK_PLAY ? "then plays " : "then opens ";
         gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, then, C_DIM);
         gfx_text(F_COND12, TEXT_X + gfx_text_w(F_COND12, then), y, name, C_DIM);
@@ -368,6 +391,19 @@ static void play(void)
     player_play_song(0, false);
 }
 
+/* CONTINUE, with nothing in memory: the root put the song down, so it is
+ * picked up again from where it was written. One that never reached the
+ * flash has nothing to pick up, and a fresh one takes its place. */
+static bool continue_song(void)
+{
+    if (app_loaded)
+        return true;
+    if (app_slot >= 0 && app_open_slot(app_slot) == STORE_OK)
+        return true;
+    app_new();
+    return app_loaded;
+}
+
 int menu_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns;
@@ -376,21 +412,55 @@ int menu_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     if (asking) {
-        /* The question's two buttons answer it; anything else is "stay" -- PLAY
-         * stopping what plays as well. */
+        /* SAVE keeps the changes, HOME held loses them, anything else is
+         * "stay" -- PLAY stopping what plays as well. A press of HOME is a
+         * let-go before the hold is through, so it stays (30/10). */
+        bool home = (in->btns >> PB_HOME & 1u) != 0;
+        int then = asking;
+        bool answered = false, decided = false;
+
         if (btns & 1u << PB_PLAY && player_playing())
             player_stop();
-        int then = asking;
-        bool answered = false;
-        if (btns & 1u << PB_SAVE)
+        if (!home)
+            ask_armed = true;
+        if (btns & 1u << PB_SAVE) {
             answered = app_save() == 0;
-        else if (btns & 1u << PB_SEL)
-            answered = true;
-        else if (!btns && !in->enc[PE_SELECT]) {
+            decided = true;
+        } else if (ask_armed && home) {
+            if (++ask_held < LOSE_HOLD) { /* still going down: not an answer yet */
+                gfx_frame(draw);
+                return MENU_STAY;
+            }
+            answered = decided = true;
+        } else if (ask_armed && ask_held) { /* let go early: a press, which is stay */
+            decided = true;
+        } else if (!btns || !ask_armed) {
+            if (!btns && !in->enc[PE_SELECT]) {
+                gfx_frame(draw);
+                return MENU_STAY;
+            }
+            decided = ask_armed;
+        } else {
+            decided = true;
+        }
+        if (!decided) {
             gfx_frame(draw);
             return MENU_STAY;
         }
         asking = ASK_NONE; /* "stay": the list as it was, the cursor where it was */
+        ask_held = 0;
+        if (then == ASK_HOME) {
+            /* Saved or lost, the song is put down -- that is what reaching
+             * the root means now. Unanswered, the hand goes back into it. */
+            if (answered)
+                app_unload();
+            else
+                return MENU_BACK;
+            refresh();
+            scroll_to(open_row >= 0 ? open_row : 0, true);
+            gfx_frame(draw);
+            return MENU_STAY;
+        }
         if (answered) {
             load(pending);
             if (then == ASK_PLAY)
@@ -407,7 +477,7 @@ int menu_frame(const PlatInput *in)
         item = item < 0 ? 0 : item >= MENU_ITEMS ? MENU_ITEMS - 1 : item;
         if (btns & 1u << PB_SEL) {
             if (item == MENU_CONTINUE)
-                to = MENU_SONG;
+                to = continue_song() ? MENU_SONG : MENU_STAY;
             else if (item == MENU_PROJECTS) {
                 listing = true;
                 refresh();
@@ -422,7 +492,7 @@ int menu_frame(const PlatInput *in)
         if (btns & 1u << PB_PLAY && item == MENU_CONTINUE) {
             if (player_playing())
                 player_stop();
-            else
+            else if (continue_song())
                 play();
         }
     } else if (naming) {

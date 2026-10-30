@@ -2916,3 +2916,43 @@ himself.
   compared byte for byte with `fm1_send.py --get`) and Install over
   MOONDAW work. Not yet tried: back to V15 and installing from V15 (they
   erase the songs), the cut-off cable, Windows, Linux, Edge.
+
+## 2026-10-30 — the root holds no song
+
+He asked for it plainly: "quand je retourne sur l'écran d'accueil je ne
+veux plus que le projet soit encore chargé en RAM. Si je retourne sur
+l'accueil et que le projet est dirty c'est là qu'il faut me dire si je
+veux sauvegarder. Une fois sur l'accueil le projet est déchargé."
+
+The reason it matters is on the desk already: a song can sit in memory
+changed and unsaved for as long as one likes, and nothing says so. That is
+how a flash took his work on the 29th. Leaving is the last moment the
+question can still be answered, so the question is asked there.
+
+- `go_root()` is now the one way in: HOME held, and stepping back out of
+  SONG, both go through it. Clean, the song is put down (`app_unload()`:
+  the player stopped, `song_init`, `app_loaded` false). Not saved, the
+  question comes up first.
+- "Not saved" is `app_dirty || app_slot < 0`. A song that was never written
+  has no place in flash to be picked up from, so putting it down without a
+  word would lose it outright -- `app_new()` makes one that is not dirty,
+  which is exactly the trap. Both read as "is not saved." to the hand.
+- The answers, and the rule they set for every confirmation that comes
+  after: **losing changes is always a hold, never a press.** SAVE keeps
+  them, HOME held loses them, a press of HOME (a let-go before the hold is
+  through) goes back into the song. A button hit on a question nobody read
+  must not destroy. The question already in `menu.c` had `SEL  lose them`
+  on a single press -- the very trap -- and now follows the same rule.
+- The root hold is guarded against itself: `held == HOME_HOLD` no longer
+  fires from `AT_MENU`, or the hold that answers the question would keep
+  putting the question back up, forever.
+- `CONTINUE` picks the song up again from its slot (`continue_song()`), and
+  so do RENAME and DUPLICATE, which work through the song in memory and
+  found none there.
+- `ASK_OPEN` / `ASK_PLAY` stay: the hand can no longer reach PROJECTS over
+  unsaved changes, but `app_load()` -- a song pushed in over USB -- still
+  lands changed with the hand at HOME. Their coverage in `menu_test.c` went
+  with the path the hand used to take.
+
+Not done: choosing the answer with the SELECT knob, which he also asked
+for. The buttons are in; the knob and its cursor are not.
