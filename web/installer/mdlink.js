@@ -1,20 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
 // MOONDAW's song link (app/link.h) over WebMIDI, the part tools/fm1_send.py
-// uses for --ping, --list and --get: enough to save every song on the FM-1
-// to this computer before the firmware is replaced. And a ZIP writer (stored,
-// no compression) to hand them over as one file.
+// uses for --ping, --list, --get and sending a song, and the bank index
+// tools/fm1_samples.py list reads: enough to save every song on the FM-1 to
+// this computer before the firmware is replaced, and to put one back. And a
+// ZIP writer (stored, no compression) to hand them over as one file.
 //
 // A message is F0 7D 4D 44 <cmd> <payload, 8 bits packed in 7> F7; the host
 // sends one and waits for its answer (the firmware holds a single SysEx).
 
 const SIG = [0x7D, 0x4D, 0x44];
-export const PING = 5, INFO = 6, READ = 7, ANSWER = 0x7F;
+export const BEGIN = 1, DATA = 2, END = 3, CANCEL = 4, PING = 5, INFO = 6, READ = 7, ANSWER = 0x7F;
+export const DATA_MAX = 240;   // app/link.h LINK_DATA_MAX
+export const BANK_SLOT = 32;   // core/bank.h: the sample bank's slot of the store
 
+// app/link.h LINK_*, with fm1_send.py's words.
 export const STATUS = {
   1: "the FM-1 is busy: go back to its MENU and try again",
+  2: "a song of that name is already on the FM-1 (ask to replace it)",
+  3: "not enough room in the FM-1's flash",
   4: "a message arrived out of turn",
-  6: "the FM-1 could not read its flash",
+  5: "the song arrived damaged; nothing was kept",
+  6: "the FM-1 could not read or write its flash",
+  7: "that song is open on the FM-1 with unsaved changes: save it there first",
   8: "the FM-1 did not understand the message",
   9: "nothing in that slot",
 };
@@ -55,11 +63,11 @@ export class SongLink {
   constructor(link, timeoutMs = 1500) { this.link = link; this.timeout = timeoutMs; }
 
   // one message and its answer: {status, seq, extra, tail}
-  async ask(cmd, raw = [], tries = 4) {
+  async ask(cmd, raw = [], tries = 4, timeoutMs = this.timeout) {
     for (let t = 0; t < tries; t++) {
       this.link.drain();
       if (!this.link.send(message(cmd, raw))) break;
-      const end = Date.now() + this.timeout;
+      const end = Date.now() + timeoutMs;
       for (;;) {
         const left = end - Date.now();
         if (left <= 0) break;
@@ -105,6 +113,64 @@ export class SongLink {
       onBytes(data.length);
     }
     return new Uint8Array(data);
+  }
+
+  // A song onto the FM-1, as tools/fm1_send.py sends it: BEGIN with the
+  // length, the checksum and the name, the bytes in pieces, then END -- the
+  // new song becomes the file only at END, so a cable pulled halfway leaves
+  // the flash as it was. -> the bytes the FM-1 kept.
+  async put(data, name, { replace = false } = {}, onBytes = () => {}) {
+    const nm = [...name.toUpperCase().slice(0, 12)].map((c) => c.charCodeAt(0) & 0x7F);
+    const head = [replace ? 1 : 0, ...u32le(data.length), ...u32le(crc32(data)), ...nm];
+    let a = await this.ask(BEGIN, head);
+    if (a.status) throw linkError(a.status);
+    try {
+      for (let seq = 0, at = 0; at < data.length; seq++, at += DATA_MAX) {
+        a = await this.ask(DATA, [seq & 0xFF, (seq >> 8) & 0xFF, ...data.subarray(at, at + DATA_MAX)]);
+        if (a.status) throw linkError(a.status);
+        onBytes(Math.min(at + DATA_MAX, data.length));
+      }
+    } catch (e) {
+      try { await this.ask(CANCEL, [], 1); } catch (_) { /* the FM-1 is gone: nothing to cancel */ }
+      throw e;
+    }
+    a = await this.ask(END, [], 2, 5000);
+    if (a.status) throw linkError(a.status);
+    return a.extra;
+  }
+
+  // The sample bank's index, over the link: core/bank.h's header and its
+  // entries, which is all the editor needs to know which sounds the FM-1
+  // holds. The whole bank is 160 KB and never read here.
+  // -> {size, samples: [{name, frames}]} or null when there is no bank.
+  async bankIndex() {
+    const HEAD = 8, ENTRY = 32, NAME_LEN = 24;      // core/bank.h
+    const a = await this.ask(INFO, [BANK_SLOT]);
+    if (a.status === 9) return null;
+    if (a.status) throw linkError(a.status);
+    const size = a.extra;
+    const head = [];
+    while (head.length < HEAD || head.length < HEAD + ENTRY * head[4]) {
+      const r = await this.ask(READ, [BANK_SLOT, ...u32le(head.length)]);
+      if (r.status) throw linkError(r.status);
+      if (!r.seq) break;
+      for (const b of r.tail) head.push(b);
+    }
+    // The FM-1 stops sending: it is free for what comes next (fm1_samples.py).
+    try { await this.ask(CANCEL, [], 1); } catch (_) { /* nothing to cancel */ }
+    if (head.length < HEAD || head[0] !== 0x53 || head[1] !== 0x4D || head[2] !== 0x50 || head[3] !== 0x31)
+      throw new Error("the FM-1's bank slot does not begin with SMP1: it is not a sample bank");
+    const samples = [];
+    for (let i = 0; i < head[4]; i++) {
+      const e = HEAD + i * ENTRY;
+      if (e + ENTRY > head.length) break;
+      let n = 0;
+      while (n < NAME_LEN && head[e + n]) n++;
+      const frames = (head[e + NAME_LEN] | (head[e + NAME_LEN + 1] << 8) |
+        (head[e + NAME_LEN + 2] << 16) | (head[e + NAME_LEN + 3] << 24)) >>> 0;
+      samples.push({ name: String.fromCharCode(...head.slice(e, e + n)), frames });
+    }
+    return { size, samples };
   }
 }
 
