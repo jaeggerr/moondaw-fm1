@@ -13,7 +13,7 @@
 // both are shown as such rather than quietly tidied away.
 
 import {
-  trkLoad, trkSave, instrumentsUsed, zonesOf, zoneAdd, zoneRemove, zoneMove, zoneShadow,
+  trkLoad, trkSave, instrumentsUsed, samplesUsed, zonesOf, zoneAdd, zoneRemove, zoneMove, zoneShadow,
   smpIntern, noteName, noteFromName, engineName, engineTimbreMax, ENGINE_NAMES,
   ENGINE_SAMPLE, ENGINE_VOX, ENGINE_DRUM, ENGINE_PLUCK, SONG_MAX_INSTR, SONG_ZONE_MAX,
   INSTR_MAX_LAYERS, SONG_SMP_MAX, NOTE_MIN, NOTE_MAX, VIB_PHASE_FREE,
@@ -178,7 +178,9 @@ function renderSong() {
   const used = instrumentsUsed(song);
   const n = used.filter(Boolean).length;
   const smpl = used.filter((u, i) => u && song.instruments[i].engine === ENGINE_SAMPLE).length;
-  const named = song.smp.filter((e) => e.name).length;
+  // What the writer puts down, not what the table holds: a name no zone of a
+  // played instrument reaches is dropped, and this line is about the file.
+  const named = samplesUsed(song, used).filter(Boolean).length;
   const changed = out !== loaded;
   $("songinfo").innerHTML = `<strong>${fileName}</strong> · ${out.length} bytes as the FM-1 writes it · ` +
     `${n} instruments played (${smpl} SMPL) · ${song.nzones} zones · ${named} sample names · ` +
