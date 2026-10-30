@@ -194,7 +194,10 @@ static int ncols(int r)
 static int span(int r, int c)
 {
     int k = kind(r);
-    return (k == L_SOUND) || ((k == L_LAYER || k == L_SAMPLE) && c == 0) ? 2 : 1;
+    /* the columns that can hold a word take two cells: the engine, the
+     * sample's name, a layer's wave, and FILTER's cutoff -- "OPEN" is 37 px
+     * and a cell is 33, so it used to spill over its neighbour (30/10). */
+    return (k == L_SOUND) || ((k == L_LAYER || k == L_SAMPLE || k == L_FILTER) && c == 0) ? 2 : 1;
 }
 
 static int col_x(int r, int c)
@@ -287,6 +290,25 @@ static const char *zone_sample_word(void)
     while (len > 1 && gfx_text_w(F_COND20, w) > 2 * CELL_W - 4)
         w[--len] = 0;
     return len ? w : "--";
+}
+
+/* This screen draws its cells and their heads flush left, three pixels
+ * in, so that every column and the instrument's name agree down the left
+ * edge -- his, from the panel (30/10): centred values of different widths
+ * read as ragged. `grid_cell` centres and MIXER and PHRASE want that, so
+ * it is left alone and this screen has its own pair. */
+enum { CELL_PAD = 3 };
+
+static void cell(int v, int x, int w, const char *s, bool band, bool on, uint16_t ink)
+{
+    if (on)
+        grid_hollow(v, x, w);
+    gfx_text(F_COND20, x + CELL_PAD, grid_base(v), s, grid_ink(band, on, ink));
+}
+
+static void head(int x, const char *s, bool on)
+{
+    gfx_text(F_COND12, x + CELL_PAD, GRID_HEAD - 3, s, on ? C_TEXT : C_DIM);
 }
 
 static const char *value(int r, int c, char *b)
@@ -485,7 +507,7 @@ static void draw(void)
      * the same line and runs into them, so it has the line while it lasts */
     if (!said && (layer_of(row) < in->nlayers || kind(row) != L_LAYER))
         for (int c = 0; c < ncols(row); c++)
-            grid_head(col_x(row, c), span(row, c) * CELL_W, heads[kind(row)][c], c == col);
+            head(col_x(row, c), heads[kind(row)][c], c == col);
     for (int v = 0; v < GRID_ROWS && top + v < n; v++) {
         int r = top + v, k = kind(r);
         bool band = r == row, adder = k == L_LAYER && layer_of(r) >= in->nlayers;
@@ -505,7 +527,8 @@ static void draw(void)
         if (k == L_NAME) {
             if (band)
                 grid_hollow(v, CELL_X - 4, 130);
-            gfx_text(F_COND20, CELL_X, grid_base(v), in->name[0] ? in->name : "--", band ? C_ACCENT : C_TEXT);
+            gfx_text(F_COND20, CELL_X + CELL_PAD, grid_base(v), in->name[0] ? in->name : "--",
+                     band ? C_ACCENT : C_TEXT);
             continue;
         }
         if (adder)
@@ -517,7 +540,7 @@ static void draw(void)
             uint16_t ink = k == L_SOUND && c == 0 && inst_mute(in)  ? C_FX
                            : k == L_SAMPLE && c == 0 && zone_count() > 1 ? C_DIM
                                                                          : C_TEXT;
-            grid_cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, ink);
+            cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, ink);
         }
     }
     gfx_fill(CELL_X - 5, GRID_HEAD, 1, (n < GRID_ROWS ? n : GRID_ROWS) * GRID_ROW, C_DIM, 255);

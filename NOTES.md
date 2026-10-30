@@ -2494,6 +2494,32 @@ right, and three were fixed at once.
   to install the **previous** package without complaint: a build that
   fails must stop the install, or the machine quietly runs old code.
 
+## 2026-10-30 — INSTRUMENT's cells go flush left, and OPEN gets its room
+
+Shown on the panel before deciding, as the SYSTEM line was: three ways
+drawn on a canvas from the computer -- centred (today), all left, and
+words left with numbers right -- at the screen's own pixel positions and
+with glyph advances parsed out of `app/fonts.h`, so variant A was what
+the code actually draws and he could hold it against his own screen.
+**He chose all left.**
+
+- **This screen has its own `cell()` and `head()`**, flush left with a
+  3 px pad. `grid_cell` centres and MIXER and PHRASE are built on that,
+  so it is untouched: no screen moved that he did not ask to move. The
+  instrument's name moves to the same edge, which is what made the
+  ragged look in the first place -- it was flush left while every value
+  was centred.
+- **Measuring for the mock found a third overflow**, the same family as
+  his two: **"OPEN" is 37 px and a cell is 33**. It has always spilled;
+  centring hid it by splitting the excess two pixels each side, and
+  left-aligning sent all seven into the next column (`OPEND 0 0` on the
+  panel). FILTER's cutoff now takes two cells like the engine, the
+  sample's name and a layer's wave -- four columns over five cells,
+  66..231, which is exactly the room there is.
+- For the record, the widths that settle these: SAMPLE 57 for the 53 px
+  before the rule (his first complaint), ZONE 36, FILTER 49, OPEN 37 for
+  33, tr9_kick 60 for 66, KICK909 61.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
