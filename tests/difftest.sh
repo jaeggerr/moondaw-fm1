@@ -6,6 +6,12 @@
 # made silent in the reference as they are on the FM-1; DRUM ones (moondaw has no DRUM yet) on both
 # sides. Both engines then render the SAME file,
 # reverb and delay included -- the voice too: VOX, its syllables, tract and accent are carried.
+#
+# KNOWN TO DIFFER since 30/10: a song that has BOTH swing and echo. moondaw gives its echo the swung
+# tick, so the line stretches and relaxes a step at a time and the tail is dragged through a pitch
+# bend; here the echo is given the tempo's own tick and stays put (NOTES.md, his find). That is
+# DAFT-PUNK-EN, DAFT-PUNK and LEOMOTEUR of the songs here, on their echo tracks only. The same one
+# line in moondaw's player_tick_samples would make them agree again.
 set -e
 cd "$(dirname "$0")/.."
 M="${MOONDAW:-../moondaw}"

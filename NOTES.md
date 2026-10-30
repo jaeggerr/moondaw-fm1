@@ -2141,6 +2141,40 @@ no screen can leave the light on behind it: every `ui_led_guide` writes
 it. One consequence: with SETTINGS' LEDS on STATE, where only PLAY's
 state shows, the CAPS LOCK light does not.
 
+## 2026-10-30 — the echo was being swung, and that is the wet sound
+
+His, and old: "il y a comme un delay, un echo plutot, que j'entends sur
+l'ecouteur de droite... ce son qui n'est pas bon". He had heard it for as
+long as the song existed, on the computer as here, and said so -- which
+was the clue that mattered, because it ruled out everything written for
+the FM-1.
+
+Measuring first said reverb: in the intro of DAFT-PUNK-EN (phrase 00, one
+track, `t4`, a gated STAB panned left) the right ear carries reverb at
+-32.6 dBFS against the echo's -39.3, and the reverb fills every gap the
+gating opens. He listened to six renders and said no: the reverb is not
+it, it is the repeats. He was right.
+
+`echo_set(ticks, feedback, tick_samples())` -- and `tick_samples()` is
+the SWUNG tick. With `swing 54` the same twelve ticks are 263 ms on one
+step and 224 ms on the next, so the line stretches and relaxes, for ever.
+The read head does not jump, it glides, a thousandth of the way per
+sample, which is right for a tempo change and wrong for this: the catch-up
+runs at two samples per sample, so for 27 ms after every step the tail is
+read at three times speed, or backwards. Twice a step, under every repeat.
+That is the spring.
+
+The swing is where a note falls, not a change of tempo. What is counted in
+seconds asks for the tempo's own tick now: `tick_samples_of(false)` for
+the echo, `tick_samples()` (swung) for everything else. The notes do not
+move by a sample.
+
+moondaw does the same thing in `player_tick_samples` and has always done
+it, which is why he has always heard it. So `make difftest` now reports
+the three songs that have both swing and echo (DAFT-PUNK-EN, DAFT-PUNK,
+LEOMOTEUR), on their echo tracks only, and says so in its own header. One
+line in moondaw would make them agree again -- his call, it is his app.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
