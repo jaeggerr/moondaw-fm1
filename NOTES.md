@@ -2382,6 +2382,37 @@ expecting one.
   having already served for the choice; `menu_test` and the sim selftest
   pass.
 
+## 2026-10-30 — SMPL on the knob, and the trap it was before
+
+His, from the machine: in INSTRUMENT he could not find how to pick a
+sound already in the bank. He cannot -- CHOOSE SAMPLE is stage 2 and is
+not written. But looking for it turned up something worse than missing.
+
+- **SMPL was not on the ENGINE knob at all** (`engines[]` in
+  `app/instrument.c`: PULSE, NOISE, WAVE, VOX, DRUM). The turn looked
+  the current engine up in that list, did not find SMPL, and fell to
+  `engines[0]`: **one cran on a sampled instrument turned it into a
+  PULSE**, silently, and SMPL-DEMO's eight instruments were all one
+  knock away from that. Deliberate while SMPL was silent, wrong since
+  29/10. SMPL now sits between WAVE and VOX, so a turn steps and comes
+  back. PLUCK stays out: the FM-1 does not have it, and a turn away
+  would not return.
+- **The engine's name was painted as "does not sound"** for every SMPL
+  instrument. `inst_mute()` replaces that test: PLUCK always, and SMPL
+  only while no zone of the song names this instrument -- which is the
+  truth and is useful, since a fresh SMPL off the knob has no zone and
+  says so in C_FX until one is given. Checked both ways in the
+  simulator: MARIMBA of SMPL-DEMO white, a fresh instrument 08 amber.
+- **`instrument_test`**: the engine walk gained SMPL and a turn back
+  from it; the old "an instrument this machine cannot sound" block now
+  checks that the knob steps a SMPL instrument along instead of throwing
+  it away, and that it is still SMPL when the screen opens on it.
+  `menu_test`, `persist_test`, `song_test` and the sim selftest pass.
+- **Still not there**, and this is what he actually asked for: no way to
+  name a sample or edit a zone on the device. The data is ready --
+  `bank_count`, `bank_entry`, `bank_find` -- so CHOOSE SAMPLE is a
+  screen and a zone row, one screen at a time.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

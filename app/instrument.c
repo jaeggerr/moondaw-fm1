@@ -43,6 +43,21 @@ static int preview_at;
 static InstrumentDef *I(void) { return &app_song.instruments[inst]; }
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 
+/* Whether this instrument would make no sound, for the colour its engine
+ * is drawn in. PLUCK never does. SMPL does since 29/10, but only once a
+ * zone sends a note to a sample: fresh off the knob it has none, and the
+ * dim name says so rather than lying either way. */
+static bool inst_mute(const InstrumentDef *in)
+{
+    if (in->engine == ENGINE_SAMPLE) {
+        for (int z = 0; z < app_song.nzones; z++)
+            if (app_song.zones[z].inst == inst)
+                return false;
+        return true;
+    }
+    return !engine_sounds(in->engine) && in->engine != ENGINE_VOX && in->engine != ENGINE_DRUM;
+}
+
 /* ------------------------------------------------------------- rows --- */
 /* The engine's own row: VOICE for a voice, DRUM for a kit, none else. */
 static int own_row(void)
@@ -179,9 +194,13 @@ static const char *value(int r, int c, char *b)
 }
 
 /* ------------------------------------------------------------ edits --- */
-/* The engines that sound here, in KNOB 3's order. One that does not (SMPL,
- * PLUCK) leaves for the first of them at a turn. */
-static const uint8_t engines[] = { ENGINE_PULSE, ENGINE_NOISE, ENGINE_WAVE, ENGINE_VOX, ENGINE_DRUM };
+/* The engines in KNOB 3's order. SMPL joined them on 30/10: it had been
+ * left out while it was silent, and an instrument already on it was
+ * thrown to the first of the list at a turn -- a song's sampled
+ * instrument lost to one cran of the knob. PLUCK is still out: the FM-1
+ * does not have it, and a turn away from it does not come back. */
+static const uint8_t engines[] = { ENGINE_PULSE, ENGINE_NOISE, ENGINE_WAVE, ENGINE_SAMPLE,
+                                   ENGINE_VOX, ENGINE_DRUM };
 
 static void turn(int d)
 {
@@ -317,8 +336,7 @@ static void draw(void)
         if (adder)
             continue;
         for (int c = 0; c < ncols(r); c++) {
-            bool on = band && c == col, silent = k == L_SOUND && c == 0 && !engine_sounds(in->engine) &&
-                                                 in->engine != ENGINE_VOX && in->engine != ENGINE_DRUM;
+            bool on = band && c == col, silent = k == L_SOUND && c == 0 && inst_mute(in);
             grid_cell(v, col_x(r, c), span(r, c) * CELL_W, value(r, c, s), band, on, silent ? C_FX : C_TEXT);
         }
     }

@@ -92,6 +92,10 @@ int main(void)
     enc(PE_K3, 1);
     CHECK("then WAVE", I3.engine == ENGINE_WAVE);
     enc(PE_K3, 1);
+    CHECK("then SMPL, on the knob since 30/10", I3.engine == ENGINE_SAMPLE);
+    enc(PE_K3, -1);
+    CHECK("a turn back from SMPL is WAVE, not the first of the list", I3.engine == ENGINE_WAVE);
+    enc(PE_K3, 2);
     CHECK("then the voice", I3.engine == ENGINE_VOX);
     enc(PE_SELECT, 4);
     CHECK("a voice has its VOICE row: tract and accent", I3.engine == ENGINE_VOX);
@@ -116,7 +120,7 @@ int main(void)
     enc(PE_K3, 64);
     enc(PE_SELECT, -4);
     enc(PE_K2, -1);
-    enc(PE_K3, -2);
+    enc(PE_K3, -3);
     CHECK("and back to WAVE", I3.engine == ENGINE_WAVE);
 
     /* the layers: + LYR is the row after LEVEL */
@@ -169,19 +173,24 @@ int main(void)
         energy(4096);
     CHECK("and PLAY again stops it", energy(2048) == 0);
 
-    /* an instrument this machine cannot sound */
+    /* an instrument on SMPL: no bank is mounted here, so it has nothing to
+     * play -- but the knob no longer throws the engine away (30/10) */
     enc(PE_PRESET, 1);
     CHECK("PRESETS steps to the next instrument", !strcmp(app_song.instruments[4].name, "KICK"));
     in.keys = 1u << 16;
     go();
-    CHECK("an instrument on SMPL is silent here", energy(4096) == 0);
+    CHECK("an instrument on SMPL with no bank is silent", energy(4096) == 0);
     in.keys = 0;
     go();
     enc(PE_SELECT, -9);
     enc(PE_SELECT, 1);
     enc(PE_K2, -1);
+    CHECK("and it is still on SMPL, sitting on the engine cell", app_song.instruments[4].engine == ENGINE_SAMPLE);
     enc(PE_K3, 1);
-    CHECK("and one turn of ENGINE gives it one of ours", app_song.instruments[4].engine == ENGINE_PULSE);
+    CHECK("one turn of ENGINE steps it along the list, not back to the first",
+          app_song.instruments[4].engine == ENGINE_VOX);
+    enc(PE_K3, -1);
+    CHECK("and a turn back returns it to SMPL", app_song.instruments[4].engine == ENGINE_SAMPLE);
 
     CHECK("GLO asks for the PROJECT", press(PB_GLO) == INSTRUMENT_PROJECT);
     instrument_resume();
