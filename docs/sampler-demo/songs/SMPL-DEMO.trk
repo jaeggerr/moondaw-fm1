@@ -1,0 +1,192 @@
+# anbernic tracker song
+# SMPL-DEMO: five sampled instruments in one song, to hear the sampler.
+# Every track is SMPL and nothing else: a 909 kit (kick, snare, hat,
+# clap), a Precision bass, the Iowa piano, a marimba and a kalimba --
+# twelve samples of the bank, 104 KB. The bank it wants, and how to
+# hear it here or on the device: docs/sampler-demo/README.md.
+#
+# Every sample is cut to one second and normalised to -1 dBFS by the
+# tool, so the balance here is the track volumes' work, not the files'.
+version 3
+bpm 96
+ticks 6
+meter 4 4
+tracks 8
+swing 0
+reverb 70 92
+delay 18 56
+
+smp 00 tr909/tr9_kick.wav
+smp 01 tr909/tr9_snare.wav
+smp 02 tr909/tr9_chh.wav
+smp 03 tr909/tr9_clap.wav
+smp 04 pbass/pbas_e2.wav
+smp 05 pbass/pbas_e3.wav
+smp 06 piano9/pf_c3.wav
+smp 07 piano9/pf_c4.wav
+smp 08 piano9/pf_c5.wav
+smp 09 marimba/marimba_c4.wav
+smp 0A marimba/marimba_c5.wav
+smp 0B kalimba/kalimba_c5.wav
+
+inst 00 engine SMPL timbre 0 adsr 0 0 255 12 gain 4 name KICK909
+zone 00 C-0 G-9 root C-4 smp 00
+inst 01 engine SMPL timbre 0 adsr 0 0 255 12 gain 0 name SNR909
+zone 01 C-0 G-9 root C-4 smp 01
+inst 02 engine SMPL timbre 0 adsr 0 0 255 12 gain -6 name CHH909
+zone 02 C-0 G-9 root C-4 smp 02
+inst 03 engine SMPL timbre 0 adsr 0 0 255 12 gain -4 name CLAP909
+zone 03 C-0 G-9 root C-4 smp 03
+inst 04 engine SMPL timbre 0 adsr 0 0 255 20 gain 2 filter 190 0 64 name PBASS
+zone 04 C-0 B-2 root E-2 smp 04 tune 3
+zone 04 C-3 G-9 root E-3 smp 05 tune -4
+inst 05 engine SMPL timbre 0 adsr 0 179 0 45 gain 0 name PIANO9
+zone 05 C-0 F-3 root C-3 smp 06
+zone 05 F#3 F-4 root C-4 smp 07
+zone 05 F#4 G-9 root C-5 smp 08
+inst 06 engine SMPL timbre 0 adsr 0 0 255 45 gain 0 name MARIMBA
+zone 06 C-0 F-4 root C-4 smp 09
+zone 06 F#4 G-9 root C-5 smp 0A
+inst 07 engine SMPL timbre 0 adsr 0 0 255 45 gain -2 name KALIMBA
+zone 07 C-0 G-9 root C-5 smp 0B
+
+trk 0 vol 58 pan 0
+trk 1 vol 56 pan 0 rev 10
+trk 2 vol 48 pan -14 rev 8
+trk 3 vol 61 pan 0
+trk 4 vol 35 pan 10 rev 18 ech 10
+trk 5 vol 45 pan -16 rev 22 ech 18
+trk 6 vol 29 pan 24 rev 30 ech 24
+trk 7 vol 46 pan 14 rev 20
+
+pat t0 00 len 16
+00 C-4 i00
+06 C-4
+0A C-4
+
+pat t0 01 len 16
+00 C-4 i00
+06 C-4
+0A C-4
+0F C-4
+
+pat t1 00 len 16
+08 C-4 i01
+
+pat t1 01 len 16
+08 C-4 i01
+0E C-4
+
+pat t2 00 len 16
+02 C-4 i02
+06 C-4
+0A C-4
+0E C-4
+
+pat t3 00 len 64
+00 A-2 i04
+06 A-2
+0A A-2
+10 F-2
+16 F-2
+1A F-2
+20 C-3
+26 C-3
+2A C-3
+30 G-2
+36 G-2
+3A G-2
+3E G-2
+
+pat t4 00 len 64
+00 A-3+C-4+E-4 i05
+08 A-3+C-4+E-4
+10 F-3+A-3+C-4
+18 F-3+A-3+C-4
+20 C-4+E-4+G-4
+28 C-4+E-4+G-4
+30 B-3+D-4+G-4
+38 B-3+D-4+G-4
+
+pat t5 00 len 64
+00 E-4 i06
+04 A-4
+08 C-5
+0C B-4
+10 A-4
+18 F-4
+20 G-4
+24 C-5
+28 E-5
+2C D-5
+30 B-4
+34 D-5
+38 B-4
+3C G-4
+
+pat t5 01 len 64
+00 A-4 i06
+06 C-5
+0A E-5
+0E D-5
+10 C-5
+14 A-4
+1A F-4
+20 E-4
+24 G-4
+28 C-5
+2C G-4
+30 D-5
+34 B-4
+38 G-4
+3C A-4
+
+pat t6 00 len 64
+02 E-5 i07
+0E C-5
+12 C-5
+1E A-4
+22 E-5
+2E G-4
+32 D-5
+3E B-4
+
+pat t7 00 len 16
+08 C-4 i03
+
+pat t7 01 len 16
+08 C-4 i03
+0E C-4
+
+arr 00 steps auto
+t4 00
+t5 00
+t6 00
+
+arr 01 steps auto
+t0 00
+t2 00
+t3 00
+t4 00
+t5 00
+t6 00
+
+arr 02 steps auto
+t0 00
+t1 00
+t2 00
+t3 00
+t4 00
+t5 01
+t6 00
+t7 00
+
+arr 03 steps auto
+t0 01
+t1 01
+t2 00
+t3 00
+t4 00
+t5 01
+t6 00
+t7 01

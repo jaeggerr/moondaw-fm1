@@ -2266,6 +2266,51 @@ parser it names never written.
   jack would read noise while USB stayed perfect -- the first thing to
   look at if a cable gives nothing.
 
+## 2026-10-30 — a song with samples in it, and the renderer that plays them
+
+His ask: he has never heard a sample in a song. There was no way to, on
+the Mac -- `tests/fm_render.c` never had a bank, so every SMPL track in
+`difftest` was silent and the suite said so ("nothing the FM-1 can play").
+
+- **`fm_render --bank BANK.bin`**: the bank from `fm1_samples.py pack`
+  written into a flash in RAM (`tests/ramflash.h`) at slot 32, then
+  `store_mount` / `bank_mount` / `bank_resolve` -- the link's work
+  without the link, so the voice reads it over the same sectors as on
+  the device. Without the flag nothing changes: the output is byte for
+  byte what it was (checked on KIDS t2). `difftest.sh` and
+  `tools/drums/drums.py` gained the three sources (`drums.py` had been
+  failing to link since the sampler landed: no `sampler.c`).
+- **`docs/sampler-demo/`**: `songs/SMPL-DEMO.trk`, every track SMPL --
+  a 909 kit, a Precision bass, the Iowa piano, a marimba, a kalimba;
+  twelve samples, 104 KB, 26 sectors. Am-F-C-G at 96 BPM, four steps of
+  four bars that come in one group at a time. `SMPL-DEMO.wav` is the
+  render, 40.5 s, peak -2.1 dBFS, nothing clipped.
+- **On the FM-1** (his yes, the same evening): the eight melodic samples
+  added beside the 909 kit rather than over it, so KIDS keeps its toms --
+  18 samples, 12.3 s, 124 KB free before and 36 after, the bank written
+  in one pass; the song 2624 bytes, 31 KB left. Opened and played: CPU
+  **21 to 39 %** on the three melodic instruments alone (max 43), **50
+  to 55** once bass, kick and hat join (62), **54 to 63** on the full
+  eight tracks, **max 77** -- KIDS is 79, and for the same reason: the
+  sample tracks all stay on CPU0 with their chains. Eight sample voices
+  at once are comfortable; much more is not. The balance was set by peak
+  here, not by ear on the panel.
+- **The balance is the track volumes', not the files'**: normalised to
+  -1 dBFS, the 909 hat came out as loud as the kick (peak 978 against
+  15474 at the volumes a moondaw mix suggests). Set by peak, hit by hit:
+  kick 12379, snare 8160, bass 10853, piano 10189, marimba 6885, hat
+  2668, clap 3278, then everything scaled 0.8 for headroom.
+- **One second a sample shows**: the piano, bass, marimba and kalimba are
+  all longer in moondaw, and what plays is their first second with a
+  5 ms fade. Short notes do not notice. Worth hearing before deciding
+  whether stage 2 needs longer samples or loops more than it needs
+  CHOOSE SAMPLE.
+- **No screen for a sample yet**: nothing on the device cuts, trims or
+  sets a start point. The tool does the only trimming there is (silence
+  off both ends, a second at most, normalise), so a sample is cut on the
+  computer before it is sent. `begin`, `loop` and `ping` ride in the
+  file and are not played.
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still

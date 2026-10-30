@@ -739,7 +739,7 @@ def fm1_kit(trk):
     os.makedirs(build, exist_ok=True)
     exe = os.path.join(build, "fm_render")
     src = [os.path.join(ROOT, p) for p in (
-        "tests/fm_render.c", "core/song.c", "core/trk.c", "core/synth.c", "core/fx.c", "core/player.c", "core/drum.c")]
+        "tests/fm_render.c", "core/song.c", "core/trk.c", "core/synth.c", "core/fx.c", "core/player.c", "core/drum.c", "core/sampler.c", "core/bank.c", "core/store.c")]
     subprocess.check_call(["cc", "-std=c11", "-O2", *src, "-o", exe])
     raw = os.path.join(build, trk.replace(".trk", ".wav"))
     subprocess.check_call([exe, os.path.join(HERE, trk), raw, str(BARS * 16 * ROW + 0.5)])
