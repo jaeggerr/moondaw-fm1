@@ -2804,6 +2804,36 @@ no instrument library to edit, and the page edits a song file.
   and `ping` are carried and not shown, since the FM-1 does not play
   them.
 
+## 2026-10-30 — the page in front of the machine
+
+`web/songedit/` had never seen an FM-1: it was written against
+`core/trk.c` and checked against it. Two halves of it exist only on
+hardware -- reading the bank's index over the link, and sending a song --
+so both were run on the device, with its 20-sample bank and its 12 songs.
+
+The index reads. The page says `20 samples, 159 KB, from the FM-1` and
+names them in the order `tools/fm1_samples.py list` names them, durations
+and all. That the list is the machine's and not the file's shows in the
+zone picker: SMPL-DEMO names 14 samples, the bank holds 20, and the six
+the song never mentions -- `tr9_crash`, `tr9_htom`, `tr9_ltom`,
+`tr9_mtom`, `tr9_ohh`, `tr9_rim` -- are offered under the song's own.
+
+The song goes and comes back unchanged. The piano's third zone
+(`A#3 D#4 root C-4`) moved from `pf_c4` to `marimba_c4` and went over
+WebMIDI as ZONETEST, 2714 bytes; `fm1_send.py --get` brought back 2714
+bytes `diff` calls identical, and the page's own bytes and the ones
+written here agree by SHA-256. On the device it is audibly not a piano
+any more, and only just: the changed zone holds one note of three in
+three of the four chords and two in the fourth, so what is heard is a
+piano chord with a bell in it, which is what that zone means.
+
+One thing the hardware taught that no test had. Dropping the last
+reference to a sample drops its `smp` line, so the file went from 14
+names to 13 and from 2738 to 2714 bytes -- and the page's song line said
+2714 bytes beside `14 sample names`. Every other number on that line is
+about the file as the FM-1 writes it; that one is now too
+(`samplesUsed()`, the writer's own test).
+
 ## Open
 
 - SMPL, stage 2: CHOOSE SAMPLE and a SAMPLES page; INSTRUMENT still
@@ -2812,8 +2842,13 @@ no instrument library to edit, and the page edits a song file.
   `web/songedit/` now does the zones (30/10), which is where the map
   belongs; the device's own editing is the open part.
 - `web/songedit/`: the editor page, lossless against `core/trk.c` over
-  18 songs in `make test`. Never run against an FM-1: sending a song and
-  reading the bank's index over the link are untried on hardware.
+  18 songs in `make test`. On the device (30/10, Chrome, macOS): the
+  bank's index reads, and a song sent over WebMIDI came back from
+  `--get` byte for byte (above). Not yet tried: a song the flash has no
+  room for, a bank near `BANK_MAX`, Windows, Linux, Edge. Open to taste:
+  `replace a song of that name` is ticked by default, so a name that
+  collides overwrites -- the `confirm()` says so, but the safer default
+  would be off.
 - The voice (VOX): the screens that do not know it sounds (above);
   syllables are written on the device since 29/10.
 - DRUM in moondaw (the same `drum_voice.inc`), then its songs on it;
