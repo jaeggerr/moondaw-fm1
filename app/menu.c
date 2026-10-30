@@ -37,10 +37,11 @@ static struct {
 static int nrows, open_row;
 static int cur, top, asking, pending; /* pending: the row the question is about */
 enum { ASK_NONE, ASK_OPEN, ASK_PLAY, ASK_HOME }; /* what the question leads to once answered */
-/* Losing changes is always a hold on this machine, never a press: a button
- * hit on a question nobody read must not destroy (30/10). HOME's own hold. */
-enum { LOSE_HOLD = 36 };
-static int ask_held;   /* frames HOME has been down, once the question is armed */
+/* HOME again leaves without keeping the changes; every other button is
+ * stay, so a press on a question nobody read lands on stay eleven times
+ * out of twelve. A hold was asked for first and taken back: "le home
+ * maintenu est inutile vu que de toute facon tous les autres boutons
+ * annulent deja" (30/10). It cost the one reflex of tapping HOME twice. */
 static bool ask_armed; /* HOME let go since the question opened -- it opened under a held HOME */
 static uint32_t prev_btns;
 static int peak; /* the worst block since PLAY, held */
@@ -121,7 +122,6 @@ void menu_ask_home(void)
     opts = deleting = naming = listing = false;
     asking = ASK_HOME;
     pending = open_row;
-    ask_held = 0;
     ask_armed = false;
     prev_btns = 0xFFFFFFFFu;
     gfx_invalidate();
@@ -274,7 +274,7 @@ static void draw_question(void)
     gfx_text(F_COND20, TEXT_X, y, app_name, C_FX);
     gfx_text(F_COND20, TEXT_X, y += ROW, "is not saved.", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", C_TEXT);
-    gfx_text(F_COND20, TEXT_X, y += ROW, "HOME held  lose them", C_TEXT);
+    gfx_text(F_COND20, TEXT_X, y += ROW, "HOME again  lose them", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", C_DIM);
     if (asking == ASK_HOME) {
         gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then puts the song down", C_DIM);
@@ -412,43 +412,38 @@ int menu_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     if (asking) {
-        /* SAVE keeps the changes, HOME held loses them, anything else is
-         * "stay" -- PLAY stopping what plays as well. A press of HOME is a
-         * let-go before the hold is through, so it stays (30/10). */
-        bool home = (in->btns >> PB_HOME & 1u) != 0;
+        /* SAVE keeps the changes, HOME again leaves without them, anything
+         * else is "stay" -- PLAY stopping what plays as well. The question
+         * opens under the held HOME that reached the root, so nothing counts
+         * until that one has been let go (30/10). */
         int then = asking;
         bool answered = false, decided = false;
 
         if (btns & 1u << PB_PLAY && player_playing())
             player_stop();
-        if (!home)
+        if (!(in->btns >> PB_HOME & 1u))
             ask_armed = true;
-        if (btns & 1u << PB_SAVE) {
-            answered = app_save() == 0;
-            decided = true;
-        } else if (ask_armed && home) {
-            if (++ask_held < LOSE_HOLD) { /* still going down: not an answer yet */
+        {   /* "anything else" is anything: the keys and every knob, not the
+             * buttons alone -- the line says so, so it had better be true. */
+            bool touched = btns || in->keys;
+            for (int e = 0; e < PLAT_ENCS; e++)
+                touched |= in->enc[e] != 0;
+            if (!ask_armed || !touched) {
                 gfx_frame(draw);
                 return MENU_STAY;
             }
-            answered = decided = true;
-        } else if (ask_armed && ask_held) { /* let go early: a press, which is stay */
-            decided = true;
-        } else if (!btns || !ask_armed) {
-            if (!btns && !in->enc[PE_SELECT]) {
-                gfx_frame(draw);
-                return MENU_STAY;
-            }
-            decided = ask_armed;
-        } else {
-            decided = true;
         }
+        if (btns & 1u << PB_SAVE)
+            answered = app_save() == 0, decided = true;
+        else if (btns & 1u << PB_HOME)
+            answered = decided = true;
+        else
+            decided = true; /* anything else: stay */
         if (!decided) {
             gfx_frame(draw);
             return MENU_STAY;
         }
         asking = ASK_NONE; /* "stay": the list as it was, the cursor where it was */
-        ask_held = 0;
         if (then == ASK_HOME) {
             /* Saved or lost, the song is put down -- that is what reaching
              * the root means now. Unanswered, the hand goes back into it. */
