@@ -56,6 +56,12 @@ int main(void)
 {
     trk_load(&app_song, trk, sizeof trk - 1, NULL);
     player_init(&app_song);
+    /* The knob's default moved to English on 30/10, the file's meaning did
+     * not: a `.trk` that never wrote an `accent` line still means French,
+     * as every song written until then was written. ROBOT is such a voice. */
+    CHECK("a voice read from a file with no accent line is French",
+          app_song.instruments[5].engine == ENGINE_VOX &&
+              app_song.instruments[5].accent == VOX_ACCENT_FR);
     instrument_open(3, 0);
     go();
 
@@ -100,13 +106,19 @@ int main(void)
     CHECK("a turn back from SMPL is WAVE, not the first of the list", I3.engine == ENGINE_WAVE);
     enc(PE_K3, 2);
     CHECK("then the voice", I3.engine == ENGINE_VOX);
+    CHECK("a voice made on the ENGINE knob sings in English (30/10)", I3.accent == VOX_ACCENT_EN);
     enc(PE_SELECT, 4);
     CHECK("a voice has its VOICE row: tract and accent", I3.engine == ENGINE_VOX);
     enc(PE_K2, 1);
-    enc(PE_K3, 1);
-    CHECK("the accent goes to EN", I3.accent == VOX_ACCENT_EN);
+    enc(PE_K3, -1);
+    CHECK("the ACCENT knob still turns it to FR", I3.accent == VOX_ACCENT_FR);
     enc(PE_SELECT, -4);
     enc(PE_K2, -1);
+    enc(PE_K3, -1);
+    CHECK("a turn away from the voice is SMPL", I3.engine == ENGINE_SAMPLE);
+    enc(PE_K3, 1);
+    CHECK("and a turn back is the voice again", I3.engine == ENGINE_VOX);
+    CHECK("away from VOX and back keeps the accent he chose", I3.accent == VOX_ACCENT_FR);
     enc(PE_K3, 1);
     CHECK("then a drum kit", I3.engine == ENGINE_DRUM);
     enc(PE_K2, 1);
@@ -219,6 +231,22 @@ int main(void)
         CHECK("the song has the one zone, not a second", app_song.nzones == 1);
     }
 
+    /* ROBOT, the voice the file carried with no `accent` line: French, and
+     * the screen must not turn it English behind his back. Only a voice
+     * MADE on the knob starts in English (30/10). */
+    instrument_open(5, 0);
+    go();
+    CHECK("the file's own voice opens in French", app_song.instruments[5].accent == VOX_ACCENT_FR);
+    enc(PE_SELECT, 1);
+    enc(PE_K3, -1);
+    CHECK("one turn down from the voice is SMPL", app_song.instruments[5].engine == ENGINE_SAMPLE);
+    enc(PE_K3, 1);
+    CHECK("and back to the voice", app_song.instruments[5].engine == ENGINE_VOX);
+    CHECK("a voice from a file turned away and back is French still",
+          app_song.instruments[5].accent == VOX_ACCENT_FR);
+
+    instrument_open(3, 0);
+    go();
     CHECK("GLO asks for the PROJECT", press(PB_GLO) == INSTRUMENT_PROJECT);
     instrument_resume();
     go();
