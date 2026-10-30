@@ -105,10 +105,18 @@ static void value_of(int k, char *s)
 /* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
-    char s[STORE_NAME + 4];
+    char s[STORE_NAME + 4], n[12];
+    int lost = app_not_carried();
     grid_clear();
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (lost)
+        /* What the file had that this machine does not carry, and that a
+         * SAVE from here would write the song without. It stands in the
+         * corner as long as the song is the one that arrived short: the
+         * screen of the project as a whole is where it belongs, the old
+         * SONG header having been replaced by one with no room for it. */
+        grid_corner(ui_dec(n, lost), C_FX, "NOT CARRIED", C_FX);
     else
         grid_corner("PROJECT", C_DIM, 0, 0);
     if (naming) {
