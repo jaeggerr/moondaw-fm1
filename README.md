@@ -169,7 +169,8 @@ docs/        studies and notes; NOTES.md is the design diary
 
 ## Credits and licence
 
-GPL-3.0-only (`LICENSE`): use it, study it, change it, share it.
+GPL-3.0-only (`LICENSE`), Copyright (C) 2026 Jaeger: use it, study it,
+change it, share it.
 
 MOONDAW stands on [Felucca](https://github.com/hugelton/Felucca), the open
 firmware for the FM-1, without which none of this would run.
@@ -186,7 +187,8 @@ firmware for the FM-1, without which none of this would run.
   font8x8 (public domain).
 - Three Apache-2.0 files from JieLi's AC79 SDK are in the package.
 
-Every third-party licence is in `LICENSES/`.
+Every third-party licence is in `LICENSES/`, and `LICENSING.md` says which
+part of this tree each one covers.
 
 ## The name
 
