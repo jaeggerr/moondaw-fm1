@@ -1,0 +1,200 @@
+<meta charset="utf-8">
+<title>The battery on HOME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+
+<!--
+  MOONDAW - the battery on the FM-1's HOME.
+
+  Written as three proposals on 31/10 and kept as the record of what was
+  chosen: C, the figure and the cell under a rule. The three proposals
+  were drawn by a throwaway patch of app/menu.c, shot, and reverted; the
+  last pictures come out of the build that is in app/ now. Every one of
+  them comes from the firmware's own framebuffer (build/web/moondaw.wasm,
+  through web_fb) and not from CSS: a screen that is judged on the panel
+  is not drawn by hand first.
+-->
+
+<style>
+:root{
+  --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --dim:#5A6470; --accent:#7FD962; --title:#62C8D9; --fx:#F0BE5A; --mute:#9E5555;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose);
+  font-family:var(--sf); font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:clamp(36px,6vw,56px); line-height:.98; color:var(--prose-hi); text-wrap:balance; }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; text-wrap:balance; }
+h2 em{ font-style:normal; color:var(--accent); }
+section{ margin-top:76px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--title); display:block; margin-bottom:8px; }
+.budget{ display:grid; margin-top:26px; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+@media (min-width:760px){ .budget{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.budget > div{ padding:14px 20px 14px 0; min-width:0; }
+@media (min-width:760px){ .budget > div + div{ padding-left:20px; border-left:1px solid var(--rule); } }
+.budget .k{ display:block; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; color:var(--title); }
+.budget .k.no{ color:var(--mute); } .budget .k.yes{ color:var(--accent); }
+.budget p{ margin:0; font-size:14px; }
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:2px; background:var(--dim); }
+
+/* The panel: 240 px square. Shown doubled, and once at the size it is. */
+figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
+figure img{ display:block; width:480px; max-width:100%; height:auto; image-rendering:pixelated;
+  border-radius:4px; box-shadow:0 0 0 2px #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.5; max-width:480px; }
+.pair{ display:flex; gap:22px; flex-wrap:wrap; margin-top:26px; }
+.pair figure img{ width:300px; }
+.pair figcaption{ max-width:300px; }
+.stage{ margin-top:26px; }
+.actual{ margin-top:26px; display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; }
+.actual figure img{ width:240px; }
+.actual figcaption{ max-width:240px; }
+</style>
+<div class="wrap">
+  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; decided and written, 31 October 2026</div>
+  <h1>The battery, <em>on the top bar</em></h1>
+  <p class="lede">HOME has five rows and half a screen of black under them, so the charge goes
+  where there is room: <strong>a bar above the menu</strong>, the wordmark on the left, the battery
+  on the right. The menu drops by 32&nbsp;px to make way. Two things left at the same time &mdash;
+  <code>MOONDAW&nbsp;0.1</code> at the foot, now said at the top, and <code>MAX</code> at its right,
+  which SYSTEM already holds as <code>CPU&nbsp;MAX</code>. <strong>It is on the machine</strong>:
+  built, installed and read back over the link on 31&nbsp;October.</p>
+
+  <section>
+    <span class="tag">First, the thing to know</span>
+    <h2>It reads the cell &mdash; <em>and the number is a gauge, not an instrument</em></h2>
+    <p>The divider was wired all along and the HAL could read it:
+    <code>firmware/hal/fm1_adc.h</code> gives <code>FM1_ADC_BATT&nbsp;=&nbsp;3</code> on PB1,
+    ten bits. Nothing ever called it. It does now &mdash; every sixteenth frame, through the same
+    <code>/8</code> filter the MASTER pot runs through &mdash; and
+    <code>plat_battery(int&nbsp;*raw)</code> joins <code>plat_audio_load()</code> on the platform
+    surface: 0&nbsp;to&nbsp;100, or <b>&minus;1 where the machine does not know</b>, which is what
+    SDL and the browser answer.</p>
+    <p><b>What is <i>not</i> measured is the scale.</b> <code>BATT_MV_FS</code> is the cell voltage
+    that would read full scale &mdash; the converter's reference times the divider on PB1 &mdash;
+    and nothing in the chip or in Felucca documents either number. It is set to <b>6600</b>: the
+    ordinary wiring, a 2:1 divider on a 3.3&nbsp;V reference. The panel reads <b>625 counts</b>,
+    flat to the count over three minutes and under a 52&nbsp;% audio load, which is 4.03&nbsp;V and
+    84&nbsp;% under that assumption.</p>
+    <ul class="notes">
+      <li><b>The shape is right, the offset is not pinned.</b> The plausible family is a 2:1
+      divider on a 2.95&ndash;3.45&nbsp;V reference, so 625 counts is somewhere in
+      3.60&ndash;4.21&nbsp;V. Near the flat part of a lithium curve that is tens of points.</li>
+      <li><b>One measurement fixes it.</b> <code>battraw=</code> rides the link beside
+      <code>batt=</code> for exactly this: a voltmeter on the cell, <code>fm1_ctl.py status</code>
+      at the same moment, and <code>BATT_MV_FS = mV * 1023 / raw</code>.</li>
+      <li><b>The curve is not a line.</b> A lithium cell sits near 3.7&nbsp;V for most of its life,
+      so the percentage goes through the ordinary open-circuit curve, every 10&nbsp;% from empty to
+      full, interpolated between two points &mdash; not a line from 3.0 to 4.2, which would read
+      90&nbsp;% for hours and then fall off a cliff.</li>
+      <li><b>Charging is not detected.</b> No VBUS sense goes through the HAL, so a cell that is
+      filling looks like a cell that is full.</li>
+    </ul>
+    <figure class="actual" style="display:block"><img src="home/8-panel.png" style="width:480px"
+      alt="A photograph of the FM-1's own panel: MOONDAW, 84% and the cell, LEOMOTEUR, 12 projects">
+      <figcaption>The real panel, read back over the link on 31/10 &mdash; not the simulator.
+      84 %, LEOMOTEUR, twelve projects.</figcaption></figure>
+  </section>
+
+  <section>
+    <span class="tag">In all three</span>
+    <h2>The mark, <em>a little like the app</em></h2>
+    <p>The Swift bar carries a pixel wordmark &mdash; gold MOON with crescent O's, cyan DAW, a gold
+    cursor &mdash; and the FM-1 already has that drawing: <code>app/logo.h</code>, which the splash
+    blows up three times. <b>The one-line version of it is 130&nbsp;x&nbsp;16</b>, over half of a
+    240&nbsp;px screen, so the bar quotes the app rather than copying it: the word in the firmware's
+    own CONDENSED&nbsp;14, cut in the app's two inks, with the cursor after it. Same colours, same
+    reading, a fifth of the width and no new asset to carry.</p>
+  </section>
+
+  <section>
+    <span class="tag">Proposal A &mdash; not taken</span>
+    <h2>The charge <em>in figures</em></h2>
+    <p>Two words and a number. Nothing drawn that type cannot say, so the bar is one line of
+    CONDENSED on an empty strip.</p>
+    <figure class="stage"><img src="home/1-figures.png" alt="HOME: MOONDAW at the top left, 78% at the top right, the menu below">
+      <figcaption>A &mdash; 78 % in CONDENSED 14, right edge on the menu's own margin.</figcaption></figure>
+    <div class="budget">
+      <div><span class="k yes">What it gains</span><p>Exact. You read 78 and 77 apart, which no bar of pixels lets you do. Nothing new to draw.</p></div>
+      <div><span class="k no">What it costs</span><p>You have to <i>read</i> it. A number says nothing at a glance across a desk, and two digits beside a wordmark look like a version number.</p></div>
+      <div><span class="k">Precision it claims</span><p>Honest to a percent &mdash; which the curve behind it will not be, for a while.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">Proposal B &mdash; not taken</span>
+    <h2>A cell <em>that empties</em></h2>
+    <p>The same bar, with a 26&nbsp;x&nbsp;13 cell on its side: a grey outline, a nub, and white
+    inside it as far as the charge goes. No figure.</p>
+    <figure class="stage"><img src="home/2-pill.png" alt="HOME: MOONDAW at the top left, a battery pictogram at the top right">
+      <figcaption>B &mdash; the outline C_DIM, what is left C_TEXT.</figcaption></figure>
+    <div class="budget">
+      <div><span class="k yes">What it gains</span><p>Read without reading: a glance from across the room says full, half or nearly out. It is the one thing on the bar that is not type.</p></div>
+      <div><span class="k no">What it costs</span><p>About eight pixels of resolution. 78 and 65 look alike. And it is a second visual idiom on a screen made of words.</p></div>
+      <div><span class="k">Precision it claims</span><p>Only what it can keep, which suits a gauge nobody has calibrated.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">Proposal C &mdash; chosen, and written</span>
+    <h2>Both, <em>under a rule</em></h2>
+    <p>The figure and the cell together, and a one-pixel rule at y&nbsp;=&nbsp;28 that makes the
+    strip a bar rather than a gap. The glance and the number: the cell is found without looking for
+    it, the figure answers the question the cell raises.</p>
+    <figure class="stage"><img src="home/5-chosen.png" alt="HOME: MOONDAW, then 78% and a battery pictogram, a thin rule under the bar">
+      <figcaption>C, out of the build that is in app/ now. The rule is C_TRACK, the same grey as a scroll bar's groove.</figcaption></figure>
+    <div class="budget">
+      <div><span class="k yes">What it gains</span><p>Both readings, and a bar that is visibly a bar: the rule stops the cursor's green band from being the first edge on the screen.</p></div>
+      <div><span class="k no">What it costs</span><p>Three things in a strip that held none this morning, and the same fact said twice.</p></div>
+      <div><span class="k">What it polls</span><p>One conversion a frame, on the root only. A frame is DRAWN fifteen times, once a band, and <code>tests/menu_test.c</code> counts the reads so it stays one.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">The two other states</span>
+    <h2>Nearly out, <em>and not known</em></h2>
+    <p>At or under 15&nbsp;% the ink goes to <code>C_MUTE</code>, the red this machine already uses
+    for a muted track and for DELETE &mdash; the figure and the cell both. And where the machine
+    cannot say, it says nothing: the right half of the bar is empty, which is the FM-1 today.</p>
+    <div class="pair">
+      <figure><img src="home/6-low.png" alt="The same bar reading 9%, in red">
+        <figcaption>9 %. The cell keeps its grey outline, so what is left reads as a sliver and not as an empty box.</figcaption></figure>
+      <figure><img src="home/7-unknown.png" alt="The same bar with nothing on its right">
+        <figcaption>&minus;1. What SDL and the browser show, having no cell to read.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">Not touched</span>
+    <h2>What <em>stays as it is</em></h2>
+    <ul class="notes">
+      <li><b>The foot while a song plays.</b> The profile line &mdash; <code>T O V C R E W</code>,
+      the worst block stage by stage &mdash; is still there, on the root and in the list. Only the
+      idle line, the version, left the root, and <code>MAX</code> left both.</li>
+      <li><b>PROJECTS keeps its version at the foot.</b> It has no top bar, and it does not poll the
+      cell either: nothing there would show it.</li>
+      <li><b>No bar anywhere else.</b> SONG, PHRASE and PATTERN are full to the edges; the charge
+      lives on HOME, which is where one lands and where there is room.</li>
+    </ul>
+  </section>
+</div>

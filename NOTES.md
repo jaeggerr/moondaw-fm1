@@ -3303,3 +3303,45 @@ them; they drive EDIT + OP5 now, and each gained a check that EDIT alone —
 tapped or held past the old threshold — leaves the SELECTION exactly as it
 was. The LED check that read "lit once a tap locks it on" now reads OP5's
 own lamp.
+
+## 2026-10-31 — the battery on HOME, and what its number is worth
+
+- **The bar.** Three proposals shot from the firmware (`proto/home.html`),
+  C chosen on the panel: the wordmark left, the charge as a figure AND a
+  cell, a rule under them at y=28. The rows start at y=32. The foot gave
+  up the version (the bar says MOONDAW now) and `MAX` (SYSTEM holds the
+  same number as CPU MAX); the profile line while a song plays stays, and
+  PROJECTS, which has no bar, keeps the version.
+- **`plat_battery(int *raw)`** joins `plat_audio_load()` on the platform
+  surface: 0..100, or -1 where the machine does not know, which is what
+  SDL and the browser answer. **-1 draws no gauge at all** — not an empty
+  cell, which reads as a flat one, and not a dash, which reads as a
+  fault.
+- **It is polled once a frame and only on the root.** A screen is DRAWN
+  fifteen times for one frame, once a band; a gauge read from a draw
+  would be fifteen conversions on the ADC the MASTER pot shares.
+  `tests/menu_test.c` counts the reads so it stays one.
+- **The read.** PB1, SARADC channel 3 (`fm1_adc.h`), every sixteenth
+  frame, the conversion right after the channel moves dropped, then the
+  same `/8` filter the MASTER pot runs through.
+- **BATT_MV_FS = 6600 IS AN ASSUMPTION, NOT A MEASUREMENT.** It is the
+  cell voltage that would read full scale: the converter's reference
+  times the divider on PB1. Nothing in the chip or in Felucca documents
+  either, so 6600 is the ordinary wiring — a 2:1 divider on a 3.3 V
+  reference. Measured on the machine on 31/10: **625 counts**, flat to
+  the count over three minutes and under a 52 % audio load (which proves
+  less than it looks: one count is 6.45 mV and the sag under that load is
+  smaller than that). 625 counts under the assumption is 4.03 V, so the
+  panel reads 84 %.
+- **What the number is worth: the shape is right, the offset is not
+  pinned.** The plausible family is a 2:1 divider on a 2.95–3.45 V
+  reference, so 625 counts is somewhere in 3.60–4.21 V. Near the flat
+  part of a lithium curve that is tens of points.
+- **How to pin it, in one measurement.** `battraw=` is on the link beside
+  `batt=` for exactly this. Put a voltmeter on the cell, read
+  `fm1_ctl.py status` at the same moment, and
+  `BATT_MV_FS = mV * 1023 / raw`. A second point near empty would also
+  check the curve itself. Until then the gauge is a gauge, not an
+  instrument.
+- **Charging is not detected.** No VBUS sense goes through the HAL, so a
+  cell that is filling looks like a cell that is full.

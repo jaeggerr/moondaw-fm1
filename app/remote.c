@@ -71,6 +71,13 @@ static uint32_t status(uint8_t *tail, bool reset)
     t = put_num(t, end, "step=", player_row());
     t = put_num(t, end, "cpu=", app_cpu);
     t = put_num(t, end, "max=", app_worst);
+    {   /* the cell: the percentage HOME shows, and the converter's own
+         * number beside it -- that one is what a calibration is read
+         * from, and what says the gauge is wired at all. */
+        int raw, pct = plat_battery(&raw);
+        t = put_num(t, end, "batt=", pct);
+        t = put_num(t, end, "battraw=", raw);
+    }
     t = put_num(t, end, "bpm=", song->bpm);
     t = put_num(t, end, "phrases=", song->arrange_len);
     t = put_num(t, end, "tracks=", song->num_tracks);

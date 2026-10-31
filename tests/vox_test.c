@@ -30,6 +30,7 @@ void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
 void plat_led_level(int l, int v) { (void)l; (void)v; }
 int plat_audio_load(int *worst) { *worst = -1; return -1; }
+int plat_battery(int *raw) { if (raw) *raw = -1; return -1; }
 int plat_sysex_get(const uint8_t **p, uint32_t *n) { (void)p; (void)n; return 0; }
 void plat_sysex_done(void) {}
 int plat_sysex_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; return -1; }

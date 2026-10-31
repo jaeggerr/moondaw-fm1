@@ -170,6 +170,46 @@ int plat_audio_load(int *worst)
     return (int)(audio_cpu_q8 * 100u / 256u);
 }
 
+/* The cell, PB1 on SARADC channel 3 (fm1_adc.h). Held << 4 like the
+ * MASTER pot and filtered the same way: a cell under a load that starts
+ * and stops swings by tens of millivolts, and a gauge that followed
+ * that would never sit still. Read every sixteenth frame (batt_read,
+ * beside the pot's own read) -- four times a second is faster than a
+ * battery moves. -1 until the first conversion lands. */
+static int32_t batt_acc = -1;
+static uint32_t batt_tick;
+
+/* Counts to millivolts: BATT_MV_FS is the cell voltage that would read
+ * full scale -- the converter's reference times the divider on PB1. It
+ * is the one number that cannot be read out of the chip, so it was
+ * measured on the machine instead (31/10, see NOTES.md).
+ *
+ * Millivolts to a percentage is not a straight line: a lithium cell
+ * sits near 3.7 V for most of its life, so a line from 3.0 to 4.2 would
+ * read 90 % for hours and then fall off a cliff. BATT_CURVE is the
+ * ordinary open-circuit curve, every 10 % from empty to full, and the
+ * reading is interpolated between two of its points. */
+#define BATT_MV_FS 6600
+static const uint16_t BATT_CURVE[11] = {
+    3270, 3610, 3690, 3730, 3760, 3800, 3850, 3920, 3990, 4080, 4190
+};
+
+int plat_battery(int *raw)
+{
+    int r = batt_acc < 0 ? -1 : (int)(batt_acc / 16), mv, i;
+    if (raw)
+        *raw = r;
+    if (r < 0)
+        return -1;
+    mv = r * BATT_MV_FS / 1023;
+    if (mv <= BATT_CURVE[0])
+        return 0;
+    for (i = 1; i < 11; i++)
+        if (mv < BATT_CURVE[i])
+            return (i - 1) * 10 + (mv - BATT_CURVE[i - 1]) * 10 / (BATT_CURVE[i] - BATT_CURVE[i - 1]);
+    return 100;
+}
+
 void plat_led_key(int key, int on) { fm1_led_key(14u + (uint32_t)key, on); }
 void plat_led_btn(int btn, int on) { fm1_led_key(panel.btn[btn], on); }
 
@@ -250,12 +290,26 @@ static void midi_drain(void)
     }
 }
 
+static void batt_read(void)
+{
+    int32_t b;
+    if (++batt_tick < 16u)
+        return;
+    batt_tick = 0;
+    (void)fm1_adc_read(FM1_ADC_BATT);   /* the channel just moved: dropped */
+    b = fm1_adc_read(FM1_ADC_BATT);
+    if (b < 0)
+        return;
+    batt_acc = batt_acc < 0 ? b * 16 : batt_acc + (b * 16 - batt_acc) / 8;
+}
+
 static void input_read(PlatInput *in)
 {
     uint32_t i, raw = fm1_in.buttons;
     int32_t a = fm1_adc_read(FM1_ADC_MASTER);
     if (a >= 0)
         master_knob += (a * 16 - master_knob) / 8;
+    batt_read();
     in->keys = fm1_in.notes;
     in->btns = 0;
     for (i = 0; i < NB; i++)

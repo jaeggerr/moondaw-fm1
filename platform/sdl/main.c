@@ -70,6 +70,14 @@ int plat_audio_load(int *worst)
     return -1;
 }
 
+/* A laptop has a cell; this is not it. HOME draws no gauge here. */
+int plat_battery(int *raw)
+{
+    if (raw)
+        *raw = -1;
+    return -1;
+}
+
 void plat_led_key(int key, int on)
 {
     led_keys = on ? led_keys | 1u << key : led_keys & ~(1u << key);

@@ -122,6 +122,18 @@ int plat_sysex_send(const uint8_t *p, uint32_t n);
  * desk. */
 int plat_audio_load(int *worst);
 
+/* What is left in the cell, 0..100, or -1 where the machine does not
+ * know -- the simulators. HOME's top bar shows it and draws nothing when
+ * it is -1: a gauge that guesses is worse than no gauge.
+ *
+ * `raw` (may be null) gets the converter's own number, 0..1023 on the
+ * FM-1 and -1 elsewhere. That is the one a calibration is read from, so
+ * the link reports it beside the percentage.
+ *
+ * Polled by the screen that shows it, once a frame, never from a draw --
+ * a draw runs fifteen times for one frame. */
+int plat_battery(int *raw);
+
 /* What a backend calls. app_frame runs in the main loop, about 60 times
  * a second. app_audio runs in the audio interrupt (a thread on SDL, the
  * worklet in the browser) and may preempt app_frame at any point:
