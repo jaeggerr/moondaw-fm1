@@ -11,6 +11,7 @@
 
 enum { SONGVIEW_STAY, SONGVIEW_PATTERN, SONGVIEW_MIXER, SONGVIEW_PHRASE, SONGVIEW_PROJECT, SONGVIEW_BACK };
 int songview_entry(void); /* the phrase under the cursor */
+int songview_top(void);   /* the first phrase of the page: where the view is */
 
 void songview_open(bool reset_cursor);
 /* Leaving by HOME: a block panel open is closed as by GLO. */

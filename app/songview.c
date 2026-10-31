@@ -1045,6 +1045,30 @@ static void follow_marked(void)
     }
 }
 
+/* And the phrase that plays follows the same rule: what says it is on the
+ * page is a SLOT, not a row. grid_follow_play counts rows -- it holds the
+ * view still while the playhead is already below the last slot, as many
+ * phrases as the page has markers, then jumps past them (LEOMOTEUR, its
+ * INTRO and its VERSE, 1/11). So: the page turns when the phrase has no
+ * slot, and the last one still comes back up to fill the grid, but never
+ * so far that a marker pushes the playhead off its foot. */
+static void follow_play_marked(int play)
+{
+    lay_out(top);
+    if (slot_of(play, false) >= 0)
+        return;
+    top = play;
+    lay_out(top);
+    while (top > 0 && slots < GRID_ROWS) {
+        int up = top - 1;
+        lay_out(up);
+        if (slot_of(play, false) < 0)
+            break;
+        top = up;
+    }
+    lay_out(top);
+}
+
 /* KNOB 4 on a marker: how many phrases the section holds. Right swallows
  * the row below when it is in no section of its own, left gives the last
  * one back. The one number a section has, on the knob that means how
@@ -1388,6 +1412,7 @@ static void draw(void)
 
 /* -------------------------------------------------------------- api --- */
 int songview_entry(void) { return row; }
+int songview_top(void) { return top; }
 
 void songview_open(bool reset_cursor)
 {
@@ -1696,7 +1721,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
                 ? 0
                 : still < GRID_FOLLOW_IDLE ? still + 1 : still;
     if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with the phrase that plays */
-        grid_follow_play(&top, play_row, song->arrange_len, GRID_ROWS);
+        follow_play_marked(play_row);
     else
         follow_marked();
     {

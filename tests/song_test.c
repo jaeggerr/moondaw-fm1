@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "../app/app.h"
+#include "../app/grid.h"
 #include "../app/loop.h"
 #include "../app/songview.h"
 #include "../app/undo.h"
@@ -91,6 +92,16 @@ static void pump(void)
 }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 #define E(i) (app_song.arrangement[i])
+/* The slots of the grid the page spends from phrase `top` down to `play`:
+ * one for the phrase, one more where a section opens over it. Past
+ * GRID_ROWS the phrase is below the floor, whatever the row count says. */
+static int slots_to(int top, int play)
+{
+    int n = 0;
+    for (int r = top; r <= play; r++)
+        n += 1 + (E(r).section != SECTION_NONE && (r == 0 || E(r - 1).section != E(r).section));
+    return n;
+}
 
 int main(void)
 {
@@ -554,6 +565,52 @@ int main(void)
                   E(r0).section == SECTION_NONE && E(r0).kind == ENTRY_PHRASE);
         enc(PE_ALGO, -1);
         CHECK("and ALGO to the left brings it back", app_song.section_count == 1);
+    }
+
+    /* The view follows the phrase that plays through the markers too
+     * (1/11): a marker costs a slot of the grid, so the eight slots hold
+     * fewer than eight phrases as soon as a section opens on the page.
+     * Counting rows, the view sat still while the playhead was already
+     * below the last slot -- one phrase for every marker above it -- and
+     * then jumped past them. LEOMOTEUR, its INTRO and its VERSE. */
+    {
+        static const char marked[] =
+            "version 3\nbpm 120\nticks 6\ntracks 1\n"
+            "pat t0 00 len 16\n00 C-4\n"
+            "sec 00\nname INTRO\n"
+            "arr 00 steps auto\nt0 00\narr 01 steps auto\nt0 00\narr 02 steps auto\nt0 00\n"
+            "sec ---\narr 03 steps auto\nt0 00\n"
+            "sec 01\nname VERSE\n"
+            "arr 04 steps auto\nt0 00\narr 05 steps auto\nt0 00\narr 06 steps auto\nt0 00\n"
+            "sec ---\n"
+            "arr 07 steps auto\nt0 00\narr 08 steps auto\nt0 00\narr 09 steps auto\nt0 00\n"
+            "arr 0A steps auto\nt0 00\narr 0B steps auto\nt0 00\n";
+
+        trk_load(&app_song, marked, sizeof marked - 1, NULL);
+        player_init(&app_song);
+        songview_open(true);
+        CHECK("the marked song comes back whole", app_song.arrange_len == 12 && app_song.section_count == 2);
+
+        /* INTRO over phrase 00 and VERSE over 04: from the top of the song
+         * the eight slots hold 00 to 05, and 06 is already off the page */
+        player_play_song(6, false);
+        pump();
+        for (int i = 0; i <= GRID_FOLLOW_IDLE; i++) /* the hand still: the view is the song's */
+            go();
+        CHECK("the page turns on the phrase that plays, the markers counted",
+              player_entry() == 6 && songview_top() <= 6 && slots_to(songview_top(), 6) <= GRID_ROWS);
+        CHECK("and the page it turns to is a full one", songview_top() == 4);
+
+        /* the last phrase: the page comes up to fill the grid, but never so
+         * far that the marker above pushes the playhead off its foot */
+        player_play_song(11, false);
+        pump();
+        for (int i = 0; i <= GRID_FOLLOW_IDLE; i++)
+            go();
+        CHECK("the last phrase of a marked song stays on the page",
+              songview_top() == 5 && slots_to(songview_top(), 11) <= GRID_ROWS);
+        player_stop();
+        pump();
     }
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
