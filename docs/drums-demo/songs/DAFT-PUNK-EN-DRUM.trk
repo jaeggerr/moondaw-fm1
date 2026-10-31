@@ -274,7 +274,7 @@ pat t6 00 len 64
 04 A-4 i07 'AQ
 08 C#5 i07 '.+2
 0C B-4 i07 '.M2
-0E A-4 i07 'CINZ
+0E A-4 i07 'CIN
 14 OFF
 20 B-2 i09 '.2
 24 C#3 i09 'G7N
@@ -292,7 +292,7 @@ pat t6 01 len 64
 12 C#4 i07 'AQ
 14 B-3 i07 '.+2
 16 A-3 i07 '.M2
-18 F#3 i07 'CINZ
+18 F#3 i07 'CIN
 1C OFF
 20 E-3 i09 '.2
 24 D-3 'G7N
@@ -310,7 +310,7 @@ pat t6 02 len 64
 02 F#3 i07 'AQ
 04 A-3 i07 '.D2
 06 C#4 i07 '.M2
-08 B-3 i07 'CINZ
+08 B-3 i07 'CIN
 0B OFF
 10 A-3 i07 '.2
 12 F#3 i07 'G7N
@@ -325,7 +325,7 @@ pat t6 02 len 64
 32 C#4 i07 'AQ
 34 E-4 i07 '.D2
 36 G#3 i07 '.M2
-38 C#4 i07 'CINZ
+38 C#4 i07 'CIN
 3C OFF
 
 pat t6 03 len 64
@@ -339,7 +339,7 @@ pat t6 03 len 64
 11 --- fRET03 fGAT01
 12 --- fRET03 fGAT01
 13 A-3 'N
-14 C#4 i07 'CINZ fSLI08
+14 C#4 i07 'CIN fSLI08
 18 B-3 i07
 1C A-3 i07
 1F OFF
@@ -358,7 +358,7 @@ pat t7 00 len 64
 02 A-2 i08 'AQ
 04 C#3 i08 '.D2
 06 E-3 i08 '.M2
-08 D-3 i08 'CINZ
+08 D-3 i08 'CIN
 0B OFF
 10 C#3 i08 '.2
 12 A-2 i08 'G7N
@@ -373,7 +373,7 @@ pat t7 00 len 64
 32 E-3 i08 'AQ
 34 G#3 i08 '.D2
 36 B-2 i08 '.M2
-38 E-3 i08 'CINZ
+38 E-3 i08 'CIN
 3C OFF
 
 pat t7 01 len 64
@@ -438,7 +438,7 @@ pat t6 05 len 64
 0A F#2 i09 '6F
 0C F#2 'LAIN
 10 F#2 '.M2
-12 F#3 i07 'CINZ
+12 F#3 i07 'CIN
 16 F#2 i09 'AQ
 18 F#2 '.2 fRET02
 19 --- '.2 fRET02
@@ -484,7 +484,7 @@ pat t6 06 len 64
 0A F#2 i09 '6F
 0C F#2 'LAIN
 10 F#2 '.M2
-12 F#3 i07 'CINZ
+12 F#3 i07 'CIN
 16 F#2 i09 'AQ
 18 F#2 '.2
 1A F#3 i07 'LAIV
@@ -506,7 +506,7 @@ pat t6 04 len 64
 04 A-3 i07 'A
 08 C#4 i07 '.+2
 0C B-3 i07 '.M2
-0E A-3 i07 'CINZ
+0E A-3 i07 'CIN
 14 C#4 i07 fSLI08
 18 B-3 i07
 1C A-3 i07
