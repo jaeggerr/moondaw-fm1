@@ -3,9 +3,10 @@
 </p>
 
 <p align="center">
-  <b>A tracker inside a pocket synth.</b><br>
-  Firmware for the M-VAVE FM-1. Eight tracks, instruments you build yourself,<br>
-  three effects a step, and songs that are text files.
+  <b>A tracker for you and your LLM.</b><br>
+  Firmware for the M-VAVE FM-1. Eight tracks, instruments you build<br>
+  yourself, three effects a step, and songs that are text files —<br>
+  the kind an LLM can write.
 </p>
 
 <p align="center">
@@ -34,6 +35,9 @@ find out if you like it before touching your FM-1.
   has a page for every screen and every effect, on the device.
 - **Your songs are yours.** A song is a plain-text `.trk` file you can read, edit
   in any text editor, diff, keep under git and send over USB.
+- **Your LLM can write them.** A `.trk` is text a model reads and writes: ask for
+  a bassline and it lands in the file, ready to send over USB. You carve the steps
+  with your thumbs; the typing you can hand over.
 - **It sounds like more than the box suggests.** Chip voices, your own samples, a
   voice that sings the syllables you write, drums, reverb, delay and a limiter,
   all on 512 KB of RAM and no floating point.
