@@ -102,7 +102,16 @@ page; the install uses the update command `F0 22 24 35 7F F7`, as
 
 ## What changed from Felucca's page
 
-- English only; MOONDAW's names, identity and credits.
+- MOONDAW's names, identity and credits, and the skin of moondaw.com: its
+  ground, its fonts, its wordmark and its header. The page is published at
+  <https://moondaw.com/install/>, and someone who follows the button there
+  should not feel they have left the site.
+- Two languages, French and English, the way the site's other pages do it:
+  the markup ships in French, a table in the page swaps it, and the choice
+  is kept under the same `localStorage` key — reading the site in English
+  and following the button lands here in English. Felucca's page was
+  English only, and so was this one until 31/10. What is NOT translated is
+  the machine's own words: the identities, the file names, the log.
 - `fm1ota.js` rewritten to follow `fm1_install.py` function for function:
   one `install()` that finishes a cut-off update instead of a separate
   resume, the Windows port pairing, the 0.3 s wait after opening a port,

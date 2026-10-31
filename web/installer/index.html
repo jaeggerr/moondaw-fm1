@@ -1,111 +1,522 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
-     After Felucca's web installer, by Leo Kuroshita (@kurogedelic), Hügelton Instruments. -->
-<html lang="en">
+     After Felucca's web installer, by Leo Kuroshita (@kurogedelic), Hügelton Instruments.
+
+     This page is published at moondaw.com/install/ (moondaw/tools/site/build.sh
+     runs make_site.py into site/install/), and it wears the site's skin and its
+     header: the ground, the fonts, the wordmark, the two flags. Someone who
+     clicks "Open the installer" should not feel they have left.
+
+     TWO LANGUAGES, as the site's three other pages do it: the markup ships in
+     FRENCH, English is a swap done by the table below, and the choice is kept
+     under the SAME localStorage key -- a visitor reading the site in English
+     and following the button lands here in English. There is no build step and
+     no second HTML file: a sentence changed on one side and not the other
+     shows up as an odd-looking pair on adjacent lines.
+
+     The page is also publishable on its own (GitHub Pages, any static host):
+     the fonts come from Google's CDN, the wordmark is inline, and the only
+     links out are absolute. Nothing here reaches back into the site.
+
+     WHAT IS NOT TRANSLATED: the machine's own words -- the identities
+     (FM-1_900, FM-1_015), the file names, the log. The firmware has no French,
+     and a log is a quotation.
+
+     The three modules beside this file touch no DOM: they are the protocol,
+     kept byte for byte equal to tools/fm1_install.py and checked against it by
+     tools/installer_compare.py. Nothing below changes what is sent. -->
+<html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MOONDAW installer</title>
-<meta name="description" content="Install MOONDAW on an M-VAVE FM-1 from Chrome or Edge, over USB-MIDI.">
+<title>MOONDAW — installer sur le FM-1</title>
+<meta name="description" content="Installer MOONDAW sur un M-VAVE FM-1 depuis Chrome ou Edge, par USB-MIDI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #fff; --fg: #000; --dim: #6b6b6b; --line: #ddd; --bad: #b00020; --good: #1b6e2a; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #000; --fg: #fff; --dim: #999; --line: #333; --bad: #ff6b81; --good: #6fd38a; }
+  /* The site's tokens, as site/index.html carries them. */
+  :root{
+    --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+    --accent:#7FD962; --ink:#0B1409; --dim:#5A6470; --title:#62C8D9;
+    --bad:#9E5555; --bad-hi:#D98B8B; --good:#7FD962;
+    --w-slot:rgba(200,208,200,.07);
+
+    --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+    --body:'Barlow','Helvetica Neue',Arial,sans-serif;
+    --jb:'JetBrains Mono',ui-monospace,Menlo,monospace;
   }
-  :root[data-theme="dark"] { --bg: #000; --fg: #fff; --dim: #999; --line: #333; --bad: #ff6b81; --good: #6fd38a; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
-  main { max-width: 560px; margin: 0 auto; padding: 48px 16px; }
-  h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px; letter-spacing: .02em; }
-  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 32px 0 8px; }
-  p { margin: 0 0 12px; }
-  a { color: inherit; }
-  button { font: inherit; background: var(--fg); color: var(--bg); border: 0; padding: 8px 20px; cursor: pointer; }
-  button.ghost { background: none; color: var(--fg); border: 1px solid var(--fg); padding: 7px 16px; }
-  button:disabled { opacity: .3; cursor: default; }
-  input[type=file] { font: inherit; font-size: 14px; max-width: 100%; }
-  .small { color: var(--dim); font-size: 14px; }
-  .line { padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
-  .bad { color: var(--bad); }
-  .good { color: var(--good); }
-  progress { width: 100%; height: 4px; margin-top: 16px; accent-color: var(--fg); }
-  #status { margin-top: 12px; min-height: 1.6em; overflow-wrap: anywhere; }
-  details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
-  summary { cursor: pointer; font-weight: 600; }
-  details > :not(summary) { margin-top: 12px; }
-  pre { color: var(--dim); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; max-height: 240px; overflow: auto; }
-  ol { padding-left: 20px; margin: 0 0 12px; }
-  footer { margin-top: 40px; }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--page);color:var(--prose);font-family:var(--body);
+    font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ── the site's header ───────────────────────────────────────────── */
+  header.top{border-bottom:1px solid var(--rule);position:sticky;top:0;
+    z-index:10;background:var(--page)}
+  .wrap{max-width:720px;margin:0 auto;padding:0 28px}
+  .top .wrap{display:flex;align-items:center;justify-content:space-between;
+    padding-top:16px;padding-bottom:16px}
+  .wordmark img{display:block;width:130px;height:16px;image-rendering:pixelated}
+  .topright{display:flex;align-items:center;gap:26px}
+  nav{display:flex;gap:26px;font-family:var(--jb);font-size:11px;
+    font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+  nav a{color:var(--prose)}
+  nav a:hover{color:var(--prose-hi);text-decoration:none}
+  .lang{display:flex;margin:-10px}
+  .lang button{background:none;border:0;padding:10px;cursor:pointer;
+    line-height:0;opacity:.4;transition:opacity .12s}
+  .lang button:hover{opacity:.8}
+  .lang button[aria-current="true"]{opacity:1;cursor:default}
+  .lang svg{display:block;width:22px;height:15px;
+    outline:1px solid rgba(200,208,200,.22);outline-offset:-1px}
+
+  /* ── the page ────────────────────────────────────────────────────── */
+  main{padding:56px 0 72px}
+  h1{font-family:var(--cond);font-weight:700;text-transform:uppercase;
+    letter-spacing:.01em;line-height:1.05;font-size:38px;color:var(--prose-hi);
+    margin-bottom:14px}
+  h2{font-family:var(--jb);font-size:11px;font-weight:500;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--accent);margin:40px 0 10px}
+  p{margin-bottom:12px;max-width:62ch}
+  strong,b{color:var(--prose-hi);font-weight:500}
+  em{color:var(--prose-hi);font-style:normal}
+  code{font-family:var(--jb);font-size:.82em;color:var(--prose-hi);
+    background:var(--w-slot);padding:2px 6px}
+  .small{font-size:14.5px}
+  .line{padding:10px 0;border-top:1px solid var(--rule);
+    overflow-wrap:anywhere;color:var(--prose-hi)}
+  .bad{color:var(--bad-hi)}
+  .good{color:var(--good)}
+
+  button.go{font-family:var(--jb);font-size:12px;font-weight:500;
+    letter-spacing:.12em;text-transform:uppercase;padding:13px 22px;
+    border:1px solid var(--accent);background:var(--accent);color:var(--ink);
+    cursor:pointer}
+  button.go:hover{filter:brightness(1.1)}
+  button.ghost{background:none;color:var(--accent)}
+  button.ghost:hover{background:rgba(127,217,98,.08);filter:none}
+  button.go:disabled{opacity:.3;cursor:default;filter:none}
+  input[type=file]{font-family:var(--body);font-size:14px;color:var(--prose);
+    max-width:100%}
+  label{color:var(--prose)}
+
+  /* The risk notice, as the landing page draws its own. */
+  .warn{border-left:2px solid var(--bad);background:rgba(158,85,85,.08);
+    padding:16px 18px;margin:18px 0 8px}
+  .warn p{margin:0;font-size:14.5px}
+  .warn b{color:var(--bad-hi)}
+
+  progress{width:100%;height:4px;margin-top:18px;accent-color:var(--accent);
+    background:var(--rule);border:0}
+  progress::-webkit-progress-bar{background:var(--rule)}
+  progress::-webkit-progress-value{background:var(--accent)}
+  #status{margin-top:12px;min-height:1.6em;overflow-wrap:anywhere;
+    color:var(--prose-hi)}
+  #bar[value="0"]{visibility:hidden}
+
+  details{margin-top:0;border-top:1px solid var(--rule);padding:14px 0}
+  details+details{margin-top:0}
+  summary{cursor:pointer;font-family:var(--cond);font-weight:600;
+    font-size:19px;text-transform:uppercase;letter-spacing:.02em;
+    color:var(--prose-hi)}
+  summary:hover{color:var(--accent)}
+  details>:not(summary){margin-top:12px}
+  pre{font-family:var(--jb);color:var(--dim);font-size:11.5px;
+    white-space:pre-wrap;overflow-wrap:anywhere;margin-top:10px;
+    max-height:240px;overflow:auto}
+  ol{padding-left:20px;margin-bottom:12px}
+  li{margin-bottom:6px}
+  footer{margin-top:48px;border-top:1px solid var(--rule);padding-top:20px;
+    font-size:13.5px;color:var(--dim)}
+  footer a{color:var(--prose)}
+  footer p+p{margin-top:8px}
+
+  @media (max-width:560px){
+    .wrap{padding:0 16px}
+    nav{display:none}
+    h1{font-size:30px}
+    main{padding-top:40px}
+  }
 </style>
 </head>
 <body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="wordmark" href="https://moondaw.com/" aria-label="MOONDAW">
+      <img width="130" height="16" alt="MOONDAW"
+           src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAAAQCAYAAADarae1AAABNUlEQVR4nO2YwQ3CMAxFU8QAbNEVemYMjhksR8bgzAps0Q1AlUCKrKR24h/aVH4nEPavqOMfJ8P8uL1dxOV6H1wCaVwqVpKD0tH+H/98JZ+ZI0xjUl+qQ/NpnlQ/Fyfl7IDkCkd/5xYESsdQLAT6krmi0DxprLRTa3W2WjS+0FF+8dqO1nJCiJQUby0HpWMAHIE6QakzHI3A7OFcR2tniG4cQbpAUtYc56J0DPCwiNhTqUatu2h0cg5XS/h2+N46ehczQoq1F15SDJSO8cfjYwlLERGWjtJpRS/O0cwRjL5o4ggoy0ZaP+r04zfq8Nb3DWpH0EzxcS5Kx+hsRugFzzgA16HaewTqBFxereNBZgTU2d7uCA4wLPayGBb9nraSMI1D7Cr0+y63htRAFn+WFgClYzgxH78J9iKpDL5hAAAAAElFTkSuQmCC">
+    </a>
+    <div class="topright">
+      <nav>
+        <a href="https://moondaw.com/" data-t="nav.site">Le site</a>
+        <a href="https://moondaw.com/manual.html" data-t="nav.manual">Le manuel</a>
+      </nav>
+      <div class="lang" role="group" data-t-aria="lang.group" aria-label="Langue">
+        <button type="button" data-lang="fr" aria-label="Français" title="Français">
+          <svg viewBox="0 0 60 40" aria-hidden="true">
+            <rect width="20" height="40" fill="#002654"/>
+            <rect x="20" width="20" height="40" fill="#fff"/>
+            <rect x="40" width="20" height="40" fill="#ED2939"/>
+          </svg>
+        </button>
+        <button type="button" data-lang="en" aria-label="English" title="English">
+          <svg viewBox="0 0 60 30" aria-hidden="true">
+            <clipPath id="uk-frame"><path d="M0,0 v30 h60 v-30 z"/></clipPath>
+            <clipPath id="uk-pale">
+              <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/>
+            </clipPath>
+            <g clip-path="url(#uk-frame)">
+              <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#uk-pale)"
+                    stroke="#C8102E" stroke-width="4"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+            </g>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
 <main>
-  <h1>MOONDAW</h1>
-  <p>A tracker for the M-VAVE FM-1. This page puts it on the FM-1 over USB, from Chrome or Edge on a computer. Nothing to install.</p>
-  <p class="small">Connect the FM-1 directly to the computer with a USB <em>data</em> cable, and close any other app that uses MIDI. Do not unplug it while writing.
-    Custom firmware is installed <strong>at your own risk</strong>: a failed install can leave the FM-1 unable to start (see the last section).</p>
+  <div class="wrap">
+    <h1 data-t="h1">Installer MOONDAW sur votre FM-1</h1>
+    <p data-t="intro">Cette page écrit le firmware dans la machine par USB, depuis Chrome
+      ou Edge sur un ordinateur. Il n'y a rien à installer sur l'ordinateur.</p>
 
-  <h2>1 · Firmware</h2>
-  <p id="pkg" class="line">Looking for the package…</p>
-  <p class="small"><label>Or another package: <input id="pkg-file" type="file" accept=".fwsc"></label></p>
-  <p id="pkg-err" class="small bad"></p>
+    <div class="warn">
+      <p data-t="warn"><b>Installer un firmware sur un FM-1 se fait à vos risques</b> et peut
+        laisser la machine incapable de démarrer (voir la dernière section).
+        Branchez le FM-1 directement à l'ordinateur avec un câble USB <em>de
+        données</em>, fermez les autres applications qui se servent du MIDI, et
+        ne débranchez rien pendant l'écriture.</p>
+    </div>
 
-  <h2>2 · FM-1</h2>
-  <p id="dev" class="line">Not connected.</p>
-  <p><button id="connect" class="ghost">Connect</button></p>
+    <h2 data-t="h2.pkg">1 · Le firmware</h2>
+    <p id="pkg" class="line" data-t="pkg.looking">Recherche du paquet…</p>
+    <p class="small"><label><span data-t="pkg.other">Ou un autre paquet :</span>
+      <input id="pkg-file" type="file" accept=".fwsc"></label></p>
+    <p id="pkg-err" class="small bad"></p>
 
-  <h2>3 · Install</h2>
-  <p><button id="install" disabled>Install</button></p>
-  <progress id="bar" max="100" value="0"></progress>
-  <p id="status" role="status" aria-live="polite"></p>
+    <h2 data-t="h2.dev">2 · La machine</h2>
+    <p id="dev" class="line" data-t="dev.none">Pas connectée.</p>
+    <p><button id="connect" class="go ghost" data-t="btn.connect">Connecter</button></p>
 
-  <details>
-    <summary>Save the songs on the FM-1</summary>
-    <p class="small">When the FM-1 runs MOONDAW: every song in its flash, in one .zip of .trk files, saved to this computer. Put the FM-1 on its MENU screen first.
-      Installing MOONDAW again leaves the songs where they are; returning to the official firmware may not.</p>
-    <p><button id="songs" class="ghost">Save songs</button></p>
-  </details>
+    <h2 data-t="h2.install">3 · Installer</h2>
+    <p><button id="install" class="go" disabled data-t="btn.install">Installer</button></p>
+    <progress id="bar" max="100" value="0"></progress>
+    <p id="status" role="status" aria-live="polite"></p>
 
-  <details>
-    <summary>Return to the official firmware</summary>
-    <p class="small">The official M-VAVE firmware V15, from the unmodified file <code>FM-1_015.fwsc</code> (699 956 bytes):
-      it is in M-VAVE's <a href="https://github.com/m-vave/fm1_open" target="_blank" rel="noopener">fm1_open</a> repository, <code>sdk/firmware/</code>.
-      (The <code>FM-1.fwsc</code> on m-vave.com is now V16, which this page does not know.)
-      The file is checked in this browser and not sent anywhere. Only that exact file is accepted.</p>
-    <p class="small">Save the songs first (above): the official firmware uses the flash where MOONDAW keeps them.</p>
-    <p><label><span class="small">Official file:</span><br><input id="stock-file" type="file" accept=".fwsc"></label></p>
-    <p id="stock" class="small"></p>
-    <p><button id="stock-go" disabled>Return to official V15</button></p>
-  </details>
+    <details>
+      <summary data-t="songs.h">Sauvegarder les morceaux de la machine</summary>
+      <p class="small" data-t="songs.p">Quand le FM-1 tourne sous MOONDAW : tous les morceaux de sa flash,
+        dans un seul .zip de fichiers .trk, enregistré sur cet ordinateur. Mettez
+        d'abord la machine sur son écran MENU. Réinstaller MOONDAW laisse les
+        morceaux en place ; revenir au firmware officiel, pas forcément.</p>
+      <p><button id="songs" class="go ghost" data-t="btn.songs">Sauvegarder</button></p>
+    </details>
 
-  <details>
-    <summary>If the FM-1 does not start</summary>
-    <p class="small">This page talks to a running firmware (or to the update loader of an install that was cut off: then it finishes it). An FM-1 that does not start has no USB-MIDI, and the browser cannot reach it.</p>
-    <p class="small">After two failed starts, or with OCT− and OCT+ held for 5 seconds on MOONDAW, the chip enters its own update mode and shows up on USB as <code>WL80UBOOT1.00</code>.
-      In that mode it is a USB mass-storage device, a kind of device browsers are not allowed to open (WebUSB blocks it, and the computer's disk driver holds it). Putting the official firmware back from there takes a program on the computer:</p>
-    <ol class="small">
-      <li><code>fm1_rescue.py</code> from <a href="https://github.com/hugelton/felucca-bsp" target="_blank" rel="noopener">felucca-bsp</a> (<code>tools/</code>): Python with pyusb, run with sudo on a Mac, the same V15 file. Without <code>--write</code> it only reads and backs up the flash; with it, it writes V15.</li>
-      <li><a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener">FM-1-transporter</a>: a Seeed XIAO RP2040 wired to the FM-1's USB pins, for when nothing else answers.</li>
-    </ol>
-  </details>
+    <details>
+      <summary data-t="stock.h">Revenir au firmware officiel</summary>
+      <p class="small" data-t="stock.p1">Le firmware officiel M-VAVE V15, à partir du fichier non modifié
+        <code>FM-1_015.fwsc</code> (699 956 octets) : il est dans le dépôt
+        <a href="https://github.com/m-vave/fm1_open" target="_blank" rel="noopener">fm1_open</a>
+        de M-VAVE, dans <code>sdk/firmware/</code>. (Le <code>FM-1.fwsc</code> de
+        m-vave.com est maintenant la V16, que cette page ne connaît pas.) Le
+        fichier est vérifié dans ce navigateur et n'est envoyé nulle part. Seul
+        ce fichier exact est accepté.</p>
+      <p class="small" data-t="stock.p2">Sauvegardez les morceaux d'abord (ci-dessus) : le firmware officiel
+        se sert de la flash où MOONDAW les range.</p>
+      <p><label><span class="small" data-t="stock.file">Le fichier officiel :</span><br>
+        <input id="stock-file" type="file" accept=".fwsc"></label></p>
+      <p id="stock" class="small"></p>
+      <p><button id="stock-go" class="go ghost" disabled data-t="btn.stock">Revenir à la V15 officielle</button></p>
+    </details>
 
-  <details>
-    <summary>Details</summary>
-    <p class="small">Checked here before anything is sent: the package's identity, its CRCs, and that it carries Felucca's update loader (the official V15: its SHA-256).
-      The FM-1 must answer as an FM-1, and after the install it must report the package's identity: <code>FM-1_900</code> for MOONDAW.
-      Identities seen so far: <code>FM-1_014</code>, <code>FM-1_015</code> official V14, V15; <code>FM-1_917</code> Felucca 1.7; <code>FM-1_900</code> MOONDAW.</p>
-    <pre id="log"></pre>
-  </details>
+    <details>
+      <summary data-t="dead.h">Si le FM-1 ne démarre plus</summary>
+      <p class="small" data-t="dead.p1">Cette page parle à un firmware qui tourne (ou au chargeur de mise à
+        jour d'une installation coupée : elle la termine). Un FM-1 qui ne démarre
+        pas n'a pas d'USB-MIDI, et le navigateur ne peut pas l'atteindre.</p>
+      <p class="small" data-t="dead.p2">Après deux démarrages ratés, ou avec OCT− et OCT+ tenus 5 secondes
+        sous MOONDAW, la puce entre dans son propre mode de mise à jour et
+        apparaît sur l'USB comme <code>WL80UBOOT1.00</code>. Dans ce mode, c'est
+        un périphérique de stockage de masse, une classe que les navigateurs
+        n'ont pas le droit d'ouvrir (WebUSB la refuse, et le pilote disque de
+        l'ordinateur la retient). Y remettre le firmware officiel demande un
+        programme sur l'ordinateur :</p>
+      <ol class="small">
+        <li data-t="dead.li1"><code>fm1_rescue.py</code> de
+          <a href="https://github.com/hugelton/felucca-bsp" target="_blank" rel="noopener">felucca-bsp</a>
+          (<code>tools/</code>) : du Python avec pyusb, lancé avec sudo sur un
+          Mac, le même fichier V15. Sans <code>--write</code> il ne fait que lire
+          et sauvegarder la flash ; avec, il écrit la V15.</li>
+        <li data-t="dead.li2"><a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener">FM-1-transporter</a> :
+          un Seeed XIAO RP2040 câblé sur les broches USB du FM-1, pour quand plus
+          rien ne répond.</li>
+      </ol>
+    </details>
 
-  <footer class="small">
-    <p>MOONDAW is GPL-3.0, with no warranty. <span id="source"></span>
-      It is built on <a href="https://github.com/hugelton/Felucca" target="_blank" rel="noopener">Felucca</a> by Leo Kuroshita (@kurogedelic), Hügelton Instruments: its hardware layer, drivers, update loader, and this installer.
-      The package also holds three JieLi AC79 SDK files (uboot.boot, cfg_tool.bin, eq_cfg_hw.bin; JieLi Technology, Apache-2.0).
-      <a id="licences" href="firmware/LICENSES/">Licences</a>.</p>
-    <p>M-VAVE and FM-1 are trademarks of their respective owners. This page is not made by or affiliated with M-VAVE.</p>
-  </footer>
+    <details>
+      <summary data-t="det.h">Le détail</summary>
+      <p class="small" data-t="det.p">Vérifié ici avant que quoi que ce soit parte : l'identité du paquet,
+        ses CRC, et qu'il porte le chargeur de mise à jour de Felucca (pour la
+        V15 officielle : son SHA-256). Le FM-1 doit répondre comme un FM-1, et
+        après l'installation il doit annoncer l'identité du paquet —
+        <code>FM-1_900</code> pour MOONDAW. Les identités vues jusqu'ici :
+        <code>FM-1_014</code>, <code>FM-1_015</code> les V14 et V15 officielles ;
+        <code>FM-1_917</code> Felucca 1.7 ; <code>FM-1_900</code> MOONDAW.</p>
+      <pre id="log"></pre>
+    </details>
+
+    <footer>
+      <p><span data-t="foot.gpl">MOONDAW est sous GPL-3.0, sans aucune garantie.</span>
+        <span id="source"></span>
+        <span data-t="foot.felucca">Il est bâti sur <a href="https://github.com/hugelton/Felucca" target="_blank" rel="noopener">Felucca</a>,
+        de Leo Kuroshita (@kurogedelic), Hügelton Instruments : sa couche
+        matérielle, ses pilotes, son chargeur de mise à jour, et cet
+        installateur. Le paquet contient aussi trois fichiers du SDK JieLi AC79
+        (uboot.boot, cfg_tool.bin, eq_cfg_hw.bin ; JieLi Technology,
+        Apache-2.0).</span>
+        <a id="licences" href="firmware/LICENSES/" data-t="foot.lic">Licences</a>.</p>
+      <p data-t="foot.tm">M-VAVE et FM-1 sont des marques de leurs propriétaires respectifs.
+        Cette page n'est pas faite par M-VAVE et n'y est pas affiliée.</p>
+    </footer>
+  </div>
 </main>
+
+<script>
+/* ── Two languages ────────────────────────────────────────────────────
+ * The same shape as moondaw.com's other pages: the markup above ships in
+ * FRENCH, English is the swap below, and the choice lives under the key
+ * the landing page uses. Values may hold markup; they are our own
+ * strings and nothing a visitor types ever reaches them.
+ *
+ * The keys with {0} in them are filled by the module below -- it is the
+ * one that knows how many bytes, which identity, which percent. */
+var LANGS = ["fr", "en"];
+var T = {
+"doc.title":{fr:"MOONDAW — installer sur le FM-1",
+             en:"MOONDAW — install it on the FM-1"},
+"lang.group":{fr:"Langue", en:"Language"},
+"nav.site":  {fr:"Le site",   en:"The site"},
+"nav.manual":{fr:"Le manuel", en:"The manual"},
+
+"h1":{fr:"Installer MOONDAW sur votre FM-1", en:"Put MOONDAW on your FM-1"},
+"intro":{
+  fr:"Cette page écrit le firmware dans la machine par USB, depuis Chrome ou Edge sur un ordinateur. Il n'y a rien à installer sur l'ordinateur.",
+  en:"This page writes the firmware into the machine over USB, from Chrome or Edge on a computer. There is nothing to install on the computer."},
+"warn":{
+  fr:"<b>Installer un firmware sur un FM-1 se fait à vos risques</b> et peut laisser la machine incapable de démarrer (voir la dernière section). Branchez le FM-1 directement à l'ordinateur avec un câble USB <em>de données</em>, fermez les autres applications qui se servent du MIDI, et ne débranchez rien pendant l'écriture.",
+  en:"<b>Installing firmware on an FM-1 is at your own risk</b> and can leave the machine unable to start (see the last section). Connect the FM-1 straight to the computer with a USB <em>data</em> cable, close any other app that uses MIDI, and unplug nothing while it writes."},
+
+"h2.pkg":    {fr:"1 · Le firmware", en:"1 · The firmware"},
+"h2.dev":    {fr:"2 · La machine",  en:"2 · The machine"},
+"h2.install":{fr:"3 · Installer",   en:"3 · Install"},
+
+"pkg.looking":{fr:"Recherche du paquet…", en:"Looking for the package…"},
+"pkg.other":  {fr:"Ou un autre paquet :", en:"Or another package:"},
+"pkg.here":   {fr:"depuis ce site",       en:"from this site"},
+"pkg.bytes":  {fr:"{0} octets",           en:"{0} bytes"},
+"pkg.notours":{fr:" <span class=\"bad\">— ce n'est pas l'identité de MOONDAW ({0})</span>",
+               en:" <span class=\"bad\">— not MOONDAW's identity ({0})</span>"},
+"pkg.none":{
+  fr:"Aucun paquet n'accompagne cette page. Choisissez-en un : build/moondaw.fwsc après ./build.sh, ou le .fwsc d'une version.",
+  en:"No package comes with this page. Choose one: build/moondaw.fwsc from ./build.sh, or a release's .fwsc."},
+"pkg.mismatch":{
+  fr:"le paquet ne correspond pas à son manifeste (téléchargement abîmé ?) : rechargez la page",
+  en:"the package does not match its manifest (damaged download?): reload the page"},
+"pkg.failed":{fr:"Le paquet n'a pas pu être chargé : {0}", en:"Could not load the package: {0}"},
+"pkg.still": {fr:" (on installe toujours {0})",            en:" (still installing {0})"},
+"pkg.http":  {fr:"firmware/{0} : HTTP {1}",                en:"firmware/{0}: HTTP {1}"},
+
+"dev.none":{fr:"Pas connectée.", en:"Not connected."},
+"dev.is":  {fr:"{0} — {1} · port « {2} »", en:"{0} — {1} · port “{2}”"},
+
+"btn.connect":{fr:"Connecter",  en:"Connect"},
+"btn.install":{fr:"Installer",  en:"Install"},
+"btn.install.pkg":{fr:"Installer {0}", en:"Install {0}"},
+"btn.songs":  {fr:"Sauvegarder", en:"Save songs"},
+"btn.stock":  {fr:"Revenir à la V15 officielle", en:"Return to the official V15"},
+
+"songs.h":{fr:"Sauvegarder les morceaux de la machine", en:"Save the songs on the FM-1"},
+"songs.p":{
+  fr:"Quand le FM-1 tourne sous MOONDAW : tous les morceaux de sa flash, dans un seul .zip de fichiers .trk, enregistré sur cet ordinateur. Mettez d'abord la machine sur son écran MENU. Réinstaller MOONDAW laisse les morceaux en place ; revenir au firmware officiel, pas forcément.",
+  en:"When the FM-1 runs MOONDAW: every song in its flash, in one .zip of .trk files, saved to this computer. Put the FM-1 on its MENU screen first. Installing MOONDAW again leaves the songs where they are; returning to the official firmware may not."},
+
+"stock.h":{fr:"Revenir au firmware officiel", en:"Return to the official firmware"},
+"stock.p1":{
+  fr:"Le firmware officiel M-VAVE V15, à partir du fichier non modifié <code>FM-1_015.fwsc</code> (699 956 octets) : il est dans le dépôt <a href=\"https://github.com/m-vave/fm1_open\" target=\"_blank\" rel=\"noopener\">fm1_open</a> de M-VAVE, dans <code>sdk/firmware/</code>. (Le <code>FM-1.fwsc</code> de m-vave.com est maintenant la V16, que cette page ne connaît pas.) Le fichier est vérifié dans ce navigateur et n'est envoyé nulle part. Seul ce fichier exact est accepté.",
+  en:"The official M-VAVE firmware V15, from the unmodified file <code>FM-1_015.fwsc</code> (699 956 bytes): it is in M-VAVE's <a href=\"https://github.com/m-vave/fm1_open\" target=\"_blank\" rel=\"noopener\">fm1_open</a> repository, <code>sdk/firmware/</code>. (The <code>FM-1.fwsc</code> on m-vave.com is now V16, which this page does not know.) The file is checked in this browser and not sent anywhere. Only that exact file is accepted."},
+"stock.p2":{
+  fr:"Sauvegardez les morceaux d'abord (ci-dessus) : le firmware officiel se sert de la flash où MOONDAW les range.",
+  en:"Save the songs first (above): the official firmware uses the flash where MOONDAW keeps them."},
+"stock.file":{fr:"Le fichier officiel :", en:"Official file:"},
+"stock.size":{fr:"{0} octets : la V15 officielle en fait {1}",
+              en:"{0} bytes: the official V15 is {1}"},
+"stock.ok":  {fr:"V15 officielle vérifiée ({0}).", en:"Official V15 verified ({0})."},
+"stock.label":{fr:"la V15 officielle", en:"the official V15"},
+
+"dead.h":{fr:"Si le FM-1 ne démarre plus", en:"If the FM-1 does not start"},
+"dead.p1":{
+  fr:"Cette page parle à un firmware qui tourne (ou au chargeur de mise à jour d'une installation coupée : elle la termine). Un FM-1 qui ne démarre pas n'a pas d'USB-MIDI, et le navigateur ne peut pas l'atteindre.",
+  en:"This page talks to a running firmware (or to the update loader of an install that was cut off: then it finishes it). An FM-1 that does not start has no USB-MIDI, and the browser cannot reach it."},
+"dead.p2":{
+  fr:"Après deux démarrages ratés, ou avec OCT− et OCT+ tenus 5 secondes sous MOONDAW, la puce entre dans son propre mode de mise à jour et apparaît sur l'USB comme <code>WL80UBOOT1.00</code>. Dans ce mode, c'est un périphérique de stockage de masse, une classe que les navigateurs n'ont pas le droit d'ouvrir (WebUSB la refuse, et le pilote disque de l'ordinateur la retient). Y remettre le firmware officiel demande un programme sur l'ordinateur :",
+  en:"After two failed starts, or with OCT− and OCT+ held for 5 seconds on MOONDAW, the chip enters its own update mode and shows up on USB as <code>WL80UBOOT1.00</code>. In that mode it is a USB mass-storage device, a kind of device browsers are not allowed to open (WebUSB blocks it, and the computer's disk driver holds it). Putting the official firmware back from there takes a program on the computer:"},
+"dead.li1":{
+  fr:"<code>fm1_rescue.py</code> de <a href=\"https://github.com/hugelton/felucca-bsp\" target=\"_blank\" rel=\"noopener\">felucca-bsp</a> (<code>tools/</code>) : du Python avec pyusb, lancé avec sudo sur un Mac, le même fichier V15. Sans <code>--write</code> il ne fait que lire et sauvegarder la flash ; avec, il écrit la V15.",
+  en:"<code>fm1_rescue.py</code> from <a href=\"https://github.com/hugelton/felucca-bsp\" target=\"_blank\" rel=\"noopener\">felucca-bsp</a> (<code>tools/</code>): Python with pyusb, run with sudo on a Mac, the same V15 file. Without <code>--write</code> it only reads and backs up the flash; with it, it writes V15."},
+"dead.li2":{
+  fr:"<a href=\"https://github.com/kurogedelic/FM-1-transporter\" target=\"_blank\" rel=\"noopener\">FM-1-transporter</a> : un Seeed XIAO RP2040 câblé sur les broches USB du FM-1, pour quand plus rien ne répond.",
+  en:"<a href=\"https://github.com/kurogedelic/FM-1-transporter\" target=\"_blank\" rel=\"noopener\">FM-1-transporter</a>: a Seeed XIAO RP2040 wired to the FM-1's USB pins, for when nothing else answers."},
+
+"det.h":{fr:"Le détail", en:"Details"},
+"det.p":{
+  fr:"Vérifié ici avant que quoi que ce soit parte : l'identité du paquet, ses CRC, et qu'il porte le chargeur de mise à jour de Felucca (pour la V15 officielle : son SHA-256). Le FM-1 doit répondre comme un FM-1, et après l'installation il doit annoncer l'identité du paquet — <code>FM-1_900</code> pour MOONDAW. Les identités vues jusqu'ici : <code>FM-1_014</code>, <code>FM-1_015</code> les V14 et V15 officielles ; <code>FM-1_917</code> Felucca 1.7 ; <code>FM-1_900</code> MOONDAW.",
+  en:"Checked here before anything is sent: the package's identity, its CRCs, and that it carries Felucca's update loader (for the official V15: its SHA-256). The FM-1 must answer as an FM-1, and after the install it must report the package's identity — <code>FM-1_900</code> for MOONDAW. Identities seen so far: <code>FM-1_014</code>, <code>FM-1_015</code> official V14, V15; <code>FM-1_917</code> Felucca 1.7; <code>FM-1_900</code> MOONDAW."},
+
+"foot.gpl":{fr:"MOONDAW est sous GPL-3.0, sans aucune garantie.",
+            en:"MOONDAW is GPL-3.0, with no warranty."},
+"foot.src":{fr:"Le code source", en:"Source"},
+"foot.felucca":{
+  fr:"Il est bâti sur <a href=\"https://github.com/hugelton/Felucca\" target=\"_blank\" rel=\"noopener\">Felucca</a>, de Leo Kuroshita (@kurogedelic), Hügelton Instruments : sa couche matérielle, ses pilotes, son chargeur de mise à jour, et cet installateur. Le paquet contient aussi trois fichiers du SDK JieLi AC79 (uboot.boot, cfg_tool.bin, eq_cfg_hw.bin ; JieLi Technology, Apache-2.0).",
+  en:"It is built on <a href=\"https://github.com/hugelton/Felucca\" target=\"_blank\" rel=\"noopener\">Felucca</a> by Leo Kuroshita (@kurogedelic), Hügelton Instruments: its hardware layer, drivers, update loader, and this installer. The package also holds three JieLi AC79 SDK files (uboot.boot, cfg_tool.bin, eq_cfg_hw.bin; JieLi Technology, Apache-2.0)."},
+"foot.lic":{fr:"Licences", en:"Licences"},
+"foot.tm":{
+  fr:"M-VAVE et FM-1 sont des marques de leurs propriétaires respectifs. Cette page n'est pas faite par M-VAVE et n'y est pas affiliée.",
+  en:"M-VAVE and FM-1 are trademarks of their respective owners. This page is not made by or affiliated with M-VAVE."},
+
+/* ── what the page says while it works ─────────────────────────────── */
+"st.nomidi.page":{
+  fr:"Ce navigateur n'a pas WebMIDI. Ouvrez la page dans Chrome ou Edge, sur un ordinateur.",
+  en:"This browser has no WebMIDI. Open the page in Chrome or Edge on a computer."},
+"st.nomidi":{
+  fr:"Ce navigateur n'a pas WebMIDI. Ouvrez la page dans Chrome ou Edge.",
+  en:"This browser has no WebMIDI. Open the page in Chrome or Edge."},
+"st.denied":{
+  fr:"Le MIDI avec SysEx n'a pas été autorisé. Autorisez le MIDI pour ce site (l'icône dans la barre d'adresse), puis réessayez.",
+  en:"MIDI with SysEx was not allowed. Allow MIDI for this site (the icon in the address bar), then try again."},
+"st.notfound":{
+  fr:"FM-1 introuvable. Vérifiez qu'il est allumé, que le câble transporte des données (et ne sert pas qu'à charger), et qu'aucune autre application ne se sert du MIDI. Entrées MIDI vues : {0}.",
+  en:"FM-1 not found. Check that it is on, that the cable carries data (not a charge-only cable), and that no other app uses MIDI. MIDI inputs seen: {0}."},
+"st.none":{fr:"aucune", en:"none"},
+"st.looking":{fr:"Recherche du FM-1…", en:"Looking for the FM-1…"},
+"st.cancel":{fr:"Annulé.", en:"Cancelled."},
+"st.start":{fr:"Démarrage de la mise à jour sur {0}…", en:"Starting the update on {0}…"},
+"st.check":{fr:"Le FM-1 vérifie le paquet ({0} lectures)…", en:"The FM-1 checks the package ({0} reads)…"},
+"st.loader":{fr:"Passage en mode mise à jour…", en:"Switching to update mode…"},
+"st.write":{fr:"Écriture {0} %… ne débranchez pas", en:"Writing {0} %… do not unplug"},
+"st.reboot":{fr:"Redémarrage…", en:"Restarting…"},
+"st.done":{fr:"Terminé : le FM-1 tourne sous {0} ({1}).", en:"Done: the FM-1 runs {0} ({1})."},
+
+"ask.resume":{
+  fr:"Le FM-1 est en mode mise à jour : une mise à jour a été coupée.\n\nLa terminer avec {0} ({1}) ? Prenez le fichier avec lequel elle avait été commencée.",
+  en:"The FM-1 is in update mode: an update was cut off.\n\nFinish it with {0} ({1})? Use the file the cut-off update was started with."},
+"ask.install":{
+  fr:"Installer {0} ({1}) sur ce FM-1, aujourd'hui {2} ({3}) ?",
+  en:"Install {0} ({1}) on this FM-1, now {2} ({3})?"},
+"ask.v14":{
+  fr:"\n\nCe FM-1 tourne en V14. Les installations n'ont été essayées que depuis la V15 : le passer d'abord en V15 avec les outils de M-VAVE est plus sûr.",
+  en:"\n\nThis FM-1 runs V14. Installs have been tried from V15 only so far: updating it to V15 first with M-VAVE's tools is safer."},
+"ask.hold":{
+  fr:"\n\nNe débranchez pas le FM-1 et ne fermez pas cette page pendant l'écriture (environ une minute).",
+  en:"\n\nDo not unplug the FM-1 and do not close this page while it writes (about a minute)."},
+"ask.songs":{
+  fr:"Les morceaux du FM-1 n'ont pas été sauvegardés depuis cette page. Le firmware officiel peut les effacer. Continuer quand même ?",
+  en:"The songs on the FM-1 have not been saved from this page. The official firmware may erase them. Continue anyway?"},
+
+"err.model":{fr:"Ce paquet n'est pas pour cette machine.", en:"This package is not for this device."},
+"err.model.why":{fr:"la machine est un {0}, le paquet est pour {1}",
+                 en:"the device is {0}, the package is for {1}"},
+"err.lost":{
+  fr:"La liaison USB a été perdue. Rebranchez et appuyez de nouveau sur le même bouton : une mise à jour coupée reprend là où le FM-1 en est.",
+  en:"The USB connection was lost. Plug it back and press the same button again: an update that was cut off is finished from where the FM-1 stands."},
+"err.stopped":{fr:"Le FM-1 ne répond plus. Rebranchez et appuyez de nouveau sur le même bouton.",
+               en:"The FM-1 stopped answering. Plug it back and press the same button again."},
+"err.badreq":{
+  fr:"Le FM-1 a demandé quelque chose qui n'est pas dans le paquet : arrêté. Appuyez de nouveau sur le bouton ; si cela recommence, le paquet ne convient pas à ce firmware.",
+  en:"The FM-1 asked for something outside the package: stopped. Press the button again; if it repeats, the package does not suit this firmware."},
+"err.noloader":{
+  fr:"Débranchez et rebranchez le câble USB, puis appuyez de nouveau sur le même bouton : le FM-1 reste en mode mise à jour tant qu'elle n'est pas finie.",
+  en:"Unplug and plug the USB cable back, then press the same button again: the FM-1 stays in update mode until the update is finished."},
+"err.noreturn":{
+  fr:"Éteignez et rallumez le FM-1. S'il ne démarre pas, voyez « Si le FM-1 ne démarre plus ».",
+  en:"Switch the FM-1 off and on. If it does not start, see “If the FM-1 does not start”."},
+"err.mismatch":{
+  fr:"L'écriture s'est terminée, mais le FM-1 annonce un autre firmware que celui du paquet.",
+  en:"The write finished, but the FM-1 reports another firmware than the package's."},
+
+"sg.loader":{fr:"le FM-1 est en mode mise à jour : aucun morceau ne peut être lu tant que la mise à jour n'est pas finie",
+             en:"the FM-1 is in update mode: no songs can be read until the update is finished"},
+"sg.version":{fr:"le FM-1 parle la version {0} du lien morceaux de MOONDAW ; cette page connaît 1 à 4",
+              en:"the FM-1 speaks version {0} of MOONDAW's song link; this page knows 1 to 4"},
+"sg.empty":{fr:"Il n'y a aucun morceau sur le FM-1.", en:"There is no song on the FM-1."},
+"sg.read":{fr:"Lecture de {0}… {1} %", en:"Reading {0}… {1} %"},
+"sg.saved":{fr:"{0} morceaux enregistrés dans {1} (vos téléchargements).",
+            en:"Saved {0} songs in {1} (your downloads)."},
+"sg.saved1":{fr:"1 morceau enregistré dans {0} (vos téléchargements).",
+             en:"Saved 1 song in {0} (your downloads)."},
+"sg.notours":{fr:"le FM-1 tourne sous {0}, pas sous MOONDAW : il n'y a pas de morceaux MOONDAW à lire",
+              en:"the FM-1 runs {0}, not MOONDAW: there are no MOONDAW songs to read"}
+};
+
+(function(){
+  var KEY = "moondaw.lang";          /* the landing page's key, on purpose */
+
+  function stored(){ try { return localStorage.getItem(KEY) } catch(e) { return null } }
+  function remember(l){ try { localStorage.setItem(KEY, l) } catch(e) {} }
+
+  function pick(){
+    var q = new URLSearchParams(location.search).get("lang");
+    if (LANGS.indexOf(q) >= 0) return q;
+    var was = stored();
+    if (LANGS.indexOf(was) >= 0) return was;
+    var list = navigator.languages || [navigator.language || "en"];
+    for (var i = 0; i < list.length; i++) {
+      var tag = String(list[i]).toLowerCase().split("-")[0];
+      if (LANGS.indexOf(tag) >= 0) return tag;
+    }
+    return "en";
+  }
+  window.moondawT = function(key){
+    var e = T[key];
+    return e ? (e[window.moondawLang] || e.fr) : "";
+  };
+
+  function apply(lang){
+    window.moondawLang = lang;
+    document.documentElement.lang = lang;
+    document.title = window.moondawT("doc.title");
+
+    document.querySelectorAll("[data-t]").forEach(function(el){
+      el.innerHTML = window.moondawT(el.dataset.t);
+    });
+    document.querySelectorAll("[data-t-aria]").forEach(function(el){
+      el.setAttribute("aria-label", window.moondawT(el.dataset.tAria));
+    });
+    document.querySelectorAll(".lang button").forEach(function(b){
+      b.setAttribute("aria-current", String(b.dataset.lang === lang));
+    });
+    document.dispatchEvent(new CustomEvent("moondawlang", { detail: lang }));
+  }
+
+  document.querySelectorAll(".lang button").forEach(function(b){
+    b.addEventListener("click", function(){
+      remember(b.dataset.lang);
+      apply(b.dataset.lang);
+    });
+  });
+
+  apply(pick());
+})();
+</script>
+
 <script type="module">
 import { Updater, describe, modelOf } from "./fm1ota.js";
 import { checkPackage, validateStockPackage, STOCK_V15_SIZE, MOONDAW_PRODUCT } from "./fm1pkg.js";
@@ -114,7 +525,23 @@ import { SongLink, zip } from "./mdlink.js";
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString("en-US").replace(/,/g, " ");
 const log = (t) => { $("log").textContent += t + "\n"; };
-function say(text, cls = "") { $("status").textContent = text; $("status").className = cls; }
+
+/* One string of the table, with {0} {1} … filled in. The page's own
+   words go through here; the machine's -- an identity, a file name, a
+   line of the log -- never do. */
+const L = (key, ...a) =>
+  window.moondawT(key).replace(/\{(\d)\}/g, (_, i) => (a[i] === undefined ? "" : String(a[i])));
+
+/* What the status line says, kept as a key so that the flag can change
+   it under a hand that is not doing anything. A message built from a
+   thrown error is not kept: it belongs to the attempt that failed. */
+let lastSay = null;
+function say(key, args = [], cls = "") {
+  lastSay = { key, args, cls };
+  $("status").textContent = L(key, ...args);
+  $("status").className = cls;
+}
+function sayText(text, cls = "") { lastSay = null; $("status").textContent = text; $("status").className = cls; }
 
 let pkg = null;          // {product, image, sha256, size, moondaw, label}
 let stock = null;        // {product, image, sha256}
@@ -122,7 +549,8 @@ let midi = null, busy = false, songsSaved = false, writing = false;
 
 function refresh() {
   $("install").disabled = busy || !pkg;
-  $("install").textContent = pkg ? `Install ${pkg.label}` : "Install";
+  $("install").textContent = pkg ? L("btn.install.pkg", pkg.label) : L("btn.install");
+  $("install").removeAttribute("data-t");
   $("stock-go").disabled = busy || !stock;
   for (const id of ["connect", "songs", "pkg-file", "stock-file"]) $(id).disabled = busy;
 }
@@ -130,17 +558,34 @@ window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault
 
 // ------------------------------------------------------------ the package ---
 
-function showPkg(p, where) {
-  const kind = p.moondaw ? "" : ` <span class="bad">— not MOONDAW's identity (${MOONDAW_PRODUCT})</span>`;
+let shown = null;        // the package line, to draw again in the other language
+function showPkg(p, whereKey, whereText) {
+  shown = { p, whereKey, whereText };
+  const where = whereKey ? L(whereKey) : whereText;
+  $("pkg").removeAttribute("data-t");
   $("pkg").innerHTML = "";
   const b = document.createElement("strong"); b.textContent = p.label;
-  $("pkg").append(b, ` · ${p.product} · ${fmt(p.size)} bytes · sha256 ${p.sha256.slice(0, 12)}… · ${where}`);
-  if (!p.moondaw) $("pkg").insertAdjacentHTML("beforeend", kind);
+  $("pkg").append(b, ` · ${p.product} · ${L("pkg.bytes", fmt(p.size))} · sha256 ${p.sha256.slice(0, 12)}… · ${where}`);
+  if (!p.moondaw) $("pkg").insertAdjacentHTML("beforeend", L("pkg.notours", MOONDAW_PRODUCT));
 }
+
+let devShown = null;     // the same, for the device line
+function showDev(id, name) {
+  devShown = { id, name };
+  $("dev").removeAttribute("data-t");
+  $("dev").textContent = L("dev.is", id.text, describe(id), name);
+}
+
+document.addEventListener("moondawlang", () => {
+  if (shown) showPkg(shown.p, shown.whereKey, shown.whereText);
+  if (devShown) showDev(devShown.id, devShown.name);
+  if (lastSay) say(lastSay.key, lastSay.args, lastSay.cls);
+  refresh();
+});
 
 (async () => {
   if (!navigator.requestMIDIAccess) {
-    say("This browser has no WebMIDI. Open the page in Chrome or Edge on a computer.", "bad");
+    say("st.nomidi.page", [], "bad");
     $("connect").disabled = true;
   }
   try {
@@ -148,21 +593,21 @@ function showPkg(p, where) {
     if (!r.ok) throw new Error("none");
     const m = await r.json();
     if (m.source) {
-      const a = document.createElement("a"); a.href = m.source; a.textContent = "Source"; a.target = "_blank"; a.rel = "noopener";
-      $("source").append(a, ".");
+      const a = document.createElement("a"); a.href = m.source; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = L("foot.src"); a.dataset.t = "foot.src";
+      $("source").append(a, ". ");
     }
     const f = await fetch("firmware/" + m.file, { cache: "no-cache" });
-    if (!f.ok) throw new Error(`firmware/${m.file}: HTTP ${f.status}`);
+    if (!f.ok) throw new Error(L("pkg.http", m.file, f.status));
     const p = await checkPackage(await f.arrayBuffer());
-    if (p.sha256 !== m.sha256 || p.product !== m.product) throw new Error("the package does not match its manifest (damaged download?): reload the page");
+    if (p.sha256 !== m.sha256 || p.product !== m.product) throw new Error(L("pkg.mismatch"));
     if (pkg) return;                               // a file was picked meanwhile
     pkg = { ...p, label: `MOONDAW ${m.version}` };
-    showPkg(pkg, "from this site");
+    showPkg(pkg, "pkg.here");
   } catch (e) {
     if (pkg) return;
-    $("pkg").textContent = e.message === "none"
-      ? "No package comes with this page. Choose one: build/moondaw.fwsc from ./build.sh, or a release's .fwsc."
-      : "Could not load the package: " + e.message;
+    $("pkg").removeAttribute("data-t");
+    $("pkg").textContent = e.message === "none" ? L("pkg.none") : L("pkg.failed", e.message);
     if (e.message !== "none") $("pkg").className = "line bad";
   }
   refresh();
@@ -176,9 +621,9 @@ $("pkg-file").addEventListener("change", async () => {
     const p = await checkPackage(await file.arrayBuffer());
     pkg = { ...p, label: p.moondaw ? "MOONDAW" : p.product };
     $("pkg").className = "line";
-    showPkg(pkg, file.name);
+    showPkg(pkg, null, file.name);
   } catch (e) {
-    $("pkg-err").textContent = `${file.name}: ${e.message}` + (pkg ? ` (still installing ${pkg.label})` : "");
+    $("pkg-err").textContent = `${file.name}: ${e.message}` + (pkg ? L("pkg.still", pkg.label) : "");
   }
   refresh();
 });
@@ -187,16 +632,16 @@ $("pkg-file").addEventListener("change", async () => {
 
 async function access() {
   if (midi) return midi;
-  if (!navigator.requestMIDIAccess) throw Object.assign(new Error("This browser has no WebMIDI. Open the page in Chrome or Edge."), { code: "nomidi" });
+  if (!navigator.requestMIDIAccess) throw Object.assign(new Error(L("st.nomidi")), { code: "nomidi" });
   try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
-  catch (_) { throw Object.assign(new Error("MIDI with SysEx was not allowed. Allow MIDI for this site (the icon in the address bar), then try again."), { code: "denied" }); }
+  catch (_) { throw Object.assign(new Error(L("st.denied")), { code: "denied" }); }
   return midi;
 }
 
 function notFound() {
   const names = [...midi.inputs.values()].map((i) => i.name).filter(Boolean);
-  return Object.assign(new Error("FM-1 not found. Check that it is on, that the cable carries data (not a charge-only cable), and that no other app uses MIDI. " +
-    `MIDI inputs seen: ${names.length ? names.join(", ") : "none"}.`), { code: "notfound" });
+  return Object.assign(new Error(L("st.notfound", names.length ? names.join(", ") : L("st.none"))),
+    { code: "notfound" });
 }
 
 async function findDevice() {
@@ -204,36 +649,31 @@ async function findDevice() {
   const dev = await up.find();
   if (!dev) throw notFound();
   log(`device: ${dev.id.text} on "${dev.name}"`);
-  $("dev").textContent = `${dev.id.text} — ${describe(dev.id)} · port “${dev.name}”`;
+  showDev(dev.id, dev.name);
   return { up, dev };
 }
 
 // what to tell, per error code (fm1_install.py's messages carry the facts)
 const ADVICE = {
-  model: "This package is not for this device.",
-  lost: "The USB connection was lost. Plug it back and press the same button again: an update that was cut off is finished from where the FM-1 stands.",
-  stopped: "The FM-1 stopped answering. Plug it back and press the same button again.",
-  badreq: "The FM-1 asked for something outside the package: stopped. Press the button again; if it repeats, the package does not suit this firmware.",
-  noloader: "Unplug and plug the USB cable back, then press the same button again: the FM-1 stays in update mode until the update is finished.",
-  noreturn: "Switch the FM-1 off and on. If it does not start, see “If the FM-1 does not start”.",
-  mismatch: "The write finished, but the FM-1 reports another firmware than the package's.",
+  model: "err.model", lost: "err.lost", stopped: "err.stopped", badreq: "err.badreq",
+  noloader: "err.noloader", noreturn: "err.noreturn", mismatch: "err.mismatch",
 };
 
 function showError(e) {
   const msg = e && e.message ? e.message : String(e);
-  say(e && ADVICE[e.code] ? `${msg}. ${ADVICE[e.code]}` : msg, "bad");
+  sayText(e && ADVICE[e.code] ? `${msg}. ${L(ADVICE[e.code])}` : msg, "bad");
   log(String((e && e.stack) || e));
 }
 
 function stepper(label) {
   return (k, a) => {
     if (k !== "check" && !(k === "write" && a % 10)) log(`${k} ${a ?? ""}`);
-    if (k === "start") { say(`Starting the update on ${a}…`); $("bar").value = 1; }
-    if (k === "check") { say(`The FM-1 checks the package (${a} reads)…`); $("bar").value = 3; }
-    if (k === "loader") { say("Switching to update mode…"); $("bar").value = 5; }
-    if (k === "write") { say(`Writing ${a} %… do not unplug`); $("bar").value = 5 + a * 0.9; }
-    if (k === "reboot") { say("Restarting…"); $("bar").value = 96; }
-    if (k === "done") { say(`Done: the FM-1 runs ${a} (${label}).`, "good"); $("bar").value = 100; }
+    if (k === "start") { say("st.start", [a]); $("bar").value = 1; }
+    if (k === "check") { say("st.check", [a]); $("bar").value = 3; }
+    if (k === "loader") { say("st.loader"); $("bar").value = 5; }
+    if (k === "write") { say("st.write", [a]); $("bar").value = 5 + a * 0.9; }
+    if (k === "reboot") { say("st.reboot"); $("bar").value = 96; }
+    if (k === "done") { say("st.done", [a, label], "good"); $("bar").value = 100; }
   };
 }
 
@@ -244,26 +684,29 @@ async function run(fn) {
 }
 
 $("connect").addEventListener("click", () => run(async () => {
-  say("Looking for the FM-1…");
+  say("st.looking");
   const { dev } = await findDevice();
   dev.link.close();
-  say("");
+  sayText("");
 }));
 
 async function installImage(image, product, label, extra) {
-  say("Looking for the FM-1…"); $("bar").value = 0;
+  say("st.looking"); $("bar").value = 0;
   const { up, dev } = await findDevice();
   let q;
   if (dev.id.loader) {
-    q = `The FM-1 is in update mode: an update was cut off.\n\nFinish it with ${label} (${product})? Use the file the cut-off update was started with.`;
+    q = L("ask.resume", label, product);
   } else {
-    if (modelOf(dev.id.text) !== modelOf(product)) { dev.link.close(); throw Object.assign(new Error(`the device is ${dev.id.text}, the package is for ${product}`), { code: "model" }); }
-    q = `Install ${label} (${product}) on this FM-1, now ${dev.id.text} (${describe(dev.id)})?`;
-    if (dev.id.version === 14) q += "\n\nThis FM-1 runs V14. Installs have been tried from V15 only so far: updating it to V15 first with M-VAVE's tools is safer.";
-    if (extra) q += "\n\n" + extra(dev.id);
+    if (modelOf(dev.id.text) !== modelOf(product)) {
+      dev.link.close();
+      throw Object.assign(new Error(L("err.model.why", dev.id.text, product)), { code: "model" });
+    }
+    q = L("ask.install", label, product, dev.id.text, describe(dev.id));
+    if (dev.id.version === 14) q += L("ask.v14");
+    if (extra) q += extra(dev.id);
   }
-  q += "\n\nDo not unplug the FM-1 and do not close this page while it writes (about a minute).";
-  if (!confirm(q)) { dev.link.close(); say("Cancelled."); return; }
+  q += L("ask.hold");
+  if (!confirm(q)) { dev.link.close(); say("st.cancel"); return; }
   writing = true;
   await up.install(dev, image, product, stepper(label));
 }
@@ -273,21 +716,24 @@ $("install").addEventListener("click", () => run(() => installImage(pkg.image, p
 // ----------------------------------------------------------------- songs ---
 
 $("songs").addEventListener("click", () => run(async () => {
-  say("Looking for the FM-1…");
+  say("st.looking");
   const { dev } = await findDevice();
   try {
-    if (dev.id.loader) throw new Error("the FM-1 is in update mode: no songs can be read until the update is finished");
+    if (dev.id.loader) throw new Error(L("sg.loader"));
     const sl = new SongLink(dev.link);
     const { version, free } = await sl.ping();
     log(`song link version ${version}, ${free} bytes free`);
-    if (version < 1 || version > 4) throw new Error(`the FM-1 speaks version ${version} of MOONDAW's song link; this page knows 1 to 4`);
+    if (version < 1 || version > 4) throw new Error(L("sg.version", version));
     const list = await sl.list();
-    if (!list.length) { say("There is no song on the FM-1.", "good"); return; }
+    if (!list.length) { say("sg.empty", [], "good"); return; }
     const files = [], used = new Set();
     const total = list.reduce((s, x) => s + x.size, 0) || 1;
     let before = 0;
     for (const s of list) {
-      const data = await sl.fetch(s.slot, (n) => { say(`Reading ${s.name}… ${Math.min(100, Math.floor((before + n) * 100 / total))} %`); $("bar").value = (before + n) * 100 / total; });
+      const data = await sl.fetch(s.slot, (n) => {
+        say("sg.read", [s.name, Math.min(100, Math.floor((before + n) * 100 / total))]);
+        $("bar").value = (before + n) * 100 / total;
+      });
       before += s.size;
       let name = s.name.replace(/[^A-Za-z0-9 _.-]/g, "_").trim() || `SLOT${s.slot}`;
       while (used.has(name)) name += "_";
@@ -302,9 +748,11 @@ $("songs").addEventListener("click", () => run(async () => {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     songsSaved = true;
     $("bar").value = 100;
-    say(`Saved ${files.length} song${files.length > 1 ? "s" : ""} in moondaw-songs-${stamp}.zip (your downloads).`, "good");
+    const zipname = `moondaw-songs-${stamp}.zip`;
+    if (files.length > 1) say("sg.saved", [files.length, zipname], "good");
+    else say("sg.saved1", [zipname], "good");
   } catch (e) {
-    if (e.code === "noanswer" && dev.id.text !== MOONDAW_PRODUCT) e.message = `the FM-1 runs ${dev.id.text}, not MOONDAW: there are no MOONDAW songs to read`;
+    if (e.code === "noanswer" && dev.id.text !== MOONDAW_PRODUCT) e.message = L("sg.notours", dev.id.text);
     throw e;
   } finally { dev.link.close(); }
 }));
@@ -316,18 +764,16 @@ $("stock-file").addEventListener("change", async () => {
   $("stock").textContent = ""; $("stock").className = "small";
   if (file) {
     try {
-      if (file.size !== STOCK_V15_SIZE) throw new Error(`${fmt(file.size)} bytes: the official V15 is ${fmt(STOCK_V15_SIZE)} bytes`);
+      if (file.size !== STOCK_V15_SIZE) throw new Error(L("stock.size", fmt(file.size), fmt(STOCK_V15_SIZE)));
       stock = await validateStockPackage(new Uint8Array(await file.arrayBuffer()));
-      $("stock").textContent = `Official V15 verified (${stock.product}).`; $("stock").className = "small good";
+      $("stock").textContent = L("stock.ok", stock.product); $("stock").className = "small good";
     } catch (e) { $("stock").textContent = `${file.name}: ${e.message}`; $("stock").className = "small bad"; }
   }
   refresh();
 });
 
-$("stock-go").addEventListener("click", () => run(() => installImage(stock.image, stock.product, "the official V15",
-  (id) => id.text === MOONDAW_PRODUCT && !songsSaved
-    ? "The songs on the FM-1 have not been saved from this page. The official firmware may erase them. Continue anyway?"
-    : "")));
+$("stock-go").addEventListener("click", () => run(() => installImage(stock.image, stock.product, L("stock.label"),
+  (id) => id.text === MOONDAW_PRODUCT && !songsSaved ? "\n\n" + L("ask.songs") : "")));
 </script>
 </body>
 </html>
