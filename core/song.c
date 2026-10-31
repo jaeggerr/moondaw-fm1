@@ -38,14 +38,15 @@ void song_copy(Song *dst, const Song *src)
         *b++ = *a++;
 }
 
-/* One instrument slot, neutral: the sustained pulse song_init puts
- * everywhere. What a slot taken fresh starts from. */
-void song_instr_init(Song *s, int i)
+/* One instrument slot, neutral: the sustained pulse under everything.
+ * What a slot taken fresh starts from -- and what an `inst` line starts
+ * from too, so that a file says what its instrument is whatever the slot
+ * held before it was read. Since song_init seeds the first slots with
+ * presets, that matters: the writer leaves out a LEVEL of 0 and an empty
+ * name, and without this ground those two would be inherited from the
+ * preset instead of read from the file. */
+void song_instr_default(InstrumentDef *in)
 {
-    InstrumentDef *in;
-    if (i < 0 || i >= SONG_MAX_INSTR)
-        return;
-    in = &s->instruments[i];
     zero(in, sizeof *in);
     in->timbre = 2;
     in->sustain = 255;
@@ -53,6 +54,188 @@ void song_instr_init(Song *s, int i)
     in->cutoff = FILTER_OPEN;
     in->filt_env = FILTER_ENV_NONE;
     in->filt_vel = FILTER_ENV_NONE;
+}
+
+void song_instr_init(Song *s, int i)
+{
+    if (i < 0 || i >= SONG_MAX_INSTR)
+        return;
+    song_instr_default(&s->instruments[i]);
+}
+
+/* --------------------------------------------------------- presets --- */
+/* The ten the first slots start with, so a track taken fresh sounds like
+ * an instrument instead of the neutral pulse underneath it. A row writes
+ * over only the fields that make a sound what it is -- eighteen bytes,
+ * not a whole InstrumentDef -- and song_instr_init lays the rest.
+ *
+ * The numbers were auditioned through core/player.c and measured, not
+ * guessed. Times are the envelope's own curve, v*v/8 ms: 34 is 144 ms,
+ * 110 is a second and a half. A cutoff of FILTER_OPEN and a filt_env of
+ * FILTER_ENV_NONE mean the filter stands aside. LEVEL holds the ten
+ * within a few dB of each other -- the ones meant to be held as chords
+ * sit lower, VOX and DRUM come up from their quieter paths. PAD sits
+ * lowest of all at -7, because its own phrase strikes a triad: three
+ * notes at once are three times the energy, and at -4 it came through
+ * the chooser at twice the level of everything beside it. That number
+ * follows the phrase -- one note at a time, it would want -4 back. They were
+ * set against the phrase CHOOSE INSTRUMENT plays on PLAY, since that is
+ * where a sound is met first, and checked again on a held triad so that
+ * three notes of one preset do not lean on the master limiter.
+ *
+ * PAD's attack was the one number a preview changed: at 800 ms it never
+ * arrived inside the 250 ms note the chooser used to play for everything,
+ * and the sound seemed broken exactly where it is met. Now that a preset
+ * says how long its own notes are (`demos` below) and PAD's are 1100 ms,
+ * the swell has room again -- 512 ms, which arrives at about half the
+ * note and then holds, so it reads as a pad and not as a slow fault. */
+typedef struct {
+    uint8_t engine, timbre;
+    uint8_t attack, decay, sustain, release;
+    uint8_t cutoff, reso, filt_env;
+    int8_t level;
+    char name[INSTR_NAME_LEN];
+} Preset;
+
+#define OPEN FILTER_OPEN
+#define NOENV FILTER_ENV_NONE
+static const Preset presets[] = {
+    /* engine        tim   A    D    S    R   cut  res   env  lvl  name  */
+    { ENGINE_PULSE, 1,   0,  34, 170,  14,  150,  60,   84,  0, "BASS"  },
+    { ENGINE_WAVE,  2,   2,  48, 200,  24, OPEN,   0, NOENV,  0, "SUB"   },
+    { ENGINE_PULSE, 0,   6,  48, 190,  24,  200,  40,   72,  0, "LEAD"  },
+    { ENGINE_WAVE,  1,   0,  55,  90,  28,  170,  50,   90, -4, "KEYS"  },
+    { ENGINE_WAVE,  0,   0,  40,   0,  34,  140,  70,  100,  0, "HARP"  },
+    { ENGINE_WAVE,  3,  64,  70, 200, 110,  120,  30,   76, -7, "PAD"   },
+    { ENGINE_PULSE, 2,   0,   0, 255,   6, OPEN,   0, NOENV, -3, "ORGAN" },
+    { ENGINE_WAVE,  2,   0, 110,   0,  96, OPEN,   0, NOENV, -4, "BELL"  },
+    { ENGINE_VOX,   2,   4,  30, 230,  30, OPEN,   0, NOENV,  3, "VOICE" },
+    { ENGINE_DRUM,  0,   0,   0, 255,  20, OPEN,   0, NOENV,  6, "KIT"   },
+};
+#undef OPEN
+#undef NOENV
+
+/* What PLAY plays on each of them. One note is too short to judge a
+ * sound by, and the same four notes are too short to judge ten: a bass
+ * wants to be heard low and a bell wants room to ring, so each preset
+ * says its own register, its own rhythm and its own note length. The
+ * phrase belongs to the sound, not to the screen -- INSTRUMENT and
+ * CHOOSE INSTRUMENT both ask for it here.
+ *
+ * Lengths were read off the rendered sound: long enough that a slow
+ * attack arrives, short enough that a plucked one does not sit in
+ * silence waiting. A 0 is a rest, and the run comes round again. */
+static const Demo demos[] = {
+    /* BASS   low, and an octave off it, the way a bass line moves */
+    { 170,  6, 0, { 36, 36, 48, 43, 36, 0 } },
+    /* SUB    down to the bottom in three steps, slowly: weight, and
+     *        nothing else, which is the whole of what a sub is */
+    { 520,  4, 0, { 40, 36, 33, 0 } },
+    /* LEAD   up where a lead cuts, with the octave at the end */
+    { 190,  6, 0, { 72, 79, 77, 72, 84, 0 } },
+    /* KEYS   a triad out and back, struck */
+    { 220,  6, 0, { 60, 64, 67, 64, 60, 0 } },
+    /* HARP   a run up, no rest: each note is left to decay under the next */
+    { 120,  6, 0, { 60, 64, 67, 72, 76, 79 } },
+    /* PAD    two triads, swelling into each other: a pad held one note at
+     *        a time was never a pad, only a slow note */
+    { 1600, 6, 3, { 48, 55, 60, 45, 52, 57 } },
+    /* ORGAN  held, and let go cleanly, which is all an organ does */
+    { 320,  4, 0, { 48, 55, 60, 55 } },
+    /* BELL   the Westminster quarters, the quarter-past phrase the tower
+     *        strikes on its four bells: G#4 F#4 E4 B3, and then room to
+     *        ring. Not a tune chosen for being pretty -- it is the one a
+     *        bell is known by. */
+    { 560,  6, 0, { 68, 66, 64, 59, 0, 0 } },
+    /* VOICE  three notes a voice can carry, long enough to be sung */
+    { 580,  4, 0, { 57, 64, 60, 0 } },
+    /* KIT    kick, closed hat, snare, open hat, clap, two toms, a rest */
+    { 125, 10, 0, { 36, 42, 38, 46, 36, 39, 48, 45, 0, 0 } },
+};
+typedef char a_demo_for_every_preset[sizeof demos / sizeof *demos ==
+                                     sizeof presets / sizeof *presets ? 1 : -1];
+
+/* For a slot no preset speaks for: what INSTRUMENT and the chooser have
+ * always played -- C E G C an octave on, a note every 250 ms, a rest --
+ * and a kit's drums wherever the engine is a kit, since on a drum map it
+ * is the engine and not the slot that decides what the notes mean. */
+static const Demo demo_plain = { 250, 6, 0, { 60, 64, 67, 72, 0, 0 } };
+static const Demo demo_kit = { 125, 10, 0, { 36, 42, 38, 46, 36, 39, 48, 45, 0, 0 } };
+
+int song_preset_count(void) { return (int)(sizeof presets / sizeof *presets); }
+
+int song_demo_steps(const Demo *d)
+{
+    int grp = d->chord > 1 ? d->chord : 1;
+    int steps = d->n / grp;
+    return steps > 0 ? steps : 1;
+}
+
+int song_demo_notes(const Demo *d, int at, uint8_t *out)
+{
+    int stride = d->chord > 1 ? d->chord : 1; /* where the next strike begins */
+    int take = stride;                        /* and how much of it is played */
+    int n = 0;
+
+    if (at < 0 || at >= song_demo_steps(d))
+        return 0;
+    /* A chord wider than a step can hold is cut, not folded: the stride
+     * has to stay what the table laid out or every strike after this one
+     * would read from the middle of its neighbour. */
+    if (take > STEP_MAX_NOTES)
+        take = STEP_MAX_NOTES;
+    for (int i = 0; i < take; i++) {
+        int k = at * stride + i;
+        uint8_t v = k < d->n ? d->note[k] : 0;
+        if (v)                  /* a 0 inside a chord is simply one note fewer */
+            out[n++] = v;
+    }
+    return n;
+}
+
+/* Its preset's phrase while the slot is still that preset -- same engine,
+ * same name; rename it or turn its engine and you have taken it over, and
+ * the phrase stops claiming to show it off. Then a kit's drums for any
+ * other kit, and the plain four notes for everything else. */
+const Demo *song_instr_demo(const Song *s, int i)
+{
+    const InstrumentDef *in;
+
+    if (i < 0 || i >= SONG_MAX_INSTR)
+        return &demo_plain;
+    in = &s->instruments[i];
+    if (i < song_preset_count() && in->engine == presets[i].engine) {
+        int c = 0;
+        while (c < INSTR_NAME_LEN && in->name[c] == presets[i].name[c])
+            c++;
+        /* step_ms is a divisor on the way out: a row that lost it would
+         * take the screen down rather than sound wrong. */
+        if (c == INSTR_NAME_LEN && demos[i].step_ms && demos[i].n)
+            return &demos[i];
+    }
+    return in->engine == ENGINE_DRUM ? &demo_kit : &demo_plain;
+}
+
+
+
+/* Preset `i` over slot `i`'s neutral ground. */
+static void song_preset_apply(Song *s, int i)
+{
+    const Preset *p = &presets[i];
+    InstrumentDef *in = &s->instruments[i];
+
+    in->engine = p->engine;
+    in->timbre = p->timbre;
+    in->attack = p->attack;
+    in->decay = p->decay;
+    in->sustain = p->sustain;
+    in->release = p->release;
+    in->cutoff = p->cutoff;
+    in->reso = p->reso;
+    in->filt_env = p->filt_env;
+    in->level = p->level;
+    for (int c = 0; c < INSTR_NAME_LEN; c++)
+        in->name[c] = p->name[c];
 }
 
 void song_init(Song *s)
@@ -76,10 +259,13 @@ void song_init(Song *s)
                 s->patterns[t][p].chunk[c] = CHUNK_NONE;
         }
     }
-    /* A neutral sustained pulse everywhere. moondaw puts ten presets in
-     * the first slots; they are not carried yet. */
+    /* A neutral sustained pulse everywhere, then the presets over the
+     * first slots: PRESET on the INS column opens CHOOSE INSTRUMENT over
+     * them, and a slot taken past them still starts clean. */
     for (int i = 0; i < SONG_MAX_INSTR; i++)
         song_instr_init(s, i);
+    for (int i = 0; i < song_preset_count() && i < SONG_MAX_INSTR; i++)
+        song_preset_apply(s, i);
     for (int i = 0; i < SONG_ARRANGE_LEN; i++) {
         SongEntry *e = &s->arrangement[i];
         for (int t = 0; t < SONG_MAX_TRACKS; t++) {

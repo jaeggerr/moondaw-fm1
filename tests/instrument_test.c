@@ -251,6 +251,100 @@ int main(void)
     instrument_resume();
     go();
     CHECK("HOME leaves", press(PB_HOME) == INSTRUMENT_BACK);
+    /* The factory presets (31/10). Their whole point is that a track
+     * taken fresh sounds like an instrument, so the test is the ear's
+     * test and not the struct's: every slot song_init seeds is played
+     * and its energy counted. A preset that says BASS and makes no
+     * sound is worse than no preset at all. The first slot past them
+     * must still be the neutral ground song_instr_init lays. */
+    song_init(&app_song);
+    player_init(&app_song);
+    player_set_master(1023);
+    {
+        int n = song_preset_count();
+        uint8_t nn_scratch[STEP_MAX_NOTES];
+
+        CHECK("song_init seeds slots, and leaves some free", n > 0 && n < SONG_MAX_INSTR);
+        for (int i = 0; i < n; i++) {
+            const InstrumentDef *in = &app_song.instruments[i];
+            /* A kit answers to the drums it carries, not to middle C. */
+            uint8_t note = in->engine == ENGINE_DRUM ? 36 : 60;
+            long e = 0;
+            char what[64];
+
+            snprintf(what, sizeof what, "preset %d carries a name", i);
+            CHECK(what, in->name[0] != '\0');
+            snprintf(what, sizeof what, "preset %d (%s) is not the silent engine", i, in->name);
+            CHECK(what, in->engine != ENGINE_PLUCK);
+
+            player_note_on(i, note);
+            for (int k = 0; k < 3; k++)
+                e += energy(4096);
+            player_note_off();
+            energy(4096);
+            snprintf(what, sizeof what, "preset %d (%s) makes a sound", i, in->name);
+            CHECK(what, e > 0);
+
+            /* Its demo phrase (31/10): step_ms divides, so a zero there
+             * would divide by zero on the screen rather than sound wrong,
+             * and a note out of range would be refused by the player
+             * instead of playing. A kit's notes are drums on a map, so
+             * only the melodic ones are held to NOTE_MIN. */
+            {
+                const Demo *d = song_instr_demo(&app_song, i);
+
+                snprintf(what, sizeof what, "preset %d (%s) has a phrase of its own", i, in->name);
+                CHECK(what, d != song_instr_demo(&app_song, SONG_MAX_INSTR - 1));
+                snprintf(what, sizeof what, "preset %d (%s): its phrase is playable", i, in->name);
+                CHECK(what, d->step_ms > 0 && d->n > 0 && d->n <= SONG_DEMO_MAX);
+                /* A chord the track cannot hold, or a phrase whose notes
+                 * do not divide into chords, would silently drop the
+                 * slots left over. */
+                snprintf(what, sizeof what, "preset %d (%s): its chords come out whole", i, in->name);
+                CHECK(what, d->chord <= 1 ||
+                            (d->chord <= STEP_MAX_NOTES && d->n % d->chord == 0));
+                CHECK("a phrase always has a strike to play", song_demo_steps(d) >= 1);
+                for (int k = 0; k < d->n; k++) {
+                    snprintf(what, sizeof what, "preset %d (%s) note %d is a note or a rest",
+                             i, in->name, k);
+                    CHECK(what, d->note[k] == 0 ||
+                                (d->note[k] >= NOTE_MIN && d->note[k] <= NOTE_MAX));
+                }
+                for (int k = 0; k < song_demo_steps(d); k++) {
+                    uint8_t nn[STEP_MAX_NOTES];
+                    int got = song_demo_notes(d, k, nn);
+
+                    snprintf(what, sizeof what, "preset %d (%s) strike %d fits a step",
+                             i, in->name, k);
+                    CHECK(what, got >= 0 && got <= STEP_MAX_NOTES);
+                }
+                CHECK("past the end a phrase strikes nothing",
+                      song_demo_notes(d, song_demo_steps(d), nn_scratch) == 0);
+            }
+        }
+
+        /* The phrase follows the preset, not the slot: rename slot 0 and
+         * it stops claiming to show BASS off. */
+        app_song.instruments[0].name[0] = 'Z';
+        CHECK("a renamed slot falls back to the plain phrase",
+              song_instr_demo(&app_song, 0) == song_instr_demo(&app_song, SONG_MAX_INSTR - 1));
+        app_song.instruments[0].name[0] = 'B';
+        CHECK("and named back, it is BASS's phrase again",
+              song_instr_demo(&app_song, 0) != song_instr_demo(&app_song, SONG_MAX_INSTR - 1));
+        {
+            /* A free slot turned into a kit plays drums, though no preset
+             * speaks for it. */
+            const Demo *plain = song_instr_demo(&app_song, SONG_MAX_INSTR - 1);
+            app_song.instruments[SONG_MAX_INSTR - 1].engine = ENGINE_DRUM;
+            CHECK("any kit plays a kit's phrase",
+                  song_instr_demo(&app_song, SONG_MAX_INSTR - 1) != plain);
+        }
+        CHECK("the slot past the presets is the neutral ground still",
+              app_song.instruments[n].name[0] == '\0' &&
+              app_song.instruments[n].engine == ENGINE_PULSE &&
+              app_song.instruments[n].sustain == 255);
+    }
+
     printf("instrument test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

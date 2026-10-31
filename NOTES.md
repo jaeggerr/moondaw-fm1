@@ -3066,3 +3066,105 @@ All five his, found by using the machine rather than by reading it.
   letters the first knob is the one the hand reaches for. Three test files
   drove the old knobs; one of them, PROJECT's "HOME leaves the name as it
   was", would have passed by typing nothing at all.
+
+## 2026-10-31 — ten sounds in the first slots
+
+The first complaint that was not about a screen: there are no presets,
+and it is not fun. Three days on the panel against Skiff, which opens
+with six tracks already sonorised, and the verdict was not about capacity
+-- MOONDAW holds more of everything -- but about the first thirty
+seconds.
+
+- **`song_init` laid the same neutral sustained pulse in all sixty-four
+  slots.** A track taken fresh was a drone to be sculpted, filter and
+  envelope by hand, before it was music. The function's own comment
+  had been admitting it for weeks: "moondaw puts ten presets in the first
+  slots; they are not carried yet." They are now -- BASS SUB LEAD KEYS
+  HARP PAD ORGAN BELL VOICE KIT -- eighteen bytes a row over the neutral
+  ground, which `song_instr_default` still lays underneath.
+- **The chooser was already built for this.** PRESETS on the INS column
+  opens CHOOSE INSTRUMENT, which previews each slot on PLAY with its own
+  four-note phrase, or a kit's drums. Nothing there needed writing: it had
+  been listing sixty-four identical pulses. The whole change is data.
+- **Measured, not guessed.** `core/player.c` linked natively against a WAV
+  writer, so every number was heard and then read back: peak, RMS, attack
+  and release in milliseconds, spectral centroid. Levels were set against
+  the chooser's own phrase, since that is where a sound is met first, and
+  checked again on a held triad so that three notes of one preset do not
+  lean on the master limiter. A dense four-track mix still reaches that
+  ceiling -- that is the machine's design, and trimming the presets seven
+  dB to avoid it would have made one note sound weak, which is the very
+  thing being fixed.
+- **PAD's attack came down from 800 ms to 220.** At 800 it never arrived
+  inside the chooser's 250 ms note: the preset that read PAD previewed at
+  a twelfth of the others and seemed broken exactly where a newcomer meets
+  it. A preset has to work in the place it is auditioned.
+- **A file's `inst` line now starts from the neutral ground**, not from
+  whatever the slot held. `parse_inst` reset most fields and let the rest
+  stand, which was harmless while every slot began identical. With presets
+  underneath it was not: the writer leaves out a LEVEL of 0 and an empty
+  name, so a saved song reloaded with the preset's level and the preset's
+  name in slots the file had named itself. Thirteen round-trip failures.
+- **`make test` reported that as a pass.** The last line of the target is
+  `node web/songedit/test/roundtrip.mjs | tail -4`, and a pipeline exits
+  with `tail`'s status, so thirteen real failures came back green. The
+  regression was found by reading the output, not by the suite failing.
+
+Then his second look at it, the same evening: a preset could have a demo
+melody of its own, and the bass should be shown on lower notes.
+
+- **A phrase per sound, and it lives in the sound.** `tune[] = {60,64,67,72}`
+  sat copied in `app/instrument.c` and `app/pattern.c`, so every one of ten
+  presets was auditioned on the same four notes in the same octave -- a bass
+  judged at middle C, a bell judged where a bell has nothing to say. Now
+  `song_instr_demo` in `core/song.c` hands each one its own register, its own
+  rhythm and its own note length, and both screens ask it rather than holding
+  a copy. BASS plays C-2 and an octave off it, SUB sits on A-1, LEAD is up at
+  C-5, HARP runs up with no rest so each note decays under the next, BELL is
+  struck twice high and left alone, PAD holds notes of 1100 ms.
+- **The phrase follows the preset, not the slot.** Its own while the slot
+  still carries that preset's engine and name; rename it or turn its engine
+  and you have taken it over, so it falls back to the four notes the screens
+  always played -- or to a kit's drums, which follow the engine wherever they
+  are, since on a drum map it is the engine and not the slot that decides
+  what a note means.
+- **PAD's attack came back.** It had been cut to 220 ms that afternoon only
+  because the chooser's 250 ms note was all a sound ever got; with its own
+  1100 ms notes the swell has room again at 512 ms, which arrives at about
+  half the note and then holds. Measured, not assumed: all of 220, 378, 512,
+  648 and 800 ms reach the same peak inside that phrase, so the number is
+  free to be the musical one. The compromise was never about the sound, only
+  about where it was heard.
+- **`step_ms` is a divisor**, so a row that lost it would take the screen
+  down rather than merely sound wrong. `song_instr_demo` refuses a phrase
+  without one, and the test walks every preset's notes for NOTE_MIN.
+
+And his third pass, on three of them: propose better for SUB and PAD, and
+could BELL not play the little London-tower chime? (The tower is the
+Elizabeth Tower at Westminster -- Big Ben.)
+
+- **A phrase can hold a chord.** The honest answer for PAD was not a better
+  melody, it was that a pad held one note at a time is not a pad: it is a
+  slow note. `Demo` gained a `chord` count, read in groups struck together
+  through `player_note_chord` -- the same path a step with several notes
+  takes, so the preview is what the step would sound. PAD now swells
+  through two triads, C-3+G-3+C-4 into A-2+E-3+A-3, 1600 ms each. ORGAN and
+  KEYS could take the same treatment later; they were left alone for now.
+- **That cost PAD three dB.** Three notes at once are three times the
+  energy: at -4 its row came through the chooser at 0.83 against 0.25 to
+  0.64 for everything beside it, which is a jolt when walking the list.
+  At -7 it previews at 0.59, and removing it from a four-track mix still
+  drops the RMS by eight per cent and the centroid from 1003 to 871, so it
+  is there. The number follows the phrase: one note at a time it wants -4
+  back, and the table says so.
+- **SUB walks down instead of sitting still.** E-2, C-2, A-1 and a rest,
+  520 ms a step: a sub is weight and nothing else, so the phrase goes to
+  the bottom in three steps and ends on the lowest note it has. The old
+  A-1 / rest / E-2 / rest showed two isolated notes and no range.
+- **BELL strikes the Westminster quarters**, his ask, and it is the
+  quarter-past phrase the tower really strikes on its four bells: G#4 F#4
+  E4 B3, then room to ring. Not a tune picked for being pretty -- it is
+  the one a bell is known by, and the drop of a fourth onto B3 at the end
+  is the part the ear recognises. Two rests after it, because the sound
+  rings 1.2 s and a chime that starts again over itself is a doorbell
+  fault, not a chime.

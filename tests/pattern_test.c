@@ -264,17 +264,25 @@ int main(void)
         press(PB_HOME);
     }
     { /* + NEW, the last row of the list: the first free slot, on the step,
-       * through the journal as the screen's other edits are */
+       * through the journal as the screen's other edits are.
+       *
+       * The first free slot is past the factory presets (31/10): they
+       * carry names, and ch_free_instr leaves a named slot alone -- which
+       * is the point of naming them. So + NEW lands on the first slot
+       * song_init did not fill, and the ten sounds stay where they are. */
+        int fresh = song_preset_count();
+
         undo_reset(&song);    /* the journal does nothing until it knows the song */
         enc(PE_PRESET, 1);
         enc(PE_K1, 100);      /* all the way down */
         press(PB_SEL);
-        CHECK("+ NEW takes the first free slot and names the step", st(2)->instrument == 1);
+        CHECK("+ NEW takes the first slot past the presets, and names the step",
+              st(2)->instrument == fresh);
         CHECK("the slot it took is neutral and unnamed",
-              !song.instruments[1].name[0] && song.instruments[1].sustain == 255);
+              !song.instruments[fresh].name[0] && song.instruments[fresh].sustain == 255);
         in.btns = 1u << PB_SEL;
         CHECK("and the list is gone: SEL asks for that instrument's screen",
-              pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == 1);
+              pattern_frame(&in) == PATTERN_INSTR && pattern_instr() == fresh);
         in.btns = 0;
         pattern_resume();
         go();
