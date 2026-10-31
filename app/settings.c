@@ -7,10 +7,11 @@
 #include "grid.h"
 #include "ui.h"
 
-enum { S_LEDS, S_LIGHT, S_COUNT, ROWS };
+enum { S_LEDS, S_LIGHT, S_COUNT, S_FXHUE, ROWS };
 enum { LABEL_X = 14, VALUE_X = 120 };
 
-static const char *const label[ROWS] = { "LEDS", "LIGHT", "COUNT-IN" };
+static const char *const label[ROWS] = { "LEDS", "LIGHT", "COUNT-IN", "FX HUE" };
+static const char *const fxhue_word[UI_FX_HUES] = { "OFF", "VIOLET", "CYAN", "SAND", "SWAP" };
 static const char *const count_word[UI_COUNT_MAX + 1] = { "OFF", "1 BAR", "2 BARS" };
 static const char *const leds_word[3] = { "OFF", "STATE", "GUIDE" };
 /* LIGHT's steps, dimmest first: the panel's levels (platform.h). */
@@ -43,7 +44,10 @@ static void draw(void)
         }
         gfx_text(F_COND20, LABEL_X, grid_base(k), label[k], here ? C_ON_ACC : C_DIM);
         gfx_text(F_COND20, VALUE_X, grid_base(k),
-                 k == S_LEDS ? leds_word[ui_leds] : k == S_LIGHT ? light_word[light_at()] : count_word[ui_count_in],
+                 k == S_LEDS      ? leds_word[ui_leds]
+                 : k == S_LIGHT    ? light_word[light_at()]
+                 : k == S_COUNT    ? count_word[ui_count_in]
+                                   : fxhue_word[ui_fx_hue],
                  here ? C_ACCENT : C_TEXT);
     }
 }
@@ -67,8 +71,10 @@ bool settings_frame(const PlatInput *in)
         ui_leds = clampi(ui_leds + d, UI_LEDS_OFF, UI_LEDS_GUIDE);
     else if (d && row == S_LIGHT)
         ui_light = light_level[clampi(light_at() + d, 0, LIGHTS - 1)];
-    else if (d)
+    else if (d && row == S_COUNT)
         ui_count_in = clampi(ui_count_in + d, 0, UI_COUNT_MAX);
+    else if (d)
+        ui_fx_hue = clampi(ui_fx_hue + d, 0, UI_FX_HUES - 1);
     /* LIGHT's row lights a few buttons at it, to judge on the panel */
     ui_led_guide(row == S_LIGHT ? 1u << PB_FX | 1u << PB_ENV | 1u << PB_LFO | 1u << PB_EDIT | 1u << PB_SEQ |
                                       1u << PB_ARP

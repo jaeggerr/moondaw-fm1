@@ -46,6 +46,12 @@ extern int ui_leds, ui_light;
 /* SETTINGS' COUNT-IN: bars REC counts before it records, 0 to 2; 1 by default. */
 enum { UI_COUNT_MAX = 2 };
 extern int ui_count_in;
+
+/* PROTOTYPE (SETTINGS > FX HUE): which colour pair tells a one-shot from a
+ * setter in the FX column. OFF is the machine as it is, every name amber. */
+enum { UI_FX_HUE_OFF, UI_FX_HUE_VIOLET, UI_FX_HUE_CYAN, UI_FX_HUE_SAND, UI_FX_HUE_SWAP, UI_FX_HUES };
+extern int ui_fx_hue;
+uint16_t ui_fx_ink(uint8_t cmd); /* the ink the name is written in */
 void ui_led_guide(uint32_t usable);
 /* A state's LED (PLAY playing), unless LEDS is OFF. */
 void ui_led_state(int btn, bool on);

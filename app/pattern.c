@@ -385,7 +385,8 @@ static void draw_cell(int v, int r, int c, bool band)
             return;
         }
         tw = gfx_text_w(F_COND20, fx_name(f.cmd)) + 4 + gfx_text_w(F_COND20, grid_hex2(s, f.val));
-        tx = gfx_text(F_COND20, x + (w - tw) / 2, grid_base(v), fx_name(f.cmd), grid_ink(band, on, C_FX));
+        tx = gfx_text(F_COND20, x + (w - tw) / 2, grid_base(v), fx_name(f.cmd),
+                      grid_ink(band, on, ui_fx_ink(f.cmd)));
         gfx_text(F_COND20, tx + 4, grid_base(v), s, grid_ink(band, on, C_TEXT));
     } else { /* the instrument the step names, or --; then the name of the one that plays:
               * white where the step names it, grey where it keeps the one in force */

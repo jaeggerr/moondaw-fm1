@@ -293,6 +293,7 @@ uint8_t fx_clamp_val(uint8_t cmd, uint8_t ticks_per_step, int v);
 const char *fx_name(uint8_t cmd);       /* 3 letters, "---" for none */
 const char *fx_desc(uint8_t cmd);       /* what it does, 18 characters at most: the only manual */
 int fx_from_name(const char *s);        /* FX_NONE if unknown */
+bool fx_sticks(uint8_t cmd);            /* holds until rewritten, vs dies with its step */
 int fx_ramp_slot(uint8_t cmd);          /* -1 when the command jumps */
 bool fx_conflicts(const Step *st, int slot, uint8_t cmd);
 const char *engine_name(uint8_t engine);

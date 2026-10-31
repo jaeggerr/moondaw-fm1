@@ -717,6 +717,20 @@ const char *fx_desc(uint8_t cmd)
     return fx_descs[cmd < FX_COUNT ? cmd : 0];
 }
 
+/* Whether a command HOLDS until it is written again. The truth is
+ * core/player.c, the block that clears the one-shots at the top of every
+ * step: what is cleared there dies with its step, the rest is a setter. */
+bool fx_sticks(uint8_t cmd)
+{
+    switch (cmd) {
+    case FX_NONE: case FX_DLY: case FX_CUT: case FX_GAT: case FX_RET:
+    case FX_STR: case FX_SCP: case FX_RMP: case FX_SMP: case FX_PRB:
+        return false;
+    default:
+        return true;
+    }
+}
+
 const char *fx_name(uint8_t cmd)
 {
     return fx_names[cmd < FX_COUNT ? cmd : 0];

@@ -2,10 +2,12 @@
 #include "ui.h"
 
 #include "../core/player.h"
+#include "../core/song.h"
 
 #include "app.h"
 #include "gfx.h"
 #include "loop.h"
+#include "theme.h"
 
 char *ui_hex2(char *b, int v)
 {
@@ -90,6 +92,19 @@ void ui_btn_map(const char *const word[12], const uint8_t state[12], uint32_t he
 }
 
 int ui_leds = UI_LEDS_GUIDE, ui_light = PLAT_LED_50, ui_count_in = 1;
+int ui_fx_hue = UI_FX_HUE_OFF;
+
+uint16_t ui_fx_ink(uint8_t cmd)
+{
+    bool sticks = fx_sticks(cmd);
+    switch (ui_fx_hue) {
+    case UI_FX_HUE_VIOLET: return sticks ? C_FX : C_SAMPLE;
+    case UI_FX_HUE_CYAN:   return sticks ? C_FX : C_TITLE;
+    case UI_FX_HUE_SAND:   return sticks ? C_FX : C_FX_SAND;
+    case UI_FX_HUE_SWAP:   return sticks ? C_SAMPLE : C_FX;
+    default:               return C_FX;
+    }
+}
 static uint32_t shown = ~0u; /* what the guide last wrote */
 
 static uint32_t keys_shown = ~0u;

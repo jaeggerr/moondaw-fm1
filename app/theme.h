@@ -24,6 +24,10 @@
 #define C_TRACK  GFX_RGB(0x28, 0x28, 0x28) /* a scroll bar's groove */
 #define C_SAMPLE GFX_RGB(0xC0, 0x84, 0xE8) /* the sample bank, on SYSTEM */
 #define C_POP    GFX_RGB(0x1A, 0x20, 0x29) /* a panel opened over the screen */
+/* PROTOTYPE (SETTINGS > FX HUE): one-shots told from setters by the colour
+ * of the name. Candidates to judge on the panel, not a decision. SAND is
+ * the only new value -- the others are colours the machine already has. */
+#define C_FX_SAND GFX_RGB(0xA8, 0x86, 0x4A)
 /* The SYLLABLE screen's keyboard, drawn as the keys lie under the hand. */
 #define C_KEY      GFX_RGB(0xD8, 0xD8, 0xD8) /* a white key that types */
 #define C_KEY_ON   GFX_RGB(0x00, 0x00, 0x00) /* its sign */

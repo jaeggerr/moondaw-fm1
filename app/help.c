@@ -288,7 +288,7 @@ static void draw_effects(void)
         uint8_t c = (uint8_t)(fx_open + 1);
         const char *t = fx_help(c);
         int n = wrap(t, 0);
-        gfx_text(F_COND20, 8, 42, fx_name(c), C_FX);
+        gfx_text(F_COND20, 8, 42, fx_name(c), ui_fx_ink(c));
         gfx_text(F_COND14, 60, 41, fx_desc(c), C_DIM);
         gfx_fill(0, 50, PLAT_W, 1, C_TRACK, 255);
         if (!t)
