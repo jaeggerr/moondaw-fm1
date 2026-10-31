@@ -1292,6 +1292,57 @@ static void draw_marker(int v, int sec, bool on)
     gfx_fill(x, y + MARK_H / 2, PLAT_W - 10 - x, 1, on ? C_ACCENT : C_FX, 255);
 }
 
+/* The strike, over the block that plays it: the eye finds which track is
+ * the drum by watching the arrangement, instead of opening the blocks to
+ * read what instruments they name (01/11).
+ *
+ * Read off the block, not asked of the player: the step the screen is
+ * shown, taken modulo the block's own length -- a shorter block comes
+ * round inside the phrase and strikes on its own first step, as the
+ * player plays it. It is what is WRITTEN there. The player knows what it
+ * actually struck, a failed PRB roll included, but saying so from the
+ * audio side is code in the RAM the render runs from, and that region had
+ * 24 bytes left: a probable step flashes whether or not its roll came up.
+ * A step with no note, a note-off, a HOLD and a track not heard flash
+ * nothing. */
+static bool strikes(const SongEntry *e, int track, uint16_t row)
+{
+    const Step *st;
+    int pat = e->pattern[track], len;
+
+    if (pat >= TRACK_MAX_PATTERNS)
+        return false;
+    len = song->patterns[track][pat].length;
+    if (len == 0)
+        return false;
+    st = song_step(song, track, pat, row % len);
+    for (int i = 0; i < STEP_MAX_NOTES; i++)
+        if (st->notes[i] <= NOTE_MAX)
+            return true;
+    return false;
+}
+
+/* A bar that comes and goes under the number, and not the number moved:
+ * a bar APPEARS, and an edge arriving out of nothing is what the eye
+ * catches a rhythm by -- two pixels of displacement on a glyph fourteen
+ * tall is a shape slightly elsewhere, read at a glance as the same shape.
+ * Judged on the panel, 01/11: the number knocked down said the beat less
+ * well than the bar it replaced.
+ *
+ * Three brightnesses over the first half of the step, not a fade: the
+ * screen is drawn band by band and only the bands that changed go down
+ * the SPI, so a bar dimming on every frame would send the row on every
+ * frame to say what three sendings say. The alpha it takes, 0 for none. */
+static int strike_alpha(const SongEntry *e, int track)
+{
+    int tps = song->ticks_per_step ? song->ticks_per_step : 1, quarter;
+
+    if (!grid_heard(track) || !strikes(e, track, player_row()))
+        return 0;
+    quarter = player_tick_in_step() * 4 / tps;
+    return quarter == 0 ? 255 : quarter == 1 ? 110 : 0;
+}
+
 /* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
@@ -1386,6 +1437,17 @@ static void draw(void)
             if (p != PATTERN_NONE && e->level[t] < VOL_FULL) /* softer: a bar its length at the cell's foot */
                 gfx_fill(GRID_CELL_X + (t - left) * CELL_W + 4, grid_y(v) + GRID_ROW - 5,
                          (CELL_W - 8) * e->level[t] / VOL_FULL + 1, 2, on ? C_TEXT : band ? C_ON_ACC : C_FX, 255);
+            if (r == play_row) { /* struck: a bar along the cell's floor, under the level's */
+                int a = strike_alpha(e, t);
+                /* The band's green ends where the row does, so down there the
+                 * bar would run along its edge and read as leaking out of it:
+                 * on the band it comes up a row and sits inside. One row and
+                 * not two -- two is the level's, and the level is drawn first
+                 * so the strike has that row while it lasts (01/11). */
+                if (a)
+                    gfx_fill(GRID_CELL_X + (t - left) * CELL_W + 4, grid_y(v) + GRID_ROW - (band ? 4 : 3),
+                             CELL_W - 8, 2, band && !on ? C_ON_ACC : C_TITLE, a);
+            }
         }
     }
     if (selecting && slot_of(row, false) >= 0) /* the cursor, over the SELECTION */
