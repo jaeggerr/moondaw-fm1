@@ -355,6 +355,28 @@ static const char *step_note_name(int r, uint8_t n, char buf[4])
     return buf;
 }
 
+/* The trail (01/11): the setter under the cursor is said again, faintly,
+ * down the rows it still reaches -- so the cell answers "how far does THIS
+ * one go", and the slot it was written in is not the question. It ends at
+ * the next writing of the SAME command, wherever on the row that sits,
+ * because the slot means nothing to the player. A one-shot shows none, and
+ * that silence is what tells the two kinds apart on a dense page. */
+static bool fx_trail(int r, int c, StepFx *out)
+{
+    StepFx f;
+    if (c != cur_col || r <= cur_row || selecting)
+        return false;
+    f = step_at(cur_row)->fx[cur_col];
+    if (f.cmd == FX_NONE || !fx_sticks(f.cmd))
+        return false;
+    for (int i = cur_row + 1; i <= r; i++)
+        for (int k = 0; k < STEP_MAX_FX; k++)
+            if (step_at(i)->fx[k].cmd == f.cmd)
+                return false;
+    *out = f;
+    return true;
+}
+
 static void draw_cell(int v, int r, int c, bool band)
 {
     const Step *st = step_at(r);
@@ -368,10 +390,14 @@ static void draw_cell(int v, int r, int c, bool band)
                   n <= NOTE_MAX ? (r == play_row ? C_TITLE : C_TEXT) : C_DIM);
     } else if (view == V_FX) {
         StepFx f = st->fx[c];
+        bool faint = false; /* in force from above, not written here */
         int tw, tx;
         if (f.cmd == FX_NONE) {
-            grid_cell(v, x, w, "---", band, on, C_DIM);
-            return;
+            if (!fx_trail(r, c, &f)) {
+                grid_cell(v, x, w, "---", band, on, C_DIM);
+                return;
+            }
+            faint = true;
         }
         if (on)
             grid_hollow(v, x, w);
@@ -386,8 +412,8 @@ static void draw_cell(int v, int r, int c, bool band)
         }
         tw = gfx_text_w(F_COND20, fx_name(f.cmd)) + 4 + gfx_text_w(F_COND20, grid_hex2(s, f.val));
         tx = gfx_text(F_COND20, x + (w - tw) / 2, grid_base(v), fx_name(f.cmd),
-                      grid_ink(band, on, ui_fx_ink(f.cmd)));
-        gfx_text(F_COND20, tx + 4, grid_base(v), s, grid_ink(band, on, C_TEXT));
+                      grid_ink(band, on, faint ? C_FX_FAINT : ui_fx_ink(f.cmd)));
+        gfx_text(F_COND20, tx + 4, grid_base(v), s, grid_ink(band, on, faint ? C_TEXT_FAINT : C_TEXT));
     } else { /* the instrument the step names, or --; then the name of the one that plays:
               * white where the step names it, grey where it keeps the one in force */
         bool named = st->instrument != INSTR_NONE, sounds = false;

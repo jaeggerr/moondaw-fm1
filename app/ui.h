@@ -47,11 +47,9 @@ extern int ui_leds, ui_light;
 enum { UI_COUNT_MAX = 2 };
 extern int ui_count_in;
 
-/* PROTOTYPE (SETTINGS > FX HUE): which colour pair tells a one-shot from a
- * setter in the FX column. OFF is the machine as it is, every name amber. */
-enum { UI_FX_HUE_OFF, UI_FX_HUE_VIOLET, UI_FX_HUE_CYAN, UI_FX_HUE_SAND, UI_FX_HUE_SWAP, UI_FX_HUES };
-extern int ui_fx_hue;
-uint16_t ui_fx_ink(uint8_t cmd); /* the ink the name is written in */
+/* Amber while it holds, violet while it dies with its step: the FX column
+ * says which kind a command is before it is read. */
+uint16_t ui_fx_ink(uint8_t cmd);
 void ui_led_guide(uint32_t usable);
 /* A state's LED (PLAY playing), unless LEDS is OFF. */
 void ui_led_state(int btn, bool on);
