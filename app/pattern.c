@@ -577,19 +577,22 @@ static void ch_listen(uint32_t ms)
     pv_at = -1;
 }
 
+/* The row's own phrase, the one INSTRUMENT's PLAY plays: `song_instr_demo`
+ * holds it, so walking the list is walking from sound to sound and not
+ * from register to register. */
 static void ch_preview(uint32_t ms)
 {
-    static const uint8_t tune[] = { 60, 64, 67, 72, 0, 0 };
-    static const uint8_t kit[] = { 36, 42, 38, 46, 36, 39, 48, 45, 0, 0 };
     int k = ch_instr(sounding);
-    bool drum = song->instruments[k % SONG_MAX_INSTR].engine == ENGINE_DRUM;
-    int at = drum ? (int)((ms - pv_t0) / 125u % sizeof kit) : (int)((ms - pv_t0) / 250u % sizeof tune);
-    uint8_t n = drum ? kit[at] : tune[at];
+    const Demo *d = song_instr_demo(song, k % SONG_MAX_INSTR);
+    int at = (int)((ms - pv_t0) / d->step_ms % song_demo_steps(d));
+    uint8_t nn[STEP_MAX_NOTES];
+    int n;
     if (at == pv_at)
         return;
     pv_at = at;
+    n = song_demo_notes(d, at, nn);
     if (n)
-        player_note_on(k, n);
+        player_note_chord(k, nn, n); /* one note or a pad's triad, struck as a step is */
     else
         player_note_off();
 }

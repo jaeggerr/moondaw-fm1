@@ -145,18 +145,10 @@ static void parse_inst(const char *t, InstrumentDef *in, TrkReport *rep)
     const char *p;
     int v;
 
-    in->engine = ENGINE_PULSE;
-    in->cutoff = FILTER_OPEN;
-    in->reso = 0;
-    in->filt_env = FILTER_ENV_NONE;
-    in->filt_vel = FILTER_ENV_NONE;
-    in->gain = 0;
-    in->vib_phase = 0;
-    in->tract = 0;
-    in->accent = VOX_ACCENT_FR;
-    for (int k = 0; k < 4; k++)
-        in->drum[k] = 0;
-    in->nlayers = 0;
+    /* The whole slot back to neutral first: a line names what it names,
+     * and what it leaves out is the ground, never the slot's last tenant
+     * -- a preset, since 31/10. */
+    song_instr_default(in);
 
     if ((p = find(t, "engine ")) != 0) {
         int e = engine_from_name(p + 7);

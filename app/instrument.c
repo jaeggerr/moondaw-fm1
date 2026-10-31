@@ -491,23 +491,32 @@ static void turn(int d)
     app_mark_dirty();
 }
 
-/* The preview: C E G C an octave on, a note every 250 ms, a rest, again.
- * A kit plays its drums instead: kick, closed hat, snare, open hat, clap,
- * two toms, a rest, a 16th at 120 bpm each. */
+/* The preview: the sound's own phrase (`song_instr_demo`), round and
+ * round. A factory preset says its own register and its own note length
+ * -- a bass low and slow, a harp running up -- and anything else gets the
+ * four notes this screen always played, or a kit's drums.
+ *
+ * The octave buttons move it, as they move the keys; a kit's notes are
+ * drums on a map and are left where they are. */
 static void preview(uint32_t ms)
 {
-    static const uint8_t tune[] = { 60, 64, 67, 72, 0, 0 };
-    static const uint8_t kit[] = { 36, 42, 38, 46, 36, 39, 48, 45, 0, 0 };
+    const Demo *d = song_instr_demo(&app_song, inst);
     bool drum = I()->engine == ENGINE_DRUM;
-    int at = drum ? (int)((ms - preview_t0) / 125u % sizeof kit) : (int)((ms - preview_t0) / 250u % sizeof tune);
-    uint8_t n = drum ? kit[at] : tune[at];
+    int at = (int)((ms - preview_t0) / d->step_ms % song_demo_steps(d));
+    uint8_t nn[STEP_MAX_NOTES];
+    int n;
     if (at == preview_at)
         return;
     preview_at = at;
-    if (n)
-        player_note_on(inst, (uint8_t)(n + (drum ? 0 : 12 * kbd_oct)));
-    else
+    n = song_demo_notes(d, at, nn);
+    if (!n) {
         player_note_off();
+        return;
+    }
+    if (!drum)
+        for (int i = 0; i < n; i++)
+            nn[i] = (uint8_t)(nn[i] + 12 * kbd_oct);
+    player_note_chord(inst, nn, n);
 }
 
 /* ---------------------------------------------------------- drawing --- */

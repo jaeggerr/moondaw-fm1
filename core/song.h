@@ -213,6 +213,37 @@ void song_copy(Song *dst, const Song *src);
 /* One instrument slot back to neutral -- what song_init puts everywhere,
  * and what a slot taken fresh starts from (PATTERN's + NEW). */
 void song_instr_init(Song *s, int i);
+/* The neutral ground one slot starts from, wherever it is held. */
+void song_instr_default(InstrumentDef *in);
+
+#define SONG_DEMO_MAX 10
+/* What PLAY plays to show one sound: a strike every `step_ms`, round and
+ * round until PLAY again. INSTRUMENT and CHOOSE INSTRUMENT both play it,
+ * so a sound is met the same way wherever it is met.
+ *
+ * `chord` 0 or 1 reads note[] one at a time; 2 and up reads it in groups
+ * struck together, as a step with several notes sounds. A pad or an organ
+ * held one note at a time is not what it is -- the phrase has to be able
+ * to say so. A group, or a note, of 0 is where the hand lets go. */
+typedef struct {
+    uint16_t step_ms;
+    uint8_t n;                    /* slots of note[] in use, rests included */
+    uint8_t chord;                /* notes struck together, 0 or 1 for one */
+    uint8_t note[SONG_DEMO_MAX];
+} Demo;
+
+/* The phrase's strikes, rests counted: what the clock is taken modulo. */
+int song_demo_steps(const Demo *d);
+/* Strike `at` into out[] (at most STEP_MAX_NOTES), how many it holds --
+ * 0 being the rest, where the note is let go. */
+int song_demo_notes(const Demo *d, int at, uint8_t *out);
+/* Instrument `i`'s phrase: its preset's own, while the slot still carries
+ * that preset's engine and name, else the one its engine deserves. Never
+ * null. */
+const Demo *song_instr_demo(const Song *s, int i);
+/* How many instrument slots song_init hands over with a sound already in
+ * them, counted from 0. */
+int song_preset_count(void);
 
 /* Reading never allocates: a step nobody wrote reads as the empty one. */
 const Step *song_step(const Song *s, int track, int pat, int row);
