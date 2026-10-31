@@ -129,6 +129,7 @@ void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
 void plat_led_level(int l, int v) { (void)l; (void)v; }
 int plat_audio_load(int *worst) { *worst = -1; return -1; }
+int plat_battery(int *raw) { if (raw) *raw = -1; return -1; }
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { (void)o; (void)d; (void)n; return -1; }
 const uint8_t *plat_flash_map(void) { return 0; }
 int plat_flash_erase(uint32_t s) { (void)s; return -1; }

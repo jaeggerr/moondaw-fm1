@@ -23,6 +23,10 @@ void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
 void plat_led_level(int l, int v) { (void)l; (void)v; }
 int plat_audio_load(int *worst) { *worst = -1; return -1; }
+/* The charge, counted: HOME's bar polls the ADC the MASTER pot shares,
+ * so where and how often it asks is the thing worth holding. */
+static int batt_reads, batt_pct = -1;
+int plat_battery(int *raw) { batt_reads++; if (raw) *raw = -1; return batt_pct; }
 int plat_sysex_get(const uint8_t **p, uint32_t *n) { (void)p; (void)n; return 0; }
 void plat_sysex_done(void) {}
 int plat_sysex_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; return -1; }
@@ -197,6 +201,21 @@ int main(void)
     press(PB_HOME);           /* the list */
     press(PB_HOME);           /* the root */
     CHECK("and HOME goes back to the root, through the list", !strcmp(app_screen(), "HOME"));
+
+    /* The top bar's charge (31/10). A frame is DRAWN fifteen times, once
+     * a band, and the gauge must not be read fifteen times with it. */
+    home();
+    batt_pct = 72, batt_reads = 0;
+    go();
+    CHECK("the root reads the charge once a frame, not once a band", batt_reads == 1);
+    projects();
+    batt_reads = 0;
+    go();
+    CHECK("PROJECTS has no bar, so it does not read it at all", batt_reads == 0);
+    home();
+    batt_pct = -1, batt_reads = 0;
+    go();
+    CHECK("a machine that does not know is still asked, once", batt_reads == 1);
 
     app_init();               /* off and on */
     go();

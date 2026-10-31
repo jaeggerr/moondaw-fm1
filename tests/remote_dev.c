@@ -19,6 +19,7 @@ void plat_led_btn(int b, int on) { (void)b; (void)on; }
 void plat_led_glow(int b, int on) { (void)b; (void)on; }
 void plat_led_level(int l, int v) { (void)l; (void)v; }
 int plat_audio_load(int *worst) { *worst = 12; return 3; } /* figures to read back */
+int plat_battery(int *raw) { if (raw) *raw = -1; return -1; }
 
 static uint32_t now_ms(void)
 {

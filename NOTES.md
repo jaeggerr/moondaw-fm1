@@ -3346,3 +3346,146 @@ The cost I did not pay: with the LEDs off there is nothing on the screen
 that says the latch is on. I left it there rather than invent a corner word
 he has not seen — SONG's corner is already the one number KNOB 4 turns, and
 PATTERN's already says SELECT. To be judged on the panel.
+## 2026-10-31 — the battery on HOME, and what its number is worth
+
+- **The bar.** Three proposals shot from the firmware (`proto/home.html`),
+  C chosen on the panel: the wordmark left, the charge as a figure AND a
+  cell, a rule under them at y=28. The rows start at y=32. The foot gave
+  up the version (the bar says MOONDAW now) and `MAX` (SYSTEM holds the
+  same number as CPU MAX); the profile line while a song plays stays, and
+  PROJECTS, which has no bar, keeps the version.
+- **`plat_battery(int *raw)`** joins `plat_audio_load()` on the platform
+  surface: 0..100, or -1 where the machine does not know, which is what
+  SDL and the browser answer. **-1 draws no gauge at all** — not an empty
+  cell, which reads as a flat one, and not a dash, which reads as a
+  fault.
+- **It is polled once a frame and only on the root.** A screen is DRAWN
+  fifteen times for one frame, once a band; a gauge read from a draw
+  would be fifteen conversions on the ADC the MASTER pot shares.
+  `tests/menu_test.c` counts the reads so it stays one.
+- **The read.** PB1, SARADC channel 3 (`fm1_adc.h`), every sixteenth
+  frame, the conversion right after the channel moves dropped, then the
+  same `/8` filter the MASTER pot runs through.
+- **BATT_MV_FS = 6600 IS AN ASSUMPTION, NOT A MEASUREMENT.** It is the
+  cell voltage that would read full scale: the converter's reference
+  times the divider on PB1. Nothing in the chip or in Felucca documents
+  either, so 6600 is the ordinary wiring — a 2:1 divider on a 3.3 V
+  reference. Measured on the machine on 31/10: **625 counts**, flat to
+  the count over three minutes and under a 52 % audio load (which proves
+  less than it looks: one count is 6.45 mV and the sag under that load is
+  smaller than that). 625 counts under the assumption is 4.03 V, so the
+  panel reads 84 %.
+- **What the number is worth: the shape is right, the offset is not
+  pinned.** The plausible family is a 2:1 divider on a 2.95–3.45 V
+  reference, so 625 counts is somewhere in 3.60–4.21 V. Near the flat
+  part of a lithium curve that is tens of points.
+- **How to pin it, in one measurement.** `battraw=` is on the link beside
+  `batt=` for exactly this. Put a voltmeter on the cell, read
+  `fm1_ctl.py status` at the same moment, and
+  `BATT_MV_FS = mV * 1023 / raw`. A second point near empty would also
+  check the curve itself. Until then the gauge is a gauge, not an
+  instrument.
+- **Charging is not detected.** No VBUS sense goes through the HAL, so a
+  cell that is filling looks like a cell that is full.
+- **One point, taken on a full cell: 623 counts.** Jaeger charged the
+  machine to its charger's own green lamp, unplugged it, put the XIAO
+  bridge back on and asked. Six `fm1_ctl.py status` in a row, fifteen
+  seconds: `batt=83 battraw=623`, flat to the count. His panel had read
+  85 % earlier in the session, which is 626 counts, and the note above
+  recorded 625: the reading is walking down, three counts over the day.
+  **The read is NOT a cell in charge.** The bridge carries D+, D- and
+  GND and deliberately no VBUS (ARRIVEE.md), so the FM-1 is on its
+  battery whenever the link is up. The green lamp is the charger's, on
+  another cable, before.
+- **So the point is open-circuit full, which is what BATT_CURVE's top
+  already means** (4190 = full, at rest). `BATT_MV_FS = 4190 * 1023 /
+  623 = 6880`, against the 6600 that was assumed. At 6880 the gauge
+  reads 99 % on 623 counts -- one millivolt under the top, lost to the
+  integer divide; taking the cell at 4.20 V instead gives 6897 and 100 %.
+- **6880 is a FLOOR, not an estimate, and that is the finding.** The
+  counts were still falling when they were read, whether the cell was
+  still relaxing or the machine was simply draining, so the settled
+  full-charge reading is 623 counts or fewer -- and fewer counts for the
+  same 4190 mV means a HIGHER full scale. 6880 already implies a 2.95-3.45
+  V reference at **3.44 V** on a 2:1 divider, ten millivolts under the
+  ceiling of the plausible family; 620 counts would put it at 3.46 V,
+  past it. The assumption that is most likely wrong is therefore not the
+  reference's value but the shape of the wiring: a divider that is not
+  exactly 2:1 would explain it without pushing the reference off its own
+  range. One point cannot separate the two.
+- **What is still owed: the voltmeter.** `BATT_MV_FS = mV * 1023 / raw`
+  with mV read on the cell at the moment of the status, as the note above
+  says. The cell is near full now, so the useful one to take is a second
+  point near empty: it pins the divider and checks the curve at the same
+  time. Until one of them is taken the constant stays at 6600 -- moving
+  it to 6880 would trade a number that is known to be a guess for a
+  number that looks measured and is not.
+- **What the other firmwares do: none of them converts counts to volts.**
+  Looked at all three on 31/10.
+  - **Felucca 1.8** (`firmware/src/ui_draw.c batt_level`) has no millivolts
+    anywhere. It is three raw thresholds on ch3 -- `>= 591` three bars,
+    `>= 561` two, `>= 531` one, under that empty -- and its comment calls
+    them "the stock thresholds": they were taken off M-VAVE's own closed
+    firmware, not derived. Its read is slower than ours too (once a
+    second, `/32`, `kt_adc_batt` pausing the key scan for the one
+    conversion) where we take one every sixteenth frame with `/8`.
+  - **Mycelium FM-1** (community, built on Felucca) carries the same
+    three numbers over verbatim, down to the `/32`.
+  - **FM1 Open**, M-VAVE's OWN open firmware, does not use the value at
+    all. `sdk/include/fm1.h` publishes it as `uint16_t knob, battery; /*
+    ADC values, 0..1023 */`, `app/board/panel.c` fills it from
+    `fm1_device_adc(3U)`, and nothing reads it: no gauge, no curve, no
+    scale. The only number in the tree is `controls.battery = 900` in the
+    web simulator, a stub beside `knob = 1023` -- it is not a
+    measurement, and 900 counts would put the full scale at 4763, outside
+    the plausible family. Do not read it as one.
+  - So the constant we need is one nobody upstream ever needed: we are
+    the only one of the four that claims a percentage. The divider ratio
+    and the reference are documented nowhere because no one else converts.
+- **But the stock thresholds ARE evidence, and they point at 6880.** Run
+  531 / 561 / 591 through `BATT_CURVE` and ask what full scale makes a
+  four-level gauge evenly spaced -- the one thing M-VAVE certainly did
+  intend when they picked them:
+  | BATT_MV_FS | thresholds, in % | the four bands |
+  | --- | --- | --- |
+  | 6600 (assumed) | 4.6 / 11.2 / 52.6 | 5 / 7 / 41 / 47 |
+  | 6857 (most even) | 8.5 / 40.0 / 75.9 | 9 / 32 / 36 / 24 |
+  | 6880 (the measured cell) | 8.9 / 43.2 / 77.8 | 9 / 34 / 35 / 22 |
+  At 6600 the bottom two bars share 12 % of the cell's life and the top
+  two share 88 %: nobody draws that gauge. The evenest spacing lands at
+  **6857**, and the full-charge point of the entry above lands at
+  **6880** -- two estimates from unrelated evidence, 0.3 % apart, about
+  one sixth of an ADC count. That is the corroboration the last entry
+  said one point could not give.
+- **It also settles which assumption was wrong.** 6880 is the composite
+  (reference x divider ratio), and only that composite matters to the
+  gauge; the split does not. The note above read the composite as a 2:1
+  divider on a 3.44 V reference and worried that 3.44 sat at the ceiling
+  of the plausible family. The thresholds say the ceiling is where the
+  truth is: it is the 3.3 V "ordinary wiring" guess that was wrong, not
+  the range.
+- **Applied: 6880, and round instead of truncate.** At 6880
+  a full cell at 623 counts reads 99 %, one millivolt short, lost to
+  `r * FS / 1023` flooring. Rounding it -- `(r * FS + 511) / 1023` --
+  gives 4190 mV exactly, the curve's own top, and 623 becomes the first
+  count that reads 100 %. Bending the scale to 6897 to get the same 100 %
+  would be fitting the constant to a rounding error. The voltmeter is
+  still owed: this is three agreeing inferences, not a measurement of the
+  divider -- and it is not being taken, because it means opening the
+  machine and Jaeger would rather not. What replaces it costs nothing:
+  the gauge reaches 0 % at 486 counts, so ONE real discharge says whether
+  the scale is right. If the FM-1 dies announcing a few percent, it is;
+  if it dies announcing a quarter full, it is not, and the fallback is
+  the upstream's -- bars off raw thresholds, no volts claimed, which
+  would cost the figure on HOME that was chosen on the panel.
+- **What covers it, and what does not.** `tests/menu_test.c` stubs
+  `plat_battery` out (it counts the reads), so NOTHING in the suite
+  exercises the arithmetic: the conversion lives in `firmware/src/firmware.c`,
+  which is only ever built for the device. The screen test still passes
+  and the firmware still builds (229 104 B, identity FM-1_900). The
+  arithmetic itself was checked by pulling the real `#define`, the real
+  `BATT_CURVE` and the real `plat_battery` out of the file with `sed`
+  into a native harness -- not retyped -- and running the table above
+  through it: 486 -> 0, 492 -> 1, 531 -> 8, 561 -> 43, 591 -> 77,
+  620 -> 98, 623 -> 100, and -1 while nothing has been read. It agrees
+  to the point. **Not yet seen on the panel: nothing has been installed.**

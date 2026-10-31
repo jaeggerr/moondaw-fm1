@@ -23,6 +23,21 @@
  * is opened in its place, or an empty project when none is). The version small
  * at the bottom of both. */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
+/* The root's top bar, chosen on the panel on 31/10 out of three
+ * (proto/home.html): the wordmark left, the charge right as a figure AND
+ * a cell, a rule under them. The rows start below it, and the foot gives
+ * up what the bar now says -- the version, which SYSTEM holds as well,
+ * and MAX, which SYSTEM holds as CPU MAX. PROJECTS has no bar, so it
+ * keeps the version at its foot. */
+enum {
+    BAR_TOP = 32,            /* where the rows begin */
+    BAR_BASE = 20,           /* the bar's baseline */
+    BAR_MID = 14,            /* the cell's middle */
+    BAR_RULE = 28,
+    BAR_RIGHT = PLAT_W - 10, /* the rows' own right margin */
+    CELL_W = 26, CELL_H = 13,
+    LOW = 15,                /* at or under this the charge goes red */
+};
 
 #include "version.h"
 
@@ -44,7 +59,7 @@ enum { ASK_NONE, ASK_OPEN, ASK_PLAY, ASK_HOME }; /* what the question leads to o
  * annulent deja" (30/10). It cost the one reflex of tapping HOME twice. */
 static bool ask_armed; /* HOME let go since the question opened -- it opened under a held HOME */
 static uint32_t prev_btns;
-static int peak; /* the worst block since PLAY, held */
+static int batt = -1; /* 0..100, or -1: read once a frame, never from a draw */
 static bool listing; /* in PROJECTS, not the root */
 /* EDIT on a project (29/10): a panel of what can be done to it. */
 enum { OPT_OPEN, OPT_RENAME, OPT_DUPLICATE, OPT_DELETE, OPTS };
@@ -288,10 +303,56 @@ static void draw_question(void)
     }
 }
 
+/* MOONDAW as the Swift app's bar has it -- gold MOON, cyan DAW, the
+ * cursor after them -- in this machine's own CONDENSED rather than as
+ * the app's pixel drawing: that one is 130 x 16, over half the screen.
+ * The two inks are the splash's (app/logo.h), so one wordmark, three
+ * sizes. */
+static void draw_mark(void)
+{
+    int x = gfx_text(F_COND14, TEXT_X, BAR_BASE, "MOON", C_FX);
+    x = gfx_text(F_COND14, x, BAR_BASE, "DAW", C_TITLE);
+    gfx_text(F_COND14, x + 1, BAR_BASE, "_", C_DIM);
+}
+
+/* A cell lying on its side: a grey outline and its nub, what is left of
+ * the charge inside. The outline stays whatever the charge is, so nearly
+ * empty reads as a sliver and not as a hole. */
+static void draw_cell(int pct, uint16_t ink)
+{
+    int x = BAR_RIGHT - 2 - CELL_W, y = BAR_MID - CELL_H / 2;
+    int w = (CELL_W - 4) * pct / 100;
+    gfx_frame_rect(x, y, CELL_W, CELL_H, C_DIM, 255);
+    gfx_fill(x + CELL_W, y + 4, 2, CELL_H - 8, C_DIM, 255);
+    if (w > 0)
+        gfx_fill(x + 2, y + 2, w, CELL_H - 4, ink, 255);
+}
+
+/* The bar. A machine that does not know the charge draws no gauge at all
+ * -- not an empty cell, which reads as a flat one, and not a "--", which
+ * reads as a fault: the FM-1 is there today (platform.h, plat_battery). */
+static void draw_bar(void)
+{
+    gfx_fill(0, BAR_RULE, PLAT_W, 1, C_TRACK, 255);
+    draw_mark();
+    if (batt < 0)
+        return;
+    {
+        char b[8];
+        char *p = ui_dec(b, batt);
+        uint16_t ink = batt <= LOW ? C_MUTE : C_TEXT;
+        while (*p)
+            p++;
+        p[0] = '%', p[1] = 0;
+        gfx_text(F_COND14, BAR_RIGHT - CELL_W - 8 - gfx_text_w(F_COND14, b), BAR_BASE, b, ink);
+        draw_cell(batt, ink);
+    }
+}
+
 static void draw_root(void)
 {
     for (int i = 0; i < MENU_ITEMS; i++) {
-        int y = i * ROW, base = y + 2 + FONTS[F_COND20].ascent;
+        int y = BAR_TOP + i * ROW, base = y + 2 + FONTS[F_COND20].ascent;
         bool here = i == item;
         char n[8];
         const char *right = i == MENU_CONTINUE ? app_name : i == MENU_PROJECTS ? ui_dec(n, nrows) : "";
@@ -317,6 +378,7 @@ static void draw(void)
         return;
     }
     if (!listing) {
+        draw_bar();
         draw_root();
         draw_foot();
         return;
@@ -349,7 +411,10 @@ static void draw(void)
     draw_foot();
 }
 
-/* The version, or while a song plays what it costs, stage by stage; MAX. */
+/* While a song plays, what it costs, stage by stage -- that one stays,
+ * it is the only place it is said. Otherwise the version, and only in
+ * PROJECTS: the root says MOONDAW on its bar now. MAX went with it
+ * (31/10, his call): SYSTEM holds the same number as CPU MAX. */
 static void draw_foot(void)
 {
     if (player_playing() && player_clock) {
@@ -367,14 +432,8 @@ static void draw_foot(void)
             ui_dec(t + 1, (int)p[order[i]]);
             x = gfx_text(F_COND12, x, PLAT_H - 4, t, C_TEXT) + 4;
         }
-    } else {
+    } else if (listing) {
         gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);
-    }
-    if (app_cpu >= 0) { /* what the song costs the chip: the worst block held while it plays */
-        char b[8];
-        int x = PLAT_W - 8 - gfx_text_w(F_COND12, ui_dec(b, peak));
-        gfx_text(F_COND12, x, PLAT_H - 4, b, peak > 90 ? C_MUTE : C_TEXT);
-        gfx_text(F_COND12, x - gfx_text_w(F_COND12, "MAX ") - 2, PLAT_H - 4, "MAX", C_DIM);
     }
 }
 
@@ -587,7 +646,9 @@ int menu_frame(const PlatInput *in)
             }
         }
     }
-    peak = !player_playing() ? 0 : app_block > peak ? app_block : peak; /* the worst block, from PLAY on */
+    /* Once a frame, and only on the root, which is the one screen that
+     * shows it: a draw runs fifteen times for the same frame. */
+    batt = listing ? -1 : plat_battery(0);
     if (!player_playing())
         player_profile_reset();
     ui_led_state(PB_PLAY, player_playing());

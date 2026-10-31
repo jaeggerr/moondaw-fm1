@@ -113,6 +113,17 @@ int plat_audio_load(int *worst)
     return -1;
 }
 
+/* No cell in a browser tab either. The page sets one when it wants to
+ * see HOME's gauge (web_battery); -1 until it does, which is what the
+ * bar is drawn against. */
+static int batt = -1;
+int plat_battery(int *raw)
+{
+    if (raw)
+        *raw = -1;
+    return batt;
+}
+
 void plat_led_key(int key, int on)
 {
     led_keys = on ? led_keys | 1u << key : led_keys & ~(1u << key);
@@ -178,6 +189,7 @@ WEB_EXPORT void web_enc(uint32_t role, int32_t steps)
         enc_acc[role] += steps;
 }
 WEB_EXPORT void web_master(uint32_t v) { in.master = (uint16_t)(v > 1023u ? 1023u : v); }
+WEB_EXPORT void web_battery(int32_t pct) { batt = pct < 0 ? -1 : pct > 100 ? 100 : (int)pct; }
 
 WEB_EXPORT const uint16_t *web_fb(void) { return fb; }
 WEB_EXPORT uint32_t web_draws(void) { return draws; }
