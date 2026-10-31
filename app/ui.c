@@ -122,17 +122,17 @@ void ui_led_mono(int track, uint32_t usable)
     ui_led_keys(usable, alone ? 1u << UI_KEY_MONO : 0u, muted ? 1u << UI_KEY_MONO : 0u);
 }
 
+bool ui_shifted(const UiShift *s) { return s->held || s->latch; }
+
 bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, bool ops, int track,
               const char **said)
 {
     bool tapped = false;
     if (pressed & 1u << PB_EDIT)
-        s->held = true, s->used = false, s->frames = 0;
-    if (s->held && (in->btns & 1u << PB_EDIT))
-        s->frames++;
+        s->held = true, s->used = false;
     if (s->held && keys)
         s->used = true;
-    if (track >= 0 && (s->held || ops || s->mono) && (keys >> UI_KEY_MONO & 1u))
+    if (track >= 0 && (ui_shifted(s) || ops || s->mono) && (keys >> UI_KEY_MONO & 1u))
         s->mono = 1, s->muted = false;
     else if (s->mono && (in->keys >> UI_KEY_MONO & 1u) && ++s->mono == MONO_HOLD && track >= 0) {
         if (player_soloed(track)) /* held: muted, whatever it was */

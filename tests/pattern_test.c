@@ -57,6 +57,8 @@ static void sel(void)
     in.btns = 0;
     go();
 }
+/* EDIT alone: the shift's CAPS LOCK, on or off (ui.h). */
+static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
 static int pat_len_of(void) { return song.patterns[0][song.arrangement[0].pattern[0]].length; }
 static const Step *st(int row) { return song_step(&song, 0, song.arrangement[0].pattern[0], row); }
 /* the player takes PLAY and STOP in its render, as on the machine */
@@ -457,21 +459,42 @@ int main(void)
         enc(PE_K2, 1);
         CHECK("and in a note column they write", (keys(1u << 1), keys(0), st(6)->notes[0] != NOTE_NONE));
         enc(PE_K2, -1);
-        /* EDIT pressed and let go with no key under it does nothing at all
-         * now, however long it was down: it is a shift and only that, and
-         * the SELECTION is OP5's (31/10) */
-        sel();
-        for (int n = 1; n <= EDIT_TAP + 2; n *= EDIT_TAP + 2) {
-            in.btns = 1u << PB_EDIT;
-            for (int i = 0; i < n; i++)
-                go();
-            in.btns = 0;
-            go();
-        }
-        keys(1u << 8);        /* OP4: the selection is still on, nothing closed it */
+        /* EDIT pressed and let go with no key under it is the CAPS LOCK of
+         * the shift, and that only: the keys stay commands until it is
+         * tapped again, and the SELECTION remains OP5's (31/10) */
+        sel();                /* the SELECTION on */
+        tap_edit();
+        keys(1u << 8);        /* OP4: still a command, the tap closed nothing */
         keys(0);
-        CHECK("EDIT alone, tapped or held, leaves the SELECTION as it was", step_is_empty(st(6)));
-        sel();       /* out */
+        CHECK("EDIT tapped leaves the SELECTION as it was", step_is_empty(st(6)));
+        sel();                /* out of the SELECTION; the CAPS LOCK is still on */
+        enc(PE_K2, 1);        /* a note column, where a key writes */
+        keys(1u << 1);
+        keys(0);
+        CHECK("the keys are commands under the CAPS LOCK, with no SELECTION on",
+              step_is_empty(st(6)));
+        tap_edit();           /* out of it */
+        keys(1u << 1);
+        keys(0);
+        CHECK("tapped again, the keys write notes", st(6)->notes[0] != NOTE_NONE);
+        in.btns = 1u << PB_EDIT;  /* a key used under EDIT makes it a hold, not a tap */
+        go();
+        keys(1u << 8);            /* OP4 clears the step */
+        keys(0);
+        in.btns = 0;
+        go();
+        keys(1u << 1);
+        keys(0);
+        CHECK("a key used under EDIT latches nothing: the keys still write",
+              st(6)->notes[0] != NOTE_NONE);
+        enc(PE_K2, -1);
+        in.btns = 1u << PB_EDIT;  /* the step empty again, as what follows expects */
+        go();
+        keys(1u << 8);
+        keys(0);
+        in.btns = 0;
+        go();
+        CHECK("and OP4 under EDIT clears the whole step", step_is_empty(st(6)));
         enc(PE_K1, -6);
     }
 
@@ -548,18 +571,25 @@ int main(void)
     enc(PE_K3, -4);
     CHECK("KNOB 3 on the step's number is the block's length", song.patterns[0][0].length == 12);
 
-    /* EDIT is never lit: it is a shift, the same on every screen. What says
-     * the SELECTION is on is OP5, the key that opened it (31/10) */
+    /* EDIT lights only while its CAPS LOCK is on: a shift the hand holds
+     * says itself, a shift that sticks has to be told. What says the
+     * SELECTION is on is OP5, the key that opened it (31/10) */
     go();
     CHECK("with no SELECTION, EDIT and OP5 are both dark",
           led[PB_EDIT] == PLAT_LED_OFF && led[PLAT_BTNS + UI_OP_SEL] == PLAT_LED_OFF);
     sel();
     go();
     CHECK("OP5 lights once the SELECTION is on", led[PLAT_BTNS + UI_OP_SEL] == PLAT_LED_LIT);
-    CHECK("and EDIT stays dark, being only a shift", led[PB_EDIT] == PLAT_LED_OFF);
+    CHECK("and EDIT stays dark, the shift being held and not latched", led[PB_EDIT] == PLAT_LED_OFF);
     sel();
     go();
     CHECK("and OP5 goes out with it", led[PLAT_BTNS + UI_OP_SEL] == PLAT_LED_OFF);
+    tap_edit();
+    go();
+    CHECK("EDIT lights while its CAPS LOCK is on", led[PB_EDIT] != PLAT_LED_OFF);
+    tap_edit();
+    go();
+    CHECK("and goes dark when EDIT is tapped again", led[PB_EDIT] == PLAT_LED_OFF);
 
     /* STOP leaves the cursor on the step it stopped on (30/10): the phrase
      * plays from its top while the cursor waits further down */

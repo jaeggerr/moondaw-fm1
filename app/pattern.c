@@ -936,20 +936,21 @@ int pattern_frame(const PlatInput *in)
          * number when the cursor was on one: the buttons keep their role */
         strip_go(strip_first(PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS) + (cur_col < 0 ? 0 : 1));
     }
-    /* EDIT is the shift and nothing else (31/10): the SELECTION is OP5's, on
-     * and off, as a CAPS LOCK -- EDIT held to reach the key the first time,
-     * a black key alone being a note here, then the key alone once the keys
-     * are commands. A tap of EDIT locked it until today, and what told a tap
-     * from a hold was EDIT_TAP, a quarter of a second the hand cannot see:
-     * holding a hair too short opened a mode nobody asked for. MONO, in
+    /* EDIT is the shift and nothing else, and a tap of it is that shift's
+     * CAPS LOCK (31/10): the black keys stay commands until EDIT is tapped
+     * again. The SELECTION is OP5's own, on and off -- EDIT held or latched
+     * to reach the key the first time, a black key alone being a note here,
+     * then the key alone once the keys are commands. The tap used to open
+     * the SELECTION itself, which is the half of it nobody wanted. MONO, in
      * either: the track alone, or muted (ui.h). */
-    ui_shift(&shift, in, btns, keys, selecting, track, &said);
-    if ((keys & 1u << OP_SEL) && (selecting || shift.held)) {
+    if (ui_shift(&shift, in, btns, keys, selecting, track, &said))
+        shift.latch = !shift.latch;
+    if ((keys & 1u << OP_SEL) && (selecting || ui_shifted(&shift))) {
         selecting = !selecting;
         anchored = selecting;
         an_row = cur_row, an_col = cur_col;
     }
-    if (selecting || shift.held) {
+    if (selecting || ui_shifted(&shift)) {
         if (keys & 1u << OP_COPY)
             sel_op(OP_COPY);
         if (keys & 1u << OP_PASTE)
@@ -1135,15 +1136,16 @@ int pattern_frame(const PlatInput *in)
         grid_follow(&cur_row, &top, len, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
-    /* EDIT is never lit: it is a shift the hand has under its finger, no more
-     * this screen's own than SEL or HOME are, and what says the SELECTION is
-     * on is OP5's own light now (ui.h, 31/10) */
+    /* EDIT is lit only while its CAPS LOCK is on: a shift the hand has under
+     * its finger says itself, a shift that sticks has to be told. What says
+     * the SELECTION is on is OP5's own light (ui.h, 31/10) */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
-                 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
+                 1u << PB_GLO | (shift.latch ? 1u << PB_EDIT : 0u) |
+                 (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied.
      * Otherwise, on a kit, the keys that are drums -- the only thing on the machine that says
      * where the snare is, and the eight or eleven lit are the whole kit (30/10) */
-    ui_led_keys(!selecting && !shift.held
+    ui_led_keys(!selecting && !ui_shifted(&shift)
                     ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
                     : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR | 1u << OP_SEL |
                           1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
