@@ -24,7 +24,10 @@ static const char demo_trk[] =
     "pat t3 00 len 16\n"
     "02 F#2 i02 fVEL50\n04 D-2 fVEL7F\n06 F#2 fVEL38\n0A F#2 fVEL50\n"
     "0C D-2 fVEL7F\n0E F#2 fVEL38\n0F F#2 fVEL24\n"
+    "sec 00\nname INTRO\n"
     "arr 00 steps auto\nname INTRO\nt0 00\nt2 00\n"
+    "sec 01\nname VERSE\n"
     "arr 01 steps auto\nt0 00\nt1 00\nt2 00\nt3 00\n"
     "arr 02 steps auto\nt0 01\nt1 00\nt2 00\nt3 00\n"
+    "sec ---\n"
     "arr 03 ref arr 01\n";
