@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The grid every screen of the road is drawn as, since 28/10 (NOTES.md):
- * SONG, the SECTION, PATTERN. CONDENSED 20 on rows of 28 px, eight rows
+ * SONG, PHRASE, PATTERN. CONDENSED 20 on rows of 28 px, eight rows
  * under a line of small column names; the row's number fixed at the left,
  * the columns to the right of a rule; the cursor's row a green band, the
  * cursor's cell hollowed out of it.
@@ -55,8 +55,13 @@ uint16_t grid_ink(bool band, bool on, uint16_t ink);
 void grid_hollow(int vis, int x, int w);
 /* The triangle of what plays, left of the number. */
 void grid_playing(int vis, bool band);
-/* The rule between the numbers and the columns, and the scroll bar when
- * `n` rows do not fit. */
+/* The rule between the numbers and the columns, for one row: a screen
+ * whose rows are not all alike draws it row by row and leaves it out
+ * where it would cross something (SONG's section markers). */
+void grid_rule(int vis);
+/* The scroll bar, when `n` rows do not fit. */
+void grid_bar(int top, int n);
+/* Both, for the screens whose rows are all alike. */
 void grid_frame(int top, int n);
 
 /* A play sign, 10 x 12 from its top left corner: drawn round, filled while it plays. */

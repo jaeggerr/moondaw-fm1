@@ -3066,3 +3066,93 @@ All five his, found by using the machine rather than by reading it.
   letters the first knob is the one the hand reaches for. Three test files
   drove the old knobs; one of them, PROJECT's "HOME leaves the name as it
   was", would have passed by typing nothing at all.
+
+## 2026-10-31 — the SECTION, made by hand (and SECTION becomes the group)
+
+The model has carried sections since the first day — `sec 01`, `name
+CHORUS`, `song_sections_normalize()` keeping them whole when rows move,
+`REF SEC` playing one, CHOOSE PHRASE listing them by name — and nothing in
+`app/` ever wrote one. They could only arrive in a file, so a song composed
+on the machine could never have a section at all. He saw the gap the hour
+after the REF landed.
+
+**The word first.** `SEC 07` in the corner of the steps screen meant the
+*phrase* 07; `REF SEC 02` on SONG meant the *group* 02; HELP's SONG page
+said "the section" for one and "a whole section" for the other, eight lines
+apart. Three letters, two meanings, two adjacent screens. SECTION goes to
+the group — the file's word, and a musician's — and the screen of one
+phrase's steps becomes **PHRASE**, which is what SONG, CHOOSE PHRASE, the
+help and the file already called that row. Its corner reads `PHR 07`, the
+same abbreviation CHOOSE PATTERN's header already used. No logic moved: a
+corner, a topic in HELP, a few help lines, a README caption, and the
+comments that named the screen.
+
+**ENV, not PRESETS — his.** I proposed PRESETS on the number; he said no,
+"le bouton preset n'a rien à voir avec des sections", and proposed ENV:
+*envelopper* la sélection. He is right beyond the pun. PRESETS opens the
+list of what is UNDER the cursor, and a section is not under the cursor, it
+is around the selection. ENV is a **verb** here, and CHOOSE SECTION is the
+one question the verb has to ask; PRESETS keeps its single meaning. ENV was
+free on SONG (only PATTERN reads it), and it works wherever the cursor
+stands in the row, his ask: a section is an affair of rows.
+
+The list is `--`, the song's sections with their names and how many
+phrases each holds, and NEW. It opens on the section those rows are in, or
+on NEW when they are in none — the same courtesy CHOOSE PATTERN pays by
+opening on the block already in the cell, so the common path is ENV, SEL,
+type. NEW opens the namer at once: a section is born named, and HOME there
+leaves it UNNAMED, which the file allows.
+
+**The marker — his, against my rules.** I had drawn a cyan rule where a
+section opens and closes. He wanted what the app and the web page do, and
+he was right: a framed tag in amber with the name, a hairline to the right
+edge, taking a row of the grid. Lifted from `SongScreen.swift:673` and
+`web/ui/song.css:213` (settled there 25/08) down to the air it breathes,
+more above than below. CONDENSED 20's capitals are 15 px tall, which is
+what centres the name in the frame — my first try put the baseline one
+pixel above the floor of the tag and he saw it at once.
+
+Taken from the same place and not asked for: **membership is an INK, not
+an indentation** (`.pos.insec`, and the app's note of 28/08 on why —
+indenting a member would slide its cells out from under the header). A
+phrase in a section wears its number in the same amber. It also pays for
+itself twice: it says where you are when the marker has scrolled off, and
+it means the corner never has to carry the name, which did not fit beside
+AUTO.
+
+The grid stops being "one visible row, one phrase": `lay_out()` builds the
+eight slots, `slot_of()` finds a row's, `follow_marked()` pushes `top` down
+until the cursor has one. `grid_frame` was split into `grid_rule` (one
+row's) and `grid_bar`, so SONG can leave the rule out where a marker
+crosses the width — he found it crossing the name.
+
+**And the marker is a place.** He asked for two prototypes rather than a
+question, which was the right call: the difference is one detent and it had
+to be seen. The cursor stops on it, the tag goes green, and the gestures
+land on the thing under the cursor — **KNOB 4 how many phrases it holds**
+(right swallows the free row below, left gives the last one back, and it
+never takes a phrase that belongs elsewhere), **SEL its name**, **EDIT held
++ OP4** clears it away and leaves the phrases.
+
+**Not LFO, his call.** I had put the dissolve on LFO twice, reasoning that
+LFO already deletes whatever is under the cursor. He was not convinced and
+proposed OP4, and the better argument is his: LFO exists to ask twice
+before something is *lost*, and a section dissolved loses nothing. Worse,
+LFO on a marker and LFO on the phrase one detent below would wear the same
+red band and the same two presses while one removes a phrase and its blocks
+and the other removes nothing. OP4 already means "clear what is under", the
+black keys are the commands, and LFO goes on meaning one thing here.
+
+**A REF SEC row is not a group.** Reading a file gives it a section of its
+own (`core/trk.c`): one row pointing elsewhere. It wears no marker, it is
+kept out of the list, and a run stops before it — a group that swallowed
+one would be taken apart by the next load, and a song that changes when you
+reload it is the worst kind of bug to leave in a file format.
+
+`song_test` drives all of it, the save and the load included. `proto/
+sections.html` is the record, pictures out of the framebuffer as `ref.html`'s
+are.
+
+Open: whether a marker should light as the song plays through it
+(`player_entry()` reports a row, and a marker is not one); and a SECTIONS
+screen, the song's shape at a glance, which is a screen and not a gesture.

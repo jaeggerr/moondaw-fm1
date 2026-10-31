@@ -39,15 +39,22 @@ static const Item song_items[] = {
     { "KNOB 4 on a cell", "its level in the phrase" },
     { "KNOB 4 on a number", "the phrase's length" },
     { "KNOB 4 on a REF", "how long it plays" },
+    { "KNOB 4 on a marker", "phrases the section holds" },
     { "PRESETS on a cell", "choose a pattern" },
     { "PRESETS on a REF", "choose a phrase" },
+    { "ENV", "section: these phrases" },
+    { "  with no selection", "the one under the cursor" },
+    { "  in the list", "--, a section, or NEW" },
+    { "  NEW", "makes one, and names it" },
     { "SEL on a cell", "edit the pattern" },
-    { "SEL on a number", "the section" },
+    { "SEL on a number", "the phrase, step by step" },
     { "SEL on a REF", "go to what it plays" },
+    { "SEL on a marker", "name the section" },
     { "EDIT", "selection, in and out" },
     { "  on a number", "whole phrases" },
     { "OP1 OP2 OP3", "copy, paste, cut" },
     { "OP4", "clear" },
+    { "OP4 on a marker", "the section, not its phrases" },
     { "OP6", "loop these phrases" },
     { "OP6, none stretched", "a loop's end, then other" },
     { "EDIT held", "black keys: commands" },
@@ -63,7 +70,7 @@ static const Item song_items[] = {
     { "ALGO", "undo left, redo right" },
     { "HOME", "back to the menu" },
 };
-static const Item section_items[] = {
+static const Item phrase_items[] = {
     { "SELECT, KNOB 1", "step" },
     { "KNOB 2", "track" },
     { "keys", "write the note" },
@@ -184,11 +191,11 @@ static const struct {
     const Item *items;
     int n;
 } pages[HELP_EFFECTS] = {
-    PAGE(home_items),     PAGE(song_items),       PAGE(section_items), PAGE(pattern_items),
+    PAGE(home_items),     PAGE(song_items),       PAGE(phrase_items),  PAGE(pattern_items),
     PAGE(syllable_items), PAGE(instrument_items), PAGE(mixer_items),   PAGE(project_items),
     PAGE(settings_items), PAGE(gestures_items),
 };
-static const char *const topic_word[HELP_TOPICS] = { "HOME",  "SONG",    "SECTION",  "PATTERN",  "SYLLABLE", "INSTRUMENT",
+static const char *const topic_word[HELP_TOPICS] = { "HOME",  "SONG",    "PHRASE",   "PATTERN",  "SYLLABLE", "INSTRUMENT",
                                                      "MIXER", "PROJECT", "SETTINGS", "GESTURES", "EFFECTS" };
 
 enum { LIST_TOP = 18, LIST_ROWS = 7, PAGE_TOP = 22, ITEM_H = 52, ITEMS = 4 };

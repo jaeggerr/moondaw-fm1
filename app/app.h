@@ -31,7 +31,7 @@ void app_new(void);          /* an empty song, named SONG nn, not yet in flash *
 void app_unload(void);
 /* Lines and tokens the song's file had that this machine does not carry. */
 int app_not_carried(void);
-/* Where the hand is: HOME, SONG, SECTION, PATTERN, INSTRUMENT, MIXER, PROJECT, CANVAS. */
+/* Where the hand is: HOME, SONG, PHRASE, PATTERN, INSTRUMENT, MIXER, PROJECT, CANVAS. */
 const char *app_screen(void);
 /* The computer's CANVAS in front, over whatever was there (GLO goes back). */
 void app_show_canvas(void);

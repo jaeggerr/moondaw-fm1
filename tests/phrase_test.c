@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The SECTION's hands without a screen: where the cursor may go, what
+/* PHRASE's hands without a screen: where the cursor may go, what
  * the keys write, and into which step of which block. */
 #include <stdio.h>
 #include <string.h>

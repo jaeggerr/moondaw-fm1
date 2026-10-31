@@ -97,7 +97,7 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
  * keys OP1-4 copy, paste, cut, clear, OP6 makes its steps the LOOP PLAY
  * goes round (again on the same forgets it); with no selection OP6 sets an
  * end at the cursor's step, a second the other end, a third none (as
- * SECTION's). A copy lets the anchor go: the cursor is free again, the
+ * PHRASE's). A copy lets the anchor go: the cursor is free again, the
  * clipboard's outline following it to show where OP2 puts it. */
 /* The black keys by their groups under the hand: the clipboard in the first
  * three, clearing in the two after (OP5 free), listening in the next three. */

@@ -10,8 +10,13 @@
 #include "ui.h"
 #include "undo.h"
 
-/* The SECTION ("phrase" in the file), as validated on the panel on 28/10
- * (NOTES.md): SONG's grid turned to steps. One row a step, its number at
+/* PHRASE, as validated on the panel on 28/10 (NOTES.md): SONG's grid
+ * turned to steps. It was called SECTION until 31/10, when SECTION went
+ * to the group of phrases the file has always called `sec` -- the screen
+ * wrote SEC 07 for a phrase while SONG wrote REF SEC 02 for a group, and
+ * the help said "the section" for both, eight lines apart. The word the
+ * file, SONG, CHOOSE PHRASE and the help already gave this row is
+ * phrase, so the screen takes it. One row a step, its number at
  * the left, white on the beat; one column a track, the note it plays on
  * that step (-- when none), five tracks a screen.
  *
@@ -103,7 +108,7 @@ static void draw(void)
     } else if (loop_state() == LOOP_ONE_END)
         grid_corner("LOOP", C_TITLE, grid_hex2(s, loop_from()), C_TEXT);
     else
-        grid_corner("SEC", C_DIM, grid_hex2(s, entry), C_TITLE);
+        grid_corner("PHR", C_DIM, grid_hex2(s, entry), C_TITLE);
     for (int c = 0; c < CELLS && left + c < song->num_tracks; c++) /* green alone, red muted */
         grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, left + c, left + c == col);
     for (int v = 0; v < GRID_ROWS && top + v < steps; v++) {

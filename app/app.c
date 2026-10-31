@@ -4,13 +4,13 @@
  *
  *   HOME     (menu.c)      where the machine opens: the projects, by name
  *   SONG     (songview.c)  the arrangement: phrases down, tracks across
- *   SECTION  (phrase.c)    one phrase, step by step
+ *   PHRASE   (phrase.c)    one phrase, step by step
  *   PATTERN  (pattern.c)   one block of one track, in three views
  *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
  *   MIXER    (mixer.c)     the tracks' levels and sends, the returns: FX
  *   PROJECT  (project.c)   name, tempo, swing, meter, step, ticks, tracks: EDIT
  *
- * The road down is HOME -> SONG -> SECTION -> PATTERN, SEL a level down,
+ * The road down is HOME -> SONG -> PHRASE -> PATTERN, SEL a level down,
  * GLO a level up, HOME home from anywhere (NOTES.md, 28/10). INSTRUMENT
  * still has the 10/10 look. */
 #include "app.h"
@@ -63,7 +63,7 @@ void app_mark_dirty(void) { app_dirty = true; }
 
 const char *app_screen(void)
 {
-    static const char *const name[] = { "HOME", "SONG", "SECTION", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
+    static const char *const name[] = { "HOME", "SONG", "PHRASE", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
                                         "CANVAS", "SETTINGS", "HELP", "SYSTEM" };
     return name[screen];
 }
@@ -601,7 +601,7 @@ void app_frame(const PlatInput *real)
     }
     {   /* HELP's topic: where the hand was working -- a screen it did something on,
          * not one it went back through (HOME from PATTERN crosses SONG) */
-        static const int8_t topic[] = { [AT_SONG] = HELP_SONG, [AT_PHRASE] = HELP_SECTION, [AT_PATTERN] = HELP_PATTERN,
+        static const int8_t topic[] = { [AT_SONG] = HELP_SONG, [AT_PHRASE] = HELP_PHRASE, [AT_PATTERN] = HELP_PATTERN,
                                         [AT_INSTRUMENT] = HELP_INSTRUMENT, [AT_MIXER] = HELP_MIXER,
                                         [AT_PROJECT] = HELP_PROJECT, [AT_SETTINGS] = HELP_SETTINGS };
         bool worked = (in->btns & ~(1u << PB_HOME)) || in->keys;

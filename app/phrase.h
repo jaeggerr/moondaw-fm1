@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The SECTION screen (a "phrase" in the file), validated on the panel on
- * 28/10: the tracks of one phrase side by side, one row a step, the cell
- * is the step's first note. phrase.c says how the hands move on it. */
+/* The PHRASE screen, validated on the panel on 28/10: the tracks of one
+ * phrase side by side, one row a step, the cell is the step's first
+ * note. It was called SECTION until 31/10 (phrase.c says why).
+ * phrase.c says how the hands move on it. */
 #ifndef PHRASE_H
 #define PHRASE_H
 

@@ -63,7 +63,7 @@ test: sim web songedit
 	build/midi_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/persist_test.c app/app.c $(UI) $(CORE) -o build/persist_test
 	build/persist_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/song_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/song_test
 	build/song_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/namer.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c core/bank.c core/store.c -o build/instrument_test
 	build/instrument_test
@@ -73,7 +73,7 @@ test: sim web songedit
 	build/project_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/phrase_test
 	build/phrase_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/undo_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/grid.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/undo_test
 	build/undo_test
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c core/bank.c core/sampler.c core/song.c -o build/link_test
 	build/link_test

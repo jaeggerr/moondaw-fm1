@@ -1,0 +1,193 @@
+<meta charset="utf-8">
+<title>The SECTION on the FM-1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+
+<!--
+  MOONDAW - making a SECTION by hand, on the FM-1.
+
+  Written as three proposals on 31/10 and kept as the record of what was
+  chosen: ENV on the selection, and a marker the cursor can stand on.
+  Every picture comes out of the firmware's own framebuffer
+  (build/web/moondaw.wasm, as tools/readme_shots.mjs takes the README's),
+  not from CSS: a screen that is judged on the panel is not drawn by hand
+  first.
+-->
+
+<style>
+:root{
+  --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --dim:#5A6470; --accent:#7FD962; --title:#62C8D9; --fx:#F0BE5A; --mute:#9E5555;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose);
+  font-family:var(--sf); font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:clamp(36px,6vw,56px); line-height:.98; color:var(--prose-hi); text-wrap:balance; }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; text-wrap:balance; }
+h2 em{ font-style:normal; color:var(--accent); }
+section{ margin-top:76px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--title); display:block; margin-bottom:8px; }
+.budget{ display:grid; margin-top:26px; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+@media (min-width:760px){ .budget{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.budget > div{ padding:14px 20px 14px 0; min-width:0; }
+@media (min-width:760px){ .budget > div + div{ padding-left:20px; border-left:1px solid var(--rule); } }
+.budget .k{ display:block; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; color:var(--title); }
+.budget .k.no{ color:var(--mute); } .budget .k.yes{ color:var(--accent); }
+.budget p{ margin:0; font-size:14px; }
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:2px; background:var(--dim); }
+
+/* The panel: 240 px square. Shown doubled, and once at the size it is. */
+figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
+figure img{ display:block; width:480px; max-width:100%; height:auto; image-rendering:pixelated;
+  border-radius:4px; box-shadow:0 0 0 2px #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.5; max-width:480px; }
+.pair{ display:flex; gap:22px; flex-wrap:wrap; margin-top:26px; }
+.pair figure img{ width:300px; }
+.pair figcaption{ max-width:300px; }
+.stage{ margin-top:26px; }
+.actual{ margin-top:26px; display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; }
+.actual figure img{ width:240px; }
+.actual figcaption{ max-width:240px; }
+</style>
+<div class="wrap">
+  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; decided and written, 31 October 2026</div>
+  <h1>The section, <em>made by hand</em></h1>
+  <p class="lede">A <code>SECTION</code> is a run of consecutive phrases with a name on it &mdash;
+  VERSE, CHORUS, BRIDGE. The file has carried them from the first day:
+  <code>sec&nbsp;01</code> and <code>name&nbsp;CHORUS</code>,
+  <code>song_sections_normalize()</code> keeping them whole when rows move,
+  <code>REF&nbsp;SEC&nbsp;02</code> playing one, CHOOSE&nbsp;PHRASE listing them by name. And until
+  today <strong>nothing in <code>app/</code> ever wrote one</strong>: a song composed on the machine
+  could not have a section at all. <strong>Now ENV makes one.</strong> Every picture below comes out
+  of the firmware's own framebuffer.</p>
+
+  <section>
+    <span class="tag">First, the word</span>
+    <h2>SEC meant <em>two things</em></h2>
+    <p>The screen of one phrase's steps was called SECTION and wrote <code>SEC&nbsp;07</code> in its
+    corner, where 07 was the <b>phrase's</b> number. A reference row writes
+    <code>REF&nbsp;SEC&nbsp;02</code>, where 02 is the <b>group's</b>. HELP's SONG page said
+    &ldquo;the section&rdquo; for a phrase and &ldquo;a whole section&rdquo; for a group, eight lines
+    apart. Three letters, two meanings, two adjacent screens.</p>
+    <p>So SECTION goes to the group, which is what the file calls it and what a musician calls a
+    verse; and the screen of one phrase's steps becomes <b>PHRASE</b>, the word SONG,
+    CHOOSE&nbsp;PHRASE, the help and the file already gave that row. Its corner reads
+    <code>PHR&nbsp;07</code> now, which is what CHOOSE&nbsp;PATTERN's header already said. One word,
+    one thing; no logic moved.</p>
+  </section>
+
+  <section>
+    <span class="tag">The gesture</span>
+    <h2><em>ENV</em> envelops the selection</h2>
+    <p>EDIT tapped on a phrase's number already locks the SELECTION onto whole phrases, and the
+    cursor already stretches it over a run &mdash; which is exactly the shape of a section. ENV
+    envelops it. The word is his, and it is also the reason PRESETS was <b>not</b> used: PRESETS
+    opens the list of what is <b>under</b> the cursor, and a section is not under the cursor, it is
+    around the selection. <b>ENV is a verb</b>, and CHOOSE&nbsp;SECTION is the one question the verb
+    has to ask. ENV works wherever the cursor stands in the row.</p>
+    <div class="pair">
+      <figure><img src="sections/1-selection.png" alt="SONG: the SELECTION over phrases 10, 11 and 12">
+        <figcaption>EDIT, then the cursor: phrases 10&ndash;12, in no section.</figcaption></figure>
+      <figure><img src="sections/2-choose.png" alt="CHOOSE SECTION, the cursor already on NEW">
+        <figcaption>ENV. The list opens on NEW, since these rows are in nothing — as CHOOSE PATTERN opens on the block already in the cell. The header says which phrases it will act on.</figcaption></figure>
+    </div>
+    <p><code>--</code> is how a row leaves a section. An existing section takes the rows into it.
+    NEW makes one and <b>the namer opens on the spot</b>, so a section is born named; taking the
+    section the rows are already in is how it is renamed.</p>
+    <div class="pair">
+      <figure><img src="sections/3-namer.png" alt="NAME THE SECTION, with OUTRO typed">
+        <figcaption>The namer, unchanged (<code>app/namer.c</code>). HOME here leaves the section without a name, which the file allows.</figcaption></figure>
+      <figure><img src="sections/4-made.png" alt="SONG: the OUTRO marker over phrase 10">
+        <figcaption>And there it is: the marker over the row it opens, 10&ndash;12 in its amber.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">How it is seen</span>
+    <h2>A marker, and an <em>ink</em></h2>
+    <p>The grid has no width left &mdash; six cells of 31&nbsp;px &mdash; so the section takes a row
+    of its own: a framed tag in amber, the ink of annotations, then a hairline to the right edge. It
+    is lifted from the two places this screen was settled before,
+    <code>moondaw/Sources/SongScreen.swift</code> and <code>web/ui/song.css</code> (25/08), down to
+    the air it breathes: more above than below, a heading sitting closer to what it opens than to
+    what it leaves. CONDENSED&nbsp;20's capitals are 15&nbsp;px tall, which is what centres the name
+    in its frame.</p>
+    <p>And the phrases it holds wear their number in the same amber. <b>Membership is an ink, not an
+    indentation</b> &mdash; the app's own note of 28/08 says why: indenting a member row would slide
+    its cells out from under the header that names them. It is also what tells you where you are
+    when the marker has scrolled off the top.</p>
+    <div class="stage">
+      <figure><img src="sections/7-unnamed.png" alt="SONG: a section marked UNNAMED over phrases 00 and 01">
+        <figcaption>A section whose name was left out reads UNNAMED, as it does in the app. The grid's rule stops clear of a marker: a marker crosses the whole width and is not a row of cells.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">And it is a place</span>
+    <h2>The cursor <em>stops on it</em></h2>
+    <p>One detent more between 01 and 02. The tag goes green &mdash; where you are, the palette's one
+    rule &mdash; and the three gestures of the machine land on the thing under the cursor.
+    <b>KNOB&nbsp;4 is how many phrases it holds</b>: the one number a section has, on the knob that
+    means how much. Right swallows the row below, left gives the last one back. It never takes a
+    phrase that belongs somewhere else.</p>
+    <div class="pair">
+      <figure><img src="sections/5-on-marker.png" alt="SONG: the BRIDGE marker green, the corner reading 5 PHRASES">
+        <figcaption>The cursor on BRIDGE. The corner reads 5 PHRASES. Phrase 10, just after, is in nothing: its number is white.</figcaption></figure>
+      <figure><img src="sections/6-grown.png" alt="The same, now 6 PHRASES, with 10 turned amber">
+        <figcaption>One detent of KNOB 4: 10 turns amber and the corner says 6. A section is something you stretch, not something you remake.</figcaption></figure>
+    </div>
+    <p><b>SEL names it</b> &mdash; SEL goes one level down everywhere, and under a marker there is a
+    name, as there is on INSTRUMENT's and PROJECT's NAME. <b>EDIT held + OP4 clears it away</b> and
+    leaves its phrases where they are.</p>
+    <div class="budget">
+      <div><span class="k no">Not LFO</span><p>LFO is there to ask twice before something is lost. A section dissolved loses nothing: the phrases stay.</p></div>
+      <div><span class="k">And the trap it would be</span><p>LFO on a marker and LFO on the phrase one detent below would wear the same red band and the same two presses, while one removes a phrase and its blocks and the other removes nothing.</p></div>
+      <div><span class="k yes">So OP4</span><p>His call. The black keys are the commands, OP4 already means &ldquo;clear what is under&rdquo;, and LFO goes on meaning one thing on this screen.</p></div>
+    </div>
+    <div class="stage">
+      <figure><img src="sections/8-list.png" alt="CHOOSE SECTION opened from the VERSE marker, listing five sections">
+        <figcaption>ENV on a marker opens the list over the whole section — PHR 02-05 — so renaming or dissolving never asks the hand to find the run again. The bar at the left marks the one it is in.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>What was settled, and what was not</h2>
+    <ul class="notes">
+      <li><b>A REF SEC row is not a group.</b> Reading a file gives it a section of its own
+      (<code>core/trk.c</code>): one row pointing elsewhere. It wears no marker, it is not in the
+      list, and a run stops before it &mdash; a group that swallowed one would be taken apart by the
+      next load.</li>
+      <li><b>A row taken out of the middle.</b> A section is one run, so the rows above stay in and
+      the rows below fall out: that is what <code>song_sections_normalize()</code> has always done,
+      and it is left as it is. UNDO holds the whole arrangement and its sections together, so one
+      ALGO to the left is one turn too many taken back.</li>
+      <li><b>The corner stays the corner.</b> It was going to say the section's name, which did not
+      fit beside AUTO. The marker names it and the amber number says you are in one, so the corner
+      keeps the length &mdash; and says how many phrases only while the cursor is on a marker.</li>
+      <li><b>Not built: a SECTIONS screen</b>, the song's shape at a glance. It is a screen, not a
+      gesture, and nothing needs it yet.</li>
+      <li><b>Not decided</b>: whether a section's marker should light up as the song plays through
+      it. It does not &mdash; <code>player_entry()</code> reports a row, and a marker is not one.</li>
+    </ul>
+  </section>
+</div>

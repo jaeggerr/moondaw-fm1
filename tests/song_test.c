@@ -46,6 +46,28 @@ static void press(int b) { int r; in.btns = 1u << b; go(); r = last; in.btns = 0
 /* EDIT is also a shift: it answers at the release */
 static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
+/* EDIT held, and a black key under it: the commands (ui.h) */
+static void edit_key(int k)
+{
+    in.btns = 1u << PB_EDIT;
+    go();
+    in.keys = 1u << k;
+    go();
+    in.keys = 0;
+    go();
+    in.btns = 0;
+    go();
+}
+/* A letter typed in the namer: KNOB 2 is what it is, KNOB 1 the next place. */
+static void letter(char c)
+{
+    static const char LETTERS[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
+    int i = 0;
+    while (LETTERS[i] && LETTERS[i] != c)
+        i++;
+    enc(PE_K2, i);
+    enc(PE_K1, 1);
+}
 /* the player takes PLAY and STOP in its render, as on the machine: a short
  * one makes what the hands just asked for true */
 static void pump(void)
@@ -403,6 +425,105 @@ int main(void)
             CHECK("SEL on a reference goes to the phrase it plays, and opens no list",
                   last == SONGVIEW_STAY && at == 2 && songview_entry() == at);
         }
+    }
+
+    /* The SECTION, made by hand (31/10): a run of consecutive phrases with
+     * a name on it, which until today could only arrive in a file. EDIT
+     * takes the run, ENV envelops it; the marker over the row it opens is
+     * a place the cursor stops on, where KNOB 4 says how many phrases it
+     * holds, SEL names it and EDIT + OP4 clears it away. */
+    {
+        uint32_t t = 100000;
+        int base, r0;
+
+        undo_frame(t += 1000);
+        enc(PE_SELECT, 40); /* the last phrase, then three fresh ones under it */
+        enc(PE_K2, -1);
+        while (app_song.arrangement[songview_entry()].kind == ENTRY_REF)
+            enc(PE_SELECT, -1);
+        press(PB_SEQ);
+        press(PB_SEQ);
+        press(PB_SEQ);
+        base = app_song.arrange_len;
+        r0 = base - 3;
+        CHECK("three phrases of their own, in no section",
+              E(r0).section == SECTION_NONE && E(r0 + 1).section == SECTION_NONE &&
+                  E(r0 + 2).section == SECTION_NONE && app_song.section_count == 0);
+
+        /* EDIT on a number takes whole phrases; the cursor stretches it */
+        enc(PE_SELECT, 40);
+        enc(PE_SELECT, -2);
+        enc(PE_K2, -1);
+        tap_edit();
+        enc(PE_SELECT, 2);
+        undo_frame(t += 1000);
+        press(PB_ENV);
+        CHECK("ENV leaves the song as it was until SEL takes something",
+              app_song.section_count == 0);
+        press(PB_SEL); /* the list opens on NEW: these rows are in no section */
+        CHECK("SEL on NEW makes a section of the phrases the selection covered",
+              app_song.section_count == 1 && E(r0).section == 0 && E(r0 + 1).section == 0 &&
+                  E(r0 + 2).section == 0);
+        CHECK("and the phrases it holds are still phrases",
+              app_song.arrange_len == base && E(r0).kind == ENTRY_PHRASE);
+        press(PB_HOME); /* the namer opened on it: HOME leaves it unnamed */
+        CHECK("the namer opens on a new section, and HOME leaves it without a name",
+              app_song.sections[0][0] == 0 && app_song.section_count == 1);
+
+        tap_edit(); /* the selection away: the cursor alone from here */
+        enc(PE_SELECT, -40);
+        enc(PE_SELECT, r0 - 1);
+        enc(PE_SELECT, 1); /* onto the marker, which is a slot of its own */
+        CHECK("the cursor stops on the marker, over the row the section opens at",
+              songview_entry() == r0);
+
+        undo_frame(t += 1000);
+        enc(PE_K3, 1);
+        CHECK("KNOB 3 on a marker turns nothing: a section has no other kind",
+              E(r0).kind == ENTRY_PHRASE);
+        enc(PE_K4, -1);
+        CHECK("KNOB 4 to the left gives the last phrase back",
+              E(r0 + 2).section == SECTION_NONE && E(r0).section == 0 && E(r0 + 1).section == 0);
+        enc(PE_K4, 1);
+        CHECK("and to the right it swallows the row below again", E(r0 + 2).section == 0);
+        enc(PE_K4, 40);
+        CHECK("it stops at the end of the song, taking no phrase that is not there",
+              app_song.arrange_len == base && E(base - 1).section == 0);
+
+        undo_frame(t += 1000);
+        press(PB_LFO); /* LFO is the phrase's, never the section's */
+        press(PB_LFO);
+        CHECK("LFO on a marker deletes nothing", app_song.arrange_len == base);
+
+        press(PB_SEL); /* SEL on a marker: its name, typed */
+        letter('O');
+        letter('U');
+        letter('T');
+        press(PB_SEL);
+        CHECK("SEL on a marker names the section",
+              app_song.sections[0][0] == 'O' && app_song.sections[0][1] == 'U' &&
+                  app_song.sections[0][2] == 'T' && app_song.sections[0][3] == 0);
+
+        /* what a save and a load make of it: the file has carried sections
+         * from the first day, and what the panel writes has to survive one */
+        {
+            static char out[1 << 18];
+            static Song back;
+            int32_t m = trk_save(&app_song, out, sizeof out);
+            CHECK("the song saves", m > 0);
+            CHECK("and comes back with its section and its name",
+                  m > 0 && trk_load(&back, out, (uint32_t)m, NULL) == TRK_OK &&
+                      back.section_count == 1 && back.sections[0][0] == 'O' &&
+                      back.arrangement[r0].section == 0 && back.arrangement[base - 1].section == 0);
+        }
+
+        undo_frame(t += 1000);
+        edit_key(UI_OP_CLEAR); /* EDIT held + OP4: the section goes, its phrases stay */
+        CHECK("OP4 on a marker clears the section away and leaves its phrases",
+              app_song.section_count == 0 && app_song.arrange_len == base &&
+                  E(r0).section == SECTION_NONE && E(r0).kind == ENTRY_PHRASE);
+        enc(PE_ALGO, -1);
+        CHECK("and ALGO to the left brings it back", app_song.section_count == 1);
     }
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");

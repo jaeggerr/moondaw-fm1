@@ -12,7 +12,7 @@
  * to open. */
 bool pattern_open(Song *s, int entry, int track);
 enum { PATTERN_STAY, PATTERN_BACK, PATTERN_SONG, PATTERN_INSTR, PATTERN_PROJECT };
-/* Right after pattern_open, when the SECTION opened it: the cursor
+/* Right after pattern_open, when PHRASE opened it: the cursor
  * starts on the step it was on. */
 void pattern_from_phrase(int row);
 /* One frame. PATTERN_BACK: the hand asked to leave by HOME, to where it

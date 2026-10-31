@@ -79,15 +79,23 @@ void grid_playing(int vis, bool band)
         gfx_fill(4 + k, y + k, 1, 12 - 2 * k, band ? C_ON_ACC : C_TITLE, 255);
 }
 
-void grid_frame(int top, int n)
+void grid_rule(int vis) { gfx_fill(GRID_CELL_X - 3, grid_y(vis), 1, GRID_ROW, C_DIM, 255); }
+
+void grid_bar(int top, int n)
 {
-    int rows = n < GRID_ROWS ? n : GRID_ROWS;
-    gfx_fill(GRID_CELL_X - 3, GRID_HEAD, 1, rows * GRID_ROW, C_DIM, 255);
     if (n > GRID_ROWS) {
         int h = GRID_ROWS * GRID_ROW * GRID_ROWS / n, y = GRID_HEAD + GRID_ROWS * GRID_ROW * top / n;
         gfx_fill(PLAT_W - 4, GRID_HEAD, 2, GRID_ROWS * GRID_ROW, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h < 4 ? 4 : h, C_DIM, 255);
     }
+}
+
+void grid_frame(int top, int n)
+{
+    int rows = n < GRID_ROWS ? n : GRID_ROWS;
+    for (int v = 0; v < rows; v++)
+        grid_rule(v);
+    grid_bar(top, n);
 }
 
 void grid_follow(int *cur, int *first, int n, int shown)

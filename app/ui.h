@@ -71,7 +71,7 @@ enum {
 };
 
 /* EDIT as a shift (29/10), shared by the screens where a track is in front
- * (PATTERN, SONG, SECTION, MIXER): while EDIT is down the black keys are
+ * (PATTERN, SONG, PHRASE, MIXER): while EDIT is down the black keys are
  * commands; MONO tapped puts the track alone (solo, cumulative), or back to
  * normal from solo or mute; MONO held MONO_HOLD frames mutes it. A tap of
  * EDIT with no key meanwhile is the screen's own EDIT, given at the
