@@ -180,16 +180,30 @@ static int32_t batt_acc = -1;
 static uint32_t batt_tick;
 
 /* Counts to millivolts: BATT_MV_FS is the cell voltage that would read
- * full scale -- the converter's reference times the divider on PB1. It
- * is the one number that cannot be read out of the chip, so it was
- * measured on the machine instead (31/10, see NOTES.md).
+ * full scale -- the converter's reference times the divider on PB1.
+ * Nothing documents either, and nothing upstream had to: of the four
+ * FM-1 firmwares this is the only one that claims a percentage at all.
+ * Felucca and Mycelium show bars off raw thresholds, and M-VAVE's own
+ * FM1 Open reads the channel and never uses the value (NOTES.md, 31/10).
+ * So it is inferred, from two unrelated directions that agree to within
+ * a sixth of an ADC count:
+ *   - a cell charged to the charger's green lamp and read at rest, 623
+ *     counts, taken as BATT_CURVE's own top (4190 mV): 6880;
+ *   - M-VAVE's stock bar thresholds (531 / 561 / 591, the numbers
+ *     Felucca lifted off the closed firmware) make an evenly spaced
+ *     four-level gauge only near: 6857. At the 6600 assumed before,
+ *     their bottom two bars would share 12 % of the cell's life.
+ * This is NOT a measurement of the divider; that still wants a voltmeter
+ * on the cell, which means opening the machine. What checks it without
+ * opening anything is one real discharge: the gauge reaches 0 % at 486
+ * counts, so the FM-1 should die near zero and not at a quarter full.
  *
  * Millivolts to a percentage is not a straight line: a lithium cell
  * sits near 3.7 V for most of its life, so a line from 3.0 to 4.2 would
  * read 90 % for hours and then fall off a cliff. BATT_CURVE is the
  * ordinary open-circuit curve, every 10 % from empty to full, and the
  * reading is interpolated between two of its points. */
-#define BATT_MV_FS 6600
+#define BATT_MV_FS 6880
 static const uint16_t BATT_CURVE[11] = {
     3270, 3610, 3690, 3730, 3760, 3800, 3850, 3920, 3990, 4080, 4190
 };
@@ -201,7 +215,9 @@ int plat_battery(int *raw)
         *raw = r;
     if (r < 0)
         return -1;
-    mv = r * BATT_MV_FS / 1023;
+    mv = (r * BATT_MV_FS + 511) / 1023;   /* rounded, not floored: a full
+                                            cell lands on 4189.9 mV and the
+                                            curve's top is 4190 */
     if (mv <= BATT_CURVE[0])
         return 0;
     for (i = 1; i < 11; i++)
