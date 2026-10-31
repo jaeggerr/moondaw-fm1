@@ -9,6 +9,7 @@
 #include "../app/app.h"
 #include "../app/loop.h"
 #include "../app/songview.h"
+#include "../app/undo.h"
 #include "../app/ui.h"
 #include "../core/player.h"
 #include "../core/trk.h"
@@ -213,11 +214,11 @@ int main(void)
           app_song.arrange_len == 3 && E(2).ref_target == 1);
 
     enc(PE_SELECT, -5);
-    enc(PE_K3, 1);
-    CHECK("KNOB 3 on the number: up from AUTO starts at the phrase's own length", E(0).steps == 16);
-    enc(PE_K3, -4);
+    enc(PE_K4, 1);
+    CHECK("KNOB 4 on the number: up from AUTO starts at the phrase's own length", E(0).steps == 16);
+    enc(PE_K4, -4);
     CHECK("and is then a number", E(0).steps == 12);
-    enc(PE_K3, -20);
+    enc(PE_K4, -20);
     CHECK("all the way down is AUTO again", E(0).steps == 0);
 
     press(PB_SEL);
@@ -311,6 +312,98 @@ int main(void)
           app_song.patterns[0][2].length == PATTERN_DEF_STEPS && song_pattern_blank(&app_song, 0, 2) &&
               step_is_empty(song_step(&app_song, 0, 2, 10)));
     /* what one UNDO takes back of it: undo_test, where the clock runs */
+
+    /* The reference, made by hand (31/10): KNOB 3 on the number says what
+     * the row IS, KNOB 3 on the reference where it points, KNOB 4 how long
+     * it plays, PRESETS the list of what it could point at, SEL the phrase
+     * it plays. The journal is told what a conversion drops, so one ALGO to
+     * the left is one turn too many taken back -- here the clock has to be
+     * moved by hand for the gestures to be separate ones. */
+    {
+        uint32_t t = 1000;
+        int before;
+
+        undo_reset(&app_song); /* the journal: nothing above here used it */
+        enc(PE_SELECT, -20);  /* phrase 00, the top of the song */
+        enc(PE_K2, -1);       /* its number */
+        press(PB_SEQ);        /* two copies below it: something to point at */
+        press(PB_SEQ);
+        enc(PE_SELECT, -20);
+        before = app_song.arrange_len;
+        CHECK("phrase 00 holds blocks of its own to start with",
+              E(0).kind == ENTRY_PHRASE && E(0).pattern[0] == 2 && before >= 4);
+
+        undo_frame(t += 1000);
+        enc(PE_K3, 1);
+        CHECK("KNOB 3 on the number turns the phrase into a reference, pointing below it",
+              E(0).kind == ENTRY_REF && E(0).ref_kind == REF_PHRASE && E(0).ref_target == 1);
+        CHECK("and the blocks it held are gone, the row keeping its place",
+              E(0).pattern[0] == PATTERN_NONE && app_song.arrange_len == before);
+
+        undo_frame(t += 1000);
+        enc(PE_K3, 1);
+        CHECK("another detent, either way, is a phrase again -- an empty one",
+              E(0).kind == ENTRY_PHRASE && E(0).pattern[0] == PATTERN_NONE);
+
+        undo_frame(t += 1000);
+        enc(PE_ALGO, -1);
+        CHECK("ALGO to the left takes the conversion back", E(0).kind == ENTRY_REF);
+
+        undo_frame(t += 1000);
+        {   /* a row others point at cannot become a reference without
+             * something going quiet: the screen says so */
+            int tgt = E(0).ref_target;
+            enc(PE_SELECT, 40);
+            enc(PE_SELECT, -40);
+            CHECK("a phrase a reference points at is still a phrase", E(tgt).kind == ENTRY_PHRASE);
+            enc(PE_SELECT, tgt);
+            enc(PE_K2, -1);
+            enc(PE_K3, 1);
+            CHECK("turning it into a reference too is allowed, and said out loud",
+                  app_song.arrangement[tgt].kind == ENTRY_REF);
+            enc(PE_K3, 1); /* back to a phrase, and back to the reference above */
+            enc(PE_SELECT, -40);
+            enc(PE_K2, -1);
+        }
+        enc(PE_K2, 1);
+        CHECK("KNOB 2 walks onto the reference's one cell, and no further",
+              songview_entry() == 0 && E(0).kind == ENTRY_REF);
+        enc(PE_K2, 5);
+        enc(PE_K3, 1);
+        CHECK("KNOB 3 on the cell walks where it points", E(0).ref_target == 2);
+        enc(PE_K3, -20);
+        CHECK("and stops at the first of them", E(0).ref_target == 1);
+
+        undo_frame(t += 1000);
+        enc(PE_K4, 1);
+        CHECK("KNOB 4 on a reference is how long it plays, up from AUTO", E(0).steps > 0);
+        enc(PE_K4, -40);
+        CHECK("and all the way down is AUTO again", E(0).steps == 0);
+
+        enc(PE_PRESET, 1);    /* CHOOSE PHRASE */
+        press(PB_HOME);
+        CHECK("HOME leaves the list and the reference as it was",
+              last == SONGVIEW_STAY && E(0).ref_target == 1);
+        enc(PE_PRESET, 1);
+        enc(PE_SELECT, 1);
+        press(PB_SEL);
+        CHECK("SEL takes the phrase the cursor is on and closes the list",
+              last == SONGVIEW_STAY && E(0).ref_target == 2);
+        enc(PE_PRESET, 1);
+        press(PB_PLAY);
+        pump();
+        CHECK("PLAY listens to the phrase the cursor rests on", player_playing());
+        press(PB_HOME);
+        pump();
+        CHECK("HOME ends the ear", !player_playing());
+
+        {
+            int at = song_entry_resolve(&app_song, 0, 0);
+            press(PB_SEL);
+            CHECK("SEL on a reference goes to the phrase it plays, and opens no list",
+                  last == SONGVIEW_STAY && at == 2 && songview_entry() == at);
+        }
+    }
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

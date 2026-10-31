@@ -15,16 +15,22 @@
  * tracks a screen.
  *
  *   SELECT, KNOB 1  the phrase (SELECT onto its number)   KNOB 2  the track; left of the first, the phrase's number
- *   KNOB 4  on a cell its level in the phrase (a bar at its foot when below full)
- *   KNOB 3  on a cell its block, -- below 00 and one new block past the last (NEW in
- *           the corner, the cell in C_FX until something is written in it); what it
- *           lands on is heard by itself once the hand rests, unless the song is
- *           playing -- then it is not interrupted (30/10). PLAY ends the audition
- *           on the number the phrase's length (AUTO, then steps)
+ *   KNOB 3  WHAT THE THING UNDER THE CURSOR IS -- on a cell its block, -- below 00
+ *           and one new block past the last (NEW in the corner, the cell in C_FX
+ *           until something is written in it); what it lands on is heard by itself
+ *           once the hand rests, unless the song is playing -- then it is not
+ *           interrupted (30/10), and PLAY ends the audition. On the number: whether
+ *           the row holds blocks of its own or points at a phrase already in the
+ *           song (31/10); on a reference: which phrase, or which section
+ *   KNOB 4  HOW MUCH -- on a cell its level in the phrase (a bar at its foot when
+ *           below full); on the number the phrase's length (AUTO, then steps); on a
+ *           reference the same, as long as it points at a phrase (31/10)
  *   PRESETS on a cell: CHOOSE PATTERN, the track's blocks with what each one
- *           holds and NEW on the first free number; PLAY listens to the one the
- *           cursor rests on (30/10)
- *   SEL     on a cell: its block, in PATTERN; on the number: the SECTION
+ *           holds and NEW on the first free number; on a reference: CHOOSE PHRASE,
+ *           the phrases and the sections it could point at with their names. PLAY
+ *           listens to the one the cursor rests on (30/10)
+ *   SEL     on a cell: its block, in PATTERN; on the number: the SECTION; on a
+ *           reference: the phrase it plays (31/10)
  *   EDIT    tapped: the SELECTION of blocks, locked on until another tap (on the
  *           phrase's number it takes whole phrases); held: its commands for as long
  *           as it is down. OP1 OP2 OP3 copy paste cut, OP4 clears, MONO solo/mute
@@ -32,7 +38,7 @@
  *           it covers the loop PLAY goes round (with none, an end at the cursor,
  *           then the other), and the same phrases again forget it (30/10)
  *   SEQ     on the number: a copy of the phrase below (on a cell: free, 29/10)
- *   LFO     on the number: delete the phrase (twice)
+ *   LFO     on the number: delete the phrase (twice) -- a reference's too
  *   keys    on a cell: play the track's instrument -- the first the block names --
  *           and write nothing; OCT- OCT+ the keyboard's octave (30/10)
  *   PLAY    the song from the cursor's phrase; with the hand still 1.5 s the view
@@ -166,8 +172,10 @@ static void turn_level(int d)
     level_said = true;
 }
 
-/* KNOB 3 on a phrase's number: how long it lasts. AUTO is one full cycle
- * of its blocks; turning up from AUTO starts at that length. */
+/* KNOB 4 on a phrase's number: how long it lasts. AUTO is one full cycle
+ * of its blocks; turning up from AUTO starts at that length. It was KNOB 3
+ * until 31/10, when KNOB 3 took what the row IS and left the knob beside it
+ * the how much -- which is what KNOB 4 means on a cell, and in FX. */
 static void turn_steps(int d)
 {
     SongEntry *e = entry_at(row);
@@ -245,6 +253,173 @@ static void delete_phrase(void)
         if (row >= song->arrange_len)
             row = song->arrange_len - 1;
     }
+    app_mark_dirty();
+}
+
+/* ------------------------------------------------------ references --- */
+/* What a reference may point at, in one order: the phrases that hold
+ * blocks of their own, then the sections. A reference to a reference
+ * resolves to nothing (`song_entry_resolve`), and so would a section the
+ * row stands in, so neither is offered; its own row never is either. The
+ * list is walked by KNOB 3 on the row and listed by CHOOSE PHRASE: one
+ * order, so the knob and the list agree. */
+static int ref_slots(void)
+{
+    int n = 0;
+    for (int i = 0; i < song->arrange_len; i++)
+        if (i != row && !is_ref(i))
+            n++;
+    for (int s = 0; s < song->section_count; s++)
+        if (s != entry_at(row)->section)
+            n++;
+    return n;
+}
+
+/* Slot `k`: what it points at, and whether that is a phrase or a section. */
+static void ref_slot(int k, uint8_t *kind, uint8_t *target)
+{
+    for (int i = 0; i < song->arrange_len; i++)
+        if (i != row && !is_ref(i) && k-- == 0) {
+            *kind = REF_PHRASE, *target = (uint8_t)i;
+            return;
+        }
+    for (int s = 0; s < song->section_count; s++)
+        if (s != entry_at(row)->section && k-- == 0) {
+            *kind = REF_SECTION, *target = (uint8_t)s;
+            return;
+        }
+}
+
+/* Which slot a reference is on now; 0 when what it holds is not among them
+ * -- a file may point at anything, the knob only at what plays. */
+static int ref_slot_of(const SongEntry *e)
+{
+    int k = 0;
+    for (int i = 0; i < song->arrange_len; i++) {
+        if (i == row || is_ref(i))
+            continue;
+        if (e->ref_kind == REF_PHRASE && e->ref_target == i)
+            return k;
+        k++;
+    }
+    for (int s = 0; s < song->section_count; s++) {
+        if (s == entry_at(row)->section)
+            continue;
+        if (e->ref_kind == REF_SECTION && e->ref_target == s)
+            return k;
+        k++;
+    }
+    return 0;
+}
+
+/* The slot a new reference starts on: the phrase above it, which is what
+ * "again" nearly always means; the first one when it stands at the top. */
+static int ref_near(void)
+{
+    int k = 0, best = 0;
+    for (int i = 0; i < song->arrange_len; i++) {
+        if (i == row || is_ref(i))
+            continue;
+        if (i < row)
+            best = k;
+        k++;
+    }
+    return best;
+}
+
+/* The first reference that points at this row, or -1. A reference that
+ * comes to point at a reference resolves to nothing
+ * (`song_entry_resolve`), so a row that others name cannot become one
+ * without their going quiet. */
+static int pointed_at(int r)
+{
+    for (int i = 0; i < song->arrange_len; i++) {
+        const SongEntry *e = entry_at(i);
+        if (i != r && e->kind == ENTRY_REF && e->ref_kind == REF_PHRASE && e->ref_target == r)
+            return i;
+    }
+    return -1;
+}
+
+/* KNOB 3 on a phrase's number: what the row IS. A phrase holds blocks of
+ * its own; a reference plays a phrase already in the song, or a whole
+ * section of it, and has no cells. Two states, so a detent either way is
+ * the other one.
+ *
+ * The blocks go when it becomes a reference and do NOT come back when it
+ * stops being one: it comes back an empty phrase, and UNDO is what holds
+ * what it held -- as UNDO holds every other edit on this screen. One turn
+ * too many is one ALGO to the left. */
+static void turn_kind(int d)
+{
+    SongEntry *e = entry_at(row);
+    bool to_ref = ((is_ref(row) + d) % 2 + 2) % 2 != 0;
+
+    if (!d || to_ref == is_ref(row))
+        return;
+    if (to_ref && ref_slots() == 0) { /* a song of one phrase has nothing to point at */
+        said = "NO TARGET";
+        return;
+    }
+    undo_arrangement();
+    for (int t = 0; t < SONG_MAX_TRACKS; t++) {
+        e->pattern[t] = PATTERN_NONE;
+        e->level[t] = VOL_FULL;
+    }
+    e->steps = 0;
+    e->kind = (uint8_t)(to_ref ? ENTRY_REF : ENTRY_PHRASE);
+    if (to_ref) {
+        int lost;
+        ref_slot(ref_near(), &e->ref_kind, &e->ref_target);
+        /* the turn is his, but a row that goes quiet elsewhere is not
+         * allowed to go quiet without a word: it is named, and the corner
+         * holds about eight letters before the first track's number. */
+        if ((lost = pointed_at(row)) >= 0) {
+            static char word[12];
+            int k = 2;
+            grid_hex2(word, lost);
+            for (const char *t = " SILENT"; *t; t++)
+                word[k++] = *t;
+            word[k] = 0;
+            said = word;
+        }
+    }
+    app_mark_dirty();
+}
+
+/* KNOB 3 on a reference: where it points, along the one list. */
+static void turn_target(int d)
+{
+    SongEntry *e = entry_at(row);
+    int n = ref_slots(), k;
+
+    if (n == 0)
+        return;
+    k = ref_slot_of(e) + d;
+    k = k < 0 ? 0 : k >= n ? n - 1 : k;
+    undo_bytes(&e->ref_kind, 1);
+    undo_bytes(&e->ref_target, 1);
+    ref_slot(k, &e->ref_kind, &e->ref_target);
+    app_mark_dirty();
+}
+
+/* KNOB 4 on a reference: how long it plays, as it is on a phrase. AUTO is
+ * the whole of what it points at; turning up from AUTO starts there. A
+ * reference to a section is as long as the phrases it holds and the file
+ * keeps no number for it (`trk_save`), so the knob says nothing there. */
+static void turn_ref_steps(int d)
+{
+    SongEntry *e = entry_at(row);
+    int v = e->steps;
+
+    if (e->ref_kind == REF_SECTION)
+        return;
+    undo_bytes(&e->steps, sizeof e->steps);
+    if (v == 0 && d > 0)
+        v = song_entry_steps(song, row) + d - 1;
+    else
+        v += d;
+    e->steps = (uint16_t)(v < 1 ? 0 : v > ENTRY_CYCLE_MAX ? ENTRY_CYCLE_MAX : v);
     app_mark_dirty();
 }
 
@@ -583,6 +758,168 @@ static void ch_draw(void)
     ch_hint(PLAT_W - 6, "HOME", "BACK", true);
 }
 
+/* ---------------------------------------------------- choose phrase --- */
+/* CHOOSE PHRASE: what a reference points at, opened by PRESETS on it as
+ * CHOOSE PATTERN is opened on a cell (31/10). KNOB 3 on the row walks the
+ * same list without opening it; this one says what each one is -- the
+ * phrase's name and how long it lasts, the section's name and how many
+ * phrases it holds -- which is what a bare number cannot. SEL takes it,
+ * PLAY listens, HOME leaves it as it was. */
+static bool picking;
+static int cp_cur, cp_top;
+static bool cp_listening;
+static int cp_heard = -1; /* the slot sounding, -1 for none */
+
+static void cp_hush(void)
+{
+    if (cp_heard < 0)
+        return;
+    player_stop();
+    cp_heard = -1;
+}
+
+/* What the cursor rests on, whole and round and round: a phrase as it is,
+ * a section from the first of its phrases. Nothing is borrowed and nothing
+ * is written, so none of this is journalled. */
+static void cp_listen(void)
+{
+    uint8_t kind, target;
+    int at, first, count;
+
+    cp_hush();
+    ref_slot(cp_cur, &kind, &target);
+    at = target;
+    if (kind == REF_SECTION)
+        at = song_section_bounds(song, target, &first, &count) ? first : -1;
+    if (at < 0 || at >= song->arrange_len)
+        return;
+    player_play_entry(at);
+    cp_heard = cp_cur;
+}
+
+static void cp_open(void)
+{
+    picking = true;
+    cp_cur = ref_slot_of(entry_at(row));
+    cp_top = 0;
+    grid_follow(&cp_cur, &cp_top, ref_slots(), CH_ROWS);
+    cp_listening = false;
+    cp_heard = -1;
+    settle = 0;
+    gfx_invalidate();
+}
+
+/* SEL takes what the cursor is on; HOME leaves and changes nothing. */
+static void cp_close(bool take)
+{
+    SongEntry *e = entry_at(row);
+
+    cp_listening = false;
+    cp_hush();
+    settle = 0;
+    if (take) {
+        uint8_t kind, target;
+        ref_slot(cp_cur, &kind, &target);
+        if (kind != e->ref_kind || target != e->ref_target) {
+            undo_bytes(&e->ref_kind, 1);
+            undo_bytes(&e->ref_target, 1);
+            e->ref_kind = kind;
+            e->ref_target = target;
+            app_mark_dirty();
+        }
+    }
+    picking = false;
+    gfx_invalidate();
+}
+
+static void cp_frame(const PlatInput *in, uint32_t btns)
+{
+#define PRESSED(b) ((btns >> (b)) & 1u)
+    /* PRESETS walks it, as it walks CHOOSE PATTERN, and so does KNOB 3:
+     * this is the list KNOB 3 walks on the row itself, so the knob that
+     * chose outside keeps choosing inside (30/10). */
+    cp_cur += in->enc[PE_SELECT] + in->enc[PE_K1] + in->enc[PE_PRESET] + in->enc[PE_K3];
+    grid_follow(&cp_cur, &cp_top, ref_slots(), CH_ROWS);
+    if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_PRESET] || in->enc[PE_K3])
+        settle = SETTLE;
+    if (PRESSED(PB_PLAY)) {
+        cp_listening = !cp_listening;
+        if (cp_listening)
+            cp_listen();
+        else
+            cp_hush();
+    } else if (cp_listening && settle > 0 && --settle == 0 && cp_cur != cp_heard) {
+        cp_listen();
+    }
+    if (PRESSED(PB_SEL))
+        cp_close(true);
+    else if (PRESSED(PB_HOME) || PRESSED(PB_GLO))
+        cp_close(false);
+    ui_led_state(PB_PLAY, cp_listening);
+    ui_led_guide(0); /* SEL takes, HOME goes back: nothing of this screen's */
+#undef PRESSED
+}
+
+/* The whole screen, nothing of the grid behind it, as CHOOSE PATTERN's. */
+static void cp_draw(void)
+{
+    int n = ref_slots(), bar = n > CH_ROWS ? 6 : 0;
+    const SongEntry *me = entry_at(row);
+    char s[20], h[3], d[12];
+
+    s[0] = 'P', s[1] = 'H', s[2] = 'R', s[3] = ' ';
+    grid_hex2(s + 4, row);
+    gfx_fill(0, 0, PLAT_W, PLAT_H, C_BG, 255);
+    gfx_text(F_COND14, 6, 17, "CHOOSE PHRASE", C_TITLE);
+    gfx_text(F_COND12, PLAT_W - 6 - gfx_text_w(F_COND12, s), 17, s, C_DIM);
+    gfx_fill(0, CH_TOP - 3, PLAT_W, 1, C_TRACK, 255);
+    for (int r = 0; r < CH_ROWS && cp_top + r < n; r++) {
+        int k = cp_top + r, y = CH_TOP + r * GRID_ROW, base = y + 2 + FONTS[F_COND20].ascent, x, w, j = 0;
+        bool here = k == cp_cur;
+        uint16_t ink = here ? C_ON_ACC : C_TEXT;
+        const char *name, *tail;
+        uint8_t kind, target;
+
+        ref_slot(k, &kind, &target);
+        if (here)
+            gfx_slab(4, y + 1, PLAT_W - 8 - bar, GRID_ROW - 2, C_ACCENT, 255);
+        if (kind == me->ref_kind && target == me->ref_target) /* where it points now */
+            gfx_fill(6, y + 6, 3, GRID_ROW - 12, here ? C_ON_ACC : C_TITLE, 255);
+        if (kind == REF_SECTION) {
+            int first, count;
+            x = gfx_text(F_COND20, 16, base, "SEC", ink);
+            x = gfx_text(F_COND20, x + 6, base, grid_hex2(h, target), ink);
+            name = song->sections[target];
+            if (!song_section_bounds(song, target, &first, &count))
+                count = 0;
+            for (const char *q = ui_dec(d, count); *q; q++)
+                s[j++] = *q;
+            tail = count == 1 ? " phrase" : " phrases";
+        } else {
+            x = gfx_text(F_COND20, 16, base, grid_hex2(h, target), ink);
+            name = song->arrangement[target].name;
+            for (const char *q = ui_dec(d, song_entry_steps(song, target)); *q; q++)
+                s[j++] = *q;
+            tail = " steps";
+        }
+        for (; *tail; tail++)
+            s[j++] = *tail;
+        s[j] = 0;
+        if (name[0]) /* a phrase that was never named says nothing here */
+            gfx_text(F_COND14, x + 8, base, name, ink);
+        w = gfx_text_w(F_COND14, s);
+        gfx_text(F_COND14, PLAT_W - 10 - bar - w, base, s, ink);
+    }
+    if (n > CH_ROWS) {
+        int hh = CH_ROWS * GRID_ROW * CH_ROWS / n, y = CH_TOP + CH_ROWS * GRID_ROW * cp_top / n;
+        gfx_fill(PLAT_W - 4, CH_TOP, 2, CH_ROWS * GRID_ROW, C_TRACK, 255);
+        gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
+    }
+    ch_hint(6, "SEL", "TAKE", false);
+    ch_hint(96, "PLAY", "LISTEN", false);
+    ch_hint(PLAT_W - 6, "HOME", "BACK", true);
+}
+
 /* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
@@ -594,9 +931,9 @@ static void draw(void)
         grid_corner(said, grid_said_ink(said), 0, 0);
     else if (level_said && col >= 0 && !is_ref(row)) /* KNOB 4: the cell's level */
         grid_corner("VOL", C_DIM, ui_dec(s, entry_at(row)->level[col]), C_TEXT);
-    else if (col < 0 && !is_ref(row)) /* the phrase's length, while the cursor is on it */
+    else if (col < 0 || is_ref(row)) /* KNOB 4: how long the row lasts, its number or its reference */
         grid_corner(entry_at(row)->steps ? ui_dec(s, entry_at(row)->steps) : "AUTO", C_TEXT, 0, 0);
-    else if (col >= 0 && !is_ref(row) && entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS &&
+    else if (entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS &&
              song_pattern_blank(song, col, entry_at(row)->pattern[col]))
         grid_corner("NEW", C_FX, 0, 0); /* the cell under the cursor wears the cursor's colour: the corner says it */
     else if (loop_state() == LOOP_SET) { /* the loop, in place of where one is: LOOP 02-05 */
@@ -634,10 +971,14 @@ static void draw(void)
             grid_playing(v, band);
         grid_num(v, r, band, band && col < 0 && !asked,
                  r == play_row || (loop_has(r) && loop_state() == LOOP_SET) ? C_TITLE : C_TEXT);
-        if (e->kind == ENTRY_REF) { /* a reference wears where it points: it has no cells of its own */
-            int x = gfx_text(F_COND20, GRID_CELL_X + 6, grid_base(v),
-                             e->ref_kind == REF_SECTION ? "REF SEC" : "REF", band ? C_ON_ACC : C_DIM);
-            gfx_text(F_COND20, x + 8, grid_base(v), grid_hex2(s, e->ref_target), band ? C_ON_ACC : C_FX);
+        if (e->kind == ENTRY_REF) { /* a reference wears where it points: one cell, the whole lane */
+            bool on = band && col >= 0;
+            int x;
+            if (on)
+                grid_hollow(v, GRID_CELL_X, PLAT_W - 4 - (n > GRID_ROWS ? 6 : 0) - GRID_CELL_X);
+            x = gfx_text(F_COND20, GRID_CELL_X + 6, grid_base(v),
+                         e->ref_kind == REF_SECTION ? "REF SEC" : "REF", grid_ink(band, on, C_DIM));
+            gfx_text(F_COND20, x + 8, grid_base(v), grid_hex2(s, e->ref_target), grid_ink(band, on, C_FX));
             continue;
         }
         for (int t = left; t < left + CELLS && t < tracks; t++) {
@@ -692,7 +1033,7 @@ void songview_open(bool reset_cursor)
     if (col >= song->num_tracks)
         col = song->num_tracks - 1;
     ask_delete = false;
-    choosing = false;
+    choosing = picking = false;
     selecting = anchored = false;
     said = 0;
     settle = still = 0;
@@ -704,6 +1045,8 @@ void songview_cancel(void)
 {
     if (choosing) /* a block being listened to goes back to what the cell held */
         ch_close(false);
+    if (picking) /* a phrase being listened to is left where it was */
+        cp_close(false);
     audition_end();
 }
 
@@ -713,8 +1056,9 @@ static uint32_t usable(void)
     /* EDIT lights only while the SELECTION is locked on (ui.h, 30/10) */
     uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE |
                  (selecting ? 1u << PB_EDIT : 0u);
-    if (is_ref(row))
-        return u | (col < 0 ? 1u << PB_LFO : 0u);
+    if (is_ref(row)) /* LFO deletes the row, SEL goes to what it plays */
+        return u | (col < 0 ? 1u << PB_LFO : 0u) |
+               (song_entry_resolve(song, row, 0) >= 0 ? 1u << PB_SEL : 0u);
     u |= 1u << PB_SEL;
     if (cell_instr() >= 0) /* the keys play: their octave */
         u |= 1u << PB_OCTDN | 1u << PB_OCTUP;
@@ -741,19 +1085,29 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
 
     /* PRESETS, which this screen had no use for, opens CHOOSE PATTERN on the
      * cell under the cursor. KNOB 3 is untouched: it is the ear (30/10). */
-    if (in->enc[PE_PRESET] && !choosing && !selecting && !is_ref(row) && col >= 0) {
+    if (in->enc[PE_PRESET] && !choosing && !picking && !selecting && col >= 0) {
         audition_end(); /* the ear's block and a key held on the way in */
         settle = 0;
         if (trying)
             player_note_off(), trying = false;
-        ch_open();
-        gfx_frame(ch_draw); /* the detent that opened it does not also walk it */
+        /* the cell's blocks, or -- on a reference -- the phrases it could
+         * point at: the same knob, the list of what is under it (31/10) */
+        if (is_ref(row))
+            cp_open(), gfx_frame(cp_draw);
+        else
+            ch_open(), gfx_frame(ch_draw); /* the detent that opened it does not also walk it */
         return SONGVIEW_STAY;
     }
     if (choosing) {
         ch_frame(in, btns);
         play_row = playing ? player_entry() : -1;
         gfx_frame(choosing ? ch_draw : draw);
+        return SONGVIEW_STAY;
+    }
+    if (picking) {
+        cp_frame(in, btns);
+        play_row = playing ? player_entry() : -1;
+        gfx_frame(picking ? cp_draw : draw);
         return SONGVIEW_STAY;
     }
 
@@ -767,17 +1121,33 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     if (in->enc[PE_SELECT]) /* SELECT: the phrase as a whole, the cursor on its number (29/10) */
         col = -1;
     col += in->enc[PE_K2];
-    col = col < -1 ? -1 : col >= song->num_tracks ? song->num_tracks - 1 : col;
+    {   /* a reference wears one cell where a phrase wears eight, so the
+         * cursor has two places on it: its number, and the cell. Where the
+         * cursor stands is the only truth (29/10), so the column is clamped
+         * and not remembered: crossing a reference leaves the cursor on its
+         * cell, and walking back out starts from the first track. */
+        int last = is_ref(row) ? 0 : song->num_tracks - 1;
+        col = col < -1 ? -1 : col > last ? last : col;
+    }
     if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]) /* the cursor left the cell the ear was on */
         audition_end(), settle = 0;
 
-    if (in->enc[PE_K4] && !selecting && !is_ref(row) && col >= 0 && entry_at(row)->pattern[col] != PATTERN_NONE)
+    /* KNOB 4 is how much, wherever the cursor is: the cell's level, the
+     * phrase's length on its number, the reference's on either of its two
+     * places (31/10). KNOB 3 beside it is what the thing IS. */
+    if (in->enc[PE_K4] && !selecting && is_ref(row))
+        turn_ref_steps(in->enc[PE_K4]);
+    else if (in->enc[PE_K4] && !selecting && col < 0)
+        turn_steps(in->enc[PE_K4]);
+    else if (in->enc[PE_K4] && !selecting && entry_at(row)->pattern[col] != PATTERN_NONE)
         turn_level(in->enc[PE_K4]);
     else if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
         level_said = false;
-    if (in->enc[PE_K3] && !selecting && !is_ref(row)) {
-        if (col < 0) {
-            turn_steps(in->enc[PE_K3]);
+    if (in->enc[PE_K3] && !selecting) {
+        if (is_ref(row) && col >= 0) {
+            turn_target(in->enc[PE_K3]); /* where it points */
+        } else if (col < 0) {
+            turn_kind(in->enc[PE_K3]); /* what the row is: blocks of its own, or a pointer */
         } else {
             bool song_on = playing && !audition; /* the song itself, not the ear's block */
             turn_block(in->enc[PE_K3]);
@@ -791,7 +1161,18 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
      * number, the block itself in PATTERN on a cell -- the panel of blocks
      * that stood between them is gone, KNOB 3 chooses and the ear says which
      * (30/10). An empty cell has no block to open. */
-    if (PRESSED(PB_SEL) && !is_ref(row)) {
+    if (PRESSED(PB_SEL) && is_ref(row)) {
+        /* On a reference, the cran below it is what it plays: the phrase it
+         * names, or the first of the section's. PRESETS is what changes it
+         * -- SEL never opens a list, here or anywhere (31/10). */
+        int at = song_entry_resolve(song, row, 0);
+        if (at >= 0 && at < song->arrange_len) {
+            audition_end();
+            settle = 0;
+            row = at;
+            col = -1;
+        }
+    } else if (PRESSED(PB_SEL)) {
         *entry = row;
         *track = col < 0 ? 0 : col;
         if (col < 0)

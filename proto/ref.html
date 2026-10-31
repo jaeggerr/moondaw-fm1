@@ -1,0 +1,186 @@
+<meta charset="utf-8">
+<title>The REF on the FM-1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+
+<!--
+  MOONDAW - making a REF by hand, on the FM-1.
+
+  Written as three proposals on 31/10 and kept as the record of what was
+  chosen. Every picture now comes out of the firmware's own framebuffer
+  (build/web/moondaw.wasm, as tools/readme_shots.mjs takes the README's),
+  not from CSS: what is on this page is what the panel draws.
+-->
+
+<style>
+:root{
+  --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --dim:#5A6470; --accent:#7FD962; --title:#62C8D9; --fx:#F0BE5A; --mute:#9E5555;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose);
+  font-family:var(--sf); font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:clamp(36px,6vw,56px); line-height:.98; color:var(--prose-hi); text-wrap:balance; }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; text-wrap:balance; }
+h2 em{ font-style:normal; color:var(--accent); }
+section{ margin-top:76px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--title); display:block; margin-bottom:8px; }
+.budget{ display:grid; margin-top:26px; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+@media (min-width:760px){ .budget{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.budget > div{ padding:14px 20px 14px 0; min-width:0; }
+@media (min-width:760px){ .budget > div + div{ padding-left:20px; border-left:1px solid var(--rule); } }
+.budget .k{ display:block; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; color:var(--title); }
+.budget .k.no{ color:var(--mute); } .budget .k.yes{ color:var(--accent); }
+.budget p{ margin:0; font-size:14px; }
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:2px; background:var(--dim); }
+
+/* The panel: 240 px square. Shown doubled, and once at the size it is. */
+figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
+figure img{ display:block; width:480px; max-width:100%; height:auto; image-rendering:pixelated;
+  border-radius:4px; box-shadow:0 0 0 2px #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.5; max-width:480px; }
+.pair{ display:flex; gap:22px; flex-wrap:wrap; margin-top:26px; }
+.pair figure img{ width:300px; }
+.pair figcaption{ max-width:300px; }
+.stage{ margin-top:26px; }
+.actual{ margin-top:26px; display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; }
+.actual figure img{ width:240px; }
+.actual figcaption{ max-width:240px; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; decided and written, 31 October 2026</div>
+  <h1>The reference, <em>made by hand</em></h1>
+  <p class="lede">A <code>REF</code> row plays a phrase that is already in the song, or a whole
+  section of it, instead of holding blocks of its own. The machine read one, drew one, played one,
+  renumbered one and deleted one &mdash; and until today no gesture on the panel made one: they
+  only ever arrived in a file. <strong>Now KNOB 3 makes one.</strong> Every picture below comes
+  out of the firmware's own framebuffer.</p>
+
+  <section>
+    <span class="tag">The gesture</span>
+    <h2>KNOB&nbsp;3 says <em>what the row is</em></h2>
+    <p>On a phrase's number, KNOB&nbsp;3 used to set its length. It now says what the row
+    <b>is</b>: blocks of its own, or a pointer. Two states, so a detent either way is the other
+    one. The length moved one knob along, to KNOB&nbsp;4, which did nothing there &mdash; and that
+    is the rule the rest of the machine already follows: <b>KNOB&nbsp;3 is the identity of what the
+    cursor holds, KNOB&nbsp;4 is how much</b>. The block in a cell and its level; the effect in FX
+    and its value; now the kind of a row and its length.</p>
+    <div class="pair">
+      <figure><img src="ref/1-phrase.png" alt="SONG: the cursor on the number of phrase 07, which holds six blocks">
+        <figcaption>On the number of 07. The corner says AUTO: how long it lasts, KNOB 4's number now.</figcaption></figure>
+      <figure><img src="ref/2-ref.png" alt="The same row, now reading REF 06">
+        <figcaption>One detent of KNOB 3. The row points at 06, the phrase above it &mdash; which is what "again" nearly always means &mdash; and its blocks are gone.</figcaption></figure>
+    </div>
+    <div class="budget">
+      <div><span class="k no">What it drops</span><p>The blocks the row held. It comes back an empty phrase, not the one it was.</p></div>
+      <div><span class="k yes">What holds them</span><p>UNDO. The conversion journals the whole arrangement, so one ALGO to the left is one turn too many taken back.</p></div>
+      <div><span class="k">Why not keep them</span><p>Two truths about one row is the class of bug the cursor's own rewrite got rid of on 29/10.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">The row, once it points</span>
+    <h2>One cell, not eight</h2>
+    <p>A phrase wears eight cells; a reference wears one, and the cursor has two places on it: its
+    number and that cell. KNOB&nbsp;2 stops there and goes no further. On the cell,
+    <b>KNOB&nbsp;3 walks where it points</b> &mdash; the phrases that hold blocks of their own
+    first, then the sections &mdash; and <b>KNOB&nbsp;4 is how long it plays</b>: AUTO, which is
+    the whole of what it points at, or a number of steps that cuts it short.</p>
+    <div class="pair">
+      <figure><img src="ref/3-cell.png" alt="The cursor on the reference's one cell, hollowed out of the green band">
+        <figcaption>The cursor on the cell: hollowed out of the band, as any other cell is.</figcaption></figure>
+      <figure><img src="ref/4-target.png" alt="The same reference, now pointing at phrase 0B">
+        <figcaption>KNOB 3 four detents on: it points at 0B instead.</figcaption></figure>
+    </div>
+    <div class="stage">
+      <figure><img src="ref/5-steps.png" alt="The corner reads 56: the reference is cut to 56 steps">
+        <figcaption>KNOB 4: cut to 56 steps, so it plays the first 56 of what 0B holds. The corner says the number, exactly as it does on a phrase.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">Past the phrases</span>
+    <h2>A whole section, again</h2>
+    <p>Turning KNOB&nbsp;3 past the last phrase reaches the sections: <code>REF&nbsp;SEC&nbsp;02</code>
+    plays every phrase of section 02 in order. It lasts as long as they do and the file keeps no
+    length for it, so KNOB&nbsp;4 says nothing there.</p>
+    <div class="stage">
+      <figure><img src="ref/6-section.png" alt="The row now reads REF SEC 02">
+        <figcaption>REF SEC 02: 84 px of the 178 the cells leave, so there is room for the section's name beside it later.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">The long way round</span>
+    <h2><em>PRESETS:</em> choose the phrase</h2>
+    <p>PRESETS opens the same list KNOB&nbsp;3 walks, saying what each one is: a phrase with its
+    name and how long it lasts, a section with its name and how many phrases it holds. The bar at
+    the left marks the one it points at now. PLAY listens, SEL takes, HOME leaves it as it was
+    &mdash; the same screen as CHOOSE&nbsp;PATTERN, built from the song instead of a track.</p>
+    <div class="stage">
+      <figure><img src="ref/7-choose.png" alt="CHOOSE PHRASE: phrases with their lengths, then the sections with their names">
+        <figcaption>Opened from phrase 07. Section 01 is not in the list: 07 stands inside it, and a section that plays itself resolves to nothing.</figcaption></figure>
+    </div>
+    <div class="actual">
+      <figure><img src="ref/3-cell.png" alt="The reference row at the size the panel draws it">
+        <figcaption>At 240 &times; 240, the size under the thumb.</figcaption></figure>
+      <figure><img src="ref/7-choose.png" alt="CHOOSE PHRASE at the size the panel draws it">
+        <figcaption>And the list, the same.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <span class="tag">What it costs elsewhere</span>
+    <h2>Nothing goes quiet <em>without a word</em></h2>
+    <p>A reference that comes to point at a reference resolves to nothing, so turning a row others
+    name into a reference makes <b>their</b> row silent. The turn still happens &mdash; it is your
+    knob &mdash; but the corner names the casualty, in the red it keeps for what went wrong.</p>
+    <div class="stage">
+      <figure><img src="ref/8-silent.png" alt="The corner reads 07 SILENT in red; row 07 reads REF 06 and 06 is now a reference too">
+        <figcaption>06 became a reference while 07 pointed at it: 07 now names a pointer and plays nothing. The corner holds about eight letters before the first track's number, which is what sets the length of every word said there.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>What was settled, and what was not</h2>
+    <ul class="notes">
+      <li><b>SEL goes where the reference goes</b> &mdash; the phrase it names, or the first of the
+      section's &mdash; and never opens a list. SEL descends everywhere else on this machine;
+      PRESETS is what opens lists. Two buttons, two jobs.</li>
+      <li><b>Not built: SEQ held.</b> It was the third proposal &mdash; SEQ tapped copies the
+      phrase below, SEQ held would point at it instead. It makes one case shorter and reaches
+      nothing KNOB&nbsp;3 does not. It can come later, and costs twenty lines if it does.</li>
+      <li><b>A reference is not offered the section it stands in</b>, nor another reference, nor
+      its own row: <code>song_entry_resolve()</code> gives nothing for any of them, and a knob that
+      lands on silence is a knob that lies. A file may still hold one; the row then plays nothing,
+      as it did before.</li>
+      <li><b>Not decided</b>: whether the rows a section reference is playing through should light
+      up as it goes. They do not &mdash; <code>player_entry()</code> reports the reference's own
+      row for the whole run.</li>
+      <li><b>Not decided</b>: whether the target's name belongs on the row beside the number.
+      There is room for it, and <code>REF&nbsp;0B</code> says less than <code>REF&nbsp;0B
+      CHORUS</code> would.</li>
+    </ul>
+  </section>
+</div>
