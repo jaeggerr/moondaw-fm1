@@ -43,7 +43,21 @@ static void go(void) { last = songview_frame(&in, &entry, &track); memset(in.enc
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 /* `last` is what the press itself answered, not the release after it */
 static void press(int b) { int r; in.btns = 1u << b; go(); r = last; in.btns = 0; go(); last = r; }
-/* EDIT is also a shift: it answers at the release */
+/* The SELECTION, in and out: EDIT held with OP5 under it (31/10). A black
+ * key alone is a note here, so the first way in is always the shift; once
+ * the mode is on the keys are commands and OP5 alone would do. */
+static void sel_mode(void)
+{
+    in.btns = 1u << PB_EDIT;
+    go();
+    in.keys = 1u << UI_OP_SEL;
+    go();
+    in.keys = 0;
+    go();
+    in.btns = 0;
+    go();
+}
+/* EDIT alone: a shift that nothing was pressed under. */
 static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
 /* EDIT held, and a black key under it: the commands (ui.h) */
@@ -148,7 +162,12 @@ int main(void)
     press(PB_SEQ);
     CHECK("SEQ on a block does nothing", last == SONGVIEW_STAY);
     /* EDIT: the SELECTION of blocks, the black keys its commands (30/10) */
-    tap_edit();               /* on, anchored on phrase 00 / track 1 */
+    tap_edit();               /* EDIT alone opens nothing now (31/10) */
+    enc(PE_K3, 1);
+    CHECK("a tap of EDIT no longer locks the SELECTION on: the knob is still the cell's",
+          E(0).pattern[0] == 1);
+    enc(PE_K3, -1);
+    sel_mode();               /* on, anchored on phrase 00 / track 1 */
     enc(PE_K3, 1);
     CHECK("the knobs only move while the SELECTION is on", E(0).pattern[0] == 0);
     enc(PE_K1, 1);            /* stretched over phrases 00 and 01 */
@@ -156,17 +175,17 @@ int main(void)
     keys(0);
     CHECK("OP4 clears every cell the SELECTION covers",
           E(0).pattern[0] == PATTERN_NONE && E(1).pattern[0] == PATTERN_NONE);
-    tap_edit();               /* off */
+    sel_mode();               /* off */
     enc(PE_K3, 1);
     CHECK("and the knobs are the cell's again", E(1).pattern[0] == 0);
-    tap_edit();               /* on, anchored on phrase 01 */
+    sel_mode();               /* on, anchored on phrase 01 */
     keys(1u << UI_OP_COPY);   /* OP1 takes the cells and collapses on the cursor, as PATTERN's */
     keys(0);
     enc(PE_K1, -1);
     keys(1u << UI_OP_PASTE);
     keys(0);
     CHECK("OP2 puts what OP1 took where the cursor is", E(0).pattern[0] == 0);
-    tap_edit();               /* off */
+    sel_mode();               /* off */
 
     /* EDIT held: its commands while it is down, and no SELECTION left behind */
     in.btns = 1u << PB_EDIT;
@@ -180,7 +199,7 @@ int main(void)
     CHECK("and leaves no SELECTION on when it is let go", E(0).pattern[0] == 0);
 
     /* OP6: the phrases PLAY goes round (30/10) */
-    tap_edit();               /* on, anchored on phrase 00 */
+    sel_mode();               /* on, anchored on phrase 00 */
     enc(PE_K1, 1);            /* stretched over phrases 00 and 01 */
     keys(1u << UI_KEY_LOOP);
     keys(0);
@@ -197,7 +216,7 @@ int main(void)
     keys(0);
     CHECK("and the press after it closes the loop",
           loop_state() == LOOP_SET && loop_from() == 0 && loop_to() == 0);
-    tap_edit();               /* off */
+    sel_mode();               /* off */
     enc(PE_K1, 1);            /* the cursor on phrase 01, outside the loop */
     press(PB_PLAY);           /* the song, from where the cursor is */
     pump();
@@ -259,7 +278,7 @@ int main(void)
     press(PB_HOME);
     CHECK("HOME goes back to HOME's root", last == SONGVIEW_BACK);
     go();
-    tap_edit();
+    sel_mode();
     keys(1u << UI_OP_CLEAR);
     keys(0);
     CHECK("EDIT on the number takes whole phrases: OP4 clears every track of it",
@@ -268,7 +287,7 @@ int main(void)
 
     /* CHOOSE PATTERN, which PRESETS opens (30/10): the list came back for
      * what a bare number never said and for NEW; KNOB 3 is untouched. */
-    tap_edit();               /* the SELECTION off */
+    sel_mode();               /* the SELECTION off */
     enc(PE_K2, 1);            /* the cursor on track 1's cell */
     enc(PE_K3, -30);
     CHECK("the cell is empty to start with", E(0).pattern[0] == PATTERN_NONE);
@@ -454,7 +473,7 @@ int main(void)
         enc(PE_SELECT, 40);
         enc(PE_SELECT, -2);
         enc(PE_K2, -1);
-        tap_edit();
+        sel_mode();
         enc(PE_SELECT, 2);
         undo_frame(t += 1000);
         press(PB_ENV);
@@ -470,7 +489,7 @@ int main(void)
         CHECK("the namer opens on a new section, and HOME leaves it without a name",
               app_song.sections[0][0] == 0 && app_song.section_count == 1);
 
-        tap_edit(); /* the selection away: the cursor alone from here */
+        sel_mode(); /* the selection away: the cursor alone from here */
         enc(PE_SELECT, -40);
         enc(PE_SELECT, r0 - 1);
         enc(PE_SELECT, 1); /* onto the marker, which is a slot of its own */

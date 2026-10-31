@@ -3258,3 +3258,48 @@ are.
 Open: whether a marker should light as the song plays through it
 (`player_entry()` reports a row, and a marker is not one); and a SECTIONS
 screen, the song's shape at a glance, which is a screen and not a gesture.
+
+## 2026-10-31 — the SELECTION moves to OP5, and EDIT is a shift again
+
+His, from using the machine: "quand EDIT est sélectionné je n'aime pas que
+ça soit en mode de sélection par défaut", on SONG as on PATTERN, with the
+fix already in it — one of the black keys we have left, acting as a toggle.
+
+He is right, and for a reason worth writing down. EDIT meant two things on
+those two screens and what separated them was `EDIT_TAP`: fifteen frames, a
+quarter of a second the hand cannot see. A threshold nobody can perceive is
+a coin toss — hold a hair too short and you are in a mode you did not ask
+for, a hair too long and you are not in the one you wanted. Every other
+mode on this machine is entered by pressing something, never by pressing
+something *for a certain length of time*. And it gives EDIT back the single
+meaning `ui.h` has always claimed for it: a shift, the same on every screen
+that has one.
+
+**OP5**, the only free OP, his pick over PIT and POLY. It is where it
+belongs by family — the SELECTION is what OP1 to OP4 act on — though it
+does land next to OP4 with nothing to do with clearing, which is what OP5
+had been kept free for on 29/10. The synth words said nothing about a
+selection and sit further under the hand.
+
+The asymmetry is in the grammar, not a wart: **EDIT held + OP5** to turn it
+on, because a black key alone is a note on both screens — it writes in
+PATTERN and plays the track's instrument in SONG — and **OP5 alone** to
+turn it off, the keys being commands already once the mode is on. Two hands
+in, one hand out.
+
+The CAPS LOCK light moves with it. EDIT lit while the SELECTION was locked
+(30/10); now EDIT is never lit and OP5 carries the state through
+`ui_led_keys`'s `lit`. The key that opens the mode is the key that says it
+is open, which is what a CAPS LOCK has always been. `ui_led_mono` was the
+wrong shape for that — it only ever lights MONO — so both screens call
+`ui_led_keys` directly and fold MONO's solo and mute into the same call.
+
+EDIT tapped now does nothing at all on SONG and PATTERN. PHRASE and the
+MIXER are untouched: their tap opens the block and goes to the PROJECT, and
+neither ever locked a mode.
+
+`pattern_test` and `song_test` drove the old tap sixteen times between
+them; they drive EDIT + OP5 now, and each gained a check that EDIT alone —
+tapped or held past the old threshold — leaves the SELECTION exactly as it
+was. The LED check that read "lit once a tap locks it on" now reads OP5's
+own lamp.

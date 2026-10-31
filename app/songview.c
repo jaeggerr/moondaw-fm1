@@ -40,9 +40,12 @@
  *           SECTION, which is --, the song's sections and NEW (31/10). ENV is a
  *           verb here, "envelop these phrases", and the list is the question it
  *           asks; PRESETS stays the list of what is UNDER the cursor
- *   EDIT    tapped: the SELECTION of blocks, locked on until another tap (on the
- *           phrase's number it takes whole phrases); held: its commands for as long
- *           as it is down. OP1 OP2 OP3 copy paste cut, OP4 clears, MONO solo/mute
+ *   EDIT    a shift, and only that (31/10): its commands for as long as it is down.
+ *           OP5 takes the SELECTION of blocks in and out and it stays, as a CAPS LOCK,
+ *           OP5 lit while it is on (on the phrase's number it takes whole phrases); it
+ *           was a tap of EDIT until 31/10, and the quarter of a second that told a tap
+ *           from a hold could not be seen.
+ *           OP1 OP2 OP3 copy paste cut, OP4 clears, MONO solo/mute
  *           -- a cell is its block and the level it plays at; OP6 makes the phrases
  *           it covers the loop PLAY goes round (with none, an end at the cursor,
  *           then the other), and the same phrases again forget it (30/10). On a
@@ -89,9 +92,9 @@ static int audition_track = -1;
 static int kbd_oct;  /* the keys' octave, as PATTERN's */
 static bool trying;  /* a key of the hand is sounding */
 
-/* The SELECTION of blocks (30/10), EDIT's own job here as it is PATTERN's:
- * a quick tap locks it on, the cursor stretches it from where it was
- * tapped, and the black keys are the commands -- OP1 copy, OP2 paste, OP3
+/* The SELECTION of blocks (30/10), OP5's own job here as it is PATTERN's
+ * (31/10): the key locks it on, the cursor stretches it from where it was
+ * pressed, and the black keys are the commands -- OP1 copy, OP2 paste, OP3
  * cut, OP4 clear, on the cells themselves (a cell is a block and the level
  * it plays at). EDIT held gives the same commands for as long as it is
  * down and leaves the SELECTION as it was (ui.h). */
@@ -1417,9 +1420,9 @@ void songview_cancel(void)
 /* What can be pressed where the cursor is: the guide's glow (ui.h). */
 static uint32_t usable(void)
 {
-    /* EDIT lights only while the SELECTION is locked on (ui.h, 30/10) */
-    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE |
-                 1u << PB_ENV | (selecting ? 1u << PB_EDIT : 0u);
+    /* EDIT is never lit: it is a shift, the same on every screen, and what
+     * says the SELECTION is on is OP5's own light now (ui.h, 31/10) */
+    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE | 1u << PB_ENV;
     if (on_mark) /* SEL names it; ENV is how its rows change; nothing else is its */
         return u | 1u << PB_SEL;
     if (is_ref(row)) /* LFO deletes the row, SEL goes to what it plays */
@@ -1592,10 +1595,14 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     if (PRESSED(PB_SEQ) && !is_ref(row) && col < 0 && !on_mark)
         insert_phrase();
-    /* EDIT: a quick tap locks the SELECTION of blocks on or off (at the
-     * release), held it is the shift and the SELECTION is left as it was
-     * (30/10). MONO, in either: the track alone, or muted (ui.h). */
-    if (ui_shift(&shift, in, btns, keys, selecting, col, &said) && shift.frames < EDIT_TAP && !on_mark) {
+    /* EDIT is the shift and nothing else (31/10): the SELECTION of blocks is
+     * OP5's, on and off, as a CAPS LOCK -- EDIT held to reach it the first
+     * time, since a black key alone is a note here, then the key alone once
+     * the keys are commands. A tap of EDIT locked it until today, and what
+     * told a tap from a hold was a quarter of a second the hand could not
+     * see. MONO, in either: the track alone, or muted (ui.h). */
+    ui_shift(&shift, in, btns, keys, selecting, col, &said);
+    if ((keys & 1u << UI_OP_SEL) && (selecting || shift.held) && !on_mark) {
         selecting = !selecting;
         anchored = selecting;
         an_row = row, an_col = col;
@@ -1694,11 +1701,17 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(usable());
     /* the SELECTION's commands: copy and cut on a stretched one, clear always,
-     * paste once something was taken; MONO: lit alone, half muted */
-    ui_led_mono(col, !selecting && !shift.held
-                         ? 0u
-                         : (anchored ? 1u << UI_OP_COPY | 1u << UI_OP_CUT : 0u) | 1u << UI_OP_CLEAR |
-                               1u << UI_KEY_LOOP | 1u << UI_KEY_MONO | (clip_rows ? 1u << UI_OP_PASTE : 0u));
+     * paste once something was taken; OP5 is the mode itself and is offered
+     * whenever EDIT is down, lit while it is on -- the key that turns the
+     * mode on is the key that says it is on (31/10); MONO: lit alone, half muted */
+    ui_led_keys(!selecting && !shift.held
+                    ? 0u
+                    : (anchored ? 1u << UI_OP_COPY | 1u << UI_OP_CUT : 0u) | 1u << UI_OP_CLEAR |
+                          1u << UI_OP_SEL | 1u << UI_KEY_LOOP | 1u << UI_KEY_MONO |
+                          (clip_rows ? 1u << UI_OP_PASTE : 0u),
+                (selecting ? 1u << UI_OP_SEL : 0u) |
+                    (col >= 0 && player_soloed(col) ? 1u << UI_KEY_MONO : 0u),
+                col >= 0 && player_muted(col) ? 1u << UI_KEY_MONO : 0u);
     gfx_frame(draw);
     if (out != SONGVIEW_STAY) { /* the screen is leaving: the ear's block and the hand's note with it */
         audition_end();

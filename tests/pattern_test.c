@@ -43,6 +43,20 @@ static void go(void) { pattern_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
+/* The SELECTION, in and out: EDIT held with OP5 under it (31/10). A black
+ * key alone is a note here, so the first way in is always the shift; once
+ * the mode is on the keys are commands and OP5 alone would do. */
+static void sel(void)
+{
+    in.btns = 1u << PB_EDIT;
+    go();
+    in.keys = 1u << UI_OP_SEL;
+    go();
+    in.keys = 0;
+    go();
+    in.btns = 0;
+    go();
+}
 static int pat_len_of(void) { return song.patterns[0][song.arrangement[0].pattern[0]].length; }
 static const Step *st(int row) { return song_step(&song, 0, song.arrangement[0].pattern[0], row); }
 /* the player takes PLAY and STOP in its render, as on the machine */
@@ -373,20 +387,20 @@ int main(void)
         keys(0);                  /* a note, to see it survive */
         enc(PE_K2, 5);            /* the first effect */
         enc(PE_K3, 1);            /* an effect, to see it go */
-        press(PB_EDIT);           /* in, the anchor on it */
+        sel();           /* in, the anchor on it */
         enc(PE_K2, 10);           /* right, hard: loose, the strip would come round to the notes */
         keys(1u << 8);            /* OP4: clear */
         keys(0);
-        press(PB_EDIT);           /* out */
+        sel();           /* out */
         CHECK("selecting, the knob stays in the view: the effects go and the note stays",
               st(11)->fx[0].cmd == FX_NONE && st(11)->notes[0] == 69);
         press(PB_FX);             /* the first effect, an effect on it again */
         enc(PE_K3, 1);
-        press(PB_EDIT);
+        sel();
         enc(PE_K2, -10);          /* left, hard: no further than its own number */
         keys(1u << 8);            /* OP4: clear -- whole steps, from a number */
         keys(0);
-        press(PB_EDIT);
+        sel();
         CHECK("and left it stops at that group's number: the whole step", step_is_empty(st(11)));
         enc(PE_K2, 1);
         enc(PE_K3, 1);
@@ -403,7 +417,7 @@ int main(void)
     enc(PE_K1, -2);
     {
         uint8_t n0 = st(0)->notes[0], n1 = st(1)->notes[0];
-        press(PB_EDIT);
+        sel();
         enc(PE_K1, 1);
         keys(1u << 1);        /* OP1: copy rows 0-1, note 1 */
         keys(0);
@@ -411,50 +425,53 @@ int main(void)
         keys(1u << 3);        /* OP2: paste */
         keys(0);
         CHECK("OP1 copies, OP2 pastes at the cursor", st(5)->notes[0] == n0 && st(6)->notes[0] == n1);
-        press(PB_EDIT);
-        press(PB_EDIT);       /* a new anchor at row 5 */
+        sel();
+        sel();       /* a new anchor at row 5 */
         enc(PE_K1, 1);
         keys(1u << 8);        /* OP4: clear */
         keys(0);
         CHECK("OP4 clears the selection", st(5)->notes[0] == NOTE_NONE && st(6)->notes[0] == NOTE_NONE);
         CHECK("and no key wrote a note meanwhile", st(0)->notes[0] == n0);
-        press(PB_EDIT);       /* out, the cursor on row 6 */
+        sel();       /* out, the cursor on row 6 */
         enc(PE_K1, -1);
-        press(PB_EDIT);       /* a selection of rows 5-6 */
+        sel();       /* a selection of rows 5-6 */
         enc(PE_K1, 1);
         keys(1u << 13);       /* OP6: the loop */
         keys(0);
         CHECK("OP6 makes the selection the loop", loop_state() == LOOP_SET && loop_from() == 5 && loop_to() == 6);
-        press(PB_EDIT);
+        sel();
         enc(PE_K1, -1);
-        press(PB_EDIT);
+        sel();
         enc(PE_K1, 1);
         keys(1u << 13);       /* OP6 on the same steps: no loop */
         keys(0);
         CHECK("and OP6 on the same steps forgets it", loop_state() == LOOP_NONE);
-        press(PB_EDIT);
-        press(PB_EDIT);
+        sel();
+        sel();
         enc(PE_K2, -1);       /* whole steps */
         keys(1u << 5);        /* OP3: cut row 6 */
         keys(0);
         CHECK("OP3 cuts whole steps", step_is_empty(st(6)));
-        press(PB_EDIT);
+        sel();
         CHECK("EDIT again: out, on the step's number the keys only play", (keys(1u << 1), keys(0), step_is_empty(st(6))));
         enc(PE_K2, 1);
         CHECK("and in a note column they write", (keys(1u << 1), keys(0), st(6)->notes[0] != NOTE_NONE));
         enc(PE_K2, -1);
-        /* EDIT held past a tap and let go, no key used: the SELECTION is left
-         * as it was -- only a quick tap locks it on or off (30/10) */
-        press(PB_EDIT);
-        in.btns = 1u << PB_EDIT;
-        for (int i = 0; i < EDIT_TAP + 2; i++)
+        /* EDIT pressed and let go with no key under it does nothing at all
+         * now, however long it was down: it is a shift and only that, and
+         * the SELECTION is OP5's (31/10) */
+        sel();
+        for (int n = 1; n <= EDIT_TAP + 2; n *= EDIT_TAP + 2) {
+            in.btns = 1u << PB_EDIT;
+            for (int i = 0; i < n; i++)
+                go();
+            in.btns = 0;
             go();
-        in.btns = 0;
-        go();
-        keys(1u << 8);        /* OP4: the selection's still, it was not closed */
+        }
+        keys(1u << 8);        /* OP4: the selection is still on, nothing closed it */
         keys(0);
-        CHECK("EDIT held and let go leaves the SELECTION as it was", step_is_empty(st(6)));
-        press(PB_EDIT);       /* out */
+        CHECK("EDIT alone, tapped or held, leaves the SELECTION as it was", step_is_empty(st(6)));
+        sel();       /* out */
         enc(PE_K1, -6);
     }
 
@@ -531,15 +548,18 @@ int main(void)
     enc(PE_K3, -4);
     CHECK("KNOB 3 on the step's number is the block's length", song.patterns[0][0].length == 12);
 
-    /* EDIT is lit only while the SELECTION is locked on, as a CAPS LOCK (30/10) */
+    /* EDIT is never lit: it is a shift, the same on every screen. What says
+     * the SELECTION is on is OP5, the key that opened it (31/10) */
     go();
-    CHECK("EDIT is dark with no SELECTION", led[PB_EDIT] == PLAT_LED_OFF);
-    press(PB_EDIT);
+    CHECK("with no SELECTION, EDIT and OP5 are both dark",
+          led[PB_EDIT] == PLAT_LED_OFF && led[PLAT_BTNS + UI_OP_SEL] == PLAT_LED_OFF);
+    sel();
     go();
-    CHECK("and lit once a tap locks it on", led[PB_EDIT] != PLAT_LED_OFF);
-    press(PB_EDIT);
+    CHECK("OP5 lights once the SELECTION is on", led[PLAT_BTNS + UI_OP_SEL] == PLAT_LED_LIT);
+    CHECK("and EDIT stays dark, being only a shift", led[PB_EDIT] == PLAT_LED_OFF);
+    sel();
     go();
-    CHECK("and dark again when the tap takes it off", led[PB_EDIT] == PLAT_LED_OFF);
+    CHECK("and OP5 goes out with it", led[PLAT_BTNS + UI_OP_SEL] == PLAT_LED_OFF);
 
     /* STOP leaves the cursor on the step it stopped on (30/10): the phrase
      * plays from its top while the cursor waits further down */

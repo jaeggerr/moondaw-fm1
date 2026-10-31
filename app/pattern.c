@@ -31,11 +31,14 @@
  *             their octave; on the step's number, in FX and INS they only play
  *   SELECT also brings the cursor to the step's number: the step as a whole
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
- *   EDIT  tapped, the SELECTION, in and out; held, a shift: the black keys
- *         are commands while it is down (EDIT + MONO tapped: the track alone, or
- *         back to normal; held: muted). The SELECTION: SELECT and KNOB 2 stretch it from where EDIT
- *         was pressed (left of the first column: whole steps); the black keys
- *         OP1 copy, OP2 paste at the cursor, OP3 cut, OP4 clear
+ *   EDIT  a shift, and only that (31/10): the black keys are commands while it
+ *         is down (EDIT + MONO tapped: the track alone, or back to normal; held:
+ *         muted). OP5 takes the SELECTION in and out and it stays, as a CAPS LOCK,
+ *         OP5 lit while it is on; it was a tap of EDIT until 31/10, and the quarter
+ *         of a second that told a tap from a hold could not be seen. The SELECTION:
+ *         SELECT and KNOB 2 stretch it from where OP5 was pressed (left of the first
+ *         column: whole steps); the black keys OP1 copy, OP2 paste at the cursor,
+ *         OP3 cut, OP4 clear
  *   SEL   on FX: the step's SYLLABLE (app/syllable.h), in an empty slot or its own
  *   SEL   on INS: the INSTRUMENT screen of the one that plays on the step -- reaching it
  *         by pressing ENV twice read as counter-intuitive (30/10); that way still works
@@ -92,7 +95,7 @@ static int still; /* frames the hand has not touched anything: past GRID_FOLLOW_
 enum { CH_TOP = 24, CH_ROWS = 7, CH_NEW = SONG_MAX_INSTR + 1, CH_N = SONG_MAX_INSTR + 2, SETTLE = 12 };
 static bool choosing, listening;
 static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
-/* SELECTION (29/10): EDIT in and out; the rectangle from the anchor to the
+/* SELECTION (29/10, OP5's since 31/10): the rectangle from the anchor to the
  * cursor, KNOB 2 left of the first column taking whole steps; the black
  * keys OP1-4 copy, paste, cut, clear, OP6 makes its steps the LOOP PLAY
  * goes round (again on the same forgets it); with no selection OP6 sets an
@@ -102,7 +105,7 @@ static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 /* The black keys by their groups under the hand: the clipboard in the first
  * three, clearing in the two after (OP5 free), listening in the next three. */
 enum { OP_COPY = UI_OP_COPY, OP_PASTE = UI_OP_PASTE, OP_CUT = UI_OP_CUT, OP_CLEAR = UI_OP_CLEAR,
-       OP_LOOP = UI_KEY_LOOP, OP_MONO = UI_KEY_MONO };
+       OP_SEL = UI_OP_SEL, OP_LOOP = UI_KEY_LOOP, OP_MONO = UI_KEY_MONO };
 static bool selecting, anchored;
 static UiShift shift; /* EDIT held: the keys are commands (ui.h) */
 /* REC (29/10): armed, PLAY counts a bar in, then what the keys play is
@@ -933,11 +936,15 @@ int pattern_frame(const PlatInput *in)
          * number when the cursor was on one: the buttons keep their role */
         strip_go(strip_first(PRESSED(PB_SEQ) ? V_NOTES : PRESSED(PB_FX) ? V_FX : V_INS) + (cur_col < 0 ? 0 : 1));
     }
-    /* EDIT: a quick tap takes the SELECTION in or out (at the release), and
-     * it stays, as a CAPS LOCK; held, it is a shift -- the keys are commands
-     * while it is down and the SELECTION is left as it was, whether the hand
-     * used one or not (30/10). MONO, in either: the track alone, or muted (ui.h). */
-    if (ui_shift(&shift, in, btns, keys, selecting, track, &said) && shift.frames < EDIT_TAP) {
+    /* EDIT is the shift and nothing else (31/10): the SELECTION is OP5's, on
+     * and off, as a CAPS LOCK -- EDIT held to reach the key the first time,
+     * a black key alone being a note here, then the key alone once the keys
+     * are commands. A tap of EDIT locked it until today, and what told a tap
+     * from a hold was EDIT_TAP, a quarter of a second the hand cannot see:
+     * holding a hair too short opened a mode nobody asked for. MONO, in
+     * either: the track alone, or muted (ui.h). */
+    ui_shift(&shift, in, btns, keys, selecting, track, &said);
+    if ((keys & 1u << OP_SEL) && (selecting || shift.held)) {
         selecting = !selecting;
         anchored = selecting;
         an_row = cur_row, an_col = cur_col;
@@ -1128,20 +1135,21 @@ int pattern_frame(const PlatInput *in)
         grid_follow(&cur_row, &top, len, GRID_ROWS);
     ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
-    /* EDIT is lit only while the SELECTION is locked on, as a CAPS LOCK is:
-     * held, it is a shift the hand has under its finger, and a shift is no more
-     * this screen's own than SEL or HOME are (ui.h, 30/10) */
+    /* EDIT is never lit: it is a shift the hand has under its finger, no more
+     * this screen's own than SEL or HOME are, and what says the SELECTION is
+     * on is OP5's own light now (ui.h, 31/10) */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
-                 (selecting ? 1u << PB_EDIT : 0u) | 1u << PB_GLO |
-                 (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
+                 1u << PB_GLO | (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied.
      * Otherwise, on a kit, the keys that are drums -- the only thing on the machine that says
      * where the snare is, and the eight or eleven lit are the whole kit (30/10) */
-    ui_led_mono(track, !selecting && !shift.held
-                           ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
-                           : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR |
-                                                       1u << OP_LOOP | 1u << OP_MONO |
-                                                       (edit_clip_len() ? 1u << OP_PASTE : 0u));
+    ui_led_keys(!selecting && !shift.held
+                    ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
+                    : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR | 1u << OP_SEL |
+                          1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
+                /* OP5 lit while the SELECTION is on: the key that opened the mode says so */
+                (selecting ? 1u << OP_SEL : 0u) | (track >= 0 && player_soloed(track) ? 1u << OP_MONO : 0u),
+                track >= 0 && player_muted(track) ? 1u << OP_MONO : 0u);
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */
         selecting = false;

@@ -59,13 +59,14 @@ void ui_led_guide_again(void);
 void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half);
 /* The black keys read OP1-6, PIT, GLO, MONO, POLY. The commands EDIT gives
  * them are the same wherever a screen has them (PATTERN's steps, SONG's
- * blocks): the clipboard in the first three, clearing in OP4, listening in
- * OP6 (29/10, NOTES.md). */
+ * blocks): the clipboard in the first three, clearing in OP4, the
+ * SELECTION itself in OP5, listening in OP6 (29/10, 31/10, NOTES.md). */
 enum {
     UI_OP_COPY = 1,
     UI_OP_PASTE = 3,
     UI_OP_CUT = 5,
     UI_OP_CLEAR = 8,
+    UI_OP_SEL = 10, /* the SELECTION on or off; it was a tap of EDIT until 31/10 */
     UI_KEY_LOOP = 13,
     UI_KEY_MONO = 20
 };
@@ -77,12 +78,15 @@ enum {
  * EDIT with no key meanwhile is the screen's own EDIT, given at the
  * release. `track` -1: none in front.
  *
- * The screens where EDIT locks a mode on (PATTERN's and SONG's SELECTION)
- * ask for the tap to be a quick one as well, `frames < EDIT_TAP`: held
- * down, EDIT is the shift and nothing else, and letting it go after a
- * long press leaves the mode as it was -- a quick tap locks it, as a CAPS
- * LOCK, and another takes it off (30/10). MIXER and INSTRUMENT, where the
- * tap only goes to the PROJECT, take it however long it was. */
+ * On PATTERN and SONG a tap of EDIT used to lock the SELECTION on, and
+ * does not any more (31/10): the difference between that tap and the hold
+ * was EDIT_TAP, a quarter of a second the hand cannot see, so holding a
+ * hair too short entered a mode nobody asked for. EDIT is ONE thing on
+ * those screens now, the shift, and OP5 is the SELECTION -- EDIT held and
+ * OP5 to turn it on (a black key alone is a note there), OP5 alone to turn
+ * it off, the keys being commands already once it is on. MIXER and
+ * INSTRUMENT, where the tap only goes to the PROJECT, take it however long
+ * it was. */
 typedef struct {
     bool held, used;  /* EDIT down; a key used while it was */
     int frames;       /* frames EDIT has been down, read at the release */
