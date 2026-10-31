@@ -3304,6 +3304,48 @@ tapped or held past the old threshold — leaves the SELECTION exactly as it
 was. The LED check that read "lit once a tap locks it on" now reads OP5's
 own lamp.
 
+## 2026-10-31 — EDIT tapped is a CAPS LOCK again, on the shift alone
+
+Same evening, from the panel: "pourquoi le EDIT n'est plus togglable comme
+un CAPS LOCK dans SONG. Avant on pouvait, maintenant il faut rester
+enfoncé." And then, when I had answered the wrong question: "tu as mal
+compris je n'aimais pas qu'appuyer sur EDIT activait le mode de sélection
+de plage."
+
+He is right and I had fused two things he was keeping apart. The old tap
+latched *two* modes at once — the black keys become commands, **and** the
+cursor anchors a range — and only the second was the one he refused. This
+morning I removed both and sent the lot to OP5, so I took away a caps lock
+he wanted to keep. The nuisance was never the latch. It was what the latch
+dragged in with it.
+
+So the tap comes back, on the shift and nothing else. **EDIT tapped**: the
+black keys stay commands and the keys sound nothing, until EDIT is tapped
+again. **EDIT held**: the same, momentary, as before. **OP5**: the
+SELECTION of a range, on top, reachable now with the shift held *or*
+latched. `UiShift` carries a `latch` and `ui_shifted()` reads it with
+`held`, so the screens stopped saying `shift.held` and say what they mean.
+
+The argument I made this morning dissolves, and that is the point. It held
+because a hold a hair too short dropped you into the SELECTION — another
+mode, with an anchor, which changes what the encoders do. Now both outcomes
+of a clumsy press are "the black keys are commands": one that sticks, one
+that does not. You can be wrong about the *duration* of the mode, not about
+the mode. So `EDIT_TAP` is gone entirely, and with it `UiShift.frames`,
+which nothing had read since this morning. What tells a tap from a hold is
+whether a key was used while EDIT was down — the thing the hand actually
+did, not how long it took to do it.
+
+EDIT lights again, and only while the latch is on: a shift under the finger
+says itself, a shift that sticks has to be told. It goes in the screens'
+`usable()` mask rather than through `ui_led_state`, so `ui_led_guide` owns
+it like every other button and nothing fights over the lamp. OP5 keeps the
+SELECTION's own light.
+
+The cost I did not pay: with the LEDs off there is nothing on the screen
+that says the latch is on. I left it there rather than invent a corner word
+he has not seen — SONG's corner is already the one number KNOB 4 turns, and
+PATTERN's already says SELECT. To be judged on the panel.
 ## 2026-10-31 — the battery on HOME, and what its number is worth
 
 - **The bar.** Three proposals shot from the firmware (`proto/home.html`),

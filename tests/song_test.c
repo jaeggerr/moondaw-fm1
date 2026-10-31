@@ -57,7 +57,7 @@ static void sel_mode(void)
     in.btns = 0;
     go();
 }
-/* EDIT alone: a shift that nothing was pressed under. */
+/* EDIT alone: the shift's CAPS LOCK, on or off (ui.h). */
 static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
 /* EDIT held, and a black key under it: the commands (ui.h) */
@@ -161,12 +161,23 @@ int main(void)
 
     press(PB_SEQ);
     CHECK("SEQ on a block does nothing", last == SONGVIEW_STAY);
-    /* EDIT: the SELECTION of blocks, the black keys its commands (30/10) */
-    tap_edit();               /* EDIT alone opens nothing now (31/10) */
+    /* EDIT: the SELECTION of blocks, the black keys its commands (30/10).
+     * A tap of EDIT is the CAPS LOCK of that shift and nothing more: the
+     * keys turn into commands, the SELECTION stays OP5's (31/10). */
+    tap_edit();
     enc(PE_K3, 1);
-    CHECK("a tap of EDIT no longer locks the SELECTION on: the knob is still the cell's",
+    CHECK("a tap of EDIT locks no SELECTION on: the knob is still the cell's",
           E(0).pattern[0] == 1);
+    keys(1u << UI_OP_SEL);    /* the keys being commands under it, OP5 alone reaches the mode */
+    keys(0);
+    enc(PE_K3, 1);
+    CHECK("but the keys are commands, so OP5 alone opens the SELECTION",
+          E(0).pattern[0] == 1);
+    keys(1u << UI_OP_SEL);    /* the SELECTION off; the CAPS LOCK is still on */
+    keys(0);
+    tap_edit();               /* and off */
     enc(PE_K3, -1);
+    CHECK("tapped again, the knob is the cell's once more", E(0).pattern[0] == 0);
     sel_mode();               /* on, anchored on phrase 00 / track 1 */
     enc(PE_K3, 1);
     CHECK("the knobs only move while the SELECTION is on", E(0).pattern[0] == 0);

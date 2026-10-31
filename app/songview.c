@@ -1401,6 +1401,7 @@ void songview_open(bool reset_cursor)
     ask_delete = false;
     choosing = picking = false;
     selecting = anchored = false;
+    shift = (UiShift){ 0 }; /* nothing of the last screen's EDIT is held here */
     said = 0;
     settle = still = 0;
     prev_btns = 0xFFFFFFFFu; /* what is held on the way in is not a press */
@@ -1420,9 +1421,11 @@ void songview_cancel(void)
 /* What can be pressed where the cursor is: the guide's glow (ui.h). */
 static uint32_t usable(void)
 {
-    /* EDIT is never lit: it is a shift, the same on every screen, and what
-     * says the SELECTION is on is OP5's own light now (ui.h, 31/10) */
-    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE | 1u << PB_ENV;
+    /* EDIT is lit only while its CAPS LOCK is on: a shift under the finger
+     * says itself, a shift that sticks has to be told. What says the
+     * SELECTION is on is OP5's own light (ui.h, 31/10) */
+    uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE | 1u << PB_ENV |
+                 (shift.latch ? 1u << PB_EDIT : 0u);
     if (on_mark) /* SEL names it; ENV is how its rows change; nothing else is its */
         return u | 1u << PB_SEL;
     if (is_ref(row)) /* LFO deletes the row, SEL goes to what it plays */
@@ -1595,19 +1598,21 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     if (PRESSED(PB_SEQ) && !is_ref(row) && col < 0 && !on_mark)
         insert_phrase();
-    /* EDIT is the shift and nothing else (31/10): the SELECTION of blocks is
-     * OP5's, on and off, as a CAPS LOCK -- EDIT held to reach it the first
-     * time, since a black key alone is a note here, then the key alone once
-     * the keys are commands. A tap of EDIT locked it until today, and what
-     * told a tap from a hold was a quarter of a second the hand could not
-     * see. MONO, in either: the track alone, or muted (ui.h). */
-    ui_shift(&shift, in, btns, keys, selecting, col, &said);
-    if ((keys & 1u << UI_OP_SEL) && (selecting || shift.held) && !on_mark) {
+    /* EDIT is the shift and nothing else, and a tap of it is that shift's
+     * CAPS LOCK (31/10): the black keys stay commands until EDIT is tapped
+     * again. The SELECTION of blocks is OP5's own, on and off -- EDIT held
+     * or latched to reach the key the first time, since a black key alone
+     * is a note here, then the key alone once the keys are commands. The
+     * tap used to open the SELECTION itself, which is the half of it nobody
+     * wanted. MONO, in either: the track alone, or muted (ui.h). */
+    if (ui_shift(&shift, in, btns, keys, selecting, col, &said))
+        shift.latch = !shift.latch;
+    if ((keys & 1u << UI_OP_SEL) && (selecting || ui_shifted(&shift)) && !on_mark) {
         selecting = !selecting;
         anchored = selecting;
         an_row = row, an_col = col;
     }
-    if (selecting || shift.held) {
+    if (selecting || ui_shifted(&shift)) {
         if (keys & 1u << UI_OP_COPY)
             sel_op(UI_OP_COPY);
         if (keys & 1u << UI_OP_PASTE)
@@ -1635,7 +1640,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
      * are commands, not notes (ui.h). */
     if (!in->keys && trying)
         player_note_off(), trying = false;
-    if (!shift.held && !selecting) {
+    if (!ui_shifted(&shift) && !selecting) {
         int instr = cell_instr();
         for (int k = 0; k < PLAT_KEYS && instr >= 0; k++) {
             int n = edit_key_note(song, instr, kbd_oct, k);
@@ -1704,7 +1709,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
      * paste once something was taken; OP5 is the mode itself and is offered
      * whenever EDIT is down, lit while it is on -- the key that turns the
      * mode on is the key that says it is on (31/10); MONO: lit alone, half muted */
-    ui_led_keys(!selecting && !shift.held
+    ui_led_keys(!selecting && !ui_shifted(&shift)
                     ? 0u
                     : (anchored ? 1u << UI_OP_COPY | 1u << UI_OP_CUT : 0u) | 1u << UI_OP_CLEAR |
                           1u << UI_OP_SEL | 1u << UI_KEY_LOOP | 1u << UI_KEY_MONO |

@@ -78,27 +78,31 @@ enum {
  * EDIT with no key meanwhile is the screen's own EDIT, given at the
  * release. `track` -1: none in front.
  *
- * On PATTERN and SONG a tap of EDIT used to lock the SELECTION on, and
- * does not any more (31/10): the difference between that tap and the hold
- * was EDIT_TAP, a quarter of a second the hand cannot see, so holding a
- * hair too short entered a mode nobody asked for. EDIT is ONE thing on
- * those screens now, the shift, and OP5 is the SELECTION -- EDIT held and
- * OP5 to turn it on (a black key alone is a note there), OP5 alone to turn
- * it off, the keys being commands already once it is on. MIXER and
- * INSTRUMENT, where the tap only goes to the PROJECT, take it however long
- * it was. */
+ * On PATTERN and SONG that tap is a CAPS LOCK on the shift itself (31/10,
+ * the evening): the black keys stay commands, and the keys sound nothing,
+ * until EDIT is tapped again -- `latch`, which ui_shifted() reads together
+ * with `held`. What the tap does NOT do any more is open the SELECTION of
+ * a range: that is OP5's alone, and it was the half of the old latch
+ * nobody wanted. Nor does a threshold tell the tap from the hold now, only
+ * whether a key was used while EDIT was down, so either way a clumsy press
+ * lands on "the black keys are commands" -- one that sticks, one that does
+ * not. MIXER and INSTRUMENT, where the tap goes to the PROJECT, never
+ * latch. */
 typedef struct {
     bool held, used;  /* EDIT down; a key used while it was */
-    int frames;       /* frames EDIT has been down, read at the release */
+    bool latch;       /* EDIT tapped: the shift sticks (PATTERN, SONG) */
     int mono;         /* frames MONO has been down, 0 when up */
     bool muted;       /* this MONO press already muted */
 } UiShift;
-enum { MONO_HOLD = 30, EDIT_TAP = 15 }; /* 0.5 s; a tap at most 0.25 s */
+enum { MONO_HOLD = 30 }; /* 0.5 s */
 /* One frame, with the buttons and keys pressed this frame; `ops` true
- * where the keys are commands anyway (PATTERN's SELECTION). True when
- * EDIT was tapped. `*said` the corner's word when MONO acted. */
+ * where the keys are commands anyway (PATTERN's SELECTION). True when EDIT
+ * was tapped: the screens that latch turn `latch` over with it, the others
+ * take it as their own EDIT. `*said` the corner's word when MONO acted. */
 bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, bool ops, int track,
               const char **said);
+/* The black keys are commands: EDIT is down, or its CAPS LOCK is on. */
+bool ui_shifted(const UiShift *s);
 /* MONO's LED for the track in front: lit alone, half muted. */
 void ui_led_mono(int track, uint32_t usable);
 
