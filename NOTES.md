@@ -3623,9 +3623,18 @@ CHOOSE PATTERN's "x steps" sat on the number's baseline, and being small it hung
 a capture: the sign was right, the text is what moved.
 
 - **Sections, likeliest first, fixed.** Triads, sevenths, sus and add, borrowed,
-  secondary dominants: 29 chords a mode. The order does not look at the phrase
+  secondary dominants: 34 chords a mode. The order does not look at the phrase
   so far, so the same turn finds the same chord. Four notes at most, what a step
   holds. Sharps only, as the notes are spelled on the grid.
+- **The keys play it by position.** The first white key is degree I of the section
+  whatever the song's key, so the hand learns 1-5-6-4 once; C is not C major. Seven
+  keys, the same seven an octave up (not another inversion: KNOB 3 holds that, and
+  higher on the keyboard should never sound lower), the last two nothing. OP1 to
+  OP5 are the sections, the one in force lit. A key sounds while held, armed or
+  not. A section keeps the rule by lighting only the degrees it has: borrowed chords
+  on the degree they stand for, a dominant on the degree it leads to, and SUS / ADD
+  on its sus4s, one a degree; sus2 and add9 stay on the knobs. Two of those sus4s
+  hold a note out of the key (IV and vii in major, ii and VI in minor).
 - **The audition arpeggio is new in the player** (`player_note_arp`): one voice,
   stepped on the song's ticks by the render loop, because `process_fx_tick` only
   runs while the song does. Any other audition ends it.

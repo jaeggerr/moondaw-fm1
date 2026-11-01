@@ -1001,7 +1001,7 @@ int pattern_frame(const PlatInput *in)
         return PATTERN_STAY;
     }
     if (in_chords) {
-        int r = chords_frame(in, btns);
+        int r = chords_frame(in, btns, keys);
         if (r == CHORDS_KEPT)
             chords_write();
         if (r != CHORDS_OPEN) {

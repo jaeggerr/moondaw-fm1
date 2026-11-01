@@ -98,6 +98,8 @@ static const Item pattern_items[] = {
     { "PRESETS on instr.", "choose an instrument" },
     { "SEL on an effect", "the syllable" },
     { "ARP on notes", "the chords of the key" },
+    { "  white keys", "degrees, octave up" },
+    { "  OP1 to OP5", "the section" },
     { "keys", "write in a note column" },
     { "keys elsewhere", "play, write nothing" },
     { "OCT- OCT+", "the keyboard's octave" },

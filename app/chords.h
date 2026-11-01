@@ -14,6 +14,11 @@
  *   KNOB 4  the arpeggio: -- all at once, 01 to 0F ticks a note (FX_ARP on the
  *           step); a step with no effect slot left says FX FULL and stays --
  *   OCT- OCT+  the keyboard's octave, which the chord is built in
+ *   the white keys  by position, whatever the key: the first plays degree I of the
+ *         section, the seventh VII, the next seven the same an octave up, the last
+ *         two nothing. It sounds while held, armed or not; lit where the section
+ *         has a chord on that degree, and the cursor goes to it
+ *   OP1-OP5  the section, the one in force lit
  *   SEL  writes it on the step      HOME or ARP  leaves, nothing written
  *   PLAY  listening, on or off: on, the chord under the cursor rings, and every
  *         chord, inversion, arpeggio or octave the hand reaches takes over at once;
@@ -27,8 +32,8 @@
  * `st` what the step holds now, for the arpeggio it already has. */
 void chords_open(const Song *s, int instr, int *oct, const Step *st);
 enum { CHORDS_OPEN, CHORDS_KEPT, CHORDS_LEFT };
-/* One frame, with the buttons pressed this frame. */
-int chords_frame(const PlatInput *in, uint32_t pressed);
+/* One frame, with the buttons and keys pressed this frame. */
+int chords_frame(const PlatInput *in, uint32_t pressed, uint32_t keys);
 void chords_draw(void);
 /* The buttons of its own, for the guide (ui.h). */
 uint32_t chords_buttons(void);
