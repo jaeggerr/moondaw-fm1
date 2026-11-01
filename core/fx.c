@@ -194,6 +194,11 @@ void echo_process(const int32_t *in, int32_t *out, int frames)
         echo_clear();
 }
 
+/* Only player_init calls it: from the flash, as player.c's main-loop side,
+ * RAMTEXT being full (firmware/app.ld). */
+#ifdef PLAT_FM1
+__attribute__((section(".flash_text")))
+#endif
 void fx_init(void)
 {
     ec.line[0] = song_scratch();

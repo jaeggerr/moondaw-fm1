@@ -97,6 +97,7 @@ static const Item pattern_items[] = {
     { "ENV, SEL on instr.", "edit the instrument" },
     { "PRESETS on instr.", "choose an instrument" },
     { "SEL on an effect", "the syllable" },
+    { "ARP on notes", "the chords of the key" },
     { "keys", "write in a note column" },
     { "keys elsewhere", "play, write nothing" },
     { "OCT- OCT+", "the keyboard's octave" },

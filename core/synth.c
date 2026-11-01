@@ -180,6 +180,10 @@ static void recompute(Osc *o)
     }
 }
 
+/* Only player_init calls it: from the flash, RAMTEXT being full (firmware/app.ld). */
+#ifdef PLAT_FM1
+__attribute__((section(".flash_text")))
+#endif
 void osc_init(Osc *o)
 {
     o->engine = ENGINE_PULSE;
