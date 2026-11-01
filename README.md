@@ -96,8 +96,9 @@ pat t1 01 len 64
 
 ## Status
 
-**Beta.** It is used every day on a real FM-1, but it has not been through many
-hands yet. Bug reports from yours are very welcome.
+**Beta, 0.1.** It is built and tried on a real FM-1 every day, but it has not
+been through many hands yet and nobody has lived with it for long. Bug reports
+from yours are very welcome.
 
 ## Install it
 
@@ -107,12 +108,14 @@ hands yet. Bug reports from yours are very welcome.
 > [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter) ready to
 > restore it.
 
-- **In a browser**: `web/installer/` is a page that installs the firmware
-  over USB from Chrome or Edge, with no tools to install; see
-  `web/installer/README.md` for what it checks and its state.
-- **From a terminal**: `python3 tools/fm1_install.py build/moondaw.fwsc`
-  (Python 3 and `python-rtmidi`), after building (below) or with a released
-  `moondaw.fwsc`.
+- **In a browser**: <https://moondaw.com/install/> installs the firmware over
+  USB from Chrome or Edge, with nothing to install first -- it carries the
+  package and checks it against its own manifest. The page is
+  `web/installer/`; its README says what it checks and its state.
+- **From a terminal**: `python3 tools/fm1_install.py moondaw-0.1.fwsc`
+  (Python 3 and `python-rtmidi`), with the package attached to a
+  [release](https://github.com/jaeggerr/moondaw-fm1/releases) or one you
+  built yourself (`build/moondaw.fwsc`, below).
 - **A device that does not start**: `docs/ARRIVEE.md` walks through the
   first install, the backup and the rescue path that needs no extra
   hardware.

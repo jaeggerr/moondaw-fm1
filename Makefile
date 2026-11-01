@@ -93,9 +93,16 @@ test: sim web songedit
 	   build/sampler_test build/test-bank.bin build/test-bank $(MOONDAW)/songs/KIDS.trk; \
 	 else build/sampler_test; fi
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck
-	@if ls $(MOONDAW)/songs/*.trk >/dev/null 2>&1; then build/trkcheck $(MOONDAW)/songs/*.trk | cut -c1-72; \
+# A pipeline exits with the status of its LAST command, so a failure read
+# through `cut` or `tail` came back green -- thirteen real round-trip
+# failures did, on 31/10. Both go through a file: the whole output on a
+# failure, the shortened form on a pass.
+	@if ls $(MOONDAW)/songs/*.trk >/dev/null 2>&1; then \
+	   build/trkcheck $(MOONDAW)/songs/*.trk > build/trkcheck.log || { cat build/trkcheck.log; exit 1; }; \
+	   cut -c1-72 build/trkcheck.log; \
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
-	node web/songedit/test/roundtrip.mjs | tail -4
+	@node web/songedit/test/roundtrip.mjs > build/roundtrip.log 2>&1 || { cat build/roundtrip.log; exit 1; }
+	@tail -4 build/roundtrip.log
 	python3 tools/gen_skill.py --check
 
 difftest:
