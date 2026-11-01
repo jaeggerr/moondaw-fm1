@@ -329,6 +329,15 @@ def main():
             raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z, X.Y.Z.W or X.Y-suffix, X and Y at most two digits")
         PRODUCT = f"FM-1_933{int(m[1]):02d}{int(m[2]):02d}"
         name = f"moondaw-{a.release}.fwsc"
+        # The machine says MOONDAW_VERSION on HOME and on SYSTEM, and make_site.py
+        # reads the same header for the page and the manifest; --release only names
+        # the file and the identity. Let them disagree and the package published as
+        # X.Y.Z is a device that answers X.Y -- so they are checked against each other.
+        hdr = (SRC / "app" / "version.h").read_text()
+        said = re.search(r'#define MOONDAW_VERSION "([^"]*)"', hdr)[1]
+        if said != a.release:
+            raise SystemExit(f"--release {a.release}: app/version.h says {said!r}. "
+                             f"Raise it first -- it is what the machine and the site say.")
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:
