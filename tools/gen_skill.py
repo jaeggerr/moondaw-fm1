@@ -146,10 +146,11 @@ def probe():
 
 
 def unmangle(s):
-    """app/fx_help.c holds moondaw's text read as latin-1 and written back as
-    UTF-8 (tools/gen_fx_help.py, through c_table's unicode_escape): an em dash
-    arrives as three characters. Put them back here, so the skill reads what
-    the page says -- the device's own copy is a bug of its own."""
+    """Older copies of app/fx_help.c hold moondaw's text read as latin-1 and
+    written back as UTF-8 (c_table's unicode_escape, fixed on 01/11/2026): an
+    em dash arrived as three characters. Kept so the skill can still be built
+    from one. The page itself is ASCII by design -- the panel's font has no
+    glyph beyond 126 -- so a dash reads `--` there and here."""
     try:
         return s.encode("latin-1").decode("utf-8")
     except UnicodeError:
