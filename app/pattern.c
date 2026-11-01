@@ -544,6 +544,10 @@ static void sel_op(int op)
         }
         anchored = false;
     }
+    if (op == OP_COPY && c0 < 0 && n == 1) { /* the view shows less than it took: say so */
+        said = "COPIED STEP";
+        return;
+    }
     {
         const char *w = op == OP_COPY ? "COPIED " : op == OP_PASTE ? "PASTED " : op == OP_CUT ? "CUT " : "CLEARED ";
         char d[8];
@@ -1187,12 +1191,12 @@ int pattern_frame(const PlatInput *in)
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
                  1u << PB_GLO | (shift.latch ? 1u << PB_EDIT : 0u) |
                  (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
-    /* selecting, the ops: copy and cut and clear on a selection, paste once something was copied.
-     * Otherwise, on a kit, the keys that are drums -- the only thing on the machine that says
-     * where the snare is, and the eight or eleven lit are the whole kit (30/10) */
+    /* the ops: copy and cut and clear on a selection or on what is under the cursor, paste once
+     * something was copied. Otherwise, on a kit, the keys that are drums -- the only thing on the
+     * machine that says where the snare is, and the eight or eleven lit are the whole kit (30/10) */
     ui_led_keys(!selecting && !ui_shifted(&shift)
                     ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
-                    : (anchored ? 1u << OP_COPY | 1u << OP_CUT : 0u) | 1u << OP_CLEAR | 1u << OP_SEL |
+                    : 1u << OP_COPY | 1u << OP_CUT | 1u << OP_CLEAR | 1u << OP_SEL |
                           1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
                 /* OP5 lit while the SELECTION is on: the key that opened the mode says so */
                 (selecting ? 1u << OP_SEL : 0u) | (track >= 0 && player_soloed(track) ? 1u << OP_MONO : 0u),

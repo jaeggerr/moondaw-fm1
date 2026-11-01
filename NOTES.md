@@ -3580,3 +3580,17 @@ opens a built-in demo song*. It has been run now, on the device, after
   reports twelve successes. What works is one process that paces the
   calls and retries, and that checks the song count after each delete
   rather than trusting the gesture.
+
+## 2026-11-01 — OP1 and OP3 lit with nothing selected
+
+Since EDIT became a shift alone (31/10), OP1 and OP3 work with no
+SELECTION: a slot in a column, the whole step on its number. Their LEDs
+still waited for a selection, a rule from 29/10 nobody went back to, so
+two keys that worked looked dead, and he took them for broken. Lit now
+whenever EDIT is down, in PATTERN and in SONG.
+
+**The number takes the whole step, not what the view shows.** His question,
+my advice: the number already means the step as a whole, and a chord in
+`ARP 01` has to stay an arpeggio once pasted. Four notes alone are still
+an OP5 selection away. Since NOTES hides what was taken with them, a
+single step says `COPIED STEP` rather than `COPIED 1`.
