@@ -269,7 +269,10 @@ The consonants strike at the note-on, the vowel holds while the note does, what 
 
 *sample NN of table* — a one-shot, `00`–`3F`.
 
-
+Which entry of the song's sample table this step's notes play, instead of the one the instrument's keymap would have picked.
+Without it the zones decide, as they do under a key pressed on the machine: the note finds its zone, the zone names the sample. This overrides that for one row, which is how one drum of a kit is swapped for another without a second instrument.
+It names a sample, so it belongs to a SMPL instrument; on any other engine there is nothing for it to pick, and it is inert.
+A one-shot: it dies with its step.
 
 ## PRB
 
