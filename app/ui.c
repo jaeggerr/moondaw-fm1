@@ -101,6 +101,14 @@ void ui_led_guide_again(void) { shown = keys_shown = ~0u; }
 
 void ui_led_state(int btn, bool on) { plat_led_btn(btn, on && ui_leds != UI_LEDS_OFF); }
 
+/* Full is the one failure the hand can do something about, so it has its word:
+ * a save writes the new file beside the old, and a song that was saved on
+ * Tuesday may not fit beside itself on Friday. */
+const char *ui_save_word(int rc)
+{
+    return rc == 0 ? "SAVED" : rc == STORE_ERR_FULL ? "FLASH FULL" : "NOT SAVED";
+}
+
 void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half)
 {
     static uint32_t lit_shown = ~0u, half_shown = ~0u;

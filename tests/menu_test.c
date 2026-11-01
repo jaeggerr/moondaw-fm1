@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../app/app.h"
+#include "../app/menu.h"
 
 static uint8_t nor[PLAT_FLASH_SECTORS * PLAT_FLASH_SECTOR];
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { memcpy(d, nor + o, n); return 0; }
@@ -221,6 +222,40 @@ int main(void)
     go();
     CHECK("the machine comes back on the song that was open",
           !strcmp(app_name, "SONG 01") && app_slot >= 0);
+
+    { /* A flash too full for the song to fit beside itself */
+        static char fill[4096];
+        int spare = -1;
+        for (int s = APP_SONG_SLOTS - 1; s >= 0 && spare < 0; s--)
+            if (!store_has(s))
+                spare = s;
+        sel(-10);
+        press(PB_SEL);        /* CONTINUE: into SONG, where HOME asks */
+        press(PB_SAVE);
+        CHECK("the song saved while there is room", !app_dirty);
+        store_save_begin(spare, "FILL");
+        for (uint32_t left = store_free(); left; ) {
+            uint32_t n = left < sizeof fill ? left : sizeof fill;
+            store_save_put(fill, n);
+            left -= n;
+        }
+        store_save_commit();
+        app_dirty = true;
+        home();
+        press(PB_SAVE);
+        CHECK("SAVE on a full flash: the song is still here, changed", app_loaded && app_dirty);
+        CHECK("and the question stays", !menu_in_list() && menu_asking());
+        press(PB_SAVE);
+        CHECK("SAVE again: the same, no worse", app_loaded && app_dirty && menu_asking());
+        press(PB_SEL);
+        CHECK("SEL: PROJECTS, the song still in hand", menu_in_list() && app_loaded && app_dirty);
+        store_delete(spare);
+        press(PB_HOME);
+        sel(-10);
+        press(PB_SEL);
+        press(PB_SAVE);
+        CHECK("room made: CONTINUE and SAVE keep the changes", app_loaded && !app_dirty && store_has(app_slot));
+    }
 
     printf("menu test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

@@ -3642,3 +3642,20 @@ a capture: the sign was right, the text is what moved.
   stays at --; nothing is overwritten. Set back to --, the step's ARP leaves.
 - **Two choices on one step within a second are one gesture**, by undo.h's rule.
 - **RAMTEXT was full again**: 156 bytes over with the audition arpeggio. `player_profile`, `player_profile_reset`, `fx_init` and `osc_init`, which only the main loop reaches, moved to `.flash_text`. Nothing on the render path left RAM.
+
+## 2026-11-01 — a song that no longer fits beside itself
+
+TREMOLO-CHIP, 23 KB, with 19 KB of flash left: SAVE cannot succeed, on any change
+to that song, because a save writes the new file beside the old and commits it
+with one write. That guarantee stays. What was wrong is what the machine did about
+it. Every corner said NOT SAVED with no reason, and the question on the way to the
+root took a failed SAVE for "stay" and went back into the song without a word. So
+SAVE seemed to do nothing, and PROJECTS, the one place room can be made, was out of
+reach while the changes were unsaved: losing them was the only way out.
+
+- **The corners say FLASH FULL**, the one failure the hand can act on.
+- **The question stays and says why**, with what is left.
+- **SEL from there opens PROJECTS with the song still in hand.** Delete something,
+  HOME, CONTINUE, SAVE: the changes survive.
+
+Nothing is freed for the hand: which song goes is its own choice.

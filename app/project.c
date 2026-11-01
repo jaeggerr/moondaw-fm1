@@ -191,7 +191,7 @@ int project_frame(const PlatInput *in)
     }
     undo_turn(in->enc[PE_ALGO], &said);
     if (PRESSED(PB_SAVE))
-        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+        said = ui_save_word(app_save());
     if (PRESSED(PB_PLAY)) {
         if (player_playing())
             player_stop();
