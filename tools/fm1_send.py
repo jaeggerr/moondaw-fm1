@@ -7,7 +7,7 @@
     tools/fm1_send.py --get NAME [-o FILE.trk]
     tools/fm1_send.py --ping
 
-The device must be on its MENU. The song is first reduced to what the
+The device must be on HOME. The song is first reduced to what the
 FM-1 carries, by the same reader and writer the firmware uses
 (tests/trkdump.c, compiled on first use), so what is sent is exactly what
 the machine would save. It lands in the flash; nothing on the device is
@@ -34,7 +34,7 @@ SIG = bytes([0x7D, 0x4D, 0x44])
 BEGIN, DATA, END, CANCEL, PING, INFO, READ, ANSWER = 1, 2, 3, 4, 5, 6, 7, 0x7F
 DATA_MAX = 240
 STATUS = {
-    1: "the device is busy: go back to its MENU and try again",
+    1: "the device is busy: go back to HOME and try again",
     2: "a song of that name is already on the device (--replace to overwrite it)",
     3: "not enough room in the device's flash",
     4: "a message arrived out of turn",

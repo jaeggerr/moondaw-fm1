@@ -84,7 +84,7 @@ python3 tools/fm1_send.py --list                 # what it is carrying
 python3 tools/fm1_send.py --get NAME -o song.trk # one back
 ```
 
-The device must be on its menu. The song is reduced by the same reader
+The device must be on HOME. The song is reduced by the same reader
 and writer the firmware uses before it goes, so what arrives is exactly
 what the dump showed. Nothing on the device is replaced without
 `--replace`.
