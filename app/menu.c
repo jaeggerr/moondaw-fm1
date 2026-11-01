@@ -20,15 +20,14 @@
  * it is not the open one), HOME goes back to the root. EDIT on a project:
  * a panel -- OPEN (EDIT where SEL was meant), RENAME, DUPLICATE (KIDS 2, then the open one), DELETE (asked
  * first: a flash erase has no UNDO; the open one deleted, the first left
- * is opened in its place, or an empty project when none is). The version small
- * at the bottom of both. */
+ * is opened in its place, or an empty project when none is). */
 enum { ROW = 28, ROWS = 8, TEXT_X = 12 };
 /* The root's top bar, chosen on the panel on 31/10 out of three
  * (proto/home.html): the wordmark left, the charge right as a figure AND
  * a cell, a rule under them. The rows start below it, and the foot gives
  * up what the bar now says -- the version, which SYSTEM holds as well,
- * and MAX, which SYSTEM holds as CPU MAX. PROJECTS has no bar, so it
- * keeps the version at its foot. */
+ * and MAX, which SYSTEM holds as CPU MAX. PROJECTS has neither bar nor
+ * foot (1/11). */
 enum {
     BAR_TOP = 32,            /* where the rows begin */
     BAR_BASE = 20,           /* the bar's baseline */
@@ -38,8 +37,6 @@ enum {
     CELL_W = 26, CELL_H = 13,
     LOW = 15,                /* at or under this the charge goes red */
 };
-
-#include "version.h"
 
 /* The rows, read once when the screen opens and after each change: a
  * frame is drawn fifteen times and must not go to the flash. A song in
@@ -391,7 +388,9 @@ static void draw(void)
         draw_opts();
         return;
     }
-    for (int r = 0; r < ROWS && top + r < count; r++) {
+    /* One row more than fit: the next one, cut by the screen's edge, says
+     * the list goes on. The cursor never reaches it without scrolling. */
+    for (int r = 0; r <= ROWS && top + r < count; r++) {
         int i = top + r, y = r * ROW, base = y + 2 + FONTS[F_COND20].ascent, x;
         bool here = i == cur;
         uint16_t c = here ? C_ON_ACC : i < nrows ? C_TEXT : C_DIM;
@@ -404,16 +403,14 @@ static void draw(void)
             gfx_fill(x + 6, base - 9, 7, 7, here ? C_ON_ACC : C_FX, 255);
     }
     if (count > ROWS) { /* where the screen is in the list */
-        int h = ROWS * ROW * ROWS / count, y = ROWS * ROW * top / count;
-        gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, C_TRACK, 255);
+        int h = PLAT_H * ROWS / count, y = PLAT_H * top / count;
+        gfx_fill(PLAT_W - 4, 0, 2, PLAT_H, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
-    draw_foot();
 }
 
-/* While a song plays, what it costs, stage by stage -- that one stays,
- * it is the only place it is said. Otherwise the version, and only in
- * PROJECTS: the root says MOONDAW on its bar now. MAX went with it
+/* The root, while a song plays: what it costs, stage by stage -- that one
+ * stays, it is the only place it is said. MAX went with the version
  * (31/10, his call): SYSTEM holds the same number as CPU MAX. */
 static void draw_foot(void)
 {
@@ -432,8 +429,6 @@ static void draw_foot(void)
             ui_dec(t + 1, (int)p[order[i]]);
             x = gfx_text(F_COND12, x, PLAT_H - 4, t, C_TEXT) + 4;
         }
-    } else if (listing) {
-        gfx_text(F_COND12, TEXT_X, PLAT_H - 4, "MOONDAW " MOONDAW_VERSION, C_DIM);
     }
 }
 
