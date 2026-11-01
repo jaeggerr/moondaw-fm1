@@ -19,7 +19,7 @@
      links out are absolute. Nothing here reaches back into the site.
 
      WHAT IS NOT TRANSLATED: the machine's own words -- the identities
-     (FM-1_900, FM-1_015), the file names, the log. The firmware has no French,
+     (FM-1_9330002, FM-1_015), the file names, the log. The firmware has no French,
      and a log is a quotation.
 
      The three modules beside this file touch no DOM: they are the protocol,
@@ -268,9 +268,11 @@
         ses CRC, et qu'il porte le chargeur de mise à jour de Felucca (pour la
         V15 officielle : son SHA-256). Le FM-1 doit répondre comme un FM-1, et
         après l'installation il doit annoncer l'identité du paquet —
-        <code>FM-1_900</code> pour MOONDAW. Les identités vues jusqu'ici :
+        <code>FM-1_9330002</code> pour MOONDAW 0.2. Les identités vues jusqu'ici :
         <code>FM-1_014</code>, <code>FM-1_015</code> les V14 et V15 officielles ;
-        <code>FM-1_917</code> Felucca 1.7 ; <code>FM-1_900</code> MOONDAW.</p>
+        <code>FM-1_917</code> Felucca 1.7 ; <code>FM-1_933</code> suivi de la version
+        pour MOONDAW, et <code>FM-1_900</code> pour MOONDAW 0.1, qui partageait
+        le numéro des builds de Felucca.</p>
       <pre id="log"></pre>
     </details>
 
@@ -379,7 +381,7 @@ var T = {
 "det.h":{fr:"Le détail", en:"Details"},
 "det.p":{
   fr:"Vérifié ici avant que quoi que ce soit parte : l'identité du paquet, ses CRC, et qu'il porte le chargeur de mise à jour de Felucca (pour la V15 officielle : son SHA-256). Le FM-1 doit répondre comme un FM-1, et après l'installation il doit annoncer l'identité du paquet — <code>FM-1_900</code> pour MOONDAW. Les identités vues jusqu'ici : <code>FM-1_014</code>, <code>FM-1_015</code> les V14 et V15 officielles ; <code>FM-1_917</code> Felucca 1.7 ; <code>FM-1_900</code> MOONDAW.",
-  en:"Checked here before anything is sent: the package's identity, its CRCs, and that it carries Felucca's update loader (for the official V15: its SHA-256). The FM-1 must answer as an FM-1, and after the install it must report the package's identity — <code>FM-1_900</code> for MOONDAW. Identities seen so far: <code>FM-1_014</code>, <code>FM-1_015</code> official V14, V15; <code>FM-1_917</code> Felucca 1.7; <code>FM-1_900</code> MOONDAW."},
+  en:"Checked here before anything is sent: the package's identity, its CRCs, and that it carries Felucca's update loader (for the official V15: its SHA-256). The FM-1 must answer as an FM-1, and after the install it must report the package's identity — <code>FM-1_9330002</code> for MOONDAW 0.2. Identities seen so far: <code>FM-1_014</code>, <code>FM-1_015</code> official V14, V15; <code>FM-1_917</code> Felucca 1.7; <code>FM-1_933</code> and the version for MOONDAW, and <code>FM-1_900</code> for MOONDAW 0.1, which shared Felucca's build number."},
 
 "foot.gpl":{fr:"MOONDAW est sous GPL-3.0, sans aucune garantie.",
             en:"MOONDAW is GPL-3.0, with no warranty."},
@@ -519,7 +521,7 @@ var T = {
 
 <script type="module">
 import { Updater, describe, modelOf } from "./fm1ota.js";
-import { checkPackage, validateStockPackage, STOCK_V15_SIZE, MOONDAW_PRODUCT } from "./fm1pkg.js";
+import { checkPackage, validateStockPackage, STOCK_V15_SIZE, MOONDAW_PREFIX, isMoondaw } from "./fm1pkg.js";
 import { SongLink, zip } from "./mdlink.js";
 
 const $ = (id) => document.getElementById(id);
@@ -566,7 +568,7 @@ function showPkg(p, whereKey, whereText) {
   $("pkg").innerHTML = "";
   const b = document.createElement("strong"); b.textContent = p.label;
   $("pkg").append(b, ` · ${p.product} · ${L("pkg.bytes", fmt(p.size))} · sha256 ${p.sha256.slice(0, 12)}… · ${where}`);
-  if (!p.moondaw) $("pkg").insertAdjacentHTML("beforeend", L("pkg.notours", MOONDAW_PRODUCT));
+  if (!p.moondaw) $("pkg").insertAdjacentHTML("beforeend", L("pkg.notours", MOONDAW_PREFIX + "\u2026"));
 }
 
 let devShown = null;     // the same, for the device line
@@ -752,7 +754,7 @@ $("songs").addEventListener("click", () => run(async () => {
     if (files.length > 1) say("sg.saved", [files.length, zipname], "good");
     else say("sg.saved1", [zipname], "good");
   } catch (e) {
-    if (e.code === "noanswer" && dev.id.text !== MOONDAW_PRODUCT) e.message = L("sg.notours", dev.id.text);
+    if (e.code === "noanswer" && !isMoondaw(dev.id.text)) e.message = L("sg.notours", dev.id.text);
     throw e;
   } finally { dev.link.close(); }
 }));
@@ -773,7 +775,7 @@ $("stock-file").addEventListener("change", async () => {
 });
 
 $("stock-go").addEventListener("click", () => run(() => installImage(stock.image, stock.product, L("stock.label"),
-  (id) => id.text === MOONDAW_PRODUCT && !songsSaved ? "\n\n" + L("ask.songs") : "")));
+  (id) => isMoondaw(id.text) && !songsSaved ? "\n\n" + L("ask.songs") : "")));
 </script>
 </body>
 </html>

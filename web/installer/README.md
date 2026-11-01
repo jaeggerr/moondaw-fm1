@@ -55,8 +55,8 @@ CORS headers, cannot be read that way. The release can still attach the
 same `.fwsc` for people who use `tools/fm1_install.py`. The page checks the
 downloaded package against the manifest's SHA-256 and identity.
 
-`make_site.py` refuses a package that is not MOONDAW's identity
-(`FM-1_900`) or does not carry Felucca's update loader (no vendor files are
+`make_site.py` refuses a package whose identity is not MOONDAW's
+(`FM-1_933` and the version) or that does not carry Felucca's update loader (no vendor files are
 ever published). The package holds three JieLi SDK files under Apache-2.0:
 `LICENSES/` travels with it. `--source` is the link to the source code that
 GPL-3.0 asks for; without it the page shows no source link.
@@ -67,10 +67,11 @@ GPL-3.0 asks for; without it the page shows no source link.
    close other apps that use MIDI.
 2. **Connect** (optional): Chrome asks for MIDI with SysEx; the page shows
    what the FM-1 runs (`FM-1_015` official V15, `FM-1_917` Felucca 1.7,
-   `FM-1_900` MOONDAW, `ota-…` an update that was cut off).
+   `FM-1_933…` MOONDAW, `FM-1_900` MOONDAW 0.1, `ota-…` an update that was
+   cut off).
 3. **Install MOONDAW**: one confirmation, then about a minute. The page
    follows the FM-1 through its restart into the update loader and back,
-   and checks that it then reports `FM-1_900`.
+   and checks that it then reports the package's own identity.
 
 An install that was cut off (cable pulled, page closed) leaves the FM-1 in
 its update loader; pressing Install again finishes it, as `fm1_install.py`
@@ -170,8 +171,13 @@ Not verified (needs the FM-1):
 - Installing from V14 (`FM-1_014`): never tried by anyone here; the page
   advises V15 first.
 - Edge, Windows (port pairing), Linux.
-- `FM-1_900` is also the identity of `hello` and of Felucca's development
-  builds: the final check cannot tell them apart.
+- `FM-1_900`, which 0.1 went out with, is also the identity of `hello`, of
+  Felucca's development builds and of two dozen firmwares on the Firmware
+  Hub: nothing that reads it can tell them apart. From 0.2 MOONDAW answers
+  with `FM-1_933` and its version (`FM-1_9330002`), a prefix no other
+  firmware uses. The update loader keeps Felucca's `ota-FM-1_900`: it is the
+  protocol's marker, hosts look for `ota-` and the model, and the rescue
+  path is not worth moving for a name.
 
 ### The first run on the device
 
@@ -179,19 +185,19 @@ Read-only first, then one write at a time; each line is the next step only
 if the one before went as said.
 
 ```
-python3 tools/fm1_install.py --info                 # FM-1_900, port Felucca: MOONDAW, as left
+python3 tools/fm1_install.py --info                 # FM-1_9330002, port Felucca: MOONDAW, as left
 python3 web/installer/make_site.py build/moondaw.fwsc 0.1-test /tmp/moondaw-site
 python3 -m http.server -b 127.0.0.1 -d /tmp/moondaw-site 8793
 ```
 
 In Chrome, <http://127.0.0.1:8793/>:
 
-1. **Connect**: expect `FM-1_900 — MOONDAW … · port “Felucca”`. Nothing is
+1. **Connect**: expect `FM-1_9330002 — MOONDAW … · port “Felucca”`. Nothing is
    written by this (the identity query only).
 2. FM-1 on MENU, **Save songs**: compare the ZIP with
    `tools/fm1_send.py --get NAME` for one or two songs.
 3. **Install MOONDAW** over MOONDAW (what `fm1_install.py` did last).
-   Expect "Done: the FM-1 runs FM-1_900", and the songs still there.
+   Expect "Done: the FM-1 runs FM-1_9330002", and the songs still there.
 4. **Return to official V15** with `~/.fm1/stock/FM-1_015.fwsc`. Expect
    `FM-1_015`, port `USB Composite Device`.
 5. **Install MOONDAW** from V15.

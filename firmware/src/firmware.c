@@ -21,7 +21,7 @@
 #define FELUCCA_UAC 0
 #define FELUCCA_UART 0
 #ifndef FELUCCA_ID
-#define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
+#define FELUCCA_ID "FM-1_9330000"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 
 /* The second core renders half of the tracks (felucca-bsp's worker, fm1_cpu1.h; 28/10: one core did not hold the

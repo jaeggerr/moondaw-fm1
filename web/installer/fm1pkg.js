@@ -13,7 +13,11 @@ export const STOCK_APP_SIZE = 0x8DFBC;
 export const STOCK_V15_SIZE = 699956;
 // Felucca's update loader, which MOONDAW's packages carry (firmware/loader/crt0_ldr.S)
 export const LOADER_MARK = "FELUCCA-LOADER-1";
-export const MOONDAW_PRODUCT = "FM-1_900";
+// MOONDAW answers with FM-1_933 and its version (FM-1_9330002 is 0.2). 0.1 went out
+// as FM-1_900, the number Felucca's own builds use, so a device on it is known too.
+export const MOONDAW_PREFIX = "FM-1_933";
+export const MOONDAW_0_1 = "FM-1_900";
+export const isMoondaw = (text) => text.startsWith(MOONDAW_PREFIX) || text === MOONDAW_0_1;
 
 const T = new Uint16Array(256);
 for (let i = 0; i < 256; i++) {
@@ -263,7 +267,7 @@ export async function checkPackage(bytes) {
   if (!hasMark(bytes, LOADER_MARK))
     throw new Error("no Felucca update loader in this package: only packages built by MOONDAW's build.sh (or Felucca's) are installed here");
   new Package(bytes);                              // the UFW header, the entry list and flash.bin CRCs
-  return { product, image: logicalImage(bytes), sha256, size: bytes.length, moondaw: product === MOONDAW_PRODUCT };
+  return { product, image: logicalImage(bytes), sha256, size: bytes.length, moondaw: isMoondaw(product) };
 }
 
 function hasMark(bytes, text) {
