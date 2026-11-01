@@ -377,6 +377,17 @@ static bool fx_trail(int r, int c, StepFx *out)
     return true;
 }
 
+/* Does the step strike anything -- a real note, not an OFF, which cuts
+ * what was already sounding and starts nothing. */
+static bool step_struck(int r)
+{
+    const Step *st = step_at(r);
+    for (int i = 0; i < STEP_MAX_NOTES; i++)
+        if (st->notes[i] <= NOTE_MAX)
+            return true;
+    return false;
+}
+
 static void draw_cell(int v, int r, int c, bool band)
 {
     const Step *st = step_at(r);
@@ -839,8 +850,15 @@ static void draw(void)
         if (loop_has(r) && loop_state() == LOOP_SET) /* the loop: a cyan rule at the left edge */
             gfx_fill(0, grid_y(v) + (r == loop_from() ? 3 : 0), 3,
                      GRID_ROW - (r == loop_from() ? 3 : 0) - (r == loop_to() ? 3 : 0), C_TITLE, 255);
-        grid_num(v, r, band, band && cur_col < 0,
-                 r == play_row || (loop_has(r) && loop_state() == LOOP_SET) ? C_TITLE : r % beat() ? C_DIM : C_TEXT);
+        uint16_t nink =
+            r == play_row || (loop_has(r) && loop_state() == LOOP_SET) ? C_TITLE : r % beat() ? C_DIM : C_TEXT;
+        grid_num(v, r, band, band && cur_col < 0, nink);
+        /* neither the FX view nor the INS one shows the notes, so the number
+         * says whether the step strikes one: an effect, or an instrument, on a
+         * struck step and on an empty one are two different readings, and
+         * nothing else on those pages tells them apart. */
+        if (view != V_NOTES && step_struck(r))
+            grid_num_rule(v, r, band, band && cur_col < 0, nink);
         for (int c = 0; c < cols; c++)
             draw_cell(v, r, c, band);
     }

@@ -48,6 +48,9 @@ uint16_t grid_said_ink(const char *s);
 void grid_band(int vis, int w);
 /* The row's number; `on` when the cursor is on it (hollowed), `ink` its colour otherwise. */
 void grid_num(int vis, int n, bool band, bool on, uint16_t ink);
+/* An underline under that number, in the same ink: a view that does not
+ * show the notes says here which steps strike one. */
+void grid_num_rule(int vis, int n, bool band, bool on, uint16_t ink);
 /* A cell's text, centred in [x, x + w); `on` when the cursor is on it. */
 void grid_cell(int vis, int x, int w, const char *s, bool band, bool on, uint16_t ink);
 /* The colour a cell's text takes: on the band, hollowed, or as it is. */

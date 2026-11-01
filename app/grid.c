@@ -65,6 +65,18 @@ void grid_num(int vis, int n, bool band, bool on, uint16_t ink)
     gfx_text(F_COND20, GRID_NUM_X, grid_base(vis), grid_hex2(s, n), grid_ink(band, on, ink));
 }
 
+/* PATTERN's FX and INS views put the notes off the page, and a row's
+ * effects -- or its instrument -- read very differently depending on
+ * whether anything is struck on it. The number is the only thing left of
+ * the step there, so it carries the answer: a rule under the digits, one
+ * px under the baseline, in the ink the digits already have -- not a
+ * colour of its own, which would read as a fourth kind of row. */
+void grid_num_rule(int vis, int n, bool band, bool on, uint16_t ink)
+{
+    char s[3];
+    gfx_fill(GRID_NUM_X, grid_base(vis) + 1, gfx_text_w(F_COND20, grid_hex2(s, n)), 1, grid_ink(band, on, ink), 255);
+}
+
 void grid_cell(int vis, int x, int w, const char *s, bool band, bool on, uint16_t ink)
 {
     if (on)
