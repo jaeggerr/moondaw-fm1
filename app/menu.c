@@ -388,7 +388,9 @@ static void draw(void)
         draw_opts();
         return;
     }
-    for (int r = 0; r < ROWS && top + r < count; r++) {
+    /* One row more than fit: the next one, cut by the screen's edge, says
+     * the list goes on. The cursor never reaches it without scrolling. */
+    for (int r = 0; r <= ROWS && top + r < count; r++) {
         int i = top + r, y = r * ROW, base = y + 2 + FONTS[F_COND20].ascent, x;
         bool here = i == cur;
         uint16_t c = here ? C_ON_ACC : i < nrows ? C_TEXT : C_DIM;
@@ -401,8 +403,8 @@ static void draw(void)
             gfx_fill(x + 6, base - 9, 7, 7, here ? C_ON_ACC : C_FX, 255);
     }
     if (count > ROWS) { /* where the screen is in the list */
-        int h = ROWS * ROW * ROWS / count, y = ROWS * ROW * top / count;
-        gfx_fill(PLAT_W - 4, 0, 2, ROWS * ROW, C_TRACK, 255);
+        int h = PLAT_H * ROWS / count, y = PLAT_H * top / count;
+        gfx_fill(PLAT_W - 4, 0, 2, PLAT_H, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h, C_DIM, 255);
     }
 }
