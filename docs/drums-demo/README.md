@@ -51,6 +51,24 @@ each engine does, not how the FM-1 would compute it. The settings are
 each source's design settings, retouched by ear on paper
 only — I could not listen.
 
+## The listening board
+
+`planche.html` is the same files as a grid: a pad per piece per engine,
+each pad drawn with the hit's waveform on one time scale, so the kick
+dying out in 60 ms is visible before it is audible. It reads the `.mp3`
+beside it, which means it wants the page **served over http** —
+`python3 -m http.server` in this folder, then
+<http://localhost:8000/planche.html>; opened as a `file://` it cannot
+fetch them, and only the plain players at the bottom of the page work.
+
+Its last section, the songs before and after, plays renders that are
+**not kept in the repository** (four songs, two versions each, 20 s: too
+much audio for what it shows once the choice is made). The board says so
+in place of each row. To put them back, render the pairs with
+`tests/fm_render.c` into `songs/NAME-avant.mp3` and `songs/NAME-apres.mp3`
+beside the `.trk` — a `.wav` of the same name works too and stays out
+of git (`.gitignore`).
+
 ## Today
 
 MOONDAW has no drum engine. Drums are made with the three

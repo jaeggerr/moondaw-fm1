@@ -9,3 +9,6 @@ moondaw-fm1.flash
 # the listening demos are kept as .mp3; the .wav the generators write
 # (tools/drums/drums.py, tests/fm_render.c) stays out of the repository
 docs/**/*.wav
+
+# the session folder of the editor (worktrees, local settings)
+/.claude/

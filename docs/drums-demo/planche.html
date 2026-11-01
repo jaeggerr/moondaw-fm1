@@ -1,3 +1,5 @@
+<!doctype html>
+<meta charset="utf-8">
 <title>Drums listening board</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -122,6 +124,8 @@ audio { width: 100%; height: 36px; }
 .bar { height: 6px; background: var(--pad); border-radius: 3px; overflow: hidden; cursor: pointer; min-width: 0; }
 .bar i { display: block; height: 100%; width: 0; background: var(--lit); }
 .clock { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.song .snote { grid-column: 1 / -1; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.song .snote:empty { display: none; }
 @media (max-width: 640px) { .song { grid-template-columns: 1fr auto; } .song .bar { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .pad .prog { transition: none; } }
 </style>
@@ -265,7 +269,7 @@ const filesBox = document.getElementById("files");
 for (const [f, what] of FILES) {
   const d = document.createElement("div");
   d.className = "file";
-  d.innerHTML = `<span class="name">${f}</span><audio controls preload="none" src="audio/${f}"></audio><span class="what">${what}</span>`;
+  d.innerHTML = `<span class="name">${f}</span><audio controls preload="none" src="${f}"></audio><span class="what">${what}</span>`;
   filesBox.appendChild(d);
 }
 
@@ -275,14 +279,15 @@ async function load() {
   let done = 0;
   await Promise.all(ENGINES.map(async e => {
     try {
-      const r = await fetch(`audio/${e.id}.wav`);
+      const r = await fetch(`${e.id}.mp3`);
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
       const data = await r.arrayBuffer();
       buffers[e.id] = await new Promise((ok, ko) => c.decodeAudioData(data, ok, ko));
       done++;
       statusEl.textContent = `${done} / ${ENGINES.length} engines loaded`;
       drawEngine(e.id);
     } catch (err) {
-      statusEl.textContent = `Could not load ${e.id}.wav: the players at the bottom still work.`;
+      statusEl.textContent = `Could not load ${e.id}.mp3 (${err.message}). The grid needs the page served over http — "python3 -m http.server" in this folder; the players at the bottom work either way.`;
     }
   }));
   if (done === ENGINES.length) statusEl.textContent = "Ready. Click a pad.";
@@ -376,6 +381,7 @@ function tick() {
 }
 
 // the songs: one player each, Before / After switch at the same moment
+const SONG_EXT = ["mp3", "wav"];
 const SONGS = [
   ["DEMO", "the firmware demo"],
   ["DAFT-PUNK", "WAVE + NOISE → DRUM"],
@@ -389,14 +395,29 @@ for (const [id, sub] of SONGS) {
   row.className = "song";
   row.innerHTML = `<div class="sname">${id}<span>${sub}</span></div>
     <div class="seg" role="group" aria-label="${id}"><button type="button" data-v="avant">▶ Before</button><button type="button" data-v="apres">▶ After</button></div>
-    <div class="bar" aria-hidden="true"><i></i></div><span class="clock">0:00</span>`;
+    <div class="bar" aria-hidden="true"><i></i></div><span class="clock">0:00</span>
+    <span class="snote"></span>`;
   const audio = new Audio();
   audio.preload = "none";
   const bar = row.querySelector(".bar i"), clock = row.querySelector(".clock");
+  const note = row.querySelector(".snote");
   const btns = row.querySelectorAll(".seg button");
   let cur = null;
   const p = { audio, btns, stop() { audio.pause(); cur = null; btns.forEach(b => b.classList.remove("on")); } };
   players.push(p);
+  // these renders are not in the repository: SONG_EXT in order until one loads
+  function play(v, t, ext) {
+    if (ext === SONG_EXT.length) {
+      audio.onerror = null;
+      note.textContent = `songs/${id}-avant and ${id}-apres (${SONG_EXT.join(" or ")}) are not in the repository — render them, see README.md.`;
+      p.stop();
+      return;
+    }
+    audio.onerror = () => play(v, t, ext + 1);
+    audio.src = `songs/${id}-${v}.${SONG_EXT[ext]}`;
+    audio.addEventListener("loadedmetadata", () => { note.textContent = ""; audio.currentTime = Math.min(t, audio.duration || t); audio.play(); }, { once: true });
+    audio.load();
+  }
   btns.forEach(b => b.addEventListener("click", () => {
     const v = b.dataset.v;
     if (cur === v && !audio.paused) { p.stop(); return; }
@@ -405,9 +426,7 @@ for (const [id, sub] of SONGS) {
     const t = cur ? audio.currentTime : 0;
     cur = v;
     btns.forEach(x => x.classList.toggle("on", x === b));
-    audio.src = `audio/songs/${id}-${v}.wav`;
-    audio.addEventListener("loadedmetadata", () => { audio.currentTime = Math.min(t, audio.duration || t); audio.play(); }, { once: true });
-    audio.load();
+    play(v, t, 0);
   }));
   row.querySelector(".bar").addEventListener("click", ev => {
     if (!audio.duration) return;
