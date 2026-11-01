@@ -34,7 +34,12 @@ def c_table(src, name):
             j = i + 1
             while body[j] != '"':
                 j += 2 if body[j] == "\\" else 1
-            cur = (cur or "") + body[i + 1:j].encode().decode("unicode_escape")
+            lit = body[i + 1:j].encode().decode("unicode_escape")
+            try:  # unicode_escape reads the bytes as latin-1: put the UTF-8 back
+                lit = lit.encode("latin-1").decode("utf-8")
+            except UnicodeError:
+                pass
+            cur = (cur or "") + lit
             i = j + 1
         elif body.startswith("NULL", i):
             cur, i = None, i + 4

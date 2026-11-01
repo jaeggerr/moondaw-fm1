@@ -82,7 +82,7 @@ Dies with its step.
 
 Spreads the notes of this step, N ticks apart, instead of starting them together. A strummed guitar at 01 or 02, a rolled chord slower, and on two notes the little grace note ahead of a big one.
 It carries no direction: the order is the order the notes are written, N1 first. The same chord entered the other way round is the other stroke.
-The chord is entered once, by the first note, so GAT releases all of it together — a hand damping a strum stops every string at once — and RET restrums the whole thing.
+The chord is entered once, by the first note, so GAT releases all of it together -- a hand damping a strum stops every string at once -- and RET restrums the whole thing.
 What is left of it may run past the step. The next step that carries a note ends it, and so does an OFF; over an empty step it carries on. Nothing to spread under ARP, which is monophonic.
 
 ## VOL
@@ -91,7 +91,7 @@ What is left of it may run past the step. The next step that carries a note ends
 
 A SHARE of the track's mixer fader, 00 to 7F: 7F is the fader as it stands, 40 is half of it. The two multiply, so turning the track down in the mixer turns down everything the steps wrote and no step needs editing again.
 A mixing level the arrangement owns, not a nuance of the playing: it moves what is already sounding, so it rides the fader on a step with no note.
-A setter. Written once, it holds until it is changed — including across the loop of the pattern, so write it at step 00 when it matters. Playback starts at 7F: the mixer, untouched.
+A setter. Written once, it holds until it is changed -- including across the loop of the pattern, so write it at step 00 when it matters. Playback starts at 7F: the mixer, untouched.
 
 ## VEL
 
@@ -114,14 +114,14 @@ A setter, like VOL and REV: the three are what the mixer says about a track, and
 
 How much of the track is sent to the ONE reverb, 00 to 7F. Around 20 is already the amount a record has.
 Post-fader: the send is taken off what the track actually puts out, so turning the track down with VOL takes its room down with it.
-The room itself — its size, its damping — belongs to the song and lives on the SONG screen. A setter.
+The room itself -- its size, its damping -- belongs to the song and lives on the SONG screen. A setter.
 
 ## ECH
 
 *delay send 00-7F* — a setter, and `RMP` can ramp it, `00`–`7F`.
 
 How much of this track goes to the ONE delay, 00 to 7F. Dry at 00, which is where every track starts.
-Beside REV because it answers the same kind of question — how much of this track is heard somewhere other than dry — and a setter for the same reason: an amount of echo is written once and holds.
+Beside REV because it answers the same kind of question -- how much of this track is heard somewhere other than dry -- and a setter for the same reason: an amount of echo is written once and holds.
 The delay ITSELF is on the SONG screen: how far apart the repeats fall, in TICKS so they land on the grid and follow the tempo, and how many of them there are. One delay for the whole record, and no step has any business rewriting it mid-bar.
 Called ECH because DLY is already the note-on hold, and two commands starting with the same letters is a mistake per session on a machine with no manual.
 Post-fader, like the reverb send: turning a track down turns its echoes down with it. The repeats ping-pong across the stereo field and darken as they go.
@@ -131,7 +131,7 @@ Post-fader, like the reverb send: turning a track down turns its echoes down wit
 *pulse duty 0-3* — a setter, `00`–`03`.
 
 Pulse width, 0 to 3, overriding the instrument. It is what tells a square from the thinner, more nasal shapes.
-Speaks only to a PULSE voice: on a noise or a sample instrument it is inert rather than meaning something else. The setting is still remembered — the next note may well be a pulse.
+Speaks only to a PULSE voice: on a noise or a sample instrument it is inert rather than meaning something else. The setting is still remembered -- the next note may well be a pulse.
 A setter. WAV is the same idea for the wave engine.
 
 ## BPM
@@ -146,7 +146,7 @@ A setter, and the one whose reach is the song rather than the track.
 
 *semitones, 40 = 0* — a setter, `00`–`7F`.
 
-Transpose, in semitones, 40 = none. Below 40 goes down, above goes up — 3C is three semitones flat, 44 is four sharp.
+Transpose, in semitones, 40 = none. Below 40 goes down, above goes up -- 3C is three semitones flat, 44 is four sharp.
 It shifts the notes as they are played, so the pattern keeps saying what it says and a section can carry it into another key.
 A setter, like the rest of the pitch family.
 
@@ -155,7 +155,7 @@ A setter, like the rest of the pitch family.
 *glide, 00 = jump* — a setter, `00`–`7F`.
 
 Glide to the note, in cents per tick. 00 jumps straight there, which is the normal way a note starts.
-A glided note is TIED: the envelope keeps running instead of re-attacking — the note is reached, not struck. A note-off ends the phrase, so the note after one attacks again.
+A glided note is TIED: the envelope keeps running instead of re-attacking -- the note is reached, not struck. A note-off ends the phrase, so the note after one attacks again.
 It slides FROM the note before it, so it needs one. SCP names its own starting point, can open a phrase, and strikes its note.
 A setter, so a passage glides without rewriting it under every note. 00 turns it off.
 
@@ -173,7 +173,7 @@ A setter. 00 turns it off.
 
 Pitch sweep, in cents per tick, 40 = none. Below 40 falls, above rises.
 This is what makes a kick: a steep fall over the first few ticks of the note. What it has bent is reset by each note-on, so it applies to every note instead of being rewritten under each.
-A setter — a drum instrument carries its sweep. SCP is the one-shot for a single note.
+A setter -- a drum instrument carries its sweep. SCP is the one-shot for a single note.
 
 ## SCP
 
@@ -181,7 +181,7 @@ A setter — a drum instrument carries its sweep. SCP is the one-shot for a sing
 
 Slide INTO the note. TWO nibbles: x is the speed, y how many semitones below it starts. SCP26 comes in two semitones low.
 Unlike SLI it needs no note before it, which is the point: the first note of a phrase is exactly the one worth sliding into.
-Upward only — a fall away from a note is SWP.
+Upward only -- a fall away from a note is SWP.
 The one ONE-SHOT of the pitch family: a gesture on one note, not a way of playing a passage. It wins over SLI when a step has both.
 
 ## ARP
@@ -197,9 +197,9 @@ A setter, 00 = off.
 
 *VIB for the level* — a setter, `00`–`FF`.
 
-Tremolo: the level pulses. TWO nibbles like VIB, on VIB's clock: x is the speed and the same x is the same rate on both, y the depth — at F the dips reach silence.
+Tremolo: the level pulses. TWO nibbles like VIB, on VIB's clock: x is the speed and the same x is the same rate on both, y the depth -- at F the dips reach silence.
 The wave is not a sine but the lopsided throb of a bias tremolo, the wobble of an early-sixties amp: a quick rounded dip, then the sound lingers near the top. Slow and deep it breathes; fast and shallow it shimmers.
-The wheel runs FREE and a note-on never resets it — that too is the amp, where playing does not restart the wobble. Every note catches the wave wherever it has got to.
+The wheel runs FREE and a note-on never resets it -- that too is the amp, where playing does not restart the wobble. Every note catches the wave wherever it has got to.
 A setter. 00 turns it off.
 
 ## FLT
@@ -222,7 +222,7 @@ High values with a low FLT are where a sweep starts to sing. A setter, like FLT 
 *wave shape 0-4* — a setter, `00`–`04`.
 
 Wave shape, 0 to 4, overriding the instrument.
-Speaks only to a WAVE voice, the way DUT speaks only to a pulse: on any other engine it is inert rather than quietly meaning something else. Each engine names its own knob — a shared "parameter 1" would say nothing on the row.
+Speaks only to a WAVE voice, the way DUT speaks only to a pulse: on any other engine it is inert rather than quietly meaning something else. Each engine names its own knob -- a shared "parameter 1" would say nothing on the row.
 A setter.
 
 ## RMP
@@ -231,7 +231,7 @@ A setter.
 
 Ramp: how many STEPS the commands written TO ITS RIGHT on this row take to reach their value, instead of jumping there. This is how a crescendo is written.
 RMP1F then VEL7F walks the velocity to full over 31 steps. What is left of the row before it still jumps, so VEL20 RMP1F VEL7F sets the soft nuance on the spot and swells from it.
-On VEL rather than VOL when you can: a volume that rises is a fader being pushed, a velocity that rises is somebody playing harder — and it opens the filter with it.
+On VEL rather than VOL when you can: a volume that rises is a fader being pushed, a velocity that rises is somebody playing harder -- and it opens the filter with it.
 Only the continuous setters answer: VOL, VEL, PAN, REV, ECH, FLT, RES, CRS, RAT. There is no half a waveform, so DUT and WAV jump, and BPM is left out because it is global where this is per track.
 A one-shot: it reaches the row it is written on and nothing beyond, so no later cell means something different for it having existed. The ramp it starts does outlive the step, exactly as GAT's release and STR's spread do.
 Moving the same fader on the MIXER cancels the ramp: the hand wins over the automation. Watch it walk on the mixer's live column.
@@ -241,7 +241,7 @@ Moving the same fader on the MIXER cancels the ramp: the hand wins over the auto
 *bit grit, 00=off* — a setter, and `RMP` can ramp it, `00`–`FF`.
 
 Bit crusher, the GRAIN half: the level of every sample is rounded to a coarser grid, 00 clean to FF crushed. What appears is grit and a quantization hiss under the note.
-It sits AFTER the envelope, where the drive sits and for its reason: it sees the note as PLAYED, so a decaying tail sinks into the floor and sputters — the sound of the old 12-bit samplers — and VOL stays a clean fader downstream. A soft velocity crushes MORE, not less: a quiet note lives closer to the floor, exactly as it did on those machines.
+It sits AFTER the envelope, where the drive sits and for its reason: it sees the note as PLAYED, so a decaying tail sinks into the floor and sputters -- the sound of the old 12-bit samplers -- and VOL stays a clean fader downstream. A soft velocity crushes MORE, not less: a quiet note lives closer to the floor, exactly as it did on those machines.
 RAT beside it is the other half of the same effect, the metallic one; both on one step is the full lo-fi, and one RMP to their left walks the two together.
 A setter. 00 turns it off, and a song that never writes it plays sample for sample as it always did.
 
@@ -249,7 +249,7 @@ A setter. 00 turns it off, and a song that never writes it plays sample for samp
 
 *downsample 00=off* — a setter, and `RMP` can ramp it, `00`–`FF`.
 
-Bit crusher, the METALLIC half: the sound is measured fewer times per second, 00 clean to FF crushed. What appears is aliasing — false harmonics folded down into the audible range, metal on a bass, fizz on a hat, the old-toy shimmer on anything bright.
+Bit crusher, the METALLIC half: the sound is measured fewer times per second, 00 clean to FF crushed. What appears is aliasing -- false harmonics folded down into the audible range, metal on a bass, fizz on a hat, the old-toy shimmer on anything bright.
 The harmonics it invents do not follow the note, which is the point: a melody under a fixed RAT changes colour as it moves, the way a sampler detunes its noise with the key.
 Same seat as CRS, after the envelope: the tail degrades as it fades and the fader stays clean.
 A setter, rampable: RMP10 RAT80 walks the wreckage in over 16 steps. 00 turns it off.
@@ -261,8 +261,8 @@ A setter, rampable: RMP10 RAT80 walks the wreckage in over 16 steps. 00 turns it
 This is the one effect whose value is text, and it is the one never written as `f`: the token is a straight apostrophe and the phonemes, `'MA`. An `fSYL40` is dropped on the way in — the number means nothing outside the song's own table.
 
 The syllable a VOX instrument sings, written as phonemes: what you type is what is pronounced, whatever the spelling of the word.
-Every DIGIT is a vowel and every letter is itself. 7 e` (sept), 2 eu (deux), 9 eur (neuf), 6 open o (pomme), 3 an (trente), 0 on, 5 in (cinq) — and the English three the French set has no room for: 1 the short i of bit, 4 the a of cat, 8 the oo of book. Then A E I O U(ou) Y(tu). Consonants sound as written, plus C ch, J j as in jour, X English th, Q English r. I Y W before a vowel glide (NYI nuit, WI oui); a vowel after the vowel makes a diphthong (MAI my).
-A setter: the notes that follow keep singing it until another syllable is written — la la la costs one cell. Inert on every other engine.
+Every DIGIT is a vowel and every letter is itself. 7 e` (sept), 2 eu (deux), 9 eur (neuf), 6 open o (pomme), 3 an (trente), 0 on, 5 in (cinq) -- and the English three the French set has no room for: 1 the short i of bit, 4 the a of cat, 8 the oo of book. Then A E I O U(ou) Y(tu). Consonants sound as written, plus C ch, J j as in jour, X English th, Q English r. I Y W before a vowel glide (NYI nuit, WI oui); a vowel after the vowel makes a diphthong (MAI my).
+A setter: the notes that follow keep singing it until another syllable is written -- la la la costs one cell. Inert on every other engine.
 The consonants strike at the note-on, the vowel holds while the note does, what follows plays at the release. Under SLI the next note keeps the vowel going instead of striking again: that is a melisma.
 
 ## SMP

@@ -31,6 +31,22 @@ helps += [None] * (len(mine) - len(helps))  # the table is FX_COUNT long: what i
 helps = [h if h is not None else EXTRA.get(name) for name, h in zip(mine, helps)]
 
 
+# The panel's font is ASCII 32..126 (tools/gen_fonts.py) and app/gfx.c draws
+# anything else as a space, so the page has to say it with the keys it has.
+ASCII = {"\u2014": "--", "\u2013": "-", "\u2018": "'", "\u2019": "'",
+         "\u201c": '"', "\u201d": '"', "\u2026": "...", "\u00a0": " "}
+
+
+def to_ascii(s, name):
+    for ch, rep in ASCII.items():
+        s = s.replace(ch, rep)
+    bad = sorted({c for c in s if c != "\n" and not 32 <= ord(c) <= 126})
+    if bad:
+        sys.exit(f"{name}: the font has no glyph for "
+                 + ", ".join(f"U+{ord(c):04X} {c!r}" for c in bad))
+    return s
+
+
 def literal(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
 
@@ -41,7 +57,8 @@ out = ["/* SPDX-License-Identifier: GPL-3.0-only */",
        '#include "fx_help.h"', "",
        "static const char *const pages[FX_COUNT] = {"]
 for name, h in zip(mine, helps):
-    out.append(f"    /* {name} */ " + ("0," if h is None else literal(h) + ","))
+    page = None if h is None else literal(to_ascii(h, name))
+    out.append(f"    /* {name} */ " + ("0," if page is None else page + ","))
 out += ["};", "",
         "const char *fx_help(uint8_t cmd) { return cmd < FX_COUNT ? pages[cmd] : 0; }", ""]
 (root / "app/fx_help.c").write_text("\n".join(out))
