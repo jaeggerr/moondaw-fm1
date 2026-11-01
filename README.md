@@ -37,7 +37,8 @@ find out if you like it before touching your FM-1.
   in any text editor, diff, keep under git and send over USB.
 - **Your LLM can write them.** A `.trk` is text a model reads and writes: ask for
   a bassline and it lands in the file, ready to send over USB. You carve the steps
-  with your thumbs; the typing you can hand over.
+  with your thumbs; the typing you can hand over. `skill/moondaw-fm1/` is the
+  whole of what a model needs to know, the format and the machine both.
 - **It sounds like more than the box suggests.** Chip voices, your own samples, a
   voice that sings the syllables you write, drums, reverb, delay and a limiter,
   all on 512 KB of RAM and no floating point.
@@ -167,6 +168,8 @@ app/         the screens, the USB link and the remote, the on-device help
 platform/    platform.h and its SDL and web implementations
 firmware/    the FM-1 implementation, on Felucca's HAL and drivers
 tools/       build, package, install, transfer and remote-control tools
+skill/       what an LLM needs: the .trk format, the effects, the engines,
+             and how to drive the machine over USB (tools/gen_skill.py)
 tests/       host tests and the differential test against MOONDAW
 docs/        studies and notes; NOTES.md is the design diary
 ```

@@ -96,6 +96,7 @@ test: sim web songedit
 	@if ls $(MOONDAW)/songs/*.trk >/dev/null 2>&1; then build/trkcheck $(MOONDAW)/songs/*.trk | cut -c1-72; \
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
 	node web/songedit/test/roundtrip.mjs | tail -4
+	python3 tools/gen_skill.py --check
 
 difftest:
 	MOONDAW=$(MOONDAW) tests/difftest.sh 30 $(MOONDAW)/songs/*.trk tests/vox-styles.trk
