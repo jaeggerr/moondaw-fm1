@@ -17,6 +17,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "../core/song.h"
+
 enum {
     GRID_ROW = 28, GRID_ROWS = 8, GRID_HEAD = 16,
     GRID_NUM_X = 14,  /* the row's number */
@@ -31,9 +33,14 @@ int grid_base(int vis); /* its baseline */
 /* A column's name, small, in the line above the rows; white when the
  * cursor is in that column. */
 void grid_head(int x, int w, const char *s, bool on);
-/* A track's number as a column's name: green while it plays alone (solo),
- * red while it is muted. */
-void grid_track_head(int x, int w, int track, bool on);
+/* A track's name as its column's: the instrument its steps name most
+ * often, worked out of the song and kept until the song is written to.
+ * Green while the track plays alone (solo), red while it is muted. A
+ * track no block of the arrangement gives an instrument falls back on
+ * its number, as this used to show. */
+void grid_track_head(int x, int w, const Song *s, int track, bool on);
+/* That instrument's name, or NULL where there is none. */
+const char *grid_track_instr(const Song *s, int track);
 /* Whether a track is heard: not muted, and no other alone. Its cells grey
  * when it is not. */
 bool grid_heard(int track);

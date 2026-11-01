@@ -1373,7 +1373,7 @@ static void draw(void)
     } else if (loop_state() == LOOP_ONE_END)
         grid_corner("LOOP", C_TITLE, grid_hex2(s, loop_from()), C_TEXT);
     for (int c = 0; c < CELLS && left + c < tracks; c++) /* green alone, red muted */
-        grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, left + c, left + c == col);
+        grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, song, left + c, left + c == col);
     lay_out(top);
     for (int v = 0; v < slots; v++) {
         int r = slot_row[v];

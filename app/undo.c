@@ -21,6 +21,7 @@ static int nrec, ntop;
 static uint32_t used, now, last_ms;
 static bool open;     /* the last gesture is being written this frame */
 static bool can_join; /* false after an undo: what comes next is a new gesture */
+static uint32_t edits;
 
 static uint8_t *live(const Rec *r)
 {
@@ -113,9 +114,12 @@ static void note(int kind, uint32_t addr, uint32_t len, const uint8_t *src)
     last_ms = now;
 }
 
+uint32_t undo_edits(void) { return edits; }
+
 void undo_reset(Song *s)
 {
     song = s;
+    edits++;
     nrec = ntop = 0;
     used = 0;
     open = can_join = false;
@@ -131,6 +135,7 @@ void undo_frame(uint32_t ms)
 
 void undo_step(int track, int pat, int row)
 {
+    edits++;
     if (song)
         note(K_STEP, (uint32_t)track | (uint32_t)pat << 8 | (uint32_t)row << 16, sizeof(Step),
              (const uint8_t *)song_step(song, track, pat, row));
@@ -138,6 +143,7 @@ void undo_step(int track, int pat, int row)
 
 void undo_bytes(void *p, uint32_t len)
 {
+    edits++;
     if (song)
         note(K_BYTES, (uint32_t)((uint8_t *)p - (uint8_t *)song), len, p);
 }
@@ -161,6 +167,7 @@ static void swap(int a, int b)
             buf[rec[i].at + k] = t;
         }
     }
+    edits++;
     app_mark_dirty();
 }
 

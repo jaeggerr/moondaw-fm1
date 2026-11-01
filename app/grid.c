@@ -2,6 +2,7 @@
 #include "grid.h"
 
 #include "../core/player.h"
+#include "undo.h"
 
 #include "../platform/platform.h"
 #include "theme.h"
@@ -15,11 +16,94 @@ void grid_head(int x, int w, const char *s, bool on)
     gfx_text_mid(F_COND12, x, w, GRID_HEAD - 3, s, on ? C_TEXT : C_DIM);
 }
 
-void grid_track_head(int x, int w, int track, bool on)
+/* What a track makes you hear, worked out of the song itself: the
+ * instrument its steps name most often, counted over the blocks the
+ * arrangement actually gives it. A track has no instrument in the model
+ * -- the step does (core/song.h) -- and a name assigned by hand would be
+ * a second truth to keep, lying the moment the content changes, so there
+ * is none: the header reads the content.
+ *
+ * Only the blocks the arrangement names are counted. A block written and
+ * not arranged is not heard, and must not name the column.
+ *
+ * Worked out once and kept, because the screen is drawn whole every
+ * frame and this walks the pool: eight tracks of sixteen blocks of a
+ * hundred and twenty-eight steps. It is thrown away when the song is
+ * written to at all (undo_edits), which covers every edit, every undo,
+ * and a song loaded in its place. */
+static const Song *head_song;
+static uint32_t head_edits;
+static uint8_t head_instr[SONG_MAX_TRACKS];
+
+static void head_build(const Song *s)
 {
-    char s[3] = { (char)('1' + track), 0, 0 };
-    gfx_text_mid(F_COND12, x, w, GRID_HEAD - 3, s,
-                 player_soloed(track) ? C_ACCENT : player_muted(track) ? C_MUTE : on ? C_TEXT : C_DIM);
+    bool used[SONG_MAX_TRACKS][TRACK_MAX_PATTERNS];
+    for (int t = 0; t < SONG_MAX_TRACKS; t++)
+        for (int p = 0; p < TRACK_MAX_PATTERNS; p++)
+            used[t][p] = false;
+    for (int i = 0; i < s->arrange_len; i++)
+        for (int t = 0; t < SONG_MAX_TRACKS; t++) {
+            uint8_t p = s->arrangement[i].pattern[t];
+            if (p < TRACK_MAX_PATTERNS)
+                used[t][p] = true;
+        }
+    for (int t = 0; t < SONG_MAX_TRACKS; t++) {
+        uint16_t n[SONG_MAX_INSTR];
+        int best = -1;
+        for (int i = 0; i < SONG_MAX_INSTR; i++)
+            n[i] = 0;
+        for (int p = 0; p < TRACK_MAX_PATTERNS; p++) {
+            if (!used[t][p])
+                continue;
+            for (int r = 0; r < s->patterns[t][p].length; r++) {
+                uint8_t in = song_step(s, t, p, r)->instrument;
+                if (in < SONG_MAX_INSTR && n[in] < 0xFFFF)
+                    n[in]++;
+            }
+        }
+        for (int i = 0; i < SONG_MAX_INSTR; i++)
+            if (n[i] && (best < 0 || n[i] > n[best]))
+                best = i;
+        head_instr[t] = best < 0 ? INSTR_NONE : (uint8_t)best;
+    }
+    head_song = s;
+    head_edits = undo_edits();
+}
+
+const char *grid_track_instr(const Song *s, int track)
+{
+    uint8_t i;
+    if (s != head_song || undo_edits() != head_edits)
+        head_build(s);
+    i = head_instr[track];
+    return i == INSTR_NONE || !s->instruments[i].name[0] ? 0 : s->instruments[i].name;
+}
+
+void grid_track_head(int x, int w, const Song *s, int track, bool on)
+{
+    char num[3] = { (char)('1' + track), 0, 0 }, cut[INSTR_NAME_LEN];
+    const char *name = grid_track_instr(s, track);
+    uint16_t ink = player_soloed(track) ? C_ACCENT : player_muted(track) ? C_MUTE : on ? C_TEXT : C_DIM;
+    /* The column is 31 px and the head 16, so a name of seven letters
+     * does not fit at this size and the tail goes. The tail is the one
+     * to lose: it is the variant, not the family -- CHOR can only be
+     * CHORD, and the 909 of SNR909 is the kit, not the drum. A smaller
+     * face would hold the whole word, and was weighed on the panel on
+     * 01/11: under a grid set in 20 the line goes thin and reads worse
+     * than a word cut. */
+    if (name) {
+        int k = 0;
+        while (name[k] && k < INSTR_NAME_LEN - 1) {
+            cut[k] = name[k], cut[k + 1] = 0;
+            if (gfx_text_w(F_COND12, cut) > w - 2) {
+                cut[k] = 0;
+                break;
+            }
+            k++;
+        }
+        name = cut[0] ? cut : 0;
+    }
+    gfx_text_mid(F_COND12, x, w, GRID_HEAD - 3, name ? name : num, ink);
 }
 
 bool grid_heard(int track)

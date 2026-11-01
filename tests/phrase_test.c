@@ -5,8 +5,10 @@
 #include <string.h>
 
 #include "../app/app.h"
+#include "../app/grid.h"
 #include "../app/loop.h"
 #include "../app/phrase.h"
+#include "../app/undo.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 
@@ -102,6 +104,35 @@ int main(void)
     phrase_resume();
     go();
     CHECK("HOME leaves", press(PB_HOME) == PHRASE_BACK);
+
+    /* ------------------------------------------- what names a column --- */
+    /* The head of a column is the same widget as SONG's (app/grid.c), so
+     * PHRASE names its tracks by the same rule: the instrument the track's
+     * steps name most often, over the blocks the arrangement gives it. */
+    {
+        const char *name;
+        trk_load(&app_song, trk, sizeof trk - 1, NULL);
+        player_init(&app_song);
+        undo_reset(&app_song);
+        phrase_open(0, 0);
+        go();
+        memcpy(app_song.instruments[0].name, "ROBOVOX", 8);
+        memcpy(app_song.instruments[1].name, "BASS", 5);
+        undo_bytes(app_song.instruments[0].name, INSTR_NAME_LEN);
+        name = grid_track_instr(&app_song, 0);
+        CHECK("PHRASE names a track by the same instrument SONG would",
+              name && !strcmp(name, "ROBOVOX"));
+        CHECK("a track outside the arrangement has no name, and keeps its number",
+              !grid_track_instr(&app_song, 3));
+        for (int r = 1; r < 4; r++) {
+            undo_step(1, 0, r);
+            song_step_w(&app_song, 1, 0, r)->instrument = 1;
+        }
+        name = grid_track_instr(&app_song, 1);
+        CHECK("and follows the steps as they are written, track by track",
+              name && !strcmp(name, "BASS"));
+        go(); /* the heads are drawn with all of this, and nothing falls over */
+    }
 
     printf("phrase test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

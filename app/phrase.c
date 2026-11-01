@@ -110,7 +110,7 @@ static void draw(void)
     else
         grid_corner("PHR", C_DIM, grid_hex2(s, entry), C_TITLE);
     for (int c = 0; c < CELLS && left + c < song->num_tracks; c++) /* green alone, red muted */
-        grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, left + c, left + c == col);
+        grid_track_head(GRID_CELL_X + c * CELL_W, CELL_W, song, left + c, left + c == col);
     for (int v = 0; v < GRID_ROWS && top + v < steps; v++) {
         int r = top + v;
         bool band = r == row;

@@ -667,6 +667,66 @@ int main(void)
         CHECK("and stops there", !player_playing());
     }
 
+    /* ------------------------------------------- what names a column --- */
+    /* A track has no instrument in the model -- the step has one (core/song.h)
+     * -- so the head of its column works one out of the song: the instrument
+     * its steps name most often, counted over the blocks the arrangement
+     * gives that track. Nothing is assigned by hand, so nothing can lie when
+     * the content changes. */
+    {
+        const char *name;
+        trk_load(&app_song, trk, sizeof trk - 1, NULL);
+        player_init(&app_song);
+        undo_reset(&app_song);
+        songview_open(true);
+        go();
+        memcpy(app_song.instruments[1].name, "KICK", 5);
+        memcpy(app_song.instruments[2].name, "BASS", 5);
+        /* track 0 plays blocks 00 and 01 in the arrangement; block 00 names
+         * instrument 1 three times and instrument 2 once */
+        for (int r = 0; r < 16; r++) {
+            undo_step(0, 0, r);
+            song_step_w(&app_song, 0, 0, r)->instrument =
+                r == 12 ? 2 : r % 4 == 0 ? 1 : INSTR_NONE;
+        }
+        undo_step(1, 0, 0);
+        song_step_w(&app_song, 1, 0, 0)->instrument = 2;
+        name = grid_track_instr(&app_song, 0);
+        CHECK("the column takes the name of the instrument the track's steps name most",
+              name && !strcmp(name, "KICK"));
+        name = grid_track_instr(&app_song, 1);
+        CHECK("each track answers for itself", name && !strcmp(name, "BASS"));
+        CHECK("a track the arrangement gives no block has no name, and keeps its number",
+              !grid_track_instr(&app_song, 2));
+
+        /* a block written and never arranged is not heard, and must not
+         * name the column however much it holds */
+        for (int r = 0; r < 16; r++) {
+            undo_step(0, 5, r);
+            song_step_w(&app_song, 0, 5, r)->instrument = 2;
+        }
+        name = grid_track_instr(&app_song, 0);
+        CHECK("a block no phrase names counts for nothing",
+              name && !strcmp(name, "KICK"));
+
+        /* and the answer is worked out again after an edit: it is kept
+         * between frames, not across a write to the song */
+        for (int r = 1; r < 6; r++)
+            if (r != 4) {
+                undo_step(0, 0, r);
+                song_step_w(&app_song, 0, 0, r)->instrument = 2;
+            }
+        name = grid_track_instr(&app_song, 0);
+        CHECK("an edit that tips the count renames the column",
+              name && !strcmp(name, "BASS"));
+
+        undo_bytes(app_song.instruments[2].name, INSTR_NAME_LEN);
+        app_song.instruments[2].name[0] = 0;
+        CHECK("an instrument with no name of its own leaves the number in place",
+              !grid_track_instr(&app_song, 0));
+        go(); /* the head is drawn with all of this, and nothing falls over */
+    }
+
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

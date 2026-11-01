@@ -23,6 +23,12 @@ void undo_step(int track, int pat, int row);
  * of the arrangement. */
 void undo_bytes(void *p, uint32_t len);
 
+/* How many writes the journal has seen -- every undo_step, every
+ * undo_bytes, every gesture taken back or done again, and another song.
+ * Nothing reads the number itself: a screen that works something out of
+ * the song keeps it until this changes (app/grid.c's track names). */
+uint32_t undo_edits(void);
+
 bool undo_can(void);
 bool undo_pop(void); /* true when something was taken back */
 /* REDO: a gesture taken back, done again -- until the next edit, which
