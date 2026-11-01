@@ -3546,3 +3546,37 @@ published and what is in the tree are the same firmware.
   (`app/app.c`), is the one path the author's own machine can never
   show: its store has songs in it. That is the test to run before the
   link is handed to anyone.
+
+## 2026-11-01 — the first thirty seconds, lived on the machine
+
+The one line of the release notes written from the code rather than from
+the panel: *on an FM-1 whose flash holds no MOONDAW songs, the firmware
+opens a built-in demo song*. It has been run now, on the device, after
+0.1 was flashed and published.
+
+- **The twelve songs came off first** (`fm1_send.py --get`), into a
+  sibling folder, and every one was put through `trkcheck` before
+  anything was erased: 12 files, byte-stable in and out. The sample bank
+  was left alone — the boot path looks at song slots only, so wiping the
+  bank would have cost twenty samples and proved nothing.
+- **Deleting is a panel gesture, not a link command.** There is no delete
+  over the USB link: it is PROJECTS, EDIT on a project, DELETE, then SEL
+  on "Delete it for good?". Driven from the computer twelve times, then
+  the same package reinstalled to force a clean start.
+- **What a stranger gets.** HOME, the cursor already on CONTINUE, the
+  song reading **DEMO**, PROJECTS reading 1. SEL and PLAY: `playing=1`,
+  CPU 16 % of 22 max, the SONG screen showing INTRO and VERSE over BASS
+  LEAD KIT KIT. **Three presses from power-on to sound**, with the ten
+  presets already in the instrument slots behind it. The verdict of
+  31/10 — menus before any sound — does not describe what a new machine
+  does any more.
+- **Then everything was put back**: the twelve songs in their old order,
+  the same names and sizes, 11 KB free as before, DPUNK-EN-DRM open
+  again, the twenty samples untouched.
+- **A note for anyone driving the panel from a script.** Back-to-back
+  `fm1_ctl.py` invocations fail — each one opens and closes the MIDI
+  port, and the next one comes too soon. They exit non-zero and say so,
+  so a shell loop that sends output to `/dev/null` deletes nothing and
+  reports twelve successes. What works is one process that paces the
+  calls and retries, and that checks the song count after each delete
+  rather than trusting the gesture.
