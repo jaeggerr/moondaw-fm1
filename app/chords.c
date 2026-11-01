@@ -249,15 +249,15 @@ void chords_draw(void)
             x = gfx_text(F_COND20, 14, base, key_root_name(song->key_root + c->semis), here ? C_ON_ACC : C_TEXT);
             gfx_text(F_COND20, x, base, quality[c->q].suffix, here ? C_ON_ACC : C_TEXT);
             /* 2 up, the small type centred on the row, as CHOOSE PATTERN's */
-            gfx_text(F_COND14, 82, base - 2, c->degree, here ? C_ON_ACC : C_DIM);
+            gfx_text(F_COND14, 88, base - 2, c->degree, here ? C_ON_ACC : C_DIM);
             if (here) { /* what SEL would write, as the step will show it */
                 uint8_t nn[STEP_MAX_NOTES];
                 int k = chords_notes(nn);
-                x = 112;
+                x = 116;
                 for (int j = 0; j < k; j++)
                     x = gfx_text(F_COND14, x, base - 2, note_name(nn[j], nm), C_ON_ACC) + 3;
             }
-            grid_play_sign(PLAT_W - 32, y + 8, here ? C_ON_ACC : C_DIM, here && listening);
+            grid_play_sign(PLAT_W - 26, y + 8, here ? C_ON_ACC : C_DIM, here && listening);
         }
     }
     {
