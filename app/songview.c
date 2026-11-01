@@ -758,7 +758,8 @@ static void ch_draw(void)
                 d[j] = 0;
             }
             w = gfx_text_w(F_COND14, d);
-            gfx_text(F_COND14, PLAT_W - 32 - bar - w, base, d, ink);
+            /* 2 up: on the number's baseline the small type sat under the sign and the number */
+            gfx_text(F_COND14, PLAT_W - 32 - bar - w, base - 2, d, ink);
             if (!blank) /* what can be heard has its PLAY; an empty block is silence */
                 grid_play_sign(PLAT_W - 26 - bar, y + 8,
                                here ? C_ON_ACC : k == ch_heard ? C_ACCENT : C_DIM, k == ch_heard);
@@ -924,7 +925,7 @@ static void cp_draw(void)
         if (name[0]) /* a phrase that was never named says nothing here */
             gfx_text(F_COND14, x + 8, base, name, ink);
         w = gfx_text_w(F_COND14, s);
-        gfx_text(F_COND14, PLAT_W - 10 - bar - w, base, s, ink);
+        gfx_text(F_COND14, PLAT_W - 10 - bar - w, base - 2, s, ink);
     }
     if (n > CH_ROWS) {
         int hh = CH_ROWS * GRID_ROW * CH_ROWS / n, y = CH_TOP + CH_ROWS * GRID_ROW * cp_top / n;
@@ -1236,7 +1237,7 @@ static void cs_draw(void)
                 s[j++] = *q;
             s[j] = 0;
             w = gfx_text_w(F_COND14, s);
-            gfx_text(F_COND14, PLAT_W - 10 - bar - w, base, s, ink);
+            gfx_text(F_COND14, PLAT_W - 10 - bar - w, base - 2, s, ink);
         }
     }
     if (n > CH_ROWS) {

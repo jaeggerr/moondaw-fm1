@@ -56,14 +56,13 @@ static const Chord table[2][CHORDS] = {
     },
 };
 
-enum { TOP = 24, ROWS = 7, LIST = CHORDS + SECTIONS, ARP_MAX = 15, HOLD_MS = 2000 };
+enum { TOP = 24, ROWS = 7, LIST = CHORDS + SECTIONS, ARP_MAX = 15 };
 
 static const Song *song;
 static int instr, *octave;
 static int cur, top, inversion, arp;
 static bool room; /* an effect slot for the arpeggio: its own, or an empty one */
-static bool strike, sounding;
-static uint32_t struck_at;
+static bool strike, listening;
 static const char *said;
 static uint32_t prev_held;
 
@@ -90,7 +89,7 @@ int chords_notes(uint8_t out[STEP_MAX_NOTES])
 
 int chords_arp(void) { return arp; }
 
-static void sound(uint32_t ms)
+static void sound(void)
 {
     uint8_t nn[STEP_MAX_NOTES];
     int n = chords_notes(nn);
@@ -98,8 +97,6 @@ static void sound(uint32_t ms)
         player_note_arp(instr, nn, n, arp);
     else
         player_note_chord(instr, nn, n);
-    sounding = true;
-    struck_at = ms;
 }
 
 /* -------------------------------------------------------------- hands --- */
@@ -116,8 +113,7 @@ void chords_open(const Song *s, int in, int *oct, const Step *st)
         if (st->fx[i].cmd == FX_ARP || st->fx[i].cmd == FX_NONE)
             room = true;
     }
-    strike = true; /* the first chord at once: the ear is what the list is for */
-    sounding = false;
+    strike = listening = false;
     said = 0;
     prev_held = 0xFFFFFFFFu;
     gfx_invalidate();
@@ -169,23 +165,22 @@ int chords_frame(const PlatInput *in, uint32_t pressed)
     if (PRESSED(PB_OCTUP) && *octave < 3)
         ++*octave, strike = true;
     if (PRESSED(PB_PLAY)) {
-        if (player_playing())
+        if (player_playing()) /* the chords, not the song: as CHOOSE INSTRUMENT's PLAY */
             player_stop();
-        else
+        listening = !listening;
+        if (listening)
             strike = true;
+        else
+            player_note_off();
     }
     if (PRESSED(PB_SEL) || PRESSED(PB_HOME) || PRESSED(PB_ARP)) {
         player_note_off();
         return PRESSED(PB_SEL) ? CHORDS_KEPT : CHORDS_LEFT;
     }
-    if (strike) {
-        strike = false;
-        sound(in->ms);
-    } else if (sounding && in->ms - struck_at >= HOLD_MS) { /* nothing is left hanging */
-        player_note_off();
-        sounding = false;
-    }
-    ui_led_state(PB_PLAY, player_playing());
+    if (strike && listening)
+        sound();
+    strike = false;
+    ui_led_state(PB_PLAY, listening);
     return CHORDS_OPEN;
 #undef PRESSED
 }
@@ -220,10 +215,10 @@ void chords_draw(void)
         gfx_text(F_COND14, PLAT_W - 6 - gfx_text_w(F_COND14, said), 17, said, C_FX);
     } else {
         n = 0;
-        for (q = "INV "; *q; q++)
+        for (q = "K3 INV "; *q; q++)
             s[n++] = *q;
         s[n++] = (char)('0' + inversion);
-        for (q = "   ARP "; *q; q++)
+        for (q = "  K4 ARP "; *q; q++)
             s[n++] = *q;
         if (arp) {
             grid_hex2(h, arp);
@@ -253,14 +248,16 @@ void chords_draw(void)
                 gfx_slab(4, y + 1, PLAT_W - 14, GRID_ROW - 2, C_ACCENT, 255);
             x = gfx_text(F_COND20, 14, base, key_root_name(song->key_root + c->semis), here ? C_ON_ACC : C_TEXT);
             gfx_text(F_COND20, x, base, quality[c->q].suffix, here ? C_ON_ACC : C_TEXT);
-            gfx_text(F_COND14, 88, base, c->degree, here ? C_ON_ACC : C_DIM);
+            /* 2 up, the small type centred on the row, as CHOOSE PATTERN's */
+            gfx_text(F_COND14, 82, base - 2, c->degree, here ? C_ON_ACC : C_DIM);
             if (here) { /* what SEL would write, as the step will show it */
                 uint8_t nn[STEP_MAX_NOTES];
                 int k = chords_notes(nn);
-                x = 120;
+                x = 112;
                 for (int j = 0; j < k; j++)
-                    x = gfx_text(F_COND14, x, base, note_name(nn[j], nm), C_ON_ACC) + 4;
+                    x = gfx_text(F_COND14, x, base - 2, note_name(nn[j], nm), C_ON_ACC) + 3;
             }
+            grid_play_sign(PLAT_W - 32, y + 8, here ? C_ON_ACC : C_DIM, here && listening);
         }
     }
     {
@@ -269,7 +266,6 @@ void chords_draw(void)
         gfx_fill(PLAT_W - 4, y, 2, hh, C_DIM, 255);
     }
     hint(6, "SEL", "TAKE", false);
-    hint(70, "K3", "INV", false);
-    hint(122, "K4", "ARP", false);
+    hint(96, "PLAY", "LISTEN", false);
     hint(PLAT_W - 6, "HOME", "BACK", true);
 }

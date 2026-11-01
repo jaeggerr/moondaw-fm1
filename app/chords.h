@@ -6,8 +6,8 @@
 #include "../platform/platform.h"
 
 /* CHORDS, ARP on PATTERN's notes (01/11): the chords of the song's KEY, by
- * section and the likeliest first, each heard as the cursor reaches it, and
- * what it will do on the step.
+ * section and the likeliest first, and what each will do on the step. The
+ * list opens silent; PLAY arms it, and from then on what the hand changes sounds.
  *
  *   SELECT, KNOB 1  the chord     KNOB 2  the section
  *   KNOB 3  which note is lowest, up to as many as the chord has
@@ -15,7 +15,9 @@
  *           step); a step with no effect slot left says FX FULL and stays --
  *   OCT- OCT+  the keyboard's octave, which the chord is built in
  *   SEL  writes it on the step      HOME or ARP  leaves, nothing written
- *   PLAY  the chord once more; the song playing, stops it
+ *   PLAY  listening, on or off: on, the chord under the cursor rings, and every
+ *         chord, inversion, arpeggio or octave the hand reaches takes over at once;
+ *         the song playing, it is stopped first, as CHOOSE INSTRUMENT has it
  *
  * A step holds four notes, so a chord is four at most: the name and the row
  * never promise more than is written. The order is fixed, the key's own and

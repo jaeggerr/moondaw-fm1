@@ -3613,6 +3613,15 @@ chord is choosing what it walks; and KNOB 4 on this screen is that arpeggio,
 heard as it is set, written with the chord by SEL. Without KNOB 4 the label
 would lie again.
 
+The list opens silent, on the panel's verdict: PLAY arms it, and it stays armed,
+so no chord needs a press of its own; PLAY again disarms. Armed, a chord rings
+for as long as the envelope holds it, the arpeggio goes round, and nothing cuts
+it on a timer. A filled sign on the row says which is sounding.
+
+CHOOSE PATTERN's "x steps" sat on the number's baseline, and being small it hung
+2 pixels under the number and the play sign, both centred on the row. Measured on
+a capture: the sign was right, the text is what moved.
+
 - **Sections, likeliest first, fixed.** Triads, sevenths, sus and add, borrowed,
   secondary dominants: 29 chords a mode. The order does not look at the phrase
   so far, so the same turn finds the same chord. Four notes at most, what a step
