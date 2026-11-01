@@ -7,6 +7,7 @@
 
 #include "../app/app.h"
 #include "../app/menu.h"
+#include "../app/room.h"
 
 static uint8_t nor[PLAT_FLASH_SECTORS * PLAT_FLASH_SECTOR];
 int plat_flash_read(uint32_t o, void *d, uint32_t n) { memcpy(d, nor + o, n); return 0; }
@@ -56,6 +57,18 @@ static int songs_in_flash(void)
     return n;
 }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
+/* Everything left, under one name, in `slot`. */
+static void fill_flash(int slot, char *buf, uint32_t size)
+{
+    store_save_begin(slot, "FILL");
+    for (uint32_t left = store_free(); left;) {
+        uint32_t n = left < size ? left : size;
+        store_save_put(buf, n);
+        left -= n;
+    }
+    store_save_commit();
+}
+
 int main(void)
 {
     memset(nor, 0xFF, sizeof nor);
@@ -233,28 +246,48 @@ int main(void)
         press(PB_SEL);        /* CONTINUE: into SONG, where HOME asks */
         press(PB_SAVE);
         CHECK("the song saved while there is room", !app_dirty);
-        store_save_begin(spare, "FILL");
-        for (uint32_t left = store_free(); left; ) {
-            uint32_t n = left < sizeof fill ? left : sizeof fill;
-            store_save_put(fill, n);
-            left -= n;
-        }
-        store_save_commit();
+        fill_flash(spare, fill, sizeof fill);
+        app_dirty = true;
+        press(PB_SAVE);
+        CHECK("SAVE on a full flash, from SONG: the window, at once", room_active());
+        CHECK("the song still here, changed", app_loaded && app_dirty);
+        press(PB_HOME);
+        go();
+        CHECK("HOME: the song as it was, and that HOME was not read as a step back",
+              !room_active() && app_loaded && app_dirty && !menu_asking());
+        press(PB_SAVE);
+        press(PB_SEL);        /* the list */
+        sel(30);              /* FILL, the last slot */
+        press(PB_SEL);        /* are you sure */
+        press(PB_HOME);       /* no */
+        CHECK("HOME on the question: nothing deleted", store_has(spare) && room_active());
+        press(PB_SEL);
+        press(PB_SEL);        /* yes */
+        CHECK("deleted, and the song fits: saved by itself", !store_has(spare) && !app_dirty && store_has(app_slot));
+        press(PB_SEL);
+        go();
+        CHECK("and the song is where it was", !room_active() && app_loaded);
+
+        /* the same from the question on the way to the root */
+        fill_flash(spare, fill, sizeof fill);
         app_dirty = true;
         home();
+        CHECK("the root asks", menu_asking());
         press(PB_SAVE);
-        CHECK("SAVE on a full flash: the song is still here, changed", app_loaded && app_dirty);
-        CHECK("and the question stays", !menu_in_list() && menu_asking());
-        press(PB_SAVE);
-        CHECK("SAVE again: the same, no worse", app_loaded && app_dirty && menu_asking());
-        press(PB_SEL);
-        CHECK("SEL: PROJECTS, the song still in hand", menu_in_list() && app_loaded && app_dirty);
-        store_delete(spare);
+        CHECK("SAVE there: the window over the question", room_active());
         press(PB_HOME);
-        sel(-10);
-        press(PB_SEL);
+        go();
+        CHECK("HOME: the question again, nothing lost", !room_active() && menu_asking() && app_dirty);
         press(PB_SAVE);
-        CHECK("room made: CONTINUE and SAVE keep the changes", app_loaded && !app_dirty && store_has(app_slot));
+        press(PB_SEL);
+        sel(30);
+        press(PB_SEL);
+        press(PB_SEL);
+        CHECK("room made from there: saved", !store_has(spare) && !app_dirty);
+        press(PB_SEL);
+        go();
+        go();
+        CHECK("and the answer is given: the song put down", !room_active() && !menu_asking() && !app_loaded);
     }
 
     printf("menu test: %s\n", fails ? "FAIL" : "ok");

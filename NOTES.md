@@ -3653,9 +3653,20 @@ root took a failed SAVE for "stay" and went back into the song without a word. S
 SAVE seemed to do nothing, and PROJECTS, the one place room can be made, was out of
 reach while the changes were unsaved: losing them was the only way out.
 
-- **The corners say FLASH FULL**, the one failure the hand can act on.
-- **The question stays and says why**, with what is left.
-- **SEL from there opens PROJECTS with the song still in hand.** Delete something,
-  HOME, CONTINUE, SAVE: the changes survive.
+The first answer put the reason in the corner and the way out in that question,
+and the panel's verdict was right: the question only comes up on the way to the
+root. Press SAVE, miss a corner, switch off, and the work is gone. So:
+
+- **FLASH FULL is a window, on every SAVE that fails on room**, opened by app_save
+  itself whichever screen asked (app/room.h). The corners say nothing about it.
+- **SEL: the other projects and what each takes. SEL: are you sure. SEL: gone**, and
+  back to the list for another. HOME is a step back at each.
+- **As soon as the song fits it is saved**, SAVE having been asked for already. What
+  it takes is measured by writing the file to nowhere, so the flash is not worn on
+  an attempt that cannot succeed.
+- **The open project is not offered.** Deleting its old file to fit the new one
+  would give up what a save promises. Nor is the sample bank: it is not a project.
+- **It lets go only when the hand is off everything**, or the HOME that closes it
+  would be read as a step back by the screen under it.
 
 Nothing is freed for the hand: which song goes is its own choice.

@@ -61,7 +61,8 @@ void ui_led_guide_again(void);
  * `lit`: a key's state, lit as PLAY's is (MONO while the track in front
  * plays alone), unless LEDS is OFF. */
 void ui_led_keys(uint32_t usable, uint32_t lit, uint32_t half);
-/* What a screen's corner says of what app_save returned. */
+/* What a screen's corner says of what app_save returned: nothing when the flash
+ * is full, the window that opens over it saying so (room.h). */
 const char *ui_save_word(int rc);
 /* The black keys read OP1-6, PIT, GLO, MONO, POLY. The commands EDIT gives
  * them are the same wherever a screen has them (PATTERN's steps, SONG's

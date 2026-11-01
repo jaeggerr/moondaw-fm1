@@ -292,26 +292,9 @@ static void draw_question(void)
     gfx_text(F_COND20, TEXT_X, y += ROW, "is not saved.", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "HOME again  lose them", C_TEXT);
-    if (ask_failed == STORE_ERR_FULL) /* the way out that keeps the changes */
-        gfx_text(F_COND20, TEXT_X, y += ROW, "SEL  make room: PROJECTS", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", C_DIM);
-    if (ask_failed) {
-        char s[32], n[12];
-        int j = 0;
-        const char *q;
-        if (ask_failed == STORE_ERR_FULL) {
-            for (q = "FLASH FULL: "; *q; q++)
-                s[j++] = *q;
-            for (q = ui_dec(n, (int)(store_free() / 1024)); *q; q++)
-                s[j++] = *q;
-            for (q = " KB LEFT"; *q; q++)
-                s[j++] = *q;
-        } else {
-            for (q = "NOT SAVED: THE FLASH REFUSED"; *q; q++)
-                s[j++] = *q;
-        }
-        s[j] = 0;
-        gfx_text(F_COND14, TEXT_X, y + ROW, s, C_FX);
+    if (ask_failed && ask_failed != STORE_ERR_FULL) {
+        gfx_text(F_COND14, TEXT_X, y + ROW, "NOT SAVED: THE FLASH REFUSED", C_FX);
     } else if (asking == ASK_HOME) {
         gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then puts the song down", C_DIM);
     } else {
@@ -506,14 +489,19 @@ int menu_frame(const PlatInput *in)
             bool touched = btns || in->keys;
             for (int e = 0; e < PLAT_ENCS; e++)
                 touched |= in->enc[e] != 0;
-            if (!ask_armed || !touched) {
+            /* Saved by the window, after room was made: that is the answer. */
+            if (ask_failed && !app_dirty) {
+                ask_failed = 0;
+                btns = 1u << PB_HOME;
+            } else if (!ask_armed || !touched) {
                 gfx_frame(draw);
                 return MENU_STAY;
             }
         }
         if (btns & 1u << PB_SAVE) {
             /* Not saved, nothing is decided: leaving now, without a word, would
-             * look as if SAVE did nothing. The question stays, and says why. */
+             * look as if SAVE did nothing. The question stays; on a full flash the
+             * window opens over it (room.h), and may yet save the song. */
             ask_failed = app_save();
             if (ask_failed) {
                 gfx_invalidate();
@@ -521,17 +509,6 @@ int menu_frame(const PlatInput *in)
                 return MENU_STAY;
             }
             answered = decided = true;
-        } else if (ask_failed == STORE_ERR_FULL && (btns & 1u << PB_SEL)) {
-            /* PROJECTS with the song still in hand: the one place room can be
-             * made, and CONTINUE picks the song up afterwards, changes and all. */
-            asking = ASK_NONE;
-            ask_failed = 0;
-            listing = true;
-            refresh();
-            scroll_to(open_row >= 0 ? open_row : 0, true);
-            gfx_invalidate();
-            gfx_frame(draw);
-            return MENU_STAY;
         } else if (btns & 1u << PB_HOME)
             answered = decided = true;
         else

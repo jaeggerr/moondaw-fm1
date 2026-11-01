@@ -36,6 +36,7 @@
 #include "project.h"
 #include "canvas.h"
 #include "remote.h"
+#include "room.h"
 #include "songview.h"
 
 Song app_song
@@ -213,6 +214,8 @@ int app_save(void)
         remember(slot);
     }
     ready = 1;
+    if (rc == STORE_ERR_FULL)
+        room_open(); /* in large, wherever this was asked from: a corner can be missed */
     return rc;
 }
 
@@ -416,6 +419,17 @@ void app_frame(const PlatInput *real)
         break;
     default:
         break;
+    }
+
+    {   /* FLASH FULL holds the screen. Projects may have gone when it lets go. */
+        static bool roomed;
+        if (room_frame(in)) {
+            roomed = true;
+            return;
+        }
+        if (roomed && screen == AT_MENU)
+            menu_reload();
+        roomed = false;
     }
 
     {   /* HOME (29/10): a press is a step back, each screen taking its own (SONG's is
