@@ -1792,13 +1792,13 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     }
     ui_led_state(PB_PLAY, playing);
     ui_led_guide(usable());
-    /* the SELECTION's commands: copy and cut on a stretched one, clear always,
-     * paste once something was taken; OP5 is the mode itself and is offered
+    /* the SELECTION's commands: copy, cut and clear, on a stretched one or on the
+     * cursor's, paste once something was taken; OP5 is the mode itself and is offered
      * whenever EDIT is down, lit while it is on -- the key that turns the
      * mode on is the key that says it is on (31/10); MONO: lit alone, half muted */
     ui_led_keys(!selecting && !ui_shifted(&shift)
                     ? 0u
-                    : (anchored ? 1u << UI_OP_COPY | 1u << UI_OP_CUT : 0u) | 1u << UI_OP_CLEAR |
+                    : 1u << UI_OP_COPY | 1u << UI_OP_CUT | 1u << UI_OP_CLEAR |
                           1u << UI_OP_SEL | 1u << UI_KEY_LOOP | 1u << UI_KEY_MONO |
                           (clip_rows ? 1u << UI_OP_PASTE : 0u),
                 (selecting ? 1u << UI_OP_SEL : 0u) |

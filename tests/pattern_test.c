@@ -592,6 +592,49 @@ int main(void)
     go();
     CHECK("and goes dark when EDIT is tapped again", led[PB_EDIT] == PLAT_LED_OFF);
 
+    /* EDIT held, no SELECTION: OP1 and OP3 take what is under the cursor, so
+     * they say so -- a slot in a column, the whole step on its number (1/11) */
+    enc(PE_K2, -10);
+    enc(PE_K2, 1);
+    enc(PE_K1, -20);
+    keys(1u << 0);            /* a note on row 0 */
+    keys(0);
+    press(PB_FX);
+    enc(PE_K3, 1);
+    enc(PE_K4, 1);            /* and an effect on it */
+    press(PB_SEQ);
+    {
+        Step whole = *st(0);
+        in.btns = 1u << PB_EDIT;
+        go();
+        CHECK("EDIT held lights OP1 and OP3 with nothing selected",
+              led[PLAT_BTNS + UI_OP_COPY] != PLAT_LED_OFF && led[PLAT_BTNS + UI_OP_CUT] != PLAT_LED_OFF);
+        keys(1u << UI_OP_COPY); /* OP1 in the first note column: that slot */
+        keys(0);
+        enc(PE_K1, 6);
+        keys(1u << UI_OP_PASTE);
+        keys(0);
+        CHECK("OP1 on a slot copies the slot alone",
+              st(6)->notes[0] == whole.notes[0] && st(6)->fx[0].cmd == FX_NONE);
+        keys(1u << UI_OP_CLEAR);
+        keys(0);
+        enc(PE_K1, -6);
+        enc(PE_K2, -10);        /* the step's number */
+        keys(1u << UI_OP_COPY);
+        keys(0);
+        enc(PE_K1, 6);
+        keys(1u << UI_OP_PASTE);
+        keys(0);
+        CHECK("OP1 on the number copies the whole step, what NOTES does not show too",
+              !memcmp(st(6)->notes, whole.notes, sizeof whole.notes) && st(6)->instrument == whole.instrument &&
+                  st(6)->fx[0].cmd == whole.fx[0].cmd && st(6)->fx[0].cmd != FX_NONE &&
+                  st(6)->fx[0].val == whole.fx[0].val);
+        keys(1u << UI_OP_CLEAR);
+        keys(0);
+        in.btns = 0;
+        go();
+    }
+
     /* STOP leaves the cursor on the step it stopped on (30/10): the phrase
      * plays from its top while the cursor waits further down */
     enc(PE_K2, -10);
