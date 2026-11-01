@@ -1,0 +1,9 @@
+{
+  "what": "A tracker for the FM-1. Eight tracks, up to four notes and three named effects a step, and instruments you build yourself: chip voices, your own samples, a voice that sings the syllables you type, and drums. A song is a plain text file you can read, edit on a computer and send back over USB.",
+  "author": "Jaeger",
+  "kinds": [
+    "tracker"
+  ],
+  "play": "https://moondaw.com/app/",
+  "image": "docs/readme/song.png"
+}
