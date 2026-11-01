@@ -3489,3 +3489,60 @@ PATTERN's already says SELECT. To be judged on the panel.
   through it: 486 -> 0, 492 -> 1, 531 -> 8, 561 -> 43, 591 -> 77,
   620 -> 98, 623 -> 100, and -1 while nothing has been read. It agrees
   to the point. **Not yet seen on the panel: nothing has been installed.**
+
+## 2026-11-01 — 0.1 goes out: what the hashes said, and what a build id is worth
+
+The question was whether the firmware can go out as a public beta now.
+The repository was already public and the README already said *Beta*, so
+what was left was the thing nobody had looked at: whether what is
+published and what is in the tree are the same firmware.
+
+- **They were not.** The package served from `moondaw.com/install/` and a
+  build of `main` differ over **101 900 of 610 257 bytes**. The site's
+  `site/install/` is gitignored — it is assembled on the way out by the
+  other repository's `tools/site/build.sh` from whatever
+  `build/moondaw.fwsc` happens to sit in this one — so nothing anywhere
+  recorded which commit the public package came from. A bug report could
+  have been about code that is not in the repository.
+- **What makes that number readable is the build id.** `build_id()` in
+  `firmware/src/firmware.c` is an FNV hash of `__DATE__ __TIME__`, used
+  twice, so the image carries **8 bytes that change with the minute**.
+  The package's cipher is a keyed XOR per 32-byte block, which is
+  positional: those 8 bytes, plus the CRCs and entries around them, come
+  out as **22 differing bytes and no more**. Two builds of one tree, at
+  different paths and in different minutes: 22 bytes. The published
+  package against the same tree: 101 900. So the comparison is not
+  "firmware is never reproducible", it is **22 means the same code and
+  another minute, anything larger means other code** — worth keeping,
+  because it is the only check there is until someone wants reproducible
+  builds enough to drop the build id.
+- **So the release is one package, built once, used twice.** `v0.1` is a
+  tag on `main`; the `.fwsc` built from it is what `make_site.py` puts
+  behind the install page AND what is attached to the GitHub release, so
+  the manifest's sha256 and the asset's are the same string and both
+  point at a commit. That is the whole of what was missing.
+- **`make test` could not fail where it mattered.** A pipeline exits with
+  its last command's status, so `trkcheck | cut` and `roundtrip.mjs |
+  tail` reported their own failures as passes — the thirteen round-trip
+  failures of 31/10 came back green, found by reading the output. Both
+  write a log and read it back now. The suite on `main` after the fix:
+  green, 13 songs through trkcheck, 18 files round-tripped, 0 failures.
+- **The README's status line said "used every day", which is not true.**
+  It is built and tried on the machine every day; nobody has lived with
+  it. The install bullet now points at the live page rather than at a
+  directory to serve yourself.
+- **The cold build crashes the toolchain, and a second run fixes it.**
+  Twice out of two cold builds, `pi32v2/bin/clang` died on the loader
+  (the crash the `.gitignore` already has a line about, since it drops a
+  `core` file at the root); the retry, incremental, went straight
+  through. `tools/build.py` compiles through a `ThreadPoolExecutor`, so
+  a race in the emulated toolchain is the suspect. Anyone building from
+  a clone will meet it on their first try.
+- **What is still owed, and it is not code.** Nothing has been installed
+  on the machine since the ten presets landed, so they have not been
+  judged by ear, and the battery gauge on HOME — three agreeing
+  inferences, no voltmeter — has never been seen on the panel. And the
+  first thirty seconds a stranger gets, DEMO loading on a virgin flash
+  (`app/app.c`), is the one path the author's own machine can never
+  show: its store has songs in it. That is the test to run before the
+  link is handed to anyone.
