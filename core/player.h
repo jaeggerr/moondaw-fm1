@@ -38,6 +38,9 @@ void player_note_sing(int instr, uint8_t note, const char *syl);
  * sound them (PATTERN's INS column auditions the step under the cursor).
  * One audition at a time, as above; `n` past a step's notes is clamped. */
 void player_note_chord(int instr, const uint8_t *notes, int n);
+/* The same under FX_ARP: one voice walks the notes, `arp` ticks each, at the
+ * song's tempo whether it plays or not. */
+void player_note_arp(int instr, const uint8_t *notes, int n, int arp);
 void player_note_off(void);
 void player_toggle_mute(int track);
 void player_set_master(int pot);   /* 0..1023 */

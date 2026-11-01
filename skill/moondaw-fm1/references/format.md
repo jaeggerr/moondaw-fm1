@@ -16,7 +16,7 @@ read what comes back.
 ## The shape of a file
 
     version 3                  <- first, and mandatory
-    bpm / ticks / meter / tracks / swing / reverb / delay
+    bpm / ticks / meter / tracks / swing / key / reverb / delay
 
     smp NN NAME                <- the sample table
     inst NN engine ...         <- the instruments, and their zones and layers
@@ -78,6 +78,7 @@ A step nobody wrote costs nothing: the pool is shared, so an empty block and the
 | `meter` | 1–16 each | 4 4 |
 | `tracks` | 1–16, cut to 8 | 8 |
 | `swing` | 50–75 | 50 |
+| `key` | `C` to `B` in sharps, `major` or `minor` | C major |
 | `reverb` | 0–127 both | 64 64 |
 | `delay` | 0–96, 0–127 | 18 60 |
 | `trk` | vol 0–127, pan -64–63, rev/ech 0–127 | vol 100 pan 0 |
@@ -137,6 +138,9 @@ These slots already hold a sound, so a song can play without one `inst` line of 
 gate can say 1 to 6, and the same `fGAT03` is half a step whatever the
 tempo. `meter` is steps a beat and beats a bar — it draws the grid and
 changes nothing you hear. `swing 50` is straight, `75` the hardest.
+`key A minor` names the song's key, a tonic from `C` to `B` in sharps and
+`major` or `minor`. Nothing plays differently for it: it is what `ARP` on
+PATTERN suggests chords from.
 `delay` is its time in ticks and its feedback.
 
 ## Instruments

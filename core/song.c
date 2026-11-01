@@ -807,6 +807,12 @@ bool engine_sounds(uint8_t engine)
     return engine <= ENGINE_WAVE;
 }
 
+const char *key_root_name(int root)
+{
+    static const char *const name[KEY_ROOTS] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+    return name[root % KEY_ROOTS];
+}
+
 char *note_name(uint8_t note, char buf[4])
 {
     static const char names[] = "C-C#D-D#E-F-F#G-G#A-A#B-";

@@ -248,6 +248,7 @@ def limits(p):
            f"| `meter` | 1–{L['metermax']} each | {d['meter'][0]} |",
            f"| `tracks` | 1–16, cut to {tr} | {d['tracks'][0]} |",
            f"| `swing` | {L['swingrange'].replace(' ', '–')} | {d['swing'][0]} |",
+           "| `key` | `C` to `B` in sharps, `major` or `minor` | C major |",
            f"| `reverb` | 0–127 both | {d['reverb'][0]} |",
            f"| `delay` | 0–96, 0–127 | {d['delay'][0]} |",
            f"| `trk` | vol 0–127, pan -64–63, rev/ech 0–127 | {d['trk'][0]} |",

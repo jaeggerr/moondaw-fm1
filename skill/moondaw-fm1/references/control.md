@@ -12,7 +12,7 @@ instead (`build/sim/moondaw-fm1`), which is the right place to try
 something out.
 
 **Everything below is the hands' own.** An edit lands exactly where a
-thumb would have put it: `ARP` (UNDO) takes it back, and nothing reaches
+thumb would have put it: `ALGO` turned left takes it back, and nothing reaches
 the flash until `save`.
 
 ## Reading what it is doing
@@ -68,8 +68,9 @@ decimal and signed.
 The keyboard is 27 keys, `F-3` to `G-5`, and `OCT-`/`OCT+` do not move
 them — they move what the keys play.
 
-Note the panel's names against the words the screens use: `ARP` is UNDO
-(and `ALGO` turned right is REDO), `SEQ` `FX` `ENV` pick the column on
+Note the panel's names against the words the screens use: `ALGO` is UNDO
+turned left and REDO turned right, `ARP` opens the chords of the key on
+PATTERN's notes, `SEQ` `FX` `ENV` pick the column on
 PATTERN, `GLO` opens the project, `FX` the mixer. `HOME` goes back one
 step and **held** returns to the menu from anywhere.
 
@@ -169,6 +170,9 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `ENV, SEL on instr.` | edit the instrument |
 | `PRESETS on instr.` | choose an instrument |
 | `SEL on an effect` | the syllable |
+| `ARP on notes` | the chords of the key |
+| `  white keys` | degrees, octave up |
+| `  OP1 to OP5` | the section |
 | `keys` | write in a note column |
 | `keys elsewhere` | play, write nothing |
 | `OCT- OCT+` | the keyboard's octave |

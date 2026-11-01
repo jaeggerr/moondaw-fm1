@@ -47,6 +47,16 @@ int main(void)
     enc(PE_K3, 20);
     CHECK("BPM", S.bpm == 140 && app_dirty);
     enc(PE_SELECT, 1);
+    CHECK("KEY: C major with no word of it", S.key_root == 0 && S.key_mode == KEY_MAJOR);
+    enc(PE_K3, 1);
+    CHECK("KEY: a notch, the same tonic in minor", S.key_root == 0 && S.key_mode == KEY_MINOR);
+    enc(PE_K3, 18);
+    CHECK("KEY: A minor", S.key_root == 9 && S.key_mode == KEY_MINOR);
+    enc(PE_K3, 100);
+    CHECK("KEY stops at B minor", S.key_root == 11 && S.key_mode == KEY_MINOR);
+    enc(PE_K3, -23);
+    CHECK("KEY: back to C major", S.key_root == 0 && S.key_mode == KEY_MAJOR);
+    enc(PE_SELECT, 1);
     enc(PE_K3, 100);
     CHECK("SWING stops at 75", S.swing == SWING_MAX);
     enc(PE_SELECT, 1);

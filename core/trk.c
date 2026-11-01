@@ -439,6 +439,16 @@ static void take_line(void)
         }
     } else if (starts(t, "swing ") && field(t, "swing ", &v)) {
         tmp->swing = (uint8_t)clampi(v, SWING_MIN, SWING_MAX);
+    } else if (starts(t, "key ")) {
+        for (int r = 0; r < KEY_ROOTS; r++) {
+            const char *a = key_root_name(r), *b = t + 4;
+            while (*a && *a == *b)
+                a++, b++;
+            if (!*a && *b == ' ' && (starts(b + 1, "major") || starts(b + 1, "minor"))) {
+                tmp->key_root = (uint8_t)r;
+                tmp->key_mode = starts(b + 1, "minor") ? KEY_MINOR : KEY_MAJOR;
+            }
+        }
     } else if (starts(t, "delay ") && (p = t + 6, rd_int(&p, &i1)) &&
                rd_int(&p, &i2)) {
         tmp->delay_time = (uint8_t)clampi(i1, 0, 96);
@@ -936,6 +946,11 @@ int32_t trk_write(const Song *s, TrkSink sink, void *ctx)
     wkv(&w, " ", s->reverb_damp);
     if (s->swing > SWING_MIN)
         wkv(&w, "\nswing ", s->swing);
+    if (s->key_root || s->key_mode) { /* C major, as a file with no word of it */
+        ws(&w, "\nkey ");
+        ws(&w, key_root_name(s->key_root));
+        ws(&w, s->key_mode == KEY_MINOR ? " minor" : " major");
+    }
     wkv(&w, "\ndelay ", s->delay_time);
     wkv(&w, " ", s->delay_fb);
     ws(&w, "\n\n");

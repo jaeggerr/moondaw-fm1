@@ -15,17 +15,19 @@
  *   SELECT, KNOB 1  the setting     KNOB 3  its value
  *   NAME    SEL opens it: one cell a letter, KNOB 2 the place, KNOB 3 the letter
  *           (space, A-Z, 0-9, -); SEL keeps it, HOME goes back without it
+ *   KEY     the tonic and major or minor, C MAJOR to B MINOR: what ARP on PATTERN
+ *           suggests chords from (the file's key); nothing else listens to it
  *   METER   beats in a bar, written x/4 (the file's beats_per_bar)
  *   STEP    what a step is worth as a note: 1/16 at 4 steps a beat, 1/12 at 3
  *           (the file's steps_per_beat)
  *   HOME    back where it was opened from     SEQ  SONG     FX  the MIXER
  *   ALGO    UNDO left, REDO right     SAVE  as printed */
-enum { S_NAME, S_BPM, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
+enum { S_NAME, S_BPM, S_KEY, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
 enum { LABEL_X = 14, VALUE_X = 120 };
 
 #define song (&app_song)
 
-static const char *const label[SETTINGS] = { "NAME", "BPM", "SWING", "METER", "STEP", "TICKS", "TRACKS" };
+static const char *const label[SETTINGS] = { "NAME", "BPM", "KEY", "SWING", "METER", "STEP", "TICKS", "TRACKS" };
 static int row;
 static bool naming;
 static const char *said;
@@ -40,6 +42,13 @@ static void turn(int k, int d)
         undo_bytes(&song->bpm, sizeof song->bpm);
         song->bpm = (uint16_t)clampi(song->bpm + d, BPM_MIN, BPM_MAX);
         break;
+    case S_KEY: {
+        int v = clampi(song->key_root * 2 + song->key_mode + d, 0, KEY_ROOTS * 2 - 1);
+        undo_bytes(&song->key_root, 2); /* and key_mode, the next byte */
+        song->key_root = (uint8_t)(v / 2);
+        song->key_mode = (uint8_t)(v % 2);
+        break;
+    }
     case S_SWING:
         undo_bytes(&song->swing, 1);
         song->swing = (uint8_t)clampi(song->swing + d, SWING_MIN, SWING_MAX);
@@ -78,6 +87,15 @@ static void value_of(int k, char *s)
     case S_BPM:
         ui_dec(s, song->bpm);
         break;
+    case S_KEY: {
+        const char *q;
+        for (q = key_root_name(song->key_root); *q; q++)
+            *s++ = *q;
+        for (q = song->key_mode == KEY_MINOR ? " MINOR" : " MAJOR"; *q; q++)
+            *s++ = *q;
+        *s = 0;
+        break;
+    }
     case S_SWING:
         ui_dec(s, song->swing);
         for (p = s; *p; p++)

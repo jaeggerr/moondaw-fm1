@@ -3594,3 +3594,51 @@ my advice: the number already means the step as a whole, and a chord in
 `ARP 01` has to stay an arpeggio once pasted. Four notes alone are still
 an OP5 selection away. Since NOTES hides what was taken with them, a
 single step says `COPIED STEP` rather than `COPIED 1`.
+
+## 2026-11-01 — ARP: the chords of the key
+
+ARP had done nothing on PATTERN since UNDO went to ALGO. It now opens
+CHORDS, on the notes of an instrument that is not a kit (app/chords.h), and
+PROJECT gains a KEY row, C MAJOR to B MINOR, `key A minor` in the file and
+left out at C major. Nothing else listens to the key: no note plays
+differently for it.
+
+I had refused this the same night, on two grounds. The menu: the verdict of
+31/10 was about menus before any sound, and a list that sounds on every notch
+is the ear choosing, as the INS column and CHOOSE INSTRUMENT already do. That
+objection did not hold. The label held: a list of chords behind ARP is the lie
+refused for the SELECTION on 29/10. What settles it is that FX_ARP has no
+intervals of its own, it walks the notes written on the step, so choosing the
+chord is choosing what it walks; and KNOB 4 on this screen is that arpeggio,
+heard as it is set, written with the chord by SEL. Without KNOB 4 the label
+would lie again.
+
+The list opens silent, on the panel's verdict: PLAY arms it, and it stays armed,
+so no chord needs a press of its own; PLAY again disarms. Armed, a chord rings
+for as long as the envelope holds it, the arpeggio goes round, and nothing cuts
+it on a timer. A filled sign on the row says which is sounding.
+
+CHOOSE PATTERN's "x steps" sat on the number's baseline, and being small it hung
+2 pixels under the number and the play sign, both centred on the row. Measured on
+a capture: the sign was right, the text is what moved.
+
+- **Sections, likeliest first, fixed.** Triads, sevenths, sus and add, borrowed,
+  secondary dominants: 34 chords a mode. The order does not look at the phrase
+  so far, so the same turn finds the same chord. Four notes at most, what a step
+  holds. Sharps only, as the notes are spelled on the grid.
+- **The keys play it by position.** The first white key is degree I of the section
+  whatever the song's key, so the hand learns 1-5-6-4 once; C is not C major. Seven
+  keys, the same seven an octave up (not another inversion: KNOB 3 holds that, and
+  higher on the keyboard should never sound lower), the last two nothing. OP1 to
+  OP5 are the sections, the one in force lit. A key sounds while held, armed or
+  not. A section keeps the rule by lighting only the degrees it has: borrowed chords
+  on the degree they stand for, a dominant on the degree it leads to, and SUS / ADD
+  on its sus4s, one a degree; sus2 and add9 stay on the knobs. Two of those sus4s
+  hold a note out of the key (IV and vii in major, ii and VI in minor).
+- **The audition arpeggio is new in the player** (`player_note_arp`): one voice,
+  stepped on the song's ticks by the render loop, because `process_fx_tick` only
+  runs while the song does. Any other audition ends it.
+- **No slot, no arpeggio.** Three effects on the step: KNOB 4 says FX FULL and
+  stays at --; nothing is overwritten. Set back to --, the step's ARP leaves.
+- **Two choices on one step within a second are one gesture**, by undo.h's rule.
+- **RAMTEXT was full again**: 156 bytes over with the audition arpeggio. `player_profile`, `player_profile_reset`, `fx_init` and `osc_init`, which only the main loop reaches, moved to `.flash_text`. Nothing on the render path left RAM.

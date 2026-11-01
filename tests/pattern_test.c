@@ -716,6 +716,147 @@ int main(void)
     in.btns = 1u << PB_HOME;
     CHECK("HOME leaves", pattern_frame(&in) == PATTERN_BACK);
 
+    { /* CHORDS: ARP on the notes, from the song's key */
+        const Step *c;
+        Song *S = &song;
+        trk_load(&song, trk, sizeof trk - 1, NULL);
+        player_init(&song);
+        undo_reset(&song);
+        pattern_open(&song, 0, 0);
+        go();
+        press(PB_SEQ);
+        S->key_root = 0, S->key_mode = KEY_MAJOR;
+        press(PB_ARP);
+        press(PB_HOME);
+        c = st(0);
+        CHECK("ARP then HOME: the step as it was", c->notes[0] == 60 && c->notes[1] == NOTE_NONE);
+        press(PB_ARP);
+        press(PB_SEL);
+        c = st(0);
+        /* the keyboard's octave 0 starts on F3: the first C above it is C-4 */
+        CHECK("SEL writes I of C major", c->notes[0] == 60 && c->notes[1] == 64 && c->notes[2] == 67 && c->notes[3] == NOTE_NONE);
+        in.ms += 2000; /* past the second that makes two writes at one place one gesture (undo.h) */
+        undo_frame(in.ms);
+        press(PB_ARP);
+        enc(PE_K1, 3);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("the fourth is vi, A minor", c->notes[0] == 57 && c->notes[1] == 60 && c->notes[2] == 64);
+        enc(PE_ALGO, -1);
+        c = st(0);
+        CHECK("ALGO takes it back", c->notes[0] == 60 && c->notes[1] == 64);
+        enc(PE_ALGO, 1);
+        S->key_root = 9, S->key_mode = KEY_MINOR;
+        press(PB_ARP);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("A minor's i", c->notes[0] == 57 && c->notes[1] == 60 && c->notes[2] == 64);
+        press(PB_ARP);
+        enc(PE_K2, 1);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("KNOB 2: the sevenths, four notes", c->notes[0] == 57 && c->notes[3] == 67);
+        press(PB_ARP);
+        enc(PE_K2, 1);
+        enc(PE_K3, 1);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("KNOB 3: Am7 with its first note up, lowest first", c->notes[0] == 57 + 3 && c->notes[3] == 69);
+        press(PB_ARP);
+        enc(PE_K4, 3);
+        press(PB_SEL);
+        c = st(0);
+        {
+            int slot = -1;
+            for (int i = 0; i < STEP_MAX_FX; i++)
+                if (c->fx[i].cmd == FX_ARP)
+                    slot = i;
+            CHECK("KNOB 4 writes the arpeggio", slot >= 0 && c->fx[slot].val == 3);
+            press(PB_ARP);
+            enc(PE_K4, -3);
+            press(PB_SEL);
+            c = st(0);
+            CHECK("back to --, the slot is empty again", c->fx[slot].cmd == FX_NONE);
+        }
+        {
+            Step *w = song_step_w(S, 0, song.arrangement[0].pattern[0], 0);
+            for (int i = 0; i < STEP_MAX_FX; i++)
+                w->fx[i].cmd = FX_VOL, w->fx[i].val = 5;
+            press(PB_ARP);
+            enc(PE_K4, 4);
+            press(PB_SEL);
+            c = st(0);
+            CHECK("no slot left: no effect overwritten", c->fx[0].cmd == FX_VOL && c->fx[1].cmd == FX_VOL && c->fx[2].cmd == FX_VOL);
+            for (int i = 0; i < STEP_MAX_FX; i++)
+                w->fx[i].cmd = FX_NONE, w->fx[i].val = 0;
+        }
+        S->key_root = 0, S->key_mode = KEY_MAJOR;
+        /* the keys, by position */
+        press(PB_ARP);
+        keys(1u << 4); keys(0);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("third white key: iii, E minor", c->notes[0] == 64 && c->notes[1] == 67 && c->notes[2] == 71);
+        press(PB_ARP);
+        keys(1u << 12); keys(0);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("eighth white key: I an octave up", c->notes[0] == 72 && c->notes[1] == 76 && c->notes[2] == 79);
+        press(PB_ARP);
+        keys(1u << 12); keys(0);
+        enc(PE_K1, 1);
+        enc(PE_K1, -1);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("the knobs bring it back to the row's octave", c->notes[0] == 60);
+        press(PB_ARP);
+        keys(1u << 24); keys(0);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("the fifteenth white key plays nothing, the cursor stays", c->notes[0] == 60);
+        press(PB_ARP);
+        keys(1u << 8); keys(0);
+        keys(1u << 11); keys(0);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("OP4, then the seventh: bVII", c->notes[0] == 58 && c->notes[1] == 62 && c->notes[2] == 65);
+        press(PB_ARP);
+        keys(1u << 8); keys(0);
+        keys(1u << 2); keys(0);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("OP4 has no chord on II: the first of the section stays", c->notes[0] == 58);
+        press(PB_ARP);
+        keys(1u << 5); keys(0);
+        keys(1u << 2); keys(0);
+        press(PB_SEL);
+        c = st(0);
+        CHECK("OP3, then the second: its sus4", c->notes[0] == 62 && c->notes[1] == 67 && c->notes[2] == 69);
+        press(PB_FX);
+        press(PB_ARP);
+        press(PB_SEQ);
+        keys(1u << 0); keys(0);
+        CHECK("ARP in the FX view: no list, the key writes", st(0)->notes[0] == 53);
+        S->instruments[0].engine = ENGINE_DRUM;
+        {
+            press(PB_ARP);
+            keys(1u << 0); keys(0);
+            CHECK("on a kit ARP is nothing: the key writes", st(0)->notes[0] != 53);
+        }
+    }
+    { /* KEY in the file: said when it is not C major, read back */
+        static char out[8192];
+        static Song back;
+        int32_t n;
+        song.key_root = 1, song.key_mode = KEY_MINOR;
+        n = trk_save(&song, out, sizeof out);
+        CHECK("the file says the key", n > 0 && strstr(out, "\nkey C# minor\n") != 0);
+        trk_load(&back, out, (uint32_t)n, NULL);
+        CHECK("and reads it back", back.key_root == 1 && back.key_mode == KEY_MINOR);
+        song.key_root = 0, song.key_mode = KEY_MAJOR;
+        n = trk_save(&song, out, sizeof out);
+        CHECK("C major is left out", n > 0 && strstr(out, "\nkey ") == 0);
+    }
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

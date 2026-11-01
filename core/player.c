@@ -441,6 +441,7 @@ enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, C
 static char audition_syl[VOX_SYL_LEN];
 /* What a CMD_NOTE_CHORD strikes, the same way; its `b` is how many. */
 static uint8_t audition_chord[STEP_MAX_NOTES];
+static uint8_t audition_arp; /* its ticks a note, 0 for all of them at once */
 static volatile struct { uint8_t type, a, b; } cmd_q[8];
 static volatile uint8_t cmd_w, cmd_r;
 
@@ -1460,6 +1461,7 @@ static void handle_cmds(void)
             const uint8_t one = b;
             const uint8_t *notes = type == CMD_NOTE_CHORD ? audition_chord : &one;
             int n = type == CMD_NOTE_CHORD ? b : 1, waves, maxn;
+            uint8_t arp = type == CMD_NOTE_CHORD ? audition_arp : 0;
             if (type == CMD_NOTE_SYL) { /* a VOX instrument sings this syllable */
                 syl_copy(tr->fx.syl, audition_syl);
                 tr->fx.syl_written = true;
@@ -1472,10 +1474,16 @@ static void handle_cmds(void)
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
-            for (int i = 0; i < n && i < maxn; i++)
+            /* Under ARP one voice sounds and moves, as trigger_step has it */
+            for (int i = 0; i < n && i < maxn && (arp == 0 || i == 0); i++)
                 voice_start(tr, in, in->timbre, i, notes[i], false);
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 osc_set_cents(&tr->voices[v].osc, tr->voices[v].detune);
+            for (int i = 0; i < STEP_MAX_NOTES; i++)
+                tr->fx.held.notes[i] = i < n ? notes[i] : NOTE_NONE;
+            tr->fx.has_held = arp > 0;
+            tr->fx.arp = arp;
+            tr->fx.arp_idx = tr->fx.arp_count = 0;
             tr->chain.pan = 0;
             chain_note_on(&tr->chain, 100, VEL_FULL, in, in->cutoff, in->reso);
             tr->used = true;
@@ -1627,18 +1635,6 @@ static void prof_mark(void)
 {
     if (player_clock)
         prof_t = player_clock();
-}
-
-void player_profile(uint32_t out[PROF_N + 1])
-{
-    for (int k = 0; k <= PROF_N; k++)
-        out[k] = prof_worst[k];
-}
-
-void player_profile_reset(void)
-{
-    for (int k = 0; k <= PROF_N; k++)
-        prof_worst[k] = 0;
 }
 
 static int32_t mix[SYNTH_MAX_FRAMES * 2];
@@ -1911,6 +1907,8 @@ void player_render_raw(int32_t *out, int frames)
             prof_mark();
             player_tick();
             prof(PROF_TICK);
+            if (tracks[AUDITION].used && tracks[AUDITION].fx.arp > 0)
+                apply_pitch(&tracks[AUDITION]); /* the song's ticks need no song playing */
             to_next_tick = tick_samples();
             reap_due = true;
         }
@@ -1978,6 +1976,18 @@ void player_render(int16_t *out, int frames)
 #define MAIN_LOOP
 #endif
 
+MAIN_LOOP void player_profile(uint32_t out[PROF_N + 1])
+{
+    for (int k = 0; k <= PROF_N; k++)
+        out[k] = prof_worst[k];
+}
+
+MAIN_LOOP void player_profile_reset(void)
+{
+    for (int k = 0; k <= PROF_N; k++)
+        prof_worst[k] = 0;
+}
+
 MAIN_LOOP void player_init(Song *s)
 {
     song = s;
@@ -2042,6 +2052,17 @@ MAIN_LOOP void player_note_chord(int instr, const uint8_t *notes, int n)
         return;
     for (int i = 0; i < n; i++)
         audition_chord[i] = notes[i];
+    audition_arp = 0;
+    cmd_push(CMD_NOTE_CHORD, (uint8_t)instr, (uint8_t)n);
+}
+MAIN_LOOP void player_note_arp(int instr, const uint8_t *notes, int n, int arp)
+{
+    n = n > STEP_MAX_NOTES ? STEP_MAX_NOTES : n;
+    if (n <= 0)
+        return;
+    for (int i = 0; i < n; i++)
+        audition_chord[i] = notes[i];
+    audition_arp = (uint8_t)arp;
     cmd_push(CMD_NOTE_CHORD, (uint8_t)instr, (uint8_t)n);
 }
 MAIN_LOOP void player_toggle_mute(int track)

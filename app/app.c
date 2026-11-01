@@ -8,7 +8,7 @@
  *   PATTERN  (pattern.c)   one block of one track, in three views
  *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
  *   MIXER    (mixer.c)     the tracks' levels and sends, the returns: FX
- *   PROJECT  (project.c)   name, tempo, swing, meter, step, ticks, tracks: EDIT
+ *   PROJECT  (project.c)   name, tempo, key, swing, meter, step, ticks, tracks: EDIT
  *
  * The road down is HOME -> SONG -> PHRASE -> PATTERN, SEL a level down,
  * GLO a level up, HOME home from anywhere (NOTES.md, 28/10). INSTRUMENT

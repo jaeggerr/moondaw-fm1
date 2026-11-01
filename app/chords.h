@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+#ifndef CHORDS_H
+#define CHORDS_H
+
+#include "../core/song.h"
+#include "../platform/platform.h"
+
+/* CHORDS, ARP on PATTERN's notes (01/11): the chords of the song's KEY, by
+ * section and the likeliest first, and what each will do on the step. The
+ * list opens silent; PLAY arms it, and from then on what the hand changes sounds.
+ *
+ *   SELECT, KNOB 1  the chord     KNOB 2  the section
+ *   KNOB 3  which note is lowest, up to as many as the chord has
+ *   KNOB 4  the arpeggio: -- all at once, 01 to 0F ticks a note (FX_ARP on the
+ *           step); a step with no effect slot left says FX FULL and stays --
+ *   OCT- OCT+  the keyboard's octave, which the chord is built in
+ *   the white keys  by position, whatever the key: the first plays degree I of the
+ *         section, the seventh VII, the next seven the same an octave up, the last
+ *         two nothing. It sounds while held, armed or not; lit where the section
+ *         has a chord on that degree, and the cursor goes to it
+ *   OP1-OP5  the section, the one in force lit
+ *   SEL  writes it on the step      HOME or ARP  leaves, nothing written
+ *   PLAY  listening, on or off: on, the chord under the cursor rings, and every
+ *         chord, inversion, arpeggio or octave the hand reaches takes over at once;
+ *         the song playing, it is stopped first, as CHOOSE INSTRUMENT has it
+ *
+ * A step holds four notes, so a chord is four at most: the name and the row
+ * never promise more than is written. The order is fixed, the key's own and
+ * not the phrase's so far: the same turn always finds the same chord. */
+
+/* `oct` is the keyboard's octave, kept by the caller and moved from here;
+ * `st` what the step holds now, for the arpeggio it already has. */
+void chords_open(const Song *s, int instr, int *oct, const Step *st);
+enum { CHORDS_OPEN, CHORDS_KEPT, CHORDS_LEFT };
+/* One frame, with the buttons and keys pressed this frame. */
+int chords_frame(const PlatInput *in, uint32_t pressed, uint32_t keys);
+void chords_draw(void);
+/* The buttons of its own, for the guide (ui.h). */
+uint32_t chords_buttons(void);
+/* After CHORDS_KEPT: the notes (how many), the arpeggio's ticks, 0 for none. */
+int chords_notes(uint8_t out[STEP_MAX_NOTES]);
+int chords_arp(void);
+
+#endif

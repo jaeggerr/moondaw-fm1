@@ -83,6 +83,8 @@ enum { VOX_ACCENT_FR = 0, VOX_ACCENT_EN };
 #define NOTE_OFF     0xFE
 #define NOTE_MIN     12
 #define NOTE_MAX     127
+
+enum { KEY_MAJOR, KEY_MINOR, KEY_ROOTS = 12 };
 #define INSTR_NONE   0xFF
 #define PATTERN_NONE 0xFF /* track muted in this phrase */
 #define PATTERN_HOLD 0xFE /* nothing played, nothing released */
@@ -195,6 +197,7 @@ typedef struct {
     uint8_t ticks_per_step, steps_per_beat, beats_per_bar;
     uint8_t num_tracks, arrange_len, section_count;
     uint8_t reverb_size, reverb_damp, delay_time, delay_fb, swing;
+    uint8_t key_root, key_mode; /* the tonic, 0 = C, and KEY_MAJOR or KEY_MINOR */
     TrackInit track_init[SONG_MAX_TRACKS];
     InstrumentDef instruments[SONG_MAX_INSTR];
     SongEntry arrangement[SONG_ARRANGE_LEN];
@@ -303,6 +306,7 @@ bool engine_sounds(uint8_t engine);     /* the three chip engines; VOX, DRUM and
 /* The zone of instrument `inst` that holds `note`, or 0. */
 const Zone *song_zone(const Song *s, int inst, uint8_t note);
 char *note_name(uint8_t note, char buf[4]);
+const char *key_root_name(int root);    /* C, C#, .. B: as sharps, as the notes are spelled */
 int note_from_name(const char *t);      /* NOTE_OFF, a note, or -1 */
 
 #endif
