@@ -12,6 +12,8 @@
 #include "../app/songview.h"
 #include "../app/undo.h"
 #include "../app/ui.h"
+#include "../app/gfx.h"
+#include "../app/theme.h"
 #include "../core/player.h"
 #include "../core/trk.h"
 
@@ -91,6 +93,18 @@ static void pump(void)
     player_render(pcm, 256);
 }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
+/* Read off the pixels gfx drew: `up` rows above the floor of slot `vis`'s
+ * cell for track `t`. The floor is under the level's bar, so what is found
+ * there is the strike's alone. */
+static uint16_t foot_px(int vis, int t, int up)
+{
+    int y = GRID_HEAD + vis * GRID_ROW + GRID_ROW - 2 - up, x = GRID_CELL_X + t * 31 + 8;
+    const uint16_t *b = gfx_band(y / 16);
+    return b ? b[(y % 16) * PLAT_W + x] : 0;
+}
+/* The bar as it stands off the band: on the black, in the colour of what
+ * plays, along the floor itself. */
+static bool foot_bar(int vis, int t) { return foot_px(vis, t, 0) == C_TITLE; }
 #define E(i) (app_song.arrangement[i])
 /* The slots of the grid the page spends from phrase `top` down to `play`:
  * one for the phrase, one more where a section opens over it. Past
@@ -611,6 +625,46 @@ int main(void)
               songview_top() == 5 && slots_to(songview_top(), 11) <= GRID_ROWS);
         player_stop();
         pump();
+    }
+
+    {   /* The grid drawn on every step of a phrase that plays, the strike
+         * bar among them: t0 00 is 16 steps and t1 00 is 8, both striking
+         * on their first, so the bar is read on step 00 for the two tracks
+         * and on step 08 for the short block alone, come round again. The
+         * drawing is judged on the panel; what is asked here is that
+         * walking it writes nowhere it should not. */
+        trk_load(&app_song, trk, sizeof trk - 1, NULL);
+        player_init(&app_song);
+        songview_open(true);
+        CHECK("nothing is struck before PLAY", !foot_bar(0, 0));
+        player_play_song(0, false);
+        pump();
+        go();
+        CHECK("the song plays its first phrase", player_playing() && player_row() == 0);
+        /* the cursor is still on phrase 00, the one that plays: the bar is
+         * inside the green rectangle and not along its edge */
+        CHECK("on the band the bar comes up a row, the green left under it",
+              foot_px(0, 1, 1) == C_ON_ACC && foot_px(0, 1, 0) == C_ACCENT);
+        enc(PE_K1, 1); /* the cursor off the phrase that plays: its cells on the black */
+        CHECK("the two tracks that write a note on the first step wear the bar",
+              foot_bar(0, 0) && foot_bar(0, 1));
+        CHECK("and a track whose cell names no block does not", !foot_bar(0, 2));
+        for (int i = 0; i < 200 && player_row() == 0 && player_tick_in_step() < 4; i++)
+            pump(), go();
+        CHECK("the bar is gone before the step it was struck on is over",
+              player_row() == 0 && !foot_bar(0, 0));
+        for (int i = 0; i < 200 && player_row() == 0; i++)
+            pump(), go();
+        CHECK("and walks on through it", player_row() == 1);
+        CHECK("a step with nothing written on it lights nothing", !foot_bar(0, 0));
+        for (int i = 0; i < 2000 && player_row() != 8; i++)
+            pump(), go();
+        CHECK("as far as the step the shorter block comes round on",
+              player_row() == 8);
+        player_stop();
+        pump();
+        go();
+        CHECK("and stops there", !player_playing());
     }
 
     printf("song test: %s\n", fails ? "FAIL" : "ok");
