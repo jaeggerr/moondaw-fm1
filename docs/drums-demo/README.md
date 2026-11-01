@@ -2,13 +2,14 @@
 
 **Choice made on 29/10: A, Felucca.** Its engine is now MOONDAW's,
 the **DRUM** engine (see "The DRUM engine, integrated" at the bottom).
-`1-drum.wav` is that engine, the real one, rendered by the FM-1 core; the
+`1-drum.mp3` is that engine, the real one, rendered by the FM-1 core; the
 rest of this page is the study that led to the choice.
 
 Nothing was installed on the FM-1. Everything is regenerated with
 
 ```sh
 python3 tools/drums/drums.py
+for f in docs/drums-demo/*.wav; do ffmpeg -y -i "$f" -q:a 2 "${f%.wav}.mp3"; done
 ```
 
 (numpy; the "current" reference is rendered by `tests/fm_render.c`, the
@@ -16,20 +17,21 @@ FM-1 core itself, from `tools/drums/current-kit.trk`).
 
 ## The files
 
-All mono 16-bit WAV at 44 100 Hz (`SYNTH_FS`), at the same loudness
-(each file's beat at −17 dBFS RMS): we compare colours, not
-volumes.
+All mono at 44 100 Hz (`SYNTH_FS`), at the same loudness (each file's
+beat at −17 dBFS RMS): we compare colours, not volumes. What is kept here
+is MP3 (LAME `-q:a 2`) of the 16-bit WAV the generator writes; the WAV
+itself is not kept in the repository.
 
 | File | Contents |
 | --- | --- |
-| `0-actuel.wav` | the drums from before DRUM (see below) |
-| `1-drum.wav` | **the integrated DRUM engine** (Felucca's STD kit), same grid |
-| `A-felucca.wav` | candidate A, the design of Felucca's DRUM engine |
-| `B-analog.wav` | candidate B, the "analog" models of Plaits/Peaks (808) |
-| `C-synth.wav` | candidate C, the "synthetic" models of Plaits (909-ish) |
-| `D-chipplus.wav` | candidate D, the current engines with what they lack |
-| `comparatif-rythmes.wav` | the bar of beat with its break, in the order current, DRUM, A, B, C, D, separated by 0.6 s |
-| `comparatif-petit-haut-parleur.wav` | the same, through a 200 Hz high-pass (12 dB/oct), one gain for all: roughly what the FM-1 speaker lets through |
+| `0-actuel.mp3` | the drums from before DRUM (see below) |
+| `1-drum.mp3` | **the integrated DRUM engine** (Felucca's STD kit), same grid |
+| `A-felucca.mp3` | candidate A, the design of Felucca's DRUM engine |
+| `B-analog.mp3` | candidate B, the "analog" models of Plaits/Peaks (808) |
+| `C-synth.mp3` | candidate C, the "synthetic" models of Plaits (909-ish) |
+| `D-chipplus.mp3` | candidate D, the current engines with what they lack |
+| `comparatif-rythmes.mp3` | the bar of beat with its break, in the order current, DRUM, A, B, C, D, separated by 0.6 s |
+| `comparatif-petit-haut-parleur.mp3` | the same, through a 200 Hz high-pass (12 dB/oct), one gain for all: roughly what the FM-1 speaker lets through |
 
 Each kit file follows the same grid (120 bpm, 16 steps per bar,
 the grid of `current-kit.trk`):
@@ -62,7 +64,7 @@ MOONDAW has no drum engine. Drums are made with the three
   no real body for the snare (here a PULSE layer);
 - **toms**: WAVE with a gentler `fSWP`.
 
-The measurements on `0-actuel.wav` say what you hear: the kick
+The measurements on `0-actuel.mp3` say what you hear: the kick
 drops by 30 dB in **60 ms** (the candidates: 360 to 490 ms) and its spectral
 centroid is at 1.5 kHz — that is the buzz of the triangle's steps
 and the drive, not a "boom"; the tom glides down to 76 Hz. No
@@ -116,7 +118,7 @@ as a preset of its ANALOG engine (1 000–1 450); roughly, 20 to
 40 operations per sample per sounding voice, the six squares shared
 between hi-hats. A silent voice (−84 dB) costs nothing.
 
-**Caution**: `A-felucca.wav` is my floating-point recreation from the
+**Caution**: `A-felucca.mp3` is my floating-point recreation from the
 description and the numbers in the code, **not** Felucca's exact sound. Its
 test `tests/drum_test.c` renders its own demos (`build/drum_demo/`), but
 I was not allowed to run the downloaded code here; run it
@@ -146,7 +148,7 @@ MIT notice is kept.
 
 **The sound**: the most "real" on headphones, round and deep — but the
 kick puts 98 % of its energy below 150 Hz: on the FM-1 speaker
-it almost disappears (listen to `comparatif-petit-haut-parleur.wav`).
+it almost disappears (listen to `comparatif-petit-haut-parleur.mp3`).
 
 **CPU cost**: the most expensive. An SVF whose frequency moves every
 sample (it needs tan(πf): a table), and the snare runs
@@ -263,8 +265,8 @@ the most; C is a good second if we want a 909 character; D is the
 fallback plan if we want to stay 100 % chiptune and not touch the
 format.
 
-**Before deciding**: listen to `comparatif-rythmes.wav` on headphones, then
-`comparatif-petit-haut-parleur.wav`, and run Felucca's `drum_test`
+**Before deciding**: listen to `comparatif-rythmes.mp3` on headphones, then
+`comparatif-petit-haut-parleur.mp3`, and run Felucca's `drum_test`
 to hear A's original (my version is only an
 approximation of it).
 

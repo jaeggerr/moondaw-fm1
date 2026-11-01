@@ -5,3 +5,7 @@ moondaw-fm1.flash
 # core/ the directory is the tracker
 /core
 !/core/
+
+# the listening demos are kept as .mp3; the .wav the generators write
+# (tools/drums/drums.py, tests/fm_render.c) stays out of the repository
+docs/**/*.wav

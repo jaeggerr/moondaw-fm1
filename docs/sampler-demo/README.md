@@ -8,8 +8,9 @@ Am - F - C - G at 96 BPM, four arrangement steps of four bars: the three
 melodic instruments alone, then bass and kick, then the full kit, then a
 variation. 40 s.
 
-`SMPL-DEMO.wav` is that song as the FM-1's own core renders it, through
-the same reverb and delay the device runs.
+`SMPL-DEMO.mp3` is that song as the FM-1's own core renders it, through
+the same reverb and delay the device runs (MP3 of the WAV `fm_render`
+writes; the WAV itself is not kept in the repository).
 
 ## The bank it wants
 
@@ -39,6 +40,8 @@ from.
         core/store.c -o build/fm_render
     build/fm_render docs/sampler-demo/songs/SMPL-DEMO.trk \
         docs/sampler-demo/SMPL-DEMO.wav 40.5 --bank build/demo-bank.bin
+    ffmpeg -y -i docs/sampler-demo/SMPL-DEMO.wav -q:a 2 \
+        docs/sampler-demo/SMPL-DEMO.mp3
 
 ## To hear it on the FM-1
 

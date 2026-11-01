@@ -4,8 +4,9 @@ current MOONDAW drums, the same kit on the same grid.
 
     python3 tools/drums/drums.py            (from the repository root)
 
-Writes docs/drums-demo/*.wav. Floats, sample by sample: what each engine
-does, not how the FM-1 would compute it (see docs/drums-demo/README.md).
+Writes docs/drums-demo/*.wav, encoded afterwards to the .mp3 the
+repository keeps. Floats, sample by sample: what each engine does, not
+how the FM-1 would compute it (see docs/drums-demo/README.md).
 
 Every candidate is written here from the technique, not copied:
   A FELUCCA  the design of Felucca's drum_voice.c (GPL-3.0-only): damped
