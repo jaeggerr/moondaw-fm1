@@ -55,6 +55,7 @@ enum { ASK_NONE, ASK_OPEN, ASK_PLAY, ASK_HOME }; /* what the question leads to o
  * maintenu est inutile vu que de toute facon tous les autres boutons
  * annulent deja" (30/10). It cost the one reflex of tapping HOME twice. */
 static bool ask_armed; /* HOME let go since the question opened -- it opened under a held HOME */
+static int ask_failed; /* what SAVE answered the question with, 0 until it failed */
 static uint32_t prev_btns;
 static int batt = -1; /* 0..100, or -1: read once a frame, never from a draw */
 static bool listing; /* in PROJECTS, not the root */
@@ -133,6 +134,7 @@ void menu_ask_home(void)
 {
     opts = deleting = naming = listing = false;
     asking = ASK_HOME;
+    ask_failed = 0;
     pending = open_row;
     ask_armed = false;
     prev_btns = 0xFFFFFFFFu;
@@ -291,7 +293,9 @@ static void draw_question(void)
     gfx_text(F_COND20, TEXT_X, y += 2 * ROW, "SAVE  keep the changes", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "HOME again  lose them", C_TEXT);
     gfx_text(F_COND20, TEXT_X, y += ROW, "anything else: stay", C_DIM);
-    if (asking == ASK_HOME) {
+    if (ask_failed && ask_failed != STORE_ERR_FULL) {
+        gfx_text(F_COND14, TEXT_X, y + ROW, "NOT SAVED: THE FLASH REFUSED", C_FX);
+    } else if (asking == ASK_HOME) {
         gfx_text(F_COND12, TEXT_X, y += 2 * ROW - 8, "then puts the song down", C_DIM);
     } else {
         const char *then = asking == ASK_PLAY ? "then plays " : "then opens ";
@@ -485,14 +489,27 @@ int menu_frame(const PlatInput *in)
             bool touched = btns || in->keys;
             for (int e = 0; e < PLAT_ENCS; e++)
                 touched |= in->enc[e] != 0;
-            if (!ask_armed || !touched) {
+            /* Saved by the window, after room was made: that is the answer. */
+            if (ask_failed && !app_dirty) {
+                ask_failed = 0;
+                btns = 1u << PB_HOME;
+            } else if (!ask_armed || !touched) {
                 gfx_frame(draw);
                 return MENU_STAY;
             }
         }
-        if (btns & 1u << PB_SAVE)
-            answered = app_save() == 0, decided = true;
-        else if (btns & 1u << PB_HOME)
+        if (btns & 1u << PB_SAVE) {
+            /* Not saved, nothing is decided: leaving now, without a word, would
+             * look as if SAVE did nothing. The question stays; on a full flash the
+             * window opens over it (room.h), and may yet save the song. */
+            ask_failed = app_save();
+            if (ask_failed) {
+                gfx_invalidate();
+                gfx_frame(draw);
+                return MENU_STAY;
+            }
+            answered = decided = true;
+        } else if (btns & 1u << PB_HOME)
             answered = decided = true;
         else
             decided = true; /* anything else: stay */
@@ -501,6 +518,7 @@ int menu_frame(const PlatInput *in)
             return MENU_STAY;
         }
         asking = ASK_NONE; /* "stay": the list as it was, the cursor where it was */
+        ask_failed = 0;
         if (then == ASK_HOME) {
             /* Saved or lost, the song is put down -- that is what reaching
              * the root means now. Unanswered, the hand goes back into it. */
@@ -652,3 +670,4 @@ int menu_frame(const PlatInput *in)
 }
 
 bool menu_in_list(void) { return listing && !opts && !naming && !asking; }
+bool menu_asking(void) { return asking != ASK_NONE; }

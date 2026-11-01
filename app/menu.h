@@ -23,6 +23,7 @@ int menu_frame(const PlatInput *in);
  * MENU_BACK is the answer that sends the hand back into the song. */
 void menu_ask_home(void);
 /* In PROJECTS' list, no panel or question open: where EDIT does something (the guide). */
+bool menu_asking(void); /* the "not saved" question is up */
 bool menu_in_list(void);
 
 #endif

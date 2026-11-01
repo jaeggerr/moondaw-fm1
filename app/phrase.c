@@ -209,7 +209,7 @@ int phrase_frame(const PlatInput *in)
         measure();
     }
     if (PRESSED(PB_SAVE))
-        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+        said = ui_save_word(app_save());
     if (PRESSED(PB_PLAY)) {
         if (playing)
             player_stop();

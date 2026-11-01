@@ -1190,7 +1190,7 @@ int pattern_frame(const PlatInput *in)
     ui_midi_play(in, edit_instr_at(song, track, pat, cur_row));
 
     if (PRESSED(PB_SAVE))
-        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+        said = ui_save_word(app_save());
     if (undo_turn(in->enc[PE_ALGO], &said)) {
         /* what was taken back may be older than this screen: the block
          * the phrase names here, or the track itself */

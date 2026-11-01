@@ -1750,7 +1750,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             col = song->num_tracks - 1;
     }
     if (PRESSED(PB_SAVE))
-        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+        said = ui_save_word(app_save());
     if (PRESSED(PB_PLAY)) {
         settle = 0;
         if (audition) /* the ear first: the song is what the next PLAY plays */

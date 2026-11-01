@@ -3642,3 +3642,31 @@ a capture: the sign was right, the text is what moved.
   stays at --; nothing is overwritten. Set back to --, the step's ARP leaves.
 - **Two choices on one step within a second are one gesture**, by undo.h's rule.
 - **RAMTEXT was full again**: 156 bytes over with the audition arpeggio. `player_profile`, `player_profile_reset`, `fx_init` and `osc_init`, which only the main loop reaches, moved to `.flash_text`. Nothing on the render path left RAM.
+
+## 2026-11-01 — a song that no longer fits beside itself
+
+TREMOLO-CHIP, 23 KB, with 19 KB of flash left: SAVE cannot succeed, on any change
+to that song, because a save writes the new file beside the old and commits it
+with one write. That guarantee stays. What was wrong is what the machine did about
+it. Every corner said NOT SAVED with no reason, and the question on the way to the
+root took a failed SAVE for "stay" and went back into the song without a word. So
+SAVE seemed to do nothing, and PROJECTS, the one place room can be made, was out of
+reach while the changes were unsaved: losing them was the only way out.
+
+The first answer put the reason in the corner and the way out in that question,
+and the panel's verdict was right: the question only comes up on the way to the
+root. Press SAVE, miss a corner, switch off, and the work is gone. So:
+
+- **FLASH FULL is a window, on every SAVE that fails on room**, opened by app_save
+  itself whichever screen asked (app/room.h). The corners say nothing about it.
+- **SEL: the other projects and what each takes. SEL: are you sure. SEL: gone**, and
+  back to the list for another. HOME is a step back at each.
+- **As soon as the song fits it is saved**, SAVE having been asked for already. What
+  it takes is measured by writing the file to nowhere, so the flash is not worn on
+  an attempt that cannot succeed.
+- **The open project is not offered.** Deleting its old file to fit the new one
+  would give up what a save promises. Nor is the sample bank: it is not a project.
+- **It lets go only when the hand is off everything**, or the HOME that closes it
+  would be read as a step back by the screen under it.
+
+Nothing is freed for the hand: which song goes is its own choice.

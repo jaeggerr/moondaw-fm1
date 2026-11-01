@@ -688,7 +688,7 @@ int instrument_frame(const PlatInput *in)
         preview(in->ms);
     undo_turn(in->enc[PE_ALGO], &said);
     if (PRESSED(PB_SAVE))
-        said = app_save() == 0 ? "SAVED" : "NOT SAVED";
+        said = ui_save_word(app_save());
 
     grid_follow(&row, &top, nrows(), GRID_ROWS);
     ui_led_state(PB_PLAY, previewing);
