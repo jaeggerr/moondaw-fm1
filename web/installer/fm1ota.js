@@ -95,7 +95,8 @@ export function describe(id) {
   if (id.loader) return "the update loader: an update was cut off and is waiting to be finished";
   if (id.model !== "FM-1") return "not an FM-1";
   const v = id.version;
-  if (v === 900) return "MOONDAW (or another FM-1_900 build: hello, a Felucca development build)";
+  if (v >= 9330000 && v < 9340000) return "MOONDAW";
+  if (v === 900) return "MOONDAW 0.1 (or another FM-1_900 build: hello, a Felucca development build)";
   if (v === 917) return "Felucca 1.7";
   if (v > 900 && v < 1000) return "Felucca or another Felucca-based firmware";
   if (v > 0 && v < 100) return `the official M-VAVE firmware V${v}`;

@@ -196,7 +196,7 @@ def scenarios(n_image, rng, back_id):
         return s
     return [
         var("install"),
-        var("install-over-moondaw", app_id="FM-1_900", app_port="Felucca"),
+        var("install-over-moondaw", app_id="FM-1_9330001", app_port="Felucca"),   # a device on 0.1
         var("finish-cut-off-update", start="loader"),
         var("no-fm1", start="gone"),
         var("wrong-model", app_id="XY-7_001"),
@@ -210,7 +210,7 @@ def scenarios(n_image, rng, back_id):
 
 
 def units(rng):
-    ids = ["FM-1_900", "FM-1_917", "FM-1_015", "FM-1_014", "ota-FM-1_900", "FM-1_8000014", "FM\x1b[2J-1_5", "noversion"]
+    ids = ["FM-1_9330002", "FM-1_900", "FM-1_917", "FM-1_015", "FM-1_014", "ota-FM-1_900", "FM-1_8000014", "FM\x1b[2J-1_5", "noversion"]
     identities = [identity_pkt(t).hex() for t in ids]
     identities.append((b"\xF0" + fi.pack7(b"\x00\x59\x12" + bytes(31)) + b"\xF7").hex())     # other command
     requests = []
@@ -314,19 +314,22 @@ def main():
             return False
         return True
 
-    runs = [(a.package, False, "FM-1_900")] + ([(a.stock, True, "FM-1_015")] if a.stock else [])
+    # None: the identity the package itself carries, read from it below -- MOONDAW's
+    # moves with its version (FM-1_933XXYY), so nothing here may hard-code it
+    runs = [(a.package, False, None)] + ([(a.stock, True, "FM-1_015")] if a.stock else [])
     songs = [("KIDS", bytes(rng.randrange(256) for _ in range(1000))), None, ("EMPTY", b""),
              ("DPEN-CHORUS", bytes(rng.randrange(256) for _ in range(250)))]
     for path, stock, back in runs:
         product, image = fi.load_package(path, False)
+        pkg_id = product
         print(f"{Path(path).name}: {product}, logical image {len(image)} bytes")
-        scs = scenarios(len(image), rng, back)
+        scs = scenarios(len(image), rng, back or product)
         if stock:
             for s in scs:
-                s["app_id"], s["app_port"] = ("FM-1_900", "Felucca") if s["app_id"] == "FM-1_015" else (s["app_id"], s["app_port"])
+                s["app_id"], s["app_port"] = (pkg_id, "Felucca") if s["app_id"] == "FM-1_015" else (s["app_id"], s["app_port"])
                 s["back_port"] = s["back_port"] and "USB Composite Device"
                 if s["back_id"] == "FM-1_917":
-                    s["back_id"] = "FM-1_900"
+                    s["back_id"] = pkg_id
         u, ids = units(rng)
         sc = {"package": str(path), "stock": stock, "scenarios": scs, **u,
               "songs": [[s[0], s[1].hex()] if s else None for s in songs]}

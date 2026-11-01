@@ -14,7 +14,8 @@
 The package is served from the same site as the page: the page reads it with
 fetch(), which a release asset on another host (GitHub Releases) does not allow.
 It must be one made by tools/fm1pkg_make.py (Felucca's loader, no vendor files)
-with MOONDAW's identity, FM-1_900. --source is the URL of the source code, linked
+whose identity is MOONDAW's (FM-1_933 and the version). --source is the URL of the
+source code, linked
 from the page (GPL-3.0).
 """
 import argparse
@@ -45,8 +46,8 @@ def main():
     a = ap.parse_args()
     raw = a.package.read_bytes()
     product = product_of(raw)
-    if product != "FM-1_900":
-        raise SystemExit(f"{a.package}: identity {product!r}, MOONDAW's is 'FM-1_900'")
+    if not product.startswith("FM-1_933"):
+        raise SystemExit(f"{a.package}: identity {product!r}, MOONDAW's begins with 'FM-1_933'")
     if b"FELUCCA-LOADER-1" not in raw:          # never publish a package with vendor files in it
         raise SystemExit(f"{a.package}: no Felucca loader in it; the site ships only fm1pkg_make.py packages")
     if not re.fullmatch(r"[A-Za-z0-9.+-]+", a.version):

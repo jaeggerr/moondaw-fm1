@@ -51,7 +51,8 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_900"                # package identity; release builds are FM-1_9XY
+PRODUCT = "FM-1_9330000"            # package identity: 933 is MOONDAW's own prefix,
+                                    # 0000 a build that is not a release (--release X.Y)
 
 
 def toolchain():
@@ -318,15 +319,15 @@ def mmio_check():
 def main():
     global PRODUCT
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_9XY, version string vX.Y")
+    ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_933XXYY, version string vX.Y")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "moondaw.fwsc"
-    if a.release:                   # one digit each: the identity has room for two (X.Y.Z and X.Y.Z.W keep X.Y's)
-        m = re.fullmatch(r"(\d)\.(\d)(?:\.\d){0,2}(-[A-Za-z0-9]+)?", a.release)
+    if a.release:                   # X and Y, two digits each (X.Y.Z and X.Y.Z.W keep X.Y's)
+        m = re.fullmatch(r"(\d{1,2})\.(\d{1,2})(?:\.\d+){0,2}(-[A-Za-z0-9]+)?", a.release)
         if not m:
-            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z, X.Y.Z.W or X.Y-suffix, one digit each")
-        PRODUCT = "FM-1_9" + m[1] + m[2]
+            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z, X.Y.Z.W or X.Y-suffix, X and Y at most two digits")
+        PRODUCT = f"FM-1_933{int(m[1]):02d}{int(m[2]):02d}"
         name = f"moondaw-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
