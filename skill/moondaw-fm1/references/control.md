@@ -168,9 +168,10 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `ENV, SEL on instr.` | edit the instrument |
 | `PRESETS on instr.` | choose an instrument |
 | `SEL on an effect` | the syllable |
-| `ARP on notes` | the chords of the key |
+| `ARP on notes` | chords on the keyboard |
 | `  white keys` | degrees, octave up |
 | `  OP1 to OP5` | the section |
+| `EDIT held + ARP` | the list: section, inv. |
 | `keys` | write in a note column |
 | `keys elsewhere` | play, write nothing |
 | `OCT- OCT+` | the keyboard's octave |

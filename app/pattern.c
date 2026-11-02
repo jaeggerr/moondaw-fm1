@@ -52,7 +52,12 @@
  *   REC   armed, or not: PLAY then counts a bar in and records what the keys play
  *         on the nearest step (replacing it), an OFF where the last key is let go;
  *         armed and stopped, the keys only play
- *   ARP   on NOTES, an instrument and not a kit: CHORDS, those of the song's KEY (app/chords.h)
+ *   ARP   on NOTES, an instrument and not a kit: the chord mode, on or off -- lit, the white
+ *         keys are the chords of the song's KEY and write them whole on the step under the
+ *         cursor, OP1-OP5 the section (2/11, app/chords.h); it cannot be on with EDIT's caps
+ *         lock, the black keys being both their sections and its commands, so the last pressed
+ *         wins. EDIT held + ARP opens the list of them, where the section, the inversion and
+ *         the arpeggio the keys play with are set
  *   ALGO  UNDO left, REDO right     SAVE  PLAY  as printed
  * FX is a view here, not the MIXER: FX shows the effects of where one is. */
 enum { V_NOTES, V_FX, V_INS, VIEWS };
@@ -97,6 +102,7 @@ enum { CH_TOP = 24, CH_ROWS = 7, CH_NEW = SONG_MAX_INSTR + 1, CH_N = SONG_MAX_IN
 static bool choosing, listening;
 static bool writing_syl; /* the SYLLABLE screen, for the FX slot syl_slot */
 static bool in_chords;   /* the CHORDS screen, for the step under the cursor */
+static bool arp_mode;    /* ARP lit: the keyboard is the chords (app/chords.h) */
 /* SELECTION (29/10, OP5's since 31/10): the rectangle from the anchor to the
  * cursor, KNOB 2 left of the first column taking whole steps; the black
  * keys OP1-4 copy, paste, cut, clear, OP6 makes its steps the LOOP PLAY
@@ -443,6 +449,48 @@ static void draw_cell(int v, int r, int c, bool band)
     }
 }
 
+/* ------------------------------------------------------------ chords --- */
+/* Where chords mean anything: a melodic instrument on the step the cursor is
+ * on, in the view notes are written in. EDIT is the two call sites' own --
+ * held it opens the list, latched it is the other mode (app/chords.h). */
+static bool chords_here(void)
+{
+    int k = edit_instr_at(song, track, pat, cur_row) % SONG_MAX_INSTR;
+    return view == V_NOTES && !selecting && song->instruments[k].engine != ENGINE_DRUM;
+}
+
+/* What CHORDS kept, on the step: the notes replace the step's, and the
+ * arpeggio takes its own slot or an empty one -- it was offered only where
+ * there is one -- or leaves when set back to --. */
+static void chords_write(int row)
+{
+    uint8_t nn[STEP_MAX_NOTES];
+    int n = chords_notes(nn), arp = chords_arp(), slot = -1;
+    Step *st = step_w(row);
+    if (!st)
+        return; /* POOL FULL, said by step_w */
+    for (int i = 0; i < STEP_MAX_NOTES; i++)
+        st->notes[i] = i < n ? nn[i] : NOTE_NONE;
+    for (int i = STEP_MAX_FX - 1; i >= 0; i--)
+        if (st->fx[i].cmd == FX_NONE)
+            slot = i; /* the first empty one */
+    for (int i = 0; i < STEP_MAX_FX; i++)
+        if (st->fx[i].cmd == FX_ARP)
+            slot = i; /* its own before any */
+    if (slot < 0) {
+        if (arp)
+            said = "FX FULL"; /* the notes are written, the arpeggio has nowhere to go */
+        return;
+    }
+    if (arp) {
+        st->fx[slot].cmd = FX_ARP;
+        st->fx[slot].val = (uint8_t)arp;
+    } else if (st->fx[slot].cmd == FX_ARP) {
+        st->fx[slot].cmd = FX_NONE;
+        st->fx[slot].val = 0;
+    }
+}
+
 /* --------------------------------------------------------------- REC --- */
 /* The step nearest to the playhead: the one playing, or the next when it
  * is past its middle. */
@@ -456,6 +504,13 @@ static int rec_nearest(void)
 static void rec_keys(const PlatInput *in, uint32_t keys)
 {
     int instr = edit_instr_at(song, track, pat, rec_row >= 0 ? rec_row : rec_nearest());
+    if (arp_mode) { /* the chord mode: one key is the chord, on the step at the playhead */
+        if (chords_mode_keys(keys, in->keys)) {
+            rec_row = rec_nearest();
+            chords_write(rec_row);
+        }
+        keys = 0;
+    }
     for (int k = 0; k < PLAT_KEYS; k++) {
         int n = edit_key_note(song, instr, kbd_oct, k);
         Step *st;
@@ -597,42 +652,6 @@ static void write_syl(void)
         return;
     st->fx[syl_slot].cmd = t[0] ? FX_SYL : FX_NONE;
     st->fx[syl_slot].val = t[0] ? (uint8_t)idx : 0;
-}
-
-/* ------------------------------------------------------------ chords --- */
-static bool chords_here(void)
-{
-    int k = edit_instr_at(song, track, pat, cur_row) % SONG_MAX_INSTR;
-    return view == V_NOTES && !selecting && !ui_shifted(&shift) && song->instruments[k].engine != ENGINE_DRUM;
-}
-
-/* What CHORDS kept, on the step: the notes replace the step's, and the
- * arpeggio takes its own slot or an empty one -- it was offered only where
- * there is one -- or leaves when set back to --. */
-static void chords_write(void)
-{
-    uint8_t nn[STEP_MAX_NOTES];
-    int n = chords_notes(nn), arp = chords_arp(), slot = -1;
-    Step *st = step_w(cur_row);
-    if (!st)
-        return; /* POOL FULL, said by step_w */
-    for (int i = 0; i < STEP_MAX_NOTES; i++)
-        st->notes[i] = i < n ? nn[i] : NOTE_NONE;
-    for (int i = STEP_MAX_FX - 1; i >= 0; i--)
-        if (st->fx[i].cmd == FX_NONE)
-            slot = i; /* the first empty one */
-    for (int i = 0; i < STEP_MAX_FX; i++)
-        if (st->fx[i].cmd == FX_ARP)
-            slot = i; /* its own before any */
-    if (slot < 0)
-        return;
-    if (arp) {
-        st->fx[slot].cmd = FX_ARP;
-        st->fx[slot].val = (uint8_t)arp;
-    } else if (st->fx[slot].cmd == FX_ARP) {
-        st->fx[slot].cmd = FX_NONE;
-        st->fx[slot].val = 0;
-    }
 }
 
 /* ------------------------------------------------- choose instrument --- */
@@ -848,6 +867,8 @@ static void draw(void)
         grid_corner(recording ? "REC" : "REC ARMED", C_MUTE, 0, 0);
     else if (selecting) /* the mode, in place of where one is */
         grid_corner("SELECT", C_FX, 0, 0);
+    else if (arp_mode) /* the section the keys play, the lit ARP saying the mode */
+        grid_corner(chords_mode_word(), C_FX, 0, 0);
     else if (loop_state() == LOOP_SET) { /* the loop, in place of where one is: LOOP 02-05 */
         char lo[3], hi[3], range[6];
         grid_hex2(lo, loop_from()), grid_hex2(hi, loop_to());
@@ -1009,7 +1030,7 @@ int pattern_frame(const PlatInput *in)
     if (in_chords) {
         int r = chords_frame(in, btns, keys);
         if (r == CHORDS_KEPT)
-            chords_write();
+            chords_write(cur_row);
         if (r != CHORDS_OPEN) {
             in_chords = false;
             gfx_invalidate();
@@ -1085,15 +1106,38 @@ int pattern_frame(const PlatInput *in)
         au_hush();
         ch_open();
     }
-    /* ARP: what the key suggests, for the step under the cursor. A kit has no
-     * chords, and the keys being written or counted in are not interrupted. */
-    if (PRESSED(PB_ARP) && chords_here() && !counting && !recording) {
+    /* ARP (2/11): the chord mode, on or off -- lit, the keyboard is the chords
+     * of the KEY and writes them on the step under the cursor. EDIT held + ARP
+     * is the list itself, where the section, the inversion and the arpeggio are
+     * set: two hands for the screen, one for the keyboard, and no duration
+     * between them (app/chords.h). A kit has no chords; the list does not
+     * interrupt the keys being counted in or recorded, the mode is what they
+     * record with. The caps lock and the chord mode cannot both be on, so the
+     * one pressed last wins -- here, ARP. */
+    chords_mode_bind(song, edit_instr_at(song, track, pat, cur_row), &kbd_oct);
+    if (arp_mode && (!chords_here() || shift.latch))
+        arp_mode = false;
+    /* EDIT + ARP is a gesture of the shift's and not a tap of it, whether or not
+     * there are chords to open here -- else the caps lock turns itself on in the
+     * FX view and on a kit (ui.c does the same for EDIT + REC). */
+    if (PRESSED(PB_ARP) && shift.held)
+        shift.used = true;
+    if (PRESSED(PB_ARP) && shift.held && chords_here() && !counting && !recording) {
         au_quiet();
+        arp_mode = false;
         chords_open(song, edit_instr_at(song, track, pat, cur_row), &kbd_oct, step_at(cur_row));
         in_chords = true;
         ui_led_guide(chords_buttons());
         gfx_frame(chords_draw);
         return PATTERN_STAY;
+    }
+    if (PRESSED(PB_ARP) && !shift.held && chords_here()) {
+        au_hush();
+        player_note_off();
+        arp_mode = !arp_mode;
+        shift.latch = false;
+        /* No word in the corner: the lit ARP and the section's name standing
+         * where the track's does say it, and `said` would be red here. */
     }
     if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]) /* the hand left the step */
         au_hush();
@@ -1164,6 +1208,14 @@ int pattern_frame(const PlatInput *in)
         recording = rec_live = false, rec_armed = false;
     if (recording) {
         rec_keys(in, keys);
+        keys = 0;
+    }
+    /* The chord mode: a white key is the whole step, written where the cursor
+     * is and heard as it is written; the section keys are the black ones'
+     * (app/chords.h). Nothing of the keyboard's own is left to do. */
+    if (arp_mode && !recording) {
+        if (chords_mode_keys(keys, in->keys))
+            chords_write(cur_row);
         keys = 0;
     }
 
@@ -1270,18 +1322,22 @@ int pattern_frame(const PlatInput *in)
      * its finger says itself, a shift that sticks has to be told. What says
      * the SELECTION is on is OP5's own light (ui.h, 31/10) */
     ui_led_guide((view != V_NOTES ? 1u << PB_SEQ : 0u) | (view != V_FX ? 1u << PB_FX : 0u) | 1u << PB_ENV |
-                 1u << PB_GLO | (shift.latch ? 1u << PB_EDIT : 0u) | (chords_here() ? 1u << PB_ARP : 0u) |
+                 1u << PB_GLO | (shift.latch ? 1u << PB_EDIT : 0u) | (arp_mode ? 1u << PB_ARP : 0u) |
                  (selecting ? 0u : 1u << PB_OCTDN | 1u << PB_OCTUP));
     /* the ops: copy and cut and clear on a selection or on what is under the cursor, paste once
      * something was copied. Otherwise, on a kit, the keys that are drums -- the only thing on the
      * machine that says where the snare is, and the eight or eleven lit are the whole kit (30/10) */
-    ui_led_keys(!selecting && !ui_shifted(&shift)
-                    ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
-                    : 1u << OP_COPY | 1u << OP_CUT | 1u << OP_CLEAR | 1u << OP_SEL |
-                          1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
-                /* OP5 lit while the SELECTION is on: the key that opened the mode says so */
-                (selecting ? 1u << OP_SEL : 0u) | (track >= 0 && player_soloed(track) ? 1u << OP_MONO : 0u),
-                track >= 0 && player_muted(track) ? 1u << OP_MONO : 0u);
+    if (arp_mode && !ui_shifted(&shift)) { /* the sections and the degrees that have a chord */
+        chords_mode_leds();
+    } else {
+        ui_led_keys(!selecting && !ui_shifted(&shift)
+                        ? edit_key_drums(song, edit_instr_at(song, track, pat, cur_row))
+                        : 1u << OP_COPY | 1u << OP_CUT | 1u << OP_CLEAR | 1u << OP_SEL |
+                              1u << OP_LOOP | 1u << OP_MONO | (edit_clip_len() ? 1u << OP_PASTE : 0u),
+                    /* OP5 lit while the SELECTION is on: the key that opened the mode says so */
+                    (selecting ? 1u << OP_SEL : 0u) | (track >= 0 && player_soloed(track) ? 1u << OP_MONO : 0u),
+                    track >= 0 && player_muted(track) ? 1u << OP_MONO : 0u);
+    }
     gfx_frame(choosing ? ch_draw : draw);
     if (PRESSED(PB_HOME) && selecting) { /* a step back: out of the SELECTION first */
         selecting = false;

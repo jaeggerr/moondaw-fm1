@@ -3948,3 +3948,65 @@ the pool at the core count would be the fix; it has not been done.
   disk any more. It can say there is room where there is none. Delete them before
   a build whose size you mean to trust, or read the size off the same run that
   printed `ok image ...`.
+
+## 2026-11-02 — ARP is a toggle, and the keyboard becomes the chords
+
+From the panel, on the list of 01/11: « c'est joli d'avoir l'écran avec la liste
+des accords mais tu peux juste les écouter. Si tu veux les encoder il faut à
+chaque fois en sélectionner un et rouvrir la vue d'arpège. » Right, and the
+reason is worth writing down: the list is a *reference screen* — one looks,
+listens, sets — while encoding is a *gesture of play*. One object was doing both,
+so every chord written cost opening it, walking to the chord and leaving, over
+and over. His fix, and it is the right shape: **ARP is a toggle**. Lit, the
+keyboard *is* the chords; the list moves behind **EDIT held + ARP**, where the
+section, the inversion and the arpeggio are set.
+
+- **Not a long press.** He proposed one; it is the quarter of a second `EDIT_TAP`
+  died of on 31/10, and the rule that came out of that evening still holds: what
+  tells two gestures apart is what the other hand did, not how long the first one
+  took. EDIT held + ARP is EDIT + OP5's grammar — two hands for the screen, one
+  for the keyboard.
+- **The caps lock and the chord mode cannot both be on**, his ask, and for a
+  precise reason: the black keys would be both the sections and the clipboard.
+  The one pressed last wins — EDIT tapped drops the mode, ARP drops the latch —
+  and leaving NOTES, a selection or a kit under the cursor ends it too, which is
+  one line against `chords_here()`. EDIT + ARP also marks the shift as used, so
+  the gesture never reads as a bare EDIT tap, even where there are no chords to
+  open (the FX view, a kit): that was a caps lock turning itself on.
+- **The lamp says the mode, not the button.** ARP was lit at guide level
+  whenever the list was reachable, so it could not also say the mode is on. It
+  leaves the guide's mask and lights only while the mode does, which is EDIT's
+  own convention since 31/10: the button that opens a mode is the button that
+  says it is open. The corner says which section the keys play, in the place
+  SELECT's word stands.
+- **One white key writes the whole step**, and the cursor does not move. Both
+  are his: « on peut avoir fait une erreur je préfère qu'on contrôle la ligne
+  manuellement ». A chord *is* the step, so the column the cursor sits in has
+  nothing to say about it — the key writes even on the step's number, where a
+  note would only have played.
+- **The section, the inversion and the arpeggio stick**, and the list opens on
+  the section the mode stands in. PATTERN's four encoders are taken, so the mode
+  has nowhere to set them: what one leaves the list on is what the keys play,
+  and that holds in both directions. The step's own ARP still wins over the
+  mode's when the list opens on a step that has one, and the row never promises
+  an arpeggio with no slot to write it in.
+- **REC armed, the same key records the chord** at the playhead, with the OFF on
+  release the single notes already got. The list could never do this: it does not
+  open while the keys are being counted in or recorded.
+- **Within a section the chords now run by degree**, I to VII, the ones sharing a
+  degree together under it and the one its white key plays first: « au sein d'une
+  même section les accords doivent être triés par degrés, là je ne comprends pas
+  trop l'ordre choisi ». They were by likelihood — I IV V vi ii iii vii, the
+  fewest detents to the common chord — which was worth something while the molette
+  chose and stopped paying the day the keyboard began writing them. The key under
+  the finger *is* the degree, so the list has to read as the keyboard is laid out.
+  SUS / ADD reads much better for it: the three chords on I stand together.
+- **A degree a section has no chord on stays silent**, as in the list, and its
+  key stays dark. BORROWED has four chords and SECONDARY five, so three of the
+  seven white keys do nothing in those two. Falling back to the triads was the
+  alternative; the lit keys already say where the chords are, and inventing a
+  chord under a dark key would be the worse of the two.
+
+`pattern_test` drives the new gestures: the list through EDIT + ARP eighteen
+times, the mode's keys, the two modes pushing each other off, and the lamp. None
+of it has been judged on the panel yet.
