@@ -104,6 +104,13 @@ screens. That is the right thing for trying the firmware and the wrong one
 here: auditioning one zone means playing a chosen note on a chosen
 instrument, which through the panel would mean steering the screens.
 
+It is used twice now. `web/export/` renders a song to WAV with this same
+wasm — one file per track — and the one thing it needed that was not already
+here is `aud_play_once`: the arrangement once, so the sequencer says when a
+render ends instead of JavaScript working that out a second time. Nothing else
+about this file is the export page's; it remains the editor's engine, which
+happens to be the machine's.
+
 `core/bank.c` is the one piece not linked — it reads the index through the
 store's sector map, over a flash this has none of — so the small part of it
 the engine needs is in `audition.c`, with `bank_find`'s rules word for word.

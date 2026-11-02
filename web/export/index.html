@@ -1,0 +1,782 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+
+     Sortir un morceau du FM-1 en WAV. Published at moondaw.com/export/
+     (moondaw/tools/site/build.sh rsyncs build/export/ into site/export/),
+     wearing the site's skin and its header, as web/installer/ does.
+
+     WHY THE RENDER IS HERE AND NOT IN THE MACHINE: see render.js. In one
+     line -- the FM-1 plays a song in real time and only just, has 512 KB,
+     and talks through a pipe that carries 120 bytes an answer. So it hands
+     over the .trk, which is the one thing it keeps well, and this page does
+     the arithmetic with the machine's own engine compiled to wasm.
+
+     TWO LANGUAGES, as the site's other pages do it: the markup ships in
+     FRENCH, English is a swap done by the table at the bottom, and the
+     choice is kept under the SAME localStorage key -- a visitor reading the
+     site in English and following the link lands here in English. There is
+     no build step for the text and no second HTML file: a sentence changed
+     on one side and not the other shows up as an odd-looking pair on
+     adjacent lines.
+
+     NOT TRANSLATED: the machine's own words -- a song's name, an
+     instrument's name, a file name. The FM-1 has no French.
+
+     This page is NOT served from web/export/. build.sh assembles it into
+     build/export/ with the four modules it loads beside it (trk.js and the
+     engine from web/songedit/, mdlink.js and fm1ota.js from web/installer/),
+     the same rule as platform/web/. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOONDAW — sortir un morceau en WAV</title>
+<meta name="description" content="Récupérer un morceau du M-VAVE FM-1 et le rendre en WAV, une piste par fichier, dans le navigateur.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* The site's tokens, as site/index.html carries them. */
+  :root{
+    --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+    --accent:#7FD962; --ink:#0B1409; --dim:#5A6470; --title:#62C8D9;
+    --bad:#9E5555; --bad-hi:#D98B8B; --good:#7FD962;
+    --w-slot:rgba(200,208,200,.07);
+
+    --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+    --body:'Barlow','Helvetica Neue',Arial,sans-serif;
+    --jb:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--page);color:var(--prose);font-family:var(--body);
+    font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ── the site's header ───────────────────────────────────────────── */
+  header.top{border-bottom:1px solid var(--rule);position:sticky;top:0;
+    z-index:10;background:var(--page)}
+  .wrap{max-width:720px;margin:0 auto;padding:0 28px}
+  .top .wrap{display:flex;align-items:center;justify-content:space-between;
+    padding-top:16px;padding-bottom:16px}
+  .wordmark img{display:block;width:130px;height:16px;image-rendering:pixelated}
+  .topright{display:flex;align-items:center;gap:26px}
+  nav{display:flex;gap:26px;font-family:var(--jb);font-size:11px;
+    font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+  nav a{color:var(--prose)}
+  nav a:hover{color:var(--prose-hi);text-decoration:none}
+  .lang{display:flex;margin:-10px}
+  .lang button{background:none;border:0;padding:10px;cursor:pointer;
+    line-height:0;opacity:.4;transition:opacity .12s}
+  .lang button:hover{opacity:.8}
+  .lang button[aria-current="true"]{opacity:1;cursor:default}
+  .lang svg{display:block;width:22px;height:15px;
+    outline:1px solid rgba(200,208,200,.22);outline-offset:-1px}
+
+  /* ── the page ────────────────────────────────────────────────────── */
+  main{padding:56px 0 72px}
+  h1{font-family:var(--cond);font-weight:700;text-transform:uppercase;
+    letter-spacing:.01em;line-height:1.05;font-size:38px;color:var(--prose-hi);
+    margin-bottom:14px}
+  h2{font-family:var(--jb);font-size:11px;font-weight:500;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--accent);margin:40px 0 10px}
+  p{margin-bottom:12px;max-width:62ch}
+  strong,b{color:var(--prose-hi);font-weight:500}
+  em{color:var(--prose-hi);font-style:normal}
+  code{font-family:var(--jb);font-size:.82em;color:var(--prose-hi);
+    background:var(--w-slot);padding:2px 6px}
+  .small{font-size:14.5px}
+  .line{padding:10px 0;border-top:1px solid var(--rule);
+    overflow-wrap:anywhere;color:var(--prose-hi)}
+  .bad{color:var(--bad-hi)}
+  .good{color:var(--good)}
+  .dim{color:var(--dim)}
+
+  button.go{font-family:var(--jb);font-size:12px;font-weight:500;
+    letter-spacing:.12em;text-transform:uppercase;padding:13px 22px;
+    border:1px solid var(--accent);background:var(--accent);color:var(--ink);
+    cursor:pointer}
+  button.go:hover{filter:brightness(1.1)}
+  button.ghost{background:none;color:var(--accent)}
+  button.ghost:hover{background:rgba(127,217,98,.08);filter:none}
+  button.go:disabled{opacity:.3;cursor:default;filter:none}
+  input[type=file]{font-family:var(--body);font-size:14px;color:var(--prose);
+    max-width:100%}
+  label{color:var(--prose)}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:14px 0}
+  .or{font-family:var(--jb);font-size:11px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--dim)}
+  select{font-family:var(--jb);font-size:12.5px;color:var(--prose-hi);
+    background:var(--w-slot);border:1px solid var(--rule);padding:12px 10px;
+    max-width:100%}
+  .hide{display:none}
+
+  /* The drop target: the whole song step is one, so a .trk dragged
+     anywhere near it lands. */
+  .drop{border:1px dashed var(--rule);padding:18px;transition:border-color .12s}
+  .drop.over{border-color:var(--accent);background:rgba(127,217,98,.05)}
+
+  /* What comes out: three choices, never two at once (his call, 02/11). */
+  .modes{display:grid;gap:0;margin:8px 0 0}
+  .modes label{display:grid;grid-template-columns:auto 1fr;gap:0 12px;
+    align-items:baseline;padding:14px 0;border-top:1px solid var(--rule);
+    cursor:pointer}
+  .modes label:hover b{color:var(--accent)}
+  .modes input{margin-top:.45em;accent-color:var(--accent)}
+  .modes b{font-family:var(--cond);font-weight:600;font-size:19px;
+    text-transform:uppercase;letter-spacing:.02em;color:var(--prose-hi)}
+  .modes span{grid-column:2;font-size:14.5px;color:var(--prose)}
+  .modes input:checked~b{color:var(--accent)}
+
+  /* The tracks the song turns out to have, named as the files will be. */
+  ul.tracks{list-style:none;font-family:var(--jb);font-size:12px;
+    margin:10px 0 0;color:var(--prose-hi)}
+  ul.tracks li{padding:5px 0;border-top:1px solid var(--rule)}
+  ul.tracks em{color:var(--dim)}
+
+  progress{width:100%;height:4px;margin-top:18px;accent-color:var(--accent);
+    background:var(--rule);border:0}
+  progress::-webkit-progress-bar{background:var(--rule)}
+  progress::-webkit-progress-value{background:var(--accent)}
+  #status{margin-top:12px;min-height:1.6em;overflow-wrap:anywhere;
+    color:var(--prose-hi)}
+  #bar[value="0"]{visibility:hidden}
+
+  details{margin-top:0;border-top:1px solid var(--rule);padding:14px 0}
+  summary{cursor:pointer;font-family:var(--cond);font-weight:600;
+    font-size:19px;text-transform:uppercase;letter-spacing:.02em;
+    color:var(--prose-hi)}
+  summary:hover{color:var(--accent)}
+  details>:not(summary){margin-top:12px}
+  ol{padding-left:20px;margin-bottom:12px}
+  li{margin-bottom:6px}
+  footer{margin-top:48px;border-top:1px solid var(--rule);padding-top:20px;
+    font-size:13.5px;color:var(--dim)}
+  footer a{color:var(--prose)}
+  footer p+p{margin-top:8px}
+
+  @media (max-width:560px){
+    .wrap{padding:0 16px}
+    nav{display:none}
+    h1{font-size:30px}
+    main{padding-top:40px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="wordmark" href="https://moondaw.com/" aria-label="MOONDAW">
+      <img width="130" height="16" alt="MOONDAW"
+           src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAAAQCAYAAADarae1AAABNUlEQVR4nO2YwQ3CMAxFU8QAbNEVemYMjhksR8bgzAps0Q1AlUCKrKR24h/aVH4nEPavqOMfJ8P8uL1dxOV6H1wCaVwqVpKD0tH+H/98JZ+ZI0xjUl+qQ/NpnlQ/Fyfl7IDkCkd/5xYESsdQLAT6krmi0DxprLRTa3W2WjS+0FF+8dqO1nJCiJQUby0HpWMAHIE6QakzHI3A7OFcR2tniG4cQbpAUtYc56J0DPCwiNhTqUatu2h0cg5XS/h2+N46ehczQoq1F15SDJSO8cfjYwlLERGWjtJpRS/O0cwRjL5o4ggoy0ZaP+r04zfq8Nb3DWpH0EzxcS5Kx+hsRugFzzgA16HaewTqBFxereNBZgTU2d7uCA4wLPayGBb9nraSMI1D7Cr0+y63htRAFn+WFgClYzgxH78J9iKpDL5hAAAAAElFTkSuQmCC">
+    </a>
+    <div class="topright">
+      <nav>
+        <a href="https://moondaw.com/" data-t="nav.site">Le site</a>
+        <a href="https://moondaw.com/manual.html" data-t="nav.manual">Le manuel</a>
+      </nav>
+      <div class="lang" role="group" data-t-aria="lang.group" aria-label="Langue">
+        <button type="button" data-lang="fr" aria-label="Français" title="Français">
+          <svg viewBox="0 0 60 40" aria-hidden="true">
+            <rect width="20" height="40" fill="#002654"/>
+            <rect x="20" width="20" height="40" fill="#fff"/>
+            <rect x="40" width="20" height="40" fill="#ED2939"/>
+          </svg>
+        </button>
+        <button type="button" data-lang="en" aria-label="English" title="English">
+          <svg viewBox="0 0 60 30" aria-hidden="true">
+            <clipPath id="uk-frame"><path d="M0,0 v30 h60 v-30 z"/></clipPath>
+            <clipPath id="uk-pale">
+              <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/>
+            </clipPath>
+            <g clip-path="url(#uk-frame)">
+              <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#uk-pale)"
+                    stroke="#C8102E" stroke-width="4"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+            </g>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <h1 data-t="h1">Sortir un morceau en WAV</h1>
+    <p data-t="intro">Cette page récupère un morceau du FM-1 et le rend en fichiers audio,
+      une piste par fichier. Le rendu se fait <em>ici</em>, dans votre
+      navigateur, avec le moteur de la machine lui-même : le FM-1 ne donne que
+      le morceau.</p>
+
+    <h2 data-t="h2.song">Le morceau</h2>
+    <div class="drop" id="drop">
+      <p class="small" data-t="song.p">Branchez le FM-1 en USB et mettez-le sur son écran MENU — il refuse
+        tout transfert ailleurs. Ou déposez ici un fichier <code>.trk</code>
+        que vous avez déjà sur l'ordinateur.</p>
+      <div class="row">
+        <button type="button" id="connect" class="go" data-t="btn.connect">Connecter le FM-1</button>
+        <span class="or" data-t="song.or">ou</span>
+        <input type="file" id="file" accept=".trk,text/plain">
+      </div>
+      <div class="row hide" id="pickrow">
+        <select id="songs" data-t-aria="song.pick" aria-label="Le morceau à lire"></select>
+        <button type="button" id="read" class="go ghost" data-t="btn.read">Lire</button>
+      </div>
+    </div>
+    <p class="line" id="song">—</p>
+    <ul class="tracks hide" id="tracks"></ul>
+
+    <div class="hide" id="banksec">
+      <h2 data-t="h2.bank">Les samples</h2>
+      <p class="small" id="bank-why" data-t="bank.p">Ce morceau joue des samples. Ils vivent dans la flash de la machine,
+        pas dans le fichier : sans la banque, les pistes échantillonnées
+        sortiraient muettes. La lecture prend quelques secondes.</p>
+      <div class="row">
+        <button type="button" id="bankread" class="go ghost" data-t="btn.bank">Lire la banque</button>
+        <span class="or" data-t="song.or">ou</span>
+        <input type="file" id="bankfile" accept=".bin,application/octet-stream">
+      </div>
+      <p class="line" id="bank">—</p>
+    </div>
+
+    <h2 data-t="h2.what">Ce qui sort</h2>
+    <div class="modes">
+      <label>
+        <input type="radio" name="mode" value="stems" checked>
+        <b data-t="mode.stems">Les pistes, telles qu'elles sonnent</b>
+        <span data-t="mode.stems.p">Un WAV par piste qui joue, avec son niveau, son panoramique, sa
+          réverbe et son écho — et leurs queues. Remises ensemble, elles
+          redonnent le morceau.</span>
+      </label>
+      <label>
+        <input type="radio" name="mode" value="dry">
+        <b data-t="mode.dry">Les pistes, à sec</b>
+        <span data-t="mode.dry.p">Les mêmes, les envois retirés du morceau avant le rendu : ni
+          réverbe ni écho, à vous de remettre la salle que vous voulez.</span>
+      </label>
+      <label>
+        <input type="radio" name="mode" value="mix">
+        <b data-t="mode.mix">Le morceau entier, mixé</b>
+        <span data-t="mode.mix.p">Un seul WAV, master et limiteur compris : exactement ce que la
+          machine envoie dans le casque.</span>
+      </label>
+    </div>
+
+    <h2 data-t="h2.go">Le rendu</h2>
+    <p class="small" data-t="go.p">L'arrangement est rendu une fois, du début à la fin, puis la page
+      laisse les queues s'éteindre. Tous les fichiers ont la même longueur, à
+      la frame près : déposés dans un DAW, ils commencent et finissent
+      ensemble.</p>
+    <p><button type="button" id="render" class="go" data-t="btn.render" disabled>Rendre</button></p>
+    <progress id="bar" value="0" max="1"></progress>
+    <p id="status"></p>
+
+    <h2 data-t="h2.more">Pour aller plus loin</h2>
+
+    <details>
+      <summary data-t="det.why.h">Pourquoi le rendu ne se fait pas dans la machine</summary>
+      <p data-t="det.why.p">Le FM-1 joue un morceau en temps réel et tout juste : un refrain de
+        démo a déjà débordé de son bloc audio. Écrire huit WAV voudrait dire
+        rendre le morceau neuf fois, garder des mégaoctets dans 512 Ko de RAM,
+        et les faire sortir par un tuyau MIDI qui transporte 120 octets par
+        réponse. Alors la machine donne ce qu'elle garde très bien — le
+        <code>.trk</code>, quelques kilooctets de texte — et l'ordinateur fait
+        l'arithmétique. Le moteur est le même C, compilé en WebAssembly : ce
+        qui sort du fichier est ce qui sortait du haut-parleur.</p>
+    </details>
+
+    <details>
+      <summary data-t="det.how.h">Ce qu'il y a dans les fichiers</summary>
+      <p data-t="det.how.p">WAV 16 bits stéréo à 44 100 Hz, sans conversion : le moteur produit
+        déjà ces nombres-là. Un fichier par piste <em>qui joue vraiment une
+        note</em> dans l'arrangement — une piste muette n'a pas de fichier.
+        Le nom est celui du morceau, le numéro de la piste et l'instrument qui
+        y frappe le plus, pour qu'un import se reconnaisse sans s'écouter. Les
+        pistes arrivent dans un <code>.zip</code>, la mixdown seule.</p>
+      <p class="small dim" data-t="det.how.p2">Une réserve honnête : le limiteur du master n'agit que sur la
+        mixdown, jamais sur une piste seule — un limiteur qui réagirait à une
+        piste l'écraserait pour un pic que l'ensemble n'a pas. Sur un morceau
+        qui pousse fort, la somme des pistes dépasse donc un peu la mixdown,
+        exactement là où la mixdown était retenue.</p>
+    </details>
+
+    <details>
+      <summary data-t="det.need.h">Ce qu'il faut</summary>
+      <p data-t="det.need.p">Chrome ou Edge sur un ordinateur, pour le WebMIDI qui parle au FM-1.
+        Le rendu, lui, ne demande rien : si vous avez déjà le fichier
+        <code>.trk</code>, n'importe quel navigateur suffit. Rien ne quitte
+        votre machine — il n'y a pas de serveur derrière cette page.</p>
+    </details>
+
+    <footer>
+      <p data-t="foot.1">MOONDAW est un firmware indépendant pour le M-VAVE FM-1, sous
+        GPL-3.0. <a href="https://github.com/jaeggerr/moondaw-fm1">Le code</a>,
+        <a href="https://moondaw.com/manual.html">le manuel</a>.</p>
+      <p data-t="foot.2">Ni M-VAVE ni Cuvave n'ont de part dans ce projet.</p>
+    </footer>
+  </div>
+</main>
+
+<script>
+/* The two languages. The markup above is the French; this table is the
+ * English beside it, and the switcher below swaps one for the other. The
+ * keys with {0} in them are filled by the module that knows how many
+ * tracks, which song, which percent.
+ *
+ * Every string the page can show is here. innerHTML is used on purpose --
+ * some of these carry <code> and <em> -- and they are all constants of this
+ * file: nothing a visitor types ever reaches them. */
+var LANGS = ["fr", "en"];
+var T = {
+"doc.title":{fr:"MOONDAW — sortir un morceau en WAV",
+             en:"MOONDAW — a song out as WAV"},
+"lang.group":{fr:"Langue", en:"Language"},
+"nav.site":  {fr:"Le site",   en:"The site"},
+"nav.manual":{fr:"Le manuel", en:"The manual"},
+
+"h1":{fr:"Sortir un morceau en WAV", en:"A song out as WAV"},
+"intro":{
+  fr:"Cette page récupère un morceau du FM-1 et le rend en fichiers audio, une piste par fichier. Le rendu se fait <em>ici</em>, dans votre navigateur, avec le moteur de la machine lui-même : le FM-1 ne donne que le morceau.",
+  en:"This page takes a song off the FM-1 and renders it to audio files, one per track. The render happens <em>here</em>, in your browser, with the machine's own engine: the FM-1 only hands over the song."},
+
+"h2.song":{fr:"Le morceau", en:"The song"},
+"song.p":{
+  fr:"Branchez le FM-1 en USB et mettez-le sur son écran MENU — il refuse tout transfert ailleurs. Ou déposez ici un fichier <code>.trk</code> que vous avez déjà sur l'ordinateur.",
+  en:"Plug the FM-1 in over USB and put it on its MENU screen — it refuses a transfer anywhere else. Or drop a <code>.trk</code> file you already have on the computer here."},
+"song.or":{fr:"ou", en:"or"},
+"song.pick":{fr:"Le morceau à lire", en:"The song to read"},
+"btn.connect":{fr:"Connecter le FM-1", en:"Connect the FM-1"},
+"btn.read":{fr:"Lire", en:"Read"},
+
+"h2.bank":{fr:"Les samples", en:"The samples"},
+"bank.p":{
+  fr:"Ce morceau joue des samples. Ils vivent dans la flash de la machine, pas dans le fichier : sans la banque, les pistes échantillonnées sortiraient muettes. La lecture prend quelques secondes.",
+  en:"This song plays samples. They live in the machine's flash, not in the file: without the bank, the sampled tracks would come out silent. Reading it takes a few seconds."},
+"btn.bank":{fr:"Lire la banque", en:"Read the bank"},
+
+"h2.what":{fr:"Ce qui sort", en:"What comes out"},
+"mode.stems":{fr:"Les pistes, telles qu'elles sonnent", en:"The tracks, as they sound"},
+"mode.stems.p":{
+  fr:"Un WAV par piste qui joue, avec son niveau, son panoramique, sa réverbe et son écho — et leurs queues. Remises ensemble, elles redonnent le morceau.",
+  en:"One WAV per track that plays, with its level, its pan, its reverb and its echo — tails and all. Put back together they give the song again."},
+"mode.dry":{fr:"Les pistes, à sec", en:"The tracks, dry"},
+"mode.dry.p":{
+  fr:"Les mêmes, les envois retirés du morceau avant le rendu : ni réverbe ni écho, à vous de remettre la salle que vous voulez.",
+  en:"The same, with the sends taken out of the song before it is rendered: no reverb and no echo, and the room is yours to choose."},
+"mode.mix":{fr:"Le morceau entier, mixé", en:"The whole song, mixed"},
+"mode.mix.p":{
+  fr:"Un seul WAV, master et limiteur compris : exactement ce que la machine envoie dans le casque.",
+  en:"One WAV, master and limiter included: exactly what the machine sends to the headphones."},
+
+"h2.go":{fr:"Le rendu", en:"The render"},
+"go.p":{
+  fr:"L'arrangement est rendu une fois, du début à la fin, puis la page laisse les queues s'éteindre. Tous les fichiers ont la même longueur, à la frame près : déposés dans un DAW, ils commencent et finissent ensemble.",
+  en:"The arrangement is rendered once, start to end, and then the page lets the tails die away. Every file is the same length to the frame: dropped into a DAW they start and end together."},
+"btn.render":{fr:"Rendre", en:"Render"},
+
+"h2.more":{fr:"Pour aller plus loin", en:"Further"},
+"det.why.h":{fr:"Pourquoi le rendu ne se fait pas dans la machine",
+             en:"Why the render is not done in the machine"},
+"det.why.p":{
+  fr:"Le FM-1 joue un morceau en temps réel et tout juste : un refrain de démo a déjà débordé de son bloc audio. Écrire huit WAV voudrait dire rendre le morceau neuf fois, garder des mégaoctets dans 512 Ko de RAM, et les faire sortir par un tuyau MIDI qui transporte 120 octets par réponse. Alors la machine donne ce qu'elle garde très bien — le <code>.trk</code>, quelques kilooctets de texte — et l'ordinateur fait l'arithmétique. Le moteur est le même C, compilé en WebAssembly : ce qui sort du fichier est ce qui sortait du haut-parleur.",
+  en:"The FM-1 plays a song in real time and only just: one demo's chorus has already overrun its audio block. Writing eight WAVs would mean rendering the song nine times over, holding megabytes in 512 KB of RAM, and pushing them out through a MIDI pipe that carries 120 bytes an answer. So the machine hands over what it keeps very well — the <code>.trk</code>, a few kilobytes of text — and the computer does the arithmetic. The engine is the same C compiled to WebAssembly: what comes out of the file is what came out of the speaker."},
+"det.how.h":{fr:"Ce qu'il y a dans les fichiers", en:"What is in the files"},
+"det.how.p":{
+  fr:"WAV 16 bits stéréo à 44 100 Hz, sans conversion : le moteur produit déjà ces nombres-là. Un fichier par piste <em>qui joue vraiment une note</em> dans l'arrangement — une piste muette n'a pas de fichier. Le nom est celui du morceau, le numéro de la piste et l'instrument qui y frappe le plus, pour qu'un import se reconnaisse sans s'écouter. Les pistes arrivent dans un <code>.zip</code>, la mixdown seule.",
+  en:"16-bit stereo WAV at 44,100 Hz, with no conversion: the engine already produces those numbers. One file per track that <em>really strikes a note</em> in the arrangement — a silent track gets no file. The name is the song's, the track's number and the instrument that strikes most on it, so an import is recognisable without being listened to. The tracks arrive in a <code>.zip</code>, the mixdown on its own."},
+"det.how.p2":{
+  fr:"Une réserve honnête : le limiteur du master n'agit que sur la mixdown, jamais sur une piste seule — un limiteur qui réagirait à une piste l'écraserait pour un pic que l'ensemble n'a pas. Sur un morceau qui pousse fort, la somme des pistes dépasse donc un peu la mixdown, exactement là où la mixdown était retenue.",
+  en:"One honest reservation: the master limiter is on the mixdown only, never on a single track — a limiter reacting to one track would squash it for a peak the whole never had. On a song that pushes hard the sum of the tracks therefore runs a little above the mixdown, exactly where the mixdown was being held down."},
+"det.need.h":{fr:"Ce qu'il faut", en:"What it takes"},
+"det.need.p":{
+  fr:"Chrome ou Edge sur un ordinateur, pour le WebMIDI qui parle au FM-1. Le rendu, lui, ne demande rien : si vous avez déjà le fichier <code>.trk</code>, n'importe quel navigateur suffit. Rien ne quitte votre machine — il n'y a pas de serveur derrière cette page.",
+  en:"Chrome or Edge on a computer, for the WebMIDI that talks to the FM-1. The render itself asks for nothing: if you already have the <code>.trk</code> file, any browser will do. Nothing leaves your machine — there is no server behind this page."},
+"foot.1":{
+  fr:"MOONDAW est un firmware indépendant pour le M-VAVE FM-1, sous GPL-3.0. <a href=\"https://github.com/jaeggerr/moondaw-fm1\">Le code</a>, <a href=\"https://moondaw.com/manual.html\">le manuel</a>.",
+  en:"MOONDAW is an independent firmware for the M-VAVE FM-1, under GPL-3.0. <a href=\"https://github.com/jaeggerr/moondaw-fm1\">The code</a>, <a href=\"https://moondaw.com/manual.html\">the manual</a>."},
+"foot.2":{fr:"Ni M-VAVE ni Cuvave n'ont de part dans ce projet.",
+          en:"Neither M-VAVE nor Cuvave has any part in this project."},
+
+/* ── what the page says while it works ───────────────────────────── */
+"st.looking":{fr:"Recherche du FM-1…", en:"Looking for the FM-1…"},
+"st.nomidi":{fr:"Ce navigateur n'a pas le WebMIDI. Ouvrez la page dans Chrome ou Edge, sur un ordinateur.",
+             en:"This browser has no WebMIDI. Open the page in Chrome or Edge, on a computer."},
+"st.nosysex":{fr:"Le MIDI avec SysEx n'a pas été autorisé. Autorisez le MIDI pour ce site (l'icône dans la barre d'adresse), puis réessayez.",
+              en:"MIDI with SysEx was not allowed. Allow MIDI for this site (the icon in the address bar), then try again."},
+"st.nodev":{fr:"FM-1 introuvable. Vérifiez qu'il est allumé, que le câble transporte des données, et qu'aucune autre application ne se sert du MIDI. Entrées MIDI vues : {0}.",
+            en:"FM-1 not found. Check that it is on, that the cable carries data, and that no other app uses MIDI. MIDI inputs seen: {0}."},
+"st.loader":{fr:"Le FM-1 est en mode mise à jour : rien ne peut être lu tant qu'elle n'est pas finie.",
+             en:"The FM-1 is in update mode: nothing can be read until it is finished."},
+"st.notours":{fr:"Le FM-1 tourne sous {0}, pas sous MOONDAW : il n'y a pas de morceaux MOONDAW à lire.",
+              en:"The FM-1 runs {0}, not MOONDAW: there are no MOONDAW songs to read."},
+"st.version":{fr:"Le FM-1 parle la version {0} du lien morceaux ; cette page en a besoin au moins de 1.",
+              en:"The FM-1 speaks version {0} of the song link; this page needs at least 1."},
+"st.empty":{fr:"Il n'y a aucun morceau sur le FM-1.", en:"There is no song on the FM-1."},
+"st.found":{fr:"{0} morceaux sur le FM-1. Choisissez-en un.", en:"{0} songs on the FM-1. Pick one."},
+"st.found1":{fr:"1 morceau sur le FM-1.", en:"1 song on the FM-1."},
+"st.reading":{fr:"Lecture de {0}… {1} %", en:"Reading {0}… {1} %"},
+"st.nobank":{fr:"Il n'y a pas de banque de samples sur le FM-1.", en:"There is no sample bank on the FM-1."},
+"st.bankread":{fr:"Lecture de la banque… {0} %", en:"Reading the bank… {0} %"},
+"st.rendering":{fr:"Rendu de {0} ({1} sur {2})… {3} s", en:"Rendering {0} ({1} of {2})… {3} s"},
+"st.renderone":{fr:"Rendu du morceau… {0} s", en:"Rendering the song… {0} s"},
+"st.zipping":{fr:"Écriture du zip…", en:"Writing the zip…"},
+"st.saved":{fr:"{0} enregistré dans vos téléchargements — {1} fichiers, {2}.",
+            en:"Saved {0} to your downloads — {1} files, {2}."},
+"st.saved1":{fr:"{0} enregistré dans vos téléchargements — {1}.",
+             en:"Saved {0} to your downloads — {1}."},
+
+/* ── the song, once it is in ─────────────────────────────────────── */
+"sg.none":{fr:"—", en:"—"},
+"sg.in":{fr:"<b>{0}</b> · {1} BPM · {2} pistes qui jouent · {3} instruments",
+         en:"<b>{0}</b> · {1} BPM · {2} tracks playing · {3} instruments"},
+"sg.in1":{fr:"<b>{0}</b> · {1} BPM · 1 piste qui joue · {2} instruments",
+          en:"<b>{0}</b> · {1} BPM · 1 track playing · {2} instruments"},
+"sg.silent":{fr:"<b>{0}</b> · aucune piste ne joue de note : il n'y a rien à rendre.",
+             en:"<b>{0}</b> · no track plays a note: there is nothing to render."},
+"sg.badfile":{fr:"Ce fichier n'est pas un morceau que le FM-1 lit.",
+              en:"That file is not a song the FM-1 reads."},
+"bk.in":{fr:"Banque lue : {0} samples, {1}. Dont ce morceau en joue {2}.",
+         en:"Bank read: {0} samples, {1}. This song plays {2} of them."},
+"bk.missing":{fr:"Attention : {0} sample(s) du morceau ne sont pas dans cette banque et sortiront muets.",
+              en:"Careful: {0} of the song's samples are not in this bank and will come out silent."},
+"bk.skip":{fr:"Sans la banque, les pistes échantillonnées sortiront muettes.",
+           en:"Without the bank, the sampled tracks will come out silent."},
+"tr.line":{fr:"piste {0} · {1} · {2} notes", en:"track {0} · {1} · {2} notes"},
+"tr.noname":{fr:"sans nom", en:"unnamed"},
+"unit.kb":{fr:"Ko", en:"KB"},
+"unit.mb":{fr:"Mo", en:"MB"}
+};
+
+(function(){
+  var KEY = "moondaw.lang";          /* the landing page's key, on purpose */
+
+  function stored(){ try { return localStorage.getItem(KEY) } catch(e) { return null } }
+  function remember(l){ try { localStorage.setItem(KEY, l) } catch(e) {} }
+
+  function pick(){
+    var q = new URLSearchParams(location.search).get("lang");
+    if (LANGS.indexOf(q) >= 0) return q;
+    var was = stored();
+    if (LANGS.indexOf(was) >= 0) return was;
+    var list = navigator.languages || [navigator.language || "en"];
+    for (var i = 0; i < list.length; i++) {
+      var tag = String(list[i]).toLowerCase().split("-")[0];
+      if (LANGS.indexOf(tag) >= 0) return tag;
+    }
+    return "en";
+  }
+  window.moondawT = function(key){
+    var e = T[key];
+    return e ? (e[window.moondawLang] || e.fr) : "";
+  };
+
+  function apply(lang){
+    window.moondawLang = lang;
+    document.documentElement.lang = lang;
+    document.title = window.moondawT("doc.title");
+
+    document.querySelectorAll("[data-t]").forEach(function(el){
+      el.innerHTML = window.moondawT(el.dataset.t);
+    });
+    document.querySelectorAll("[data-t-aria]").forEach(function(el){
+      el.setAttribute("aria-label", window.moondawT(el.dataset.tAria));
+    });
+    document.querySelectorAll(".lang button").forEach(function(b){
+      b.setAttribute("aria-current", String(b.dataset.lang === lang));
+    });
+    document.dispatchEvent(new CustomEvent("moondawlang", { detail: lang }));
+  }
+
+  document.querySelectorAll(".lang button").forEach(function(b){
+    b.addEventListener("click", function(){
+      remember(b.dataset.lang);
+      apply(b.dataset.lang);
+    });
+  });
+
+  apply(pick());
+})();
+</script>
+
+<script type="module">
+// The wiring. The link is web/installer/'s, byte for byte -- this page adds
+// no protocol of its own. The render is render.js, in a worker.
+import { Updater } from "./fm1ota.js";
+import { SongLink, BANK_SLOT, zip } from "./mdlink.js";
+import { trkLoad, instrumentsUsed, samplesUsed, SONG_SMP_MAX } from "./trk.js";
+import { tracksUsed, names, safe } from "./stems.js";
+
+const $ = (id) => document.getElementById(id);
+const L = (key, args = []) => window.moondawT(key).replace(/\{(\d+)\}/g, (_, i) => args[i]);
+// Ko / Mo in French, KB / MB in English: the one piece of the machine's
+// arithmetic that is prose and not a name.
+const kb = (n) => n < 1024 * 1024 ? `${Math.round(n / 1024)} ${L("unit.kb")}`
+                                  : `${(n / 1048576).toFixed(1)} ${L("unit.mb")}`;
+
+let midi = null, busy = false;
+let song = null, songName = "SONG", trkText = "", bank = null, slots = [];
+
+// The status line, said again when the language changes: a message held as a
+// key and its arguments, never as a sentence.
+let last = null;
+function say(key, args = [], cls = "") {
+  last = { key, args, cls };
+  $("status").innerHTML = L(key, args);
+  $("status").className = cls;
+}
+function sayPlain(text, cls = "bad") { last = null; $("status").textContent = text; $("status").className = cls; }
+document.addEventListener("moondawlang", () => {
+  if (last) $("status").innerHTML = L(last.key, last.args);
+  showSong();
+  showBank();
+});
+
+function busyNow(on) {
+  busy = on;
+  for (const id of ["connect", "read", "render", "bankread", "file", "bankfile"]) $(id).disabled = on;
+}
+async function run(fn) {
+  if (busy) return;
+  busyNow(true);
+  try { await fn(); } catch (e) {
+    if (e && e.sayKey) say(e.sayKey, e.sayArgs || [], "bad");
+    else sayPlain((e && e.message) || String(e));
+  } finally { busyNow(false); }
+}
+const told = (key, ...args) => Object.assign(new Error(L(key, args)), { sayKey: key, sayArgs: args });
+
+// ------------------------------------------------------------- the link ---
+
+async function access() {
+  if (midi) return midi;
+  if (!navigator.requestMIDIAccess) throw told("st.nomidi");
+  try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
+  catch (_) { throw told("st.nosysex"); }
+  return midi;
+}
+
+async function findDevice() {
+  const up = new Updater(await access());
+  const dev = await up.find();
+  if (!dev) {
+    const seen = [...midi.inputs.values()].map((i) => i.name).filter(Boolean);
+    throw told("st.nodev", seen.length ? seen.join(", ") : "—");
+  }
+  if (dev.id.loader) throw told("st.loader");
+  return dev;
+}
+
+// A link opened, used, and closed again -- the FM-1 holds one SysEx at a
+// time and another page waiting on the port would never get its answer.
+async function overLink(fn) {
+  say("st.looking");
+  const dev = await findDevice();
+  try {
+    const sl = new SongLink(dev.link);
+    const { version } = await sl.ping();
+    if (version < 1) throw told("st.version", version);
+    return await fn(sl, dev);
+  } finally { dev.link.close(); }
+}
+
+// ------------------------------------------------------------- the song ---
+
+$("connect").addEventListener("click", () => run(() => overLink(async (sl) => {
+  slots = await sl.list();
+  if (!slots.length) { say("st.empty"); return; }
+  const sel = $("songs");
+  sel.innerHTML = "";
+  for (const s of slots) {
+    const o = document.createElement("option");
+    o.value = String(s.slot);
+    o.textContent = `${s.name}   ${kb(s.size)}`;
+    sel.appendChild(o);
+  }
+  $("pickrow").classList.remove("hide");
+  say(slots.length > 1 ? "st.found" : "st.found1", [slots.length], "good");
+})));
+
+$("read").addEventListener("click", () => run(() => overLink(async (sl) => {
+  const slot = Number($("songs").value);
+  const s = slots.find((x) => x.slot === slot) || { name: "SONG", size: 1 };
+  say("st.reading", [s.name, 0]);
+  const bytes = await sl.fetch(slot, (n) =>
+    say("st.reading", [s.name, Math.min(100, Math.floor(n * 100 / Math.max(1, s.size)))]));
+  took(new TextDecoder("latin1").decode(bytes), s.name);
+})));
+
+$("file").addEventListener("change", (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (f) run(() => readLocal(f));
+});
+
+// A .trk dragged onto the first step, which is the whole dashed box.
+const drop = $("drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) run(() => readLocal(f));
+});
+
+async function readLocal(f) {
+  // latin1, as the FM-1 writes and reads its files: a .trk is bytes, not
+  // Unicode, and a name with an accent in it must come back unchanged.
+  const text = new TextDecoder("latin1").decode(await f.arrayBuffer());
+  took(text, f.name.replace(/\.trk$/i, ""));
+}
+
+// A song is in. Everything the page offers from here is decided by it.
+function took(text, name) {
+  const { err, song: s } = trkLoad(text);
+  if (err !== 0 || !s) throw told("sg.badfile");
+  song = s;
+  trkText = text;
+  songName = name;
+  $("tracks").classList.remove("hide");
+  showSong();
+  // Only a song that plays samples is asked for a bank, and asking is the
+  // whole of that step: a song of synths never sees it.
+  const need = sampleCount();
+  $("banksec").classList.toggle("hide", need === 0);
+  if (need && !bank) say("bk.skip", [], "small dim");
+  else if (!last || last.key !== "sg.badfile") $("status").textContent = "";
+  showBank();
+  armRender();
+}
+
+const sampleCount = () => {
+  if (!song) return 0;
+  const used = samplesUsed(song, instrumentsUsed(song));
+  let n = 0;
+  for (let i = 0; i < SONG_SMP_MAX; i++) if (used[i]) n++;
+  return n;
+};
+
+function showSong() {
+  if (!song) { $("song").innerHTML = L("sg.none"); $("tracks").innerHTML = ""; return; }
+  const used = tracksUsed(song);
+  let instr = 0;
+  const iu = instrumentsUsed(song);
+  for (const u of iu) if (u) instr++;
+  $("song").innerHTML = !used.length ? L("sg.silent", [safe(songName)])
+    : L(used.length > 1 ? "sg.in" : "sg.in1",
+        used.length > 1 ? [safe(songName), song.bpm, used.length, instr] : [safe(songName), song.bpm, instr]);
+
+  // The files this song will give, named now rather than after the wait.
+  const named = names(songName, modeNow(), used);
+  $("tracks").innerHTML = "";
+  if (modeNow() === "mix") {
+    const li = document.createElement("li");
+    li.textContent = named.single;
+    $("tracks").appendChild(li);
+    return;
+  }
+  used.forEach((u, i) => {
+    const li = document.createElement("li");
+    li.textContent = named.files[i];
+    const em = document.createElement("em");
+    em.textContent = `   ${L("tr.line", [u.track + 1, u.name || L("tr.noname"), u.notes])}`;
+    li.appendChild(em);
+    $("tracks").appendChild(li);
+  });
+}
+
+// ------------------------------------------------------------- the bank ---
+
+$("bankread").addEventListener("click", () => run(() => overLink(async (sl) => {
+  const idx = await sl.bankIndex();
+  if (!idx) { say("st.nobank", [], "bad"); return; }
+  say("st.bankread", [0]);
+  const bytes = await sl.fetch(BANK_SLOT, (n) =>
+    say("st.bankread", [Math.min(100, Math.floor(n * 100 / Math.max(1, idx.size)))]));
+  bank = bytes;
+  showBank(bytes.length, idx.samples.length);
+})));
+
+$("bankfile").addEventListener("change", (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  run(async () => {
+    bank = new Uint8Array(await f.arrayBuffer());
+    showBank(bank.length, null);
+  });
+});
+
+let bankSeen = null;
+function showBank(size, count) {
+  if (size !== undefined) bankSeen = { size, count };
+  if (!bankSeen || !song) { if (!bankSeen) $("bank").innerHTML = L("sg.none"); return; }
+  const want = sampleCount();
+  $("bank").innerHTML = L("bk.in", [bankSeen.count === null ? "?" : bankSeen.count, kb(bankSeen.size), want]);
+}
+
+// ----------------------------------------------------------- the render ---
+
+const modeNow = () => document.querySelector("input[name=mode]:checked").value;
+document.querySelectorAll("input[name=mode]").forEach((r) =>
+  r.addEventListener("change", () => { if (song) { showSong(); armRender(); } }));
+
+// A song no track of which plays a note has stems to give but no mixdown to
+// refuse, so the button follows the choice as well as the song.
+function armRender() {
+  $("render").disabled = modeNow() !== "mix" && !tracksUsed(song).length;
+}
+
+$("render").addEventListener("click", () => run(async () => {
+  if (!song) return;
+  const mode = modeNow();
+  const used = tracksUsed(song);
+  const wasm = await (await fetch("./audition.wasm", { cache: "no-cache" })).arrayBuffer();
+  const worker = new Worker("./worker.js", { type: "module" });
+  $("bar").value = 0;
+  $("bar").max = mode === "mix" ? 1 : Math.max(1, used.length);
+
+  const out = await new Promise((res, rej) => {
+    worker.onmessage = ({ data: m }) => {
+      if (m.type === "progress") {
+        const secs = (m.frames / 44100).toFixed(1);
+        if (mode === "mix") say("st.renderone", [secs]);
+        else say("st.rendering", [used[m.pass] ? (used[m.pass].name || used[m.pass].track + 1) : "", m.pass + 1, m.passes, secs]);
+        $("bar").value = (m.pass || 0) + (m.playing === false ? 1 : 0.5);
+      } else if (m.type === "done") { res(m); worker.terminate(); }
+      else if (m.type === "failed") { rej(new Error(m.message)); worker.terminate(); }
+    };
+    worker.onerror = (e) => { rej(new Error(e.message || "the render stopped")); worker.terminate(); };
+    worker.postMessage({ type: "render", wasm, trk: trkText, bank, mode, songName }, [wasm]);
+  });
+
+  $("bar").value = $("bar").max;
+  const files = out.files.map((f) => ({ name: f.name, data: new Uint8Array(f.data) }));
+  const secs = (out.frames / out.rate).toFixed(1);
+  if (files.length === 1) {
+    download(files[0].name, files[0].data, "audio/wav");
+    say("st.saved1", [files[0].name, `${secs} s, ${kb(files[0].data.length)}`], "good");
+  } else {
+    say("st.zipping");
+    const archive = zip(files);
+    download(out.zipName, archive, "application/zip");
+    say("st.saved", [out.zipName, files.length, `${secs} s, ${kb(archive.length)}`], "good");
+  }
+}));
+
+function download(name, bytes, type) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+</script>
+</body>
+</html>
