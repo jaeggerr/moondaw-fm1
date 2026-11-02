@@ -22,13 +22,23 @@
  *           (the file's steps_per_beat)
  *   HOME    back where it was opened from     SEQ  SONG     FX  the MIXER
  *   ALGO    UNDO left, REDO right     SAVE  as printed */
-enum { S_NAME, S_BPM, S_KEY, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
+enum { S_NAME, S_BPM, S_KEY, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, S_SPEED, S_METRO, SETTINGS };
+enum { SPEED_STEP = 5 };
 enum { LABEL_X = 14, VALUE_X = 120 };
 
 #define song (&app_song)
 
-static const char *const label[SETTINGS] = { "NAME", "BPM", "KEY", "SWING", "METER", "STEP", "TICKS", "TRACKS" };
-static int row;
+static const char *const label[SETTINGS] = { "NAME",  "BPM",   "KEY",   "SWING", "METER",
+                                             "STEP",  "TICKS", "TRACKS", "SPEED", "METRONOME" };
+
+/* The last two are not the project: they are how the machine is listening to
+ * it, and they are not written to the file (player_init puts both back when a
+ * project opens). A rule above SPEED says so, and they are reachable here so
+ * that the gesture is not the only way in -- the foot then says what the
+ * gesture is, which is how one stops needing this screen (his design, 02/11). */
+static const char *const gesture[SETTINGS] = { [S_SPEED] = "EDIT + SELECT", [S_METRO] = "EDIT + REC" };
+static const char *const gesture_say[SETTINGS] = { [S_SPEED] = "slower, faster", [S_METRO] = "on, off" };
+static int row, top;
 static bool naming;
 static const char *said;
 static uint32_t prev_btns;
@@ -69,6 +79,14 @@ static void turn(int k, int d)
         undo_bytes(&song->num_tracks, 1);
         song->num_tracks = (uint8_t)clampi(song->num_tracks + d, 1, SONG_MAX_TRACKS);
         break;
+    /* Neither is the song: no UNDO, and the project is not dirtied by them. */
+    case S_SPEED:
+        player_set_speed(player_speed() + d * SPEED_STEP);
+        return;
+    case S_METRO:
+        if (player_metro() != (d > 0))
+            player_toggle_metro();
+        return;
     default:
         return;
     }
@@ -115,10 +133,26 @@ static void value_of(int k, char *s)
     case S_TICKS:
         ui_dec(s, song->ticks_per_step);
         break;
+    case S_SPEED:
+        ui_dec(s, player_speed());
+        for (p = s; *p; p++)
+            ;
+        p[0] = ' ', p[1] = '%', p[2] = 0;
+        break;
+    case S_METRO: {
+        const char *q;
+        for (q = player_metro() ? "ON" : "OFF"; *q; q++)
+            *s++ = *q;
+        *s = 0;
+        break;
+    }
     default:
         ui_dec(s, song->num_tracks);
     }
 }
+
+/* Eight rows, or seven while the foot is saying a gesture. */
+static int shown_rows(void) { return GRID_ROWS - (gesture[row] ? 1 : 0); }
 
 /* ---------------------------------------------------------- drawing --- */
 static void draw(void)
@@ -141,22 +175,31 @@ static void draw(void)
         namer_draw();
         return;
     }
-    for (int k = 0; k < SETTINGS; k++) {
+    for (int v = 0; v < shown_rows() && top + v < SETTINGS; v++) {
+        int k = top + v;
         bool here = k == row;
+        if (k == S_SPEED) /* under this, the machine's listening, not the file */
+            gfx_fill(0, grid_y(v), PLAT_W, 1, C_TRACK, 255);
         if (here) {
-            grid_band(k, PLAT_W - 4);
-            grid_hollow(k, VALUE_X - 6, PLAT_W - VALUE_X);
+            grid_band(v, PLAT_W - 4);
+            grid_hollow(v, VALUE_X - 6, PLAT_W - VALUE_X);
         }
-        gfx_text(F_COND20, LABEL_X, grid_base(k), label[k], here ? C_ON_ACC : C_DIM);
+        gfx_text(F_COND20, LABEL_X, grid_base(v), label[k], here ? C_ON_ACC : C_DIM);
         value_of(k, s);
-        gfx_text(F_COND20, VALUE_X, grid_base(k), s, here ? C_ACCENT : C_TEXT);
+        gfx_text(F_COND20, VALUE_X, grid_base(v), s, here ? C_ACCENT : C_TEXT);
+    }
+    if (gesture[row]) { /* the fast way to the row one is on */
+        int y = PLAT_H - GRID_ROW, x;
+        gfx_fill(0, y, PLAT_W, 1, C_TRACK, 255);
+        x = gfx_text(F_COND14, 8, y + 19, gesture[row], C_TITLE);
+        gfx_text(F_COND12, x + 10, y + 19, gesture_say[row], C_DIM);
     }
 }
 
 /* -------------------------------------------------------------- api --- */
 void project_open(void)
 {
-    row = 0;
+    row = top = 0;
     naming = false;
     said = 0;
     prev_btns = 0xFFFFFFFFu; /* what is held on the way in is not a press */
@@ -183,6 +226,7 @@ int project_frame(const PlatInput *in)
     }
 
     row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], 0, SETTINGS - 1);
+    grid_follow(&row, &top, SETTINGS, shown_rows());
     if (in->enc[PE_K3])
         turn(row, in->enc[PE_K3]);
     if (PRESSED(PB_SEL) && row == S_NAME) {
