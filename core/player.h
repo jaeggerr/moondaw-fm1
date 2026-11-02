@@ -41,14 +41,19 @@ void player_set_song_loop(int from, int to);
  * longer, so a slowed song is the same song, swing and all. */
 void player_set_speed(int pct);
 int player_speed(void);
-/* The mix the auditions that follow are heard in: the VOL, the PAN, the
- * REV and the ECH of `track`, as MIXER shows them -- a key played where
- * the cursor rests on a track sounds like that track sounds, and not dry
- * (2/11). A screen says it every frame; -1, where the cursor is on no
- * track, previews dry at moondaw's preview level. MUTE and SOLO are left
- * out: a key under the hand always sounds. A fader moved while a key is
- * held is heard on the next key, not under that one. */
-void player_audition_track(int track);
+/* Where the auditions that follow stand, which is what they sound like.
+ * `track`: the mix they are heard in -- its VOL, its PAN, its REV and its
+ * ECH, as MIXER shows them, so a key played where the cursor rests on a
+ * track sounds like that track sounds and not dry (2/11); -1, on no track,
+ * previews dry at moondaw's preview level. MUTE and SOLO are left out: a
+ * key under the hand always sounds. `sfx`, the FX of the step it rests on
+ * (0 for none, `n` of them): the key carries the ones that describe a
+ * sound -- VOL VEL PAN REV ECH FLT RES CRS RAT DUT WAV SMP ARP VIB TRM --
+ * over that mix. The ones that only mean something over a step's length
+ * are left out, a held key not being a step: RET or CUT would kill it
+ * mid-note and read as a broken sound. A screen says all of this every
+ * frame. A fader moved while a key is held is heard on the next key. */
+void player_audition_at(int track, const StepFx *sfx, int n);
 /* A note outside the song, on an instrument of the song: what a key
  * does on the INSTRUMENT screen, and the note PATTERN just wrote. One
  * at a time; the next one replaces it. */

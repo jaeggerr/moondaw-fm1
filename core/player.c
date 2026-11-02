@@ -456,6 +456,10 @@ static uint8_t audition_arp; /* its ticks a note, 0 for all of them at once */
 /* The track a CMD_NOTE_* borrows its mix from, -1 = dry; written the same
  * way, by the screen that holds the cursor. */
 static int8_t audition_at = -1;
+/* And the FX of the step it stands on, already sifted down to the ones a
+ * held key can carry (player_audition_at, in the flash); FX_NONE for the
+ * slots that carry nothing. */
+static StepFx audition_fx[STEP_MAX_FX];
 static volatile struct { uint8_t type, a, b; } cmd_q[8];
 static volatile uint8_t cmd_w, cmd_r;
 
@@ -641,10 +645,6 @@ static void trigger_step(int t, const Step *st)
 
     tr->last_inst = inst;
     timbre = voice_timbre(tr, in);
-    tr->fx.smp = -1;
-    for (int i = 0; i < STEP_MAX_FX; i++)
-        if (st->fx[i].cmd == FX_SMP)
-            tr->fx.smp = (int8_t)fx_clamp_val(FX_SMP, 0, st->fx[i].val);
     for (int i = 0; i < STEP_MAX_NOTES; i++) {
         uint8_t n = st->notes[i];
         /* Under ARP one voice sounds; under STR the first comes now and
@@ -922,14 +922,14 @@ static bool prb_rolls(const Step *st)
     return true;
 }
 
-static void apply_fx(int t, const Step *st)
+static void apply_fx(int t, const StepFx *sfx)
 {
     Track *tr = &tracks[t];
     int ramp_steps = 0;
 
     for (int i = 0; i < STEP_MAX_FX; i++) {
-        uint8_t cmd = st->fx[i].cmd;
-        uint8_t v = fx_clamp_val(cmd, song->ticks_per_step, st->fx[i].val);
+        uint8_t cmd = sfx[i].cmd;
+        uint8_t v = fx_clamp_val(cmd, song->ticks_per_step, sfx[i].val);
         int slot = fx_ramp_slot(cmd);
 
         if (slot >= 0) {
@@ -964,6 +964,7 @@ static void apply_fx(int t, const Step *st)
         case FX_TRM: tr->fx.trem = v; break;
         case FX_SWP: tr->fx.sweep = (int16_t)(((int)v - 64) * 32); break;
         case FX_SCP: tr->fx.scoop = v; break;
+        case FX_SMP: tr->fx.smp = (int8_t)v; break; /* the table entry this step's notes play */
         case FX_ARP:
             if (v > 0 && tr->fx.arp == 0) {
                 /* The step goes monophonic: only the first note's waves stay. */
@@ -1012,6 +1013,7 @@ static void process_row(const SongEntry *e)
         bool any = false;
 
         /* The one-shots end with their step. */
+        tr->fx.smp = -1; /* no SMP on the step: its notes play their zones */
         tr->fx.delay_tick = 0;
         tr->fx.cut_tick = -1;
         tr->fx.retrig = 0;
@@ -1035,7 +1037,7 @@ static void process_row(const SongEntry *e)
                 syl_copy(tr->fx.syl, song_syl(song, st->fx[i].val));
                 tr->fx.syl_written = true;
             }
-        apply_fx(t, st);
+        apply_fx(t, st->fx);
         if (!prb_rolls(st)) {
             /* The roll failed: an empty step. Nothing is struck and
              * nothing is released, so what sounds carries on. */
@@ -1469,48 +1471,63 @@ static void handle_cmds(void)
         } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL || type == CMD_NOTE_CHORD) {
             /* The audition: one note and its layers, in the mix of the
              * track the cursor is on -- its VOL, its PAN and what it sends
-             * to the room and to the delay, so a key under the hand sounds
-             * like the track sounds (2/11). On no track it previews dry, at
-             * the level moondaw previews at. A chord strikes the notes of a
-             * step together, as trigger_step does -- what the step itself
-             * would sound (30/10). */
+             * to the room and to the delay -- and then in the colour the
+             * step under the cursor asks for, so a key under the hand
+             * sounds like that step sounds (2/11). On no track it previews
+             * dry, at the level moondaw previews at. A chord strikes the
+             * notes of a step together, as trigger_step does -- what the
+             * step itself would sound (30/10). */
             Track *tr = &tracks[AUDITION];
+            TrackFx *fx = &tr->fx;
+            const TrackInit *ti = audition_at >= 0 && audition_at < song->num_tracks
+                                      ? &song->track_init[audition_at]
+                                      : 0;
             const uint8_t one = b;
             const uint8_t *notes = type == CMD_NOTE_CHORD ? audition_chord : &one;
             int n = type == CMD_NOTE_CHORD ? b : 1, waves, maxn;
             uint8_t arp = type == CMD_NOTE_CHORD ? audition_arp : 0;
             if (type == CMD_NOTE_SYL) { /* a VOX instrument sings this syllable */
-                syl_copy(tr->fx.syl, audition_syl);
-                tr->fx.syl_written = true;
+                syl_copy(fx->syl, audition_syl);
+                fx->syl_written = true;
             }
             const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
             waves = instr_waves(in);
             maxn = TRACK_MAX_VOICES / waves;
             tr->last_inst = a;
-            tr->fx.smp = -1; /* a key plays the zones */
+            /* The mix first, as the faders have it, then the step over it.
+             * Everything the sifted FX can set is put back to "nothing
+             * asked" here; what they cannot set never moves on this track,
+             * so TSP, SLI, SCP and SWP stay at rest without being cleared. */
+            fx->volume = VOL_FULL;
+            fx->velocity = VEL_FULL;
+            fx->cutoff = fx->reso = -1;
+            fx->duty = fx->shape = -1;
+            fx->crs = fx->rat = 0;
+            fx->vib = fx->trem = 0;
+            fx->smp = -1; /* a key plays the zones */
+            fx->send = ti ? ti->send : 0;
+            fx->echo = ti ? ti->echo : 0;
+            fx->arp = arp;
+            fx->arp_idx = fx->arp_count = 0;
+            tr->chain.pan = ti ? ti->pan : 0;
+            tr->seen.volume = ti ? ti->volume : 100;
+            tr->sec_level = VOL_FULL;
+            chain_set_crush(&tr->chain, 0, 0);
+            apply_fx(AUDITION, audition_fx); /* SMP among them, before the notes start */
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
             /* Under ARP one voice sounds and moves, as trigger_step has it */
-            for (int i = 0; i < n && i < maxn && (arp == 0 || i == 0); i++)
-                voice_start(tr, in, in->timbre, i, notes[i], false);
+            for (int i = 0; i < n && i < maxn && (fx->arp == 0 || i == 0); i++)
+                voice_start(tr, in, voice_timbre(tr, in), i, notes[i], false);
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 osc_set_cents(&tr->voices[v].osc, tr->voices[v].detune);
             for (int i = 0; i < STEP_MAX_NOTES; i++)
-                tr->fx.held.notes[i] = i < n ? notes[i] : NOTE_NONE;
-            tr->fx.has_held = arp > 0;
-            tr->fx.arp = arp;
-            tr->fx.arp_idx = tr->fx.arp_count = 0;
-            {
-                const TrackInit *ti = audition_at >= 0 && audition_at < song->num_tracks
-                                          ? &song->track_init[audition_at]
-                                          : 0;
-                tr->chain.pan = ti ? ti->pan : 0;
-                tr->fx.send = ti ? ti->send : 0;
-                tr->fx.echo = ti ? ti->echo : 0;
-                chain_note_on(&tr->chain, ti ? ti->volume : 100, VEL_FULL, in,
-                              in->cutoff, in->reso);
-            }
+                fx->held.notes[i] = i < n ? notes[i] : NOTE_NONE;
+            fx->has_held = fx->arp > 0; /* the step's ARP counts, not only the chord's */
+            chain_note_on(&tr->chain, track_level(tr), fx->velocity, in,
+                          fx->cutoff >= 0 ? (uint8_t)fx->cutoff : in->cutoff,
+                          fx->reso >= 0 ? (uint8_t)fx->reso : in->reso);
             tr->used = true;
         } else if (type == CMD_NOTE_OFF) {
             /* A drum is not ended by its key: it rings out (below). */
@@ -1931,8 +1948,15 @@ void player_render_raw(int32_t *out, int frames)
             prof_mark();
             player_tick();
             prof(PROF_TICK);
-            if (tracks[AUDITION].used && tracks[AUDITION].fx.arp > 0)
-                apply_pitch(&tracks[AUDITION]); /* the song's ticks need no song playing */
+            if (tracks[AUDITION].used) {
+                /* The song's ticks need no song playing: what the step asked
+                 * for and a held key can carry goes on under the hand. */
+                TrackFx *afx = &tracks[AUDITION].fx;
+                if (afx->arp > 0 || (afx->vib & 0x0F) != 0)
+                    apply_pitch(&tracks[AUDITION]);
+                if (afx->trem != 0)
+                    apply_trem(&tracks[AUDITION]);
+            }
             to_next_tick = tick_samples();
             reap_due = true;
         }
@@ -2041,6 +2065,8 @@ MAIN_LOOP void player_init(Song *s)
     tracks[AUDITION].fx.syl[1] = '\0';
     play_speed = 100, tick_num = (uint32_t)FS * 15u; /* a project opens at its own tempo */
     audition_at = -1;
+    for (int i = 0; i < STEP_MAX_FX; i++)
+        audition_fx[i].cmd = FX_NONE;
     bpm = s->bpm;
     playing = false;
     to_next_tick = 0;
@@ -2088,9 +2114,28 @@ MAIN_LOOP void player_set_song_loop(int from, int to)
 {
     song_loop_word = from < 0 || to < from ? 0 : ((uint32_t)from & 0xFFFFu) | (((uint32_t)to + 1) & 0xFFFFu) << 16;
 }
-MAIN_LOOP void player_audition_track(int track)
+/* What a key held under the hand can carry of a step's FX: the ones that
+ * describe a sound. Left out are the ones that only mean something over the
+ * length of a step -- RET and CUT would chop or kill the note and read as a
+ * broken sound -- and the ones that reach from one step into the next or
+ * drift without end: DLY, CUT, GAT, RET, STR, SLI, SCP, SWP, TSP, RMP, PRB
+ * and BPM, which is the song's and not a sound's at all (2/11). */
+static MAIN_LOOP bool audition_carries(uint8_t cmd)
 {
+    return fx_ramp_slot(cmd) >= 0 /* VOL VEL PAN REV ECH FLT RES CRS RAT */
+           || cmd == FX_DUT || cmd == FX_WAV || cmd == FX_SMP
+           || cmd == FX_ARP || cmd == FX_VIB || cmd == FX_TRM;
+}
+
+MAIN_LOOP void player_audition_at(int track, const StepFx *sfx, int n)
+{
+    int k = 0;
     audition_at = track >= 0 && track < SONG_MAX_TRACKS ? (int8_t)track : -1;
+    for (int i = 0; sfx && i < n && i < STEP_MAX_FX; i++)
+        if (audition_carries(sfx[i].cmd))
+            audition_fx[k++] = sfx[i];
+    while (k < STEP_MAX_FX)
+        audition_fx[k++].cmd = FX_NONE;
 }
 MAIN_LOOP void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
 MAIN_LOOP void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }

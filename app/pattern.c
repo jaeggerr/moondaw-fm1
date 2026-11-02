@@ -992,9 +992,10 @@ int pattern_frame(const PlatInput *in)
 
     prev_btns = in->btns;
     prev_keys = in->keys;
-    /* The keys are heard in the mix of this track -- CHOOSE INSTRUMENT, the
-     * chords and the syllable included: they all stand on its step (2/11) */
-    player_audition_track(track);
+    /* The keys are heard in the mix of this track and in the colour of the
+     * step under the cursor -- CHOOSE INSTRUMENT, the chords and the syllable
+     * included: they all stand on that step (2/11) */
+    player_audition_at(track, step_at(cur_row)->fx, STEP_MAX_FX);
     if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
         in->enc[PE_K4] || in->enc[PE_PRESET])
         said = 0;

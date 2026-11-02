@@ -162,7 +162,7 @@ int phrase_frame(const PlatInput *in)
     prev_btns = in->btns;
     prev_keys = in->keys;
     playing = player_playing();
-    player_audition_track(col); /* heard in the mix of the track under the cursor (2/11) */
+    player_audition_at(col, 0, 0); /* heard in the mix of the track under the cursor (2/11) */
     if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1])
         said = 0;
     /* EDIT tapped opens the block (at the release); held, the keys are its
