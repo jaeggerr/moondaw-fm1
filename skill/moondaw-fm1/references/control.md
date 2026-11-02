@@ -94,8 +94,7 @@ What each screen answers, as HELP on the device says it. The words are the machi
 
 | | |
 |---|---|
-| `SELECT` | phrase, onto its number |
-| `KNOB 1` | phrase |
+| `SELECT, KNOB 1` | phrase |
 | `KNOB 2` | track |
 | `KNOB 3 on a cell` | its pattern |
 | `  at rest` | it plays by itself |
@@ -161,8 +160,7 @@ What each screen answers, as HELP on the device says it. The words are the machi
 
 | | |
 |---|---|
-| `SELECT` | step, onto its number |
-| `KNOB 1` | step |
+| `SELECT, KNOB 1` | step |
 | `KNOB 2` | column |
 | `KNOB 3` | note, instr., effect |
 | `KNOB 4` | an effect's value |
@@ -187,8 +185,8 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `OP6, no selection` | a loop's end, then other |
 | `MONO` | solo; held: mute |
 | `ALGO` | undo left, redo right |
-| `PLAY` | the phrase, round |
-| `  again` | stop, the cursor there |
+| `PLAY` | round, from the cursor |
+| `  again` | stop; the cursor stays |
 | `REC` | armed: PLAY counts in |
 | `  then keys` | record; OFF when let go |
 | `GLO` | the project |

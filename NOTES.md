@@ -3670,3 +3670,23 @@ root. Press SAVE, miss a corner, switch off, and the work is gone. So:
   would be read as a step back by the screen under it.
 
 Nothing is freed for the hand: which song goes is its own choice.
+
+## 2026-11-02 — the column stays, and PLAY starts where one is pointing
+
+Everything for the beta being in, the app was finally played rather than built,
+and two things that had been asked for read wrong under the hand.
+
+- **SELECT no longer jumps the cursor to the row's number**, in SONG and in
+  PATTERN. It was asked for on 29/10 — the row as a whole, one detent away — and
+  beside KNOB 1, which moves and leaves the column alone, the column vanishing
+  out from under one knob and not the other is a lurch. The two knobs are now
+  the same hand down to the column. The number is still one detent to the left,
+  on KNOB 2, which is where it was all along.
+- **PATTERN plays from the step under the cursor**, as SONG plays from the
+  phrase under it, and **STOP leaves the cursor where it was**: the view scrolls
+  back to the step one was pointing at instead of leaving the hand wherever the
+  playhead happened to stop. The other way round was asked for on 30/10 and was
+  the less intuitive of the two with a loop under the ear — the step one had
+  picked out was lost on every stop. The player takes the step in
+  `player_play_entry_at`, the free byte of its PLAY command; REC's count-in
+  starts there too.
