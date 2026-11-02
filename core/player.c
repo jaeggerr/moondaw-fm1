@@ -411,6 +411,12 @@ static bool playing, song_mode, song_once;
 static uint16_t arr_pos, arr_play, ref_nth, entry_step;
 static uint8_t tick_in_step, tick_parity;
 static uint16_t bpm;
+static uint8_t play_speed = 100; /* the listening speed, per cent (player.h) */
+/* A tick's numerator, FS * 15 scaled by the listening speed: the whole of
+ * the speed, worked out by the main loop alone (player_set_speed). The
+ * audio path reads it and does what it always did -- the tick is counted
+ * on every block and RAMTEXT had nothing to spare (02/11, firmware/app.ld). */
+static uint32_t tick_num = (uint32_t)FS * 15u;
 static int32_t to_next_tick;
 static int32_t master = 1024; /* Q10 */
 
@@ -1599,7 +1605,8 @@ static void player_tick(void)
 }
 
 /* Samples in a tick: FS * 60 / (bpm * 4 steps * ticks), which is
- * FS * 15 / (bpm * ticks). Swing stretches the even step of each pair
+ * FS * 15 / (bpm * ticks) -- `tick_num` is that FS * 15, and the
+ * listening speed is already in it (02/11). Swing stretches the even step of each pair
  * and shrinks the odd one by the same amount. */
 /* How long a tick lasts, in samples. `swung` asks for the swing to be in
  * it: one tick long, the next short, which is where the notes fall. What
@@ -1609,7 +1616,7 @@ static void player_tick(void)
  * through a pitch bend twice a step (30/10, NOTES.md). */
 static int32_t tick_samples_of(bool swung)
 {
-    uint32_t num = (uint32_t)FS * 15u, den = (uint32_t)bpm * song->ticks_per_step;
+    uint32_t num = tick_num, den = (uint32_t)bpm * song->ticks_per_step;
     int32_t n;
     if (swung && playing && song->swing > SWING_MIN && song->swing <= SWING_MAX) {
         num *= tick_parity == 0 ? song->swing : 100u - song->swing;
@@ -2019,6 +2026,7 @@ MAIN_LOOP void player_init(Song *s)
     drum_init();
     tracks[AUDITION].fx.syl[0] = 'A';
     tracks[AUDITION].fx.syl[1] = '\0';
+    play_speed = 100, tick_num = (uint32_t)FS * 15u; /* a project opens at its own tempo */
     bpm = s->bpm;
     playing = false;
     to_next_tick = 0;
@@ -2050,6 +2058,16 @@ MAIN_LOOP void player_set_loop(int from, int len)
 {
     loop_word = from < 0 || len <= 0 ? 0 : ((uint32_t)from & 0xFFFFu) | ((uint32_t)len & 0xFFFFu) << 16;
 }
+
+MAIN_LOOP void player_set_speed(int pct)
+{
+    play_speed = (uint8_t)(pct < 25 ? 25 : pct > 100 ? 100 : pct);
+    /* A tick lasts 100 / speed of what it did: the division is the main
+     * loop's, and one store of `tick_num` is what the audio side sees. */
+    tick_num = (uint32_t)FS * 15u * 100u / play_speed;
+}
+
+MAIN_LOOP int player_speed(void) { return play_speed; }
 
 MAIN_LOOP void player_set_song_loop(int from, int to)
 {

@@ -3702,3 +3702,62 @@ and two things that had been asked for read wrong under the hand.
   view -- but the press that sets the playhead going is not a hand busying
   itself. There is no test for this: `top` is private to each screen and
   nothing reads it back.
+
+## 2026-11-02 — the listening speed
+
+Working a loop, the one thing missing was hearing it slower. Not the tempo:
+the song's `bpm` is what it is, and a knob that writes it would be a change to
+the song, in the file and in UNDO, for a question the ear asks for a minute.
+So a listening speed, 25 % to 100 %, beside the two loops of `app/loop.h` and
+under their rule: never saved, never in UNDO, back to 100 when a project opens.
+
+**EDIT held, SELECT turned**, by fives, 100 % in a hard stop at the top -- the
+tempo is found again by turning the knob up as far as it goes. Nothing above
+100: the only honest use would be checking that a slow song holds together over
+its length, and at ×1,5 the ear judges nothing. It would have cost half the
+knob's travel and a digit in the corner.
+
+**EDIT is the only button of the panel that can be held.** Every other one acts
+on the press, and that settles PLAY, which was the obvious one: PLAY pressed
+while it plays is a stop, so the speed would be set on silence -- the one thing
+it must not be, since the whole point is hearing the loop slow down under the
+hand. SEL, REC, OCT, the same. EDIT alone gives its own action back at the
+release, and only if nothing served while it was down (29/10): a detent counts
+as serving now, so the CAPS LOCK does not turn over behind the hand.
+
+**It is read once a frame, before any screen** (`ui_speed`, from `app_frame` on
+the hands as they came), and the detents it takes are rubbed out of them. One
+place, the three screens of the road untouched, and no cursor moves under the
+speed. SELECT keeps its one job by the rule set the same evening, just above:
+it only moves, and EDIT held is the one thing that borrows it.
+
+- **The corner had no room.** PATTERN, PHRASE and SONG each say one thing there,
+  in place of another -- `said`, REC, SELECT, `LOOP 02-05`, the length, the
+  track -- and both of `grid_corner`'s slots are taken as soon as a loop is
+  posed, which is exactly when one slows down. So what says it permanently is
+  **the triangle of what plays, amber instead of cyan** (`grid_playing`): the
+  thing concerned says it, one line, the three screens at once, no space taken.
+  Dark amber on the cursor's green band, where near-black is what reads. The
+  number itself is shouted in the corner for 1.5 s after the last detent,
+  `SPEED 60%`, and 100 % is said too, once: coming back to the tempo is worth
+  a word.
+- **The swing follows, and it was free.** A step stretched by a ratio is still
+  stretched by it when the tick is longer, so a slowed song is the same song,
+  swing and all. The echo's line, counted in seconds, slows with it -- also
+  right: it is the same song.
+- **Not one instruction on the audio path, at the second attempt.** The first
+  version folded the speed into the `bpm` the ticks are counted from, at each
+  moment the tempo changes -- and one of those moments is `FX_BPM` on a step,
+  which runs in the render. It linked on its own. Merged with the evening's
+  other work it did not: **RAMTEXT overflowed by 8 bytes**, the division by 100
+  having pulled its helper into RAM with it. So the speed went where it costs
+  nothing: `tick_num`, the tick's numerator, `FS * 15` scaled once by the main
+  loop in `player_set_speed`. `tick_samples_of` reads it and does exactly what
+  it did before, `bpm` is the asked tempo again and `FX_BPM` is one store, so a
+  BPM effect mid-song stays slowed with nothing to recompute. The lesson is the
+  one of 29/10 and 01/11, a third time: a feature that fits alone is not a
+  feature that fits.
+- **The frame's order is the test's order.** `pattern_test`'s `go()` now calls
+  `ui_speed` before `pattern_frame`, as `app_frame` does, which is how a run of
+  turns reads as one gesture and how the release stops being a tap. A step's
+  samples are counted twice, at the tempo and at half: 5512, then twice that.

@@ -839,6 +839,8 @@ static void draw(void)
     s[0] = 'T', s[1] = (char)('1' + track), s[2] = 0;
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (ui_speed_word()) /* the number, while the hand is on it; the triangle says the rest */
+        grid_corner(ui_speed_word(), C_FX, 0, 0);
     else if (counting) { /* the count-in's beat */
         char b[2] = { (char)('0' + count_beat), 0 };
         grid_corner("REC", C_MUTE, b, C_TEXT);

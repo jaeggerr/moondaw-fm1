@@ -170,9 +170,15 @@ void grid_cell(int vis, int x, int w, const char *s, bool band, bool on, uint16_
 
 void grid_playing(int vis, bool band)
 {
+    /* Amber, not cyan, while the listening speed is below 100 % (02/11):
+     * what plays says that it is not at the song's tempo. The corner has
+     * no room left on any of the three screens, and a slowed song nobody
+     * is told about is a song that sounds wrong for no reason. */
+    bool slow = player_speed() < 100;
     int y = grid_y(vis) + 8;
+    uint16_t ink = band ? (slow ? C_SEL : C_ON_ACC) : slow ? C_FX : C_TITLE;
     for (int k = 0; k < 6; k++)
-        gfx_fill(4 + k, y + k, 1, 12 - 2 * k, band ? C_ON_ACC : C_TITLE, 255);
+        gfx_fill(4 + k, y + k, 1, 12 - 2 * k, ink, 255);
 }
 
 void grid_rule(int vis) { gfx_fill(GRID_CELL_X - 3, grid_y(vis), 1, GRID_ROW, C_DIM, 255); }

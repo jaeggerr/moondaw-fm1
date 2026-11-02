@@ -1354,6 +1354,8 @@ static void draw(void)
     grid_clear();
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (ui_speed_word()) /* the number, while the hand is on it; the triangle says the rest */
+        grid_corner(ui_speed_word(), C_FX, 0, 0);
     else if (level_said && col >= 0 && !is_ref(row)) /* KNOB 4: the cell's level */
         grid_corner("VOL", C_DIM, ui_dec(s, entry_at(row)->level[col]), C_TEXT);
     else if (on_mark) { /* on a marker: the one number a section has, KNOB 4's */

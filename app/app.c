@@ -395,6 +395,7 @@ void app_frame(const PlatInput *real)
     int entry, track, worst;
 
     remote_input(&mine);
+    ui_speed(&mine); /* EDIT held + SELECT, before any screen sees the detents (ui.h) */
     player_set_master(in->master);
     app_cpu = plat_audio_load(&worst);
     app_block = worst;

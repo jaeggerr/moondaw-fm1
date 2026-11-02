@@ -78,6 +78,30 @@ enum {
     UI_KEY_MONO = 20
 };
 
+/* The listening speed (02/11): EDIT held, SELECT turned, 25 % to 100 % by
+ * fives, 100 % in a hard stop at the top -- the tempo is found again by
+ * turning the knob up as far as it goes. Read once a frame, before any
+ * screen, on the hands as they came: the detents it takes are rubbed out
+ * of them, so no cursor moves under the speed.
+ *
+ * EDIT is the only button of the panel that can be held. Every other one
+ * acts on the press, and PLAY pressed while it plays is a stop -- the
+ * speed would be set on silence, which is the one thing it must not be.
+ * EDIT alone gives its own action back at the release, and only if nothing
+ * served while it was down (ui_shift): a detent counts as serving, so the
+ * CAPS LOCK does not turn over behind the hand.
+ *
+ * Nothing of it is saved and nothing is in UNDO, as the listening loop is
+ * not (app/loop.h). What says it permanently is the triangle of what plays,
+ * amber instead of cyan while the speed is below 100 (app/grid.c): the
+ * corner has no room left on any of the three screens. */
+void ui_speed(PlatInput *in);
+/* EDIT served the speed while it was down: its release is not a tap. */
+bool ui_speed_took(void);
+/* `SPEED 60%` for the corner, for 1.5 s after the last detent, then NULL.
+ * 100 % is said too, once: coming back to the tempo is worth a word. */
+const char *ui_speed_word(void);
+
 /* EDIT as a shift (29/10), shared by the screens where a track is in front
  * (PATTERN, SONG, PHRASE, MIXER): while EDIT is down the black keys are
  * commands; MONO tapped puts the track alone (solo, cumulative), or back to
