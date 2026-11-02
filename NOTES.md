@@ -3761,3 +3761,55 @@ it only moves, and EDIT held is the one thing that borrows it.
   `ui_speed` before `pattern_frame`, as `app_frame` does, which is how a run of
   turns reads as one gesture and how the release stops being a tap. A step's
   samples are counted twice, at the tempo and at half: 5512, then twice that.
+
+## 2026-11-02 — a metronome, on REC under the shift
+
+The machine had one click and one place to hear it: REC's count-in, the bars
+SETTINGS counts before it records. Playing a sparse block by hand, there was
+nothing to play against once those bars were over.
+
+The switch was the whole question. SETTINGS, beside COUNT-IN, is one more row
+in a screen one has to leave the song to reach, and a setting of the machine is
+on until one remembers it -- the menus the verdict of 31/10 was about. A
+metronome is flipped while one plays. So a gesture; and the gesture is **EDIT
+held + REC**.
+
+I had proposed a free black key first (PIT, GLO and POLY are commands of
+nothing) and then said what was wrong with my own proposal: none of them says
+metronome, which is the lie refused for the SELECTION on 29/10 and nearly
+refused for the chords on 01/11. REC says it. The click belongs to the
+count-in and the count-in belongs to REC, so the shift takes the one button
+whose family it is already in -- and the count flowing into the metronome is
+one sound to the ear, the same two pitches.
+
+- **Four steps to a beat**, which is what `tick_samples` has always said
+  (`FS * 15 / bpm` a step, a quarter of a beat at any tempo). The bar's first
+  beat is the higher click, `beats_per_bar` wide.
+- **The bar's grid is the phrase's, not the hand's.** Since this morning PATTERN
+  plays from the step under the cursor, so PLAY on step 05 puts the first click
+  on 08 and the accent on 10 -- the note sounds at once, the click waits for the
+  grid. Judged on the panel and kept: the barline belongs to the phrase. Clicking
+  from the starting step instead would make the accent mean nothing.
+- **Driven from the player's own tick**, not from the frame clock the count-in
+  uses. `in->ms` and the audio clock are two clocks; a metronome that drifts
+  against the song is worse than none. The click still lands at the head of the
+  128-frame block that holds the tick, up to 2.9 ms early on a click 33 ms long
+  (`CLICK_N`): inaudible, and not worth an offset carried into the render.
+- **Monitoring, like the mutes and solos**: never in a file, cleared by
+  `player_init`, off at every power-on. Nothing is saved, so nothing has to be
+  saved -- no SAVE, no flash wear, none of 01/11's trouble over room, for a
+  thing that is not music.
+- **The latch does not reach REC.** PATTERN's and SONG's CAPS LOCK is the black
+  keys' own (31/10); a caps lock that took REC away from recording would be a
+  trap, so the metronome asks for EDIT physically held and REC alone still arms.
+  `ui_shift` does it, so it landed on PATTERN, SONG, PHRASE and MIXER at once.
+- **No new LED.** A metronome that is on is heard, continuously, and the corner
+  says METRO ON at the press. REC's light stays what PATTERN made it.
+- **RAMTEXT was full again**, 20 bytes over with the beat inside the tick.
+  `vox_init`, whose only caller is `player_init`, moved to `.flash_text` beside
+  `osc_init` (01/11 moved four others the same way).
+
+What the test covers is the gesture: on, off, that the shift takes REC so
+nothing is armed, that the caps lock leaves REC alone, and that a fresh player
+has it off. The beat itself has no test -- the click is not observable from the
+host without exposing `click_req` -- and was judged on the panel.

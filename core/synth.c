@@ -985,6 +985,11 @@ void vox_reset(Vox *v)
     recompute_f0(v);
 }
 
+/* Only player_init calls it, as osc_init above: from the flash, RAMTEXT
+ * being full again (02/11, the metronome's beat -- firmware/app.ld). */
+#ifdef PLAT_FM1
+__attribute__((section(".flash_text")))
+#endif
 void vox_init(Vox *v)
 {
     for (uint32_t i = 0; i < sizeof(*v); i++)

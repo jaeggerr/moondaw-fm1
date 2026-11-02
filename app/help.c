@@ -116,6 +116,7 @@ static const Item pattern_items[] = {
     { "  again", "stop; the cursor stays" },
     { "REC", "armed: PLAY counts in" },
     { "  then keys", "record; OFF when let go" },
+    { "EDIT held + REC", "the metronome, on, off" },
     { "GLO", "the project" },
     { "HOME", "back" },
 };
@@ -187,6 +188,7 @@ static const Item gestures_items[] = {
     { "GLO", "the project" },
     { "ALGO", "undo left, redo right" },
     { "EDIT held", "black keys: commands" },
+    { "EDIT held + REC", "the metronome, on, off" },
     { "lit buttons", "what this screen does" },
     { "SAVE", "save the project" },
     { "PLAY", "play, stop" },

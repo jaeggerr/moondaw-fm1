@@ -70,6 +70,11 @@ bool player_muted(int track);
 /* Monitoring, like the mutes: never in the file, cleared by player_init. */
 void player_toggle_solo(int track);
 bool player_soloed(int track);
+/* The metronome: the count-in's click kept on, beating the song's tempo
+ * while it plays -- four steps to a beat, the bar's first higher. Monitoring
+ * too: never in the file, off at every power-on (EDIT + REC, 02/11). */
+void player_toggle_metro(void);
+bool player_metro(void);
 
 /* From the audio interrupt: interleaved stereo, any number of frames. */
 void player_render(int16_t *out, int frames);

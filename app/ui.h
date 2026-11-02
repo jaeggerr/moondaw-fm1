@@ -109,6 +109,12 @@ const char *ui_speed_word(void);
  * EDIT with no key meanwhile is the screen's own EDIT, given at the
  * release. `track` -1: none in front.
  *
+ * REC is the one button the shift takes (02/11): EDIT held, REC turns the
+ * metronome over -- the count-in's click kept on, beating the song while it
+ * plays (core/player.h). REC alone still arms recording, on PATTERN, which
+ * is the only screen that wants it. The latch does not reach REC: a CAPS
+ * LOCK that took REC away from recording would be a trap.
+ *
  * On PATTERN and SONG that tap is a CAPS LOCK on the shift itself (31/10,
  * the evening): the black keys stay commands, and the keys sound nothing,
  * until EDIT is tapped again -- `latch`, which ui_shifted() reads together

@@ -435,6 +435,7 @@ static volatile uint8_t click_req;
 enum { LIM_CEIL = 30000, LIM_ONE = 1 << 16, LIM_REL = 12 };
 static int32_t lim_gain = LIM_ONE;
 static int click_left, click_half, click_phase;
+static volatile uint8_t metro_on; /* the metronome: the same click, kept on (player.h) */
 static volatile uint8_t mute_mask, solo_mask;
 static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio side never sees half of it */
 /* The phrases the song goes round: from | (to + 1) << 16, 0 for none -- one
@@ -1561,6 +1562,10 @@ static void player_tick(void)
     tick_parity = (uint8_t)(entry_step & 1);
     ui_tick = tick_in_step;
     if (tick_in_step == 0) {
+        if (metro_on && entry_step % 4 == 0) { /* four steps to a beat; the bar's first higher */
+            uint16_t bar = (uint16_t)(4 * (song->beats_per_bar ? song->beats_per_bar : 4));
+            click_req = entry_step % bar == 0 ? 2 : 1;
+        }
         process_row(e);
         ui_row = (uint16_t)(entry_step % cycle);
         ui_entry = arr_pos;
@@ -2034,6 +2039,7 @@ MAIN_LOOP void player_init(Song *s)
     ui_playing = 0;
     ui_row = ui_entry = 0;
     mute_mask = solo_mask = 0;
+    metro_on = 0;
     loop_word = 0;
     song_loop_word = 0;
 }
@@ -2121,3 +2127,5 @@ MAIN_LOOP void player_toggle_solo(int track)
         solo_mask ^= (uint8_t)(1u << track);
 }
 MAIN_LOOP bool player_soloed(int track) { return (solo_mask >> track) & 1u; }
+MAIN_LOOP void player_toggle_metro(void) { metro_on = !metro_on; }
+MAIN_LOOP bool player_metro(void) { return metro_on != 0; }
