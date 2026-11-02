@@ -11,6 +11,15 @@
  * PROJECTS' DELETE -- HOME goes back. Filling the bank stays the
  * computer's (tools/fm1_samples.py); here one can only be taken away.
  *
+ * A row no song on the machine names says UNUSED, small, left of its size
+ * (2/11, his ask -- he had asked for two sections, used and unused, and a
+ * mark keeps the list in the order one reads it by). It is read out of the
+ * flash when the screen opens, every song as the text it is
+ * (core/bank.h, bank_used); a song that will not read leaves every row
+ * unmarked, which is the way round that cannot invite a mistake. The
+ * question says it again, the other way: whether a song still names what
+ * is about to go.
+ *
  * PLAY hears the one under the cursor (2/11, his ask): « des fois que le
  * nom n'est pas clair ». tr9_mtom says little and tr9_ltom says the same
  * thing; the sound says which of the two can go. It is heard through no

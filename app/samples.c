@@ -17,6 +17,17 @@ static bool asking;
 static const char *said; /* what the last delete answered with, or NULL */
 static uint32_t free_kb;
 static uint32_t prev_btns;
+/* Which samples a song on the machine names, read from the flash when the
+ * screen opens (core/bank.h, bank_used). `knows` is false when a song
+ * could not be read: then nothing is called unused, which is the way round
+ * that cannot invite a mistake. */
+static uint8_t used_bits[BANK_MAX / 8];
+static bool knows;
+
+static bool unused(int i)
+{
+    return knows && !(used_bits[i >> 3] >> (i & 7) & 1u);
+}
 
 /* s + word, for lines built of pieces (as app/room.c). */
 static char *put(char *s, const char *w)
@@ -51,6 +62,7 @@ static void refresh(void)
 {
     nrows = bank_count();
     free_kb = store_free();
+    knows = bank_used(used_bits, sizeof used_bits) == STORE_OK;
     grid_follow(&cur, &top, nrows, ROWS);
 }
 
@@ -113,14 +125,25 @@ static void draw_list(void)
         char name[BANK_NAME_LEN];
         uint32_t frames;
         int k = top + r, y = TOP + r * ROW, base = y + 2 + FONTS[F_COND20].ascent;
+        int x, sw, uw, ux;
         bool here = k == cur;
         if (!bank_entry(k, name, &frames))
             break;
         if (here)
             gfx_slab(4, y + 1, PLAT_W - 14, ROW - 2, C_ACCENT, 255);
-        gfx_text(F_COND20, 14, base, name, here ? C_ON_ACC : C_TEXT);
+        x = gfx_text(F_COND20, 14, base, name, here ? C_ON_ACC : C_TEXT);
         put_kb(s, row_bytes(k));
-        gfx_text(F_COND14, PLAT_W - 16 - gfx_text_w(F_COND14, s), base - 2, s, here ? C_ON_ACC : C_DIM);
+        sw = gfx_text_w(F_COND14, s);
+        /* Nothing names it: the room it holds is room a song could have.
+         * Small, left of the size, and left out where a long name would
+         * meet it -- the size is what must always be readable. */
+        if (unused(k)) {
+            uw = gfx_text_w(F_COND12, "UNUSED");
+            ux = PLAT_W - 16 - sw - 10 - uw;
+            if (ux > x + 8)
+                gfx_text(F_COND12, ux, base - 3, "UNUSED", here ? C_ON_ACC : C_ACCENT);
+        }
+        gfx_text(F_COND14, PLAT_W - 16 - sw, base - 2, s, here ? C_ON_ACC : C_DIM);
     }
     if (nrows > ROWS) { /* where the screen is in the list */
         int h = ROWS * ROW * ROWS / nrows, y = TOP + ROWS * ROW * top / nrows;
@@ -150,6 +173,11 @@ static void draw_sure(void)
     gfx_text(F_COND20, X, y += ROW, name, C_FX);
     put(put_kb(s, row_bytes(cur)), " back, for good.");
     gfx_text(F_COND20, X, y += ROW, s, C_DIM);
+    /* The one thing worth saying at the moment of deciding: whether
+     * anything on the machine still asks for it. */
+    if (knows)
+        gfx_text(F_COND20, X, y += ROW, unused(cur) ? "Nothing names it." : "A SONG NAMES IT.",
+                 unused(cur) ? C_ACCENT : C_FX);
     hint(6, "SEL", "YES, DELETE", false);
     hint(PLAT_W - 6, "HOME", "NO", true);
 }

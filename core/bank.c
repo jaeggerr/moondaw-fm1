@@ -116,6 +116,66 @@ void bank_resolve(const Song *s)
     }
 }
 
+/* `smp 00 tr909/tr9_kick.wav begin 100 ...`: the third word of a line
+ * that opens with smp, looked up in the bank. Anything else is left
+ * alone -- a song is read here as text, not parsed (core/trk.h does
+ * that, and it needs the whole song in memory). */
+static void smp_line(char *line, uint8_t *bits, uint32_t n)
+{
+    char *p = line, *name;
+    int b;
+
+    if (p[0] != 's' || p[1] != 'm' || p[2] != 'p' || p[3] != ' ')
+        return;
+    for (p += 4; *p == ' '; p++)
+        ;
+    while (*p && *p != ' ') /* the entry's number */
+        p++;
+    while (*p == ' ')
+        p++;
+    for (name = p; *p && *p != ' '; p++)
+        ;
+    *p = 0;
+    b = *name ? bank_find(name) : -1;
+    if (b >= 0 && (uint32_t)(b >> 3) < n)
+        bits[b >> 3] |= (uint8_t)(1u << (b & 7));
+}
+
+int bank_used(uint8_t *bits, uint32_t n)
+{
+    char chunk[256], line[96];
+    int rc = STORE_OK;
+
+    for (uint32_t i = 0; i < n; i++)
+        bits[i] = 0;
+    for (int s = 0; s < STORE_SLOTS; s++) {
+        int32_t got;
+        int at = 0, begin;
+        if (s == BANK_SLOT || (begin = store_load_begin(s)) == STORE_ERR_NONE)
+            continue;
+        if (begin != STORE_OK) {
+            rc = begin;
+            continue;
+        }
+        while ((got = store_load_get(chunk, sizeof chunk)) > 0)
+            for (int32_t k = 0; k < got; k++) {
+                char c = chunk[k];
+                if (c == '\n' || c == '\r') {
+                    line[at] = 0;
+                    smp_line(line, bits, n);
+                    at = 0;
+                } else if (at < (int)sizeof line - 1) {
+                    line[at++] = c;
+                }
+            }
+        if (got < 0)
+            rc = (int)got;
+        line[at] = 0; /* a last line the file ended without */
+        smp_line(line, bits, n);
+    }
+    return rc;
+}
+
 bool bank_place(int i, uint32_t *at, uint32_t *frames)
 {
     uint32_t e = BANK_HEAD + (uint32_t)i * BANK_ENTRY;

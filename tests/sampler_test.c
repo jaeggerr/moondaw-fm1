@@ -318,6 +318,25 @@ int main(int argc, char **argv)
         CHECK("the bank of three is there", put(BANK_SLOT, BANK_FILE, bankfile, size) == STORE_OK);
         store_mount();
         bank_mount();
+
+        {   /* which samples a song names, read out of the flash as text:
+             * what SAMPLES marks its rows with (core/bank.h, bank_used) */
+            static const char one[] = "version 3\nbpm 120\ntracks 1\n"
+                                      "smp 00 dir/TONE.WAV\nsmp 01 beep.wav begin 10\n"
+                                      "smp 02 nothing.wav\n";
+            uint8_t bits[BANK_MAX / 8];
+            CHECK("a song goes in beside the bank", put(0, "ONE", (const uint8_t *)one, sizeof one - 1) == STORE_OK);
+            store_mount();
+            bank_mount();
+            CHECK("every song is read whole", bank_used(bits, sizeof bits) == STORE_OK);
+            CHECK("a name a song carries is used, whatever its spelling", (bits[0] & 1) && (bits[0] & 2));
+            CHECK("one nothing carries is not", !(bits[0] & 4));
+            CHECK("and a name the bank does not have is nobody's", bank_find("nothing") < 0);
+            store_delete(0);
+            store_mount();
+            bank_mount();
+        }
+
         room = store_free();
         CHECK("the middle sample goes", bank_delete(1) == STORE_OK);
         CHECK("the bank is one shorter", bank_count() == 2);

@@ -70,4 +70,19 @@ int bank_delete(int i);
  * one that no song names. False past the last. */
 bool bank_place(int i, uint32_t *at, uint32_t *frames);
 
+/* Which samples anything on this machine names: a bit per entry, the
+ * lowest first, in `bits` (`n` bytes, cleared here). Every song in flash
+ * is read as the text it is and its `smp` lines are looked up in the bank
+ * -- a name no song carries is a sample nothing can play, and the room it
+ * takes is room a song could have had (app/samples.h marks those rows).
+ *
+ * The flash is the whole truth: reaching HOME puts the song in memory
+ * down (app/app.h), so by the time SAMPLES is open there is no unsaved
+ * work left that could name one.
+ *
+ * STORE_OK when every song that is there was read whole; a STORE_ERR_*
+ * otherwise, and then what is in `bits` is only part of the answer --
+ * nothing should be called unused on it. */
+int bank_used(uint8_t *bits, uint32_t n);
+
 #endif

@@ -4108,3 +4108,41 @@ en train de jouer, PLAY l'arrête ; sinon, PLAY écoute. Le pied de l'écran le 
 exactement ce qui a été corrigé hier.
 
 Pas encore jugé sur le panneau.
+
+### UNUSED, et pourquoi pas deux sections
+
+« Quels samples sont inutilisés ? D'ailleurs ce serait peut-être intéressant de
+le marquer, non ? Ou faire deux sections, used et unused. »
+
+La réponse sur sa machine, lue en tirant les douze morceaux par le lien : sur
+vingt samples, **six que rien ne nomme** — `tr9_crash` (11 KB), `tr9_ohh` (7),
+`tr9_ltom` (7), `tr9_mtom` (5), `tr9_htom` (5), `tr9_rim` (1), soit 36 KB quand
+il ne lui reste que 16 KB de libre. Un seul morceau nomme des samples,
+SMPL-DEMO ; KIDS-DRUM et les autres passent par le moteur DRUM. Et les deux toms
+qu'il n'arrivait pas à distinguer sont justement tous les deux inutilisés.
+
+**Un marqueur, pas deux sections.** Trois raisons, dans l'ordre d'importance :
+
+1. *Inutilisé par quoi ?* Le firmware ne connaissait que la table du morceau en
+   mémoire. Un marqueur bâti là-dessus aurait invité exactement la faute qu'il
+   doit prévenir : `tr9_kick` est inutilisé par FX KEYS, le morceau ouvert, et
+   indispensable à SMPL-DEMO. Donc `bank_used` lit **la flash** : chaque slot
+   relu comme le texte qu'il est, les lignes `smp` cherchées dans la banque.
+   Pas d'analyse de morceau — `trk_load` demanderait le morceau entier en
+   mémoire — juste un balayage de lignes, 82 KB parcourus une fois à
+   l'ouverture de l'écran. Et la flash est toute la vérité ici : rejoindre HOME
+   repose le morceau en mémoire, donc quand SAMPLES s'ouvre il ne reste aucun
+   travail non sauvé qui pourrait en nommer un.
+2. Deux sections feraient bouger les lignes sous le pouce : le jour où un
+   morceau nomme `tr9_ohh`, il saute de section. La liste se lit par nom.
+3. Le sens de l'échec. Marquer les utilisés, c'est laisser une ligne non marquée
+   quand un morceau ne se lit pas — et une ligne non marquée inviterait à
+   l'effacer. Marquer les inutilisés échoue dans le bon sens : `knows` tombe à
+   faux et plus rien n'est dit.
+
+Le mot est petit, à gauche de la taille, et il s'efface si un nom long vient à sa
+rencontre : la taille est ce qui doit rester lisible. La question le redit dans
+l'autre sens au moment de décider — « Nothing names it. » en vert, ou « A SONG
+NAMES IT. » en rouge, qui est la seule des deux qui vaut un avertissement.
+
+Pas encore jugé sur le panneau.
