@@ -9,6 +9,7 @@
 #include "grid.h"
 #include "loop.h"
 #include "chords.h"
+#include "coat.h"
 #include "syllable.h"
 #include "ui.h"
 #include "undo.h"
@@ -82,6 +83,10 @@ static Song *song;
 static int entry, track, pat;
 static int cur_at;                      /* where the cursor stands in the strip: the whole truth of it */
 static int view, cur_row, cur_col, top; /* view and cur_col are cur_at read back; cur_col -1: the step's number */
+
+/* How many rows PATTERN shows: eight, less the two the coat takes off the
+ * foot while it is worn (app/coat.h). */
+static int vis_rows(void) { return GRID_ROWS - coat_rows(); }
 static int kbd_oct;                     /* octaves the keyboard is moved by */
 static bool trying;                     /* a key plays without writing (the cursor in no note column) */
 static int chord_next;                  /* the note slot the next held key fills, 0 = none held */
@@ -849,6 +854,38 @@ static void ch_draw(void)
     ch_hint(PLAT_W - 6, "HOME", "BACK", true);
 }
 
+/* What the twelve do on PATTERN, under the cursor where it is now
+ * (app/coat.h). The screen is three views of the same steps, and that is
+ * what moves: the view one is NOT in is the button that goes there, and
+ * SEL means something only where there is something to open -- an
+ * effect's syllable, an instrument. On the notes it opens nothing, and
+ * the dark cell says so better than a word would.
+ *
+ * The rest hold wherever one is. LFO has nothing on this screen at all
+ * and never lights: that it is always dark is itself worth knowing. */
+static const char *const *coat_words(void)
+{
+    static const char *w[COAT_BTNS];
+
+    w[PB_GLO] = "PROJECT";
+    w[PB_HOME] = "BACK";
+    w[PB_SAVE] = "WRITE";
+    w[PB_EDIT] = "KEYS";
+    w[PB_REC] = "ARM";
+    w[PB_PLAY] = player_playing() ? "STOP" : "ROUND";
+    w[PB_LFO] = 0;
+    w[PB_FX] = view == V_FX ? 0 : "EFFECTS";
+    w[PB_SEQ] = view == V_NOTES ? 0 : "NOTES";
+    w[PB_ARP] = view == V_NOTES ? (arp_mode ? "KEYS" : "CHORDS") : 0;
+    if (view == V_INS) {
+        w[PB_ENV] = w[PB_SEL] = "OPEN"; /* already here: both open the instrument */
+    } else {
+        w[PB_ENV] = "INSTR.";
+        w[PB_SEL] = view == V_FX ? "SYLLABLE" : 0;
+    }
+    return w;
+}
+
 static void draw(void)
 {
     int len = pat_len(), cols = view_cols[view], w = view_w[view];
@@ -898,11 +935,11 @@ static void draw(void)
      * the eye takes it for what it is. Dim, like the rest of the header: a
      * hint, not a control. */
     gfx_text(F_COND9, PLAT_W - 4 - gfx_text_w(F_COND9, view_next[view]), GRID_HEAD - 3, view_next[view], C_DIM);
-    for (int v = 0; v < GRID_ROWS && top + v < len; v++) {
+    for (int v = 0; v < vis_rows() && top + v < len; v++) {
         int r = top + v;
         bool band = r == cur_row;
         if (band)
-            grid_band(v, PLAT_W - 4 - (len > GRID_ROWS ? 6 : 0));
+            grid_band(v, PLAT_W - 4 - (len > vis_rows() ? 6 : 0));
         if (r == play_row)
             grid_playing(v, band);
         if (selecting) {
@@ -927,19 +964,20 @@ static void draw(void)
         for (int c = 0; c < cols; c++)
             draw_cell(v, r, c, band);
     }
-    if (selecting && cur_row >= top && cur_row < top + GRID_ROWS) /* the cursor, over the selection */
+    if (selecting && cur_row >= top && cur_row < top + vis_rows()) /* the cursor, over the selection */
         gfx_frame_rect(cur_col < 0 ? 2 : GRID_CELL_X + cur_col * w, grid_y(cur_row - top),
                        cur_col < 0 ? GRID_CELL_X - 4 : w, GRID_ROW, C_TEXT, 255);
     if (selecting && !anchored && edit_clip_len()) { /* where OP2 would put the clipboard */
         int c0 = clip_cols < 0 || cur_col < 0 ? 0 : cur_col, nc = clip_cols < 0 ? cols : clip_cols;
         int v0 = cur_row - top, v1 = cur_row + edit_clip_len() - 1 - top;
-        v1 = v1 >= GRID_ROWS ? GRID_ROWS - 1 : v1;
+        v1 = v1 >= vis_rows() ? vis_rows() - 1 : v1;
         if (c0 + nc > cols)
             nc = cols - c0;
-        if (v0 >= 0 && v0 < GRID_ROWS)
+        if (v0 >= 0 && v0 < vis_rows())
             gfx_frame_rect(GRID_CELL_X + c0 * w, grid_y(v0), nc * w, grid_y(v1) + GRID_ROW - grid_y(v0), C_FX, 255);
     }
-    grid_frame(top, len);
+    grid_frame_rows(top, len, vis_rows());
+    coat_draw(coat_words(), ui_shifted(&shift));
 }
 
 /* ------------------------------------------------------------- api --- */
@@ -989,7 +1027,7 @@ bool pattern_open(Song *s, int e, int t)
 void pattern_from_phrase(int row)
 {
     cur_row = row < 0 ? 0 : row >= pat_len() ? pat_len() - 1 : row;
-    top = cur_row >= GRID_ROWS ? cur_row - GRID_ROWS / 2 : 0;
+    top = cur_row >= vis_rows() ? cur_row - vis_rows() / 2 : 0;
 }
 
 int pattern_instr(void) { return edit_instr_at(song, track, pat, cur_row); }
@@ -1313,9 +1351,9 @@ int pattern_frame(const PlatInput *in)
                     ? 0
                     : still < GRID_FOLLOW_IDLE ? still + 1 : still;
     if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with what plays */
-        grid_follow_play(&top, play_row, len, GRID_ROWS);
+        grid_follow_play(&top, play_row, len, vis_rows());
     else
-        grid_follow(&cur_row, &top, len, GRID_ROWS);
+        grid_follow(&cur_row, &top, len, vis_rows());
     ui_led_state(PB_PLAY, playing);
     /* the other views, ENV always (twice: the instrument), the keyboard's octave */
     /* EDIT is lit only while its CAPS LOCK is on: a shift the hand has under

@@ -37,29 +37,30 @@ static const char *const key_word[2][KEYS_COLS] = { { "COPY", "PASTE", "CUT", "C
 static int key_x(int s) { return s < 3 ? s * KEY_W : KEY_GAP_AT + (s - 3) * KEY_W; }
 
 /* Centred in its cell, and never into the next one. A word too wide at
- * CONDENSED 12 is tried at 11 before it is given up -- PATTERN and PROJECT
- * are both over by a hair, and a cyan name with nothing under it is the
- * worst cell of all: it says a button does something and will not say
- * what. What it still must not do is SHORTEN the word (coat.h): past 11
- * the cell goes dark name and all, which at least tells the truth. */
+ * CONDENSED 12 drops to 11, then to 9 -- the name's own size -- before it
+ * is given up: SYLLABLE on the effects does not fit at any ordinary size,
+ * and small is better than absent. What it must never do is SHORTEN the
+ * word (coat.h); an abbreviation nobody reads is worse than nothing.
+ *
+ * The NAME is always drawn, whatever became of the word. A blank cell
+ * means "this button does nothing here", so leaving one blank while the
+ * button is live would be a lie -- the first build did exactly that to
+ * SEL on the effects, and the cell read as dead (seen on the panel,
+ * 03/11). A live name with no word under it says the honest thing: there
+ * is something here and the foot cannot say what. */
 static void cell_at(int x, int cw, int r, const char *name, const char *word, uint16_t ink, uint16_t wink)
 {
-    static const int sizes[] = { F_COND12, F_COND11 };
+    static const int sizes[] = { F_COND12, F_COND11, F_COND9 };
     int y = TOP + r * GRID_ROW, w;
-    const int CELL_W = cw;
-    if (word) {
-        for (unsigned i = 0; i < sizeof sizes / sizeof sizes[0]; i++) {
-            w = gfx_text_w(sizes[i], word);
-            if (w <= CELL_W - 4) { /* 2 px clear of the rule either side */
-                gfx_text(sizes[i], x + (CELL_W - w) / 2, y + WORD_Y, word, wink);
-                break;
-            }
-            if (i + 1 == sizeof sizes / sizeof sizes[0])
-                return; /* no name either: the cell says nothing rather than half */
+    for (unsigned i = 0; word && i < sizeof sizes / sizeof sizes[0]; i++) {
+        w = gfx_text_w(sizes[i], word);
+        if (w <= cw - 4) { /* 2 px clear of the rule either side */
+            gfx_text(sizes[i], x + (cw - w) / 2, y + WORD_Y, word, wink);
+            break;
         }
     }
     w = gfx_text_w(F_COND9, name);
-    gfx_text(F_COND9, x + (CELL_W - w) / 2, y + NAME_Y, name, ink);
+    gfx_text(F_COND9, x + (cw - w) / 2, y + NAME_Y, name, ink);
 }
 
 static void cell(int c, int r, const char *name, const char *word, uint16_t ink)

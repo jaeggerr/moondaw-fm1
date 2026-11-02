@@ -194,13 +194,15 @@ void grid_bar_rows(int top, int n, int rows)
 
 void grid_bar(int top, int n) { grid_bar_rows(top, n, GRID_ROWS); }
 
-void grid_frame(int top, int n)
+void grid_frame_rows(int top, int n, int rows)
 {
-    int rows = n < GRID_ROWS ? n : GRID_ROWS;
-    for (int v = 0; v < rows; v++)
+    int r = n < rows ? n : rows;
+    for (int v = 0; v < r; v++)
         grid_rule(v);
-    grid_bar(top, n);
+    grid_bar_rows(top, n, rows);
 }
+
+void grid_frame(int top, int n) { grid_frame_rows(top, n, GRID_ROWS); }
 
 void grid_follow(int *cur, int *first, int n, int shown)
 {

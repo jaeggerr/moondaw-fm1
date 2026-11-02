@@ -76,6 +76,7 @@ void grid_bar(int top, int n);
 void grid_bar_rows(int top, int n, int rows);
 /* Both, for the screens whose rows are all alike. */
 void grid_frame(int top, int n);
+void grid_frame_rows(int top, int n, int rows);
 
 /* A play sign, 10 x 12 from its top left corner: drawn round, filled while it plays. */
 void grid_play_sign(int x, int y, uint16_t c, bool filled);
