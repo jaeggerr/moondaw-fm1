@@ -3671,6 +3671,38 @@ root. Press SAVE, miss a corner, switch off, and the work is gone. So:
 
 Nothing is freed for the hand: which song goes is its own choice.
 
+## 2026-11-02 — the column stays, and PLAY starts where one is pointing
+
+Everything for the beta being in, the app was finally played rather than built,
+and two things that had been asked for read wrong under the hand.
+
+- **SELECT no longer jumps the cursor to the row's number**, in SONG, in
+  PATTERN and in MIXER -- the three screens where it did, and HELP's GESTURES
+  page states it as one rule for all of them. It was asked for on 29/10 — the row as a whole, one detent away — and
+  beside KNOB 1, which moves and leaves the column alone, the column vanishing
+  out from under one knob and not the other is a lurch. The two knobs are now
+  the same hand down to the column. The number is still one detent to the left,
+  on KNOB 2, which is where it was all along.
+- **PATTERN plays from the step under the cursor**, as SONG plays from the
+  phrase under it, and **STOP leaves the cursor where it was**: the view scrolls
+  back to the step one was pointing at instead of leaving the hand wherever the
+  playhead happened to stop. The other way round was asked for on 30/10 and was
+  the less intuitive of the two with a loop under the ear — the step one had
+  picked out was lost on every stop. The player takes the step in
+  `player_play_entry_at`, the free byte of its PLAY command; REC's count-in
+  starts there too.
+- **The PLAY that starts the transport hands the view to the playhead at once**,
+  in PATTERN, PHRASE and SONG. The autoscroll only takes over once the hand has
+  been still for GRID_FOLLOW_IDLE, 1.5 s, and the press itself counted as the
+  hand touching something -- so for 1.5 s the view stayed on the cursor while
+  the playhead ran on (fourteen steps at 138 bpm), and the follow then jumped a
+  page at a time from wherever it had got to. Starting on step 06 of a long
+  block, the grid went from 06..0D straight to 14..1B: six steps were never
+  shown. The delay itself is right and stays -- a hand on the knobs owns the
+  view -- but the press that sets the playhead going is not a hand busying
+  itself. There is no test for this: `top` is private to each screen and
+  nothing reads it back.
+
 ## 2026-11-02 — the listening speed
 
 Working a loop, the one thing missing was hearing it slower. Not the tempo:
@@ -3696,7 +3728,8 @@ as serving now, so the CAPS LOCK does not turn over behind the hand.
 **It is read once a frame, before any screen** (`ui_speed`, from `app_frame` on
 the hands as they came), and the detents it takes are rubbed out of them. One
 place, the three screens of the road untouched, and no cursor moves under the
-speed.
+speed. SELECT keeps its one job by the rule set the same evening, just above:
+it only moves, and EDIT held is the one thing that borrows it.
 
 - **The corner had no room.** PATTERN, PHRASE and SONG each say one thing there,
   in place of another -- `said`, REC, SELECT, `LOOP 02-05`, the length, the
