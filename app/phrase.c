@@ -100,6 +100,8 @@ static void draw(void)
     grid_clear();
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
+    else if (ui_speed_word()) /* the number, while the hand is on it; the triangle says the rest */
+        grid_corner(ui_speed_word(), C_FX, 0, 0);
     else if (loop_state() == LOOP_SET) { /* the loop, in place of where one is: LOOP 02-05 */
         char lo[3], hi[3], range[6];
         grid_hex2(lo, loop_from()), grid_hex2(hi, loop_to());

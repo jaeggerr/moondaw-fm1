@@ -410,7 +410,19 @@ static int16_t vox_owner[VOX_VOICES]; /* track * TRACK_MAX_VOICES + voice, -1 */
 static bool playing, song_mode, song_once;
 static uint16_t arr_pos, arr_play, ref_nth, entry_step;
 static uint8_t tick_in_step, tick_parity;
-static uint16_t bpm;
+static uint16_t bpm;      /* the tempo the ticks are counted at: what was asked, slowed */
+static uint16_t bpm_asked; /* what it would be at full speed: the song's, or FX_BPM's */
+static uint8_t play_speed = 100; /* the listening speed, per cent (player.h) */
+
+/* The speed is folded in here, at the two or three moments the tempo
+ * changes, and never in tick_samples_of: the tick is counted on every
+ * audio block and that path had no multiplication to spare (29/10,
+ * firmware/app.ld). */
+static void bpm_fold(void)
+{
+    uint32_t n = (uint32_t)bpm_asked * play_speed / 100u;
+    bpm = (uint16_t)(n > 0u ? n : 1u);
+}
 static int32_t to_next_tick;
 static int32_t master = 1024; /* Q10 */
 
@@ -943,7 +955,7 @@ static void apply_fx(int t, const Step *st)
                 if (tr->voices[j].wave == 0 && tr->voices[j].osc.engine == ENGINE_WAVE)
                     osc_set_timbre(&tr->voices[j].osc, v);
             break;
-        case FX_BPM: bpm = v < 20 ? 20 : v; break;
+        case FX_BPM: bpm_asked = v < 20 ? 20 : v, bpm_fold(); break;
         case FX_TSP: tr->fx.transpose = (int16_t)(((int)v - 64) * 100); break;
         case FX_SLI: tr->fx.glide = (uint16_t)(v * 16); break;
         case FX_VIB: tr->fx.vib = v; break;
@@ -1392,7 +1404,8 @@ static void advance_entry(void)
 
 static void start_play(bool as_song, int entry)
 {
-    bpm = song->bpm;
+    bpm_asked = song->bpm;
+    bpm_fold();
     song_mode = as_song;
     prb_rng = 1; /* every take rolls the same way (above) */
     arr_pos = (uint16_t)(entry >= 0 && entry < song->arrange_len ? entry : 0);
@@ -2015,7 +2028,9 @@ MAIN_LOOP void player_init(Song *s)
     drum_init();
     tracks[AUDITION].fx.syl[0] = 'A';
     tracks[AUDITION].fx.syl[1] = '\0';
-    bpm = s->bpm;
+    play_speed = 100; /* a project opens at its own tempo */
+    bpm_asked = s->bpm;
+    bpm_fold();
     playing = false;
     to_next_tick = 0;
     cmd_r = cmd_w;
@@ -2033,6 +2048,14 @@ MAIN_LOOP void player_set_loop(int from, int len)
 {
     loop_word = from < 0 || len <= 0 ? 0 : ((uint32_t)from & 0xFFFFu) | ((uint32_t)len & 0xFFFFu) << 16;
 }
+
+MAIN_LOOP void player_set_speed(int pct)
+{
+    play_speed = (uint8_t)(pct < 25 ? 25 : pct > 100 ? 100 : pct);
+    bpm_fold(); /* one store of `bpm`: the audio side reads it whole */
+}
+
+MAIN_LOOP int player_speed(void) { return play_speed; }
 
 MAIN_LOOP void player_set_song_loop(int from, int to)
 {

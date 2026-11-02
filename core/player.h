@@ -28,6 +28,14 @@ void player_set_loop(int from, int len);
  * apart from the file: ignored while one phrase plays on its own, cleared
  * by player_init. A `to` past the song's end is taken as its last phrase. */
 void player_set_song_loop(int from, int to);
+/* The listening speed, per cent of the song's tempo: 25 to 100, 100 off.
+ * What is heard slows down, the song's `bpm` does not move -- a listening
+ * tool like the two loops above, never in the file, never in UNDO, and
+ * back to 100 when a project opens (player_init). The swing follows it:
+ * a step stretched by a ratio is still stretched by it when the tick is
+ * longer, so a slowed song is the same song, swing and all. */
+void player_set_speed(int pct);
+int player_speed(void);
 /* A note outside the song, on an instrument of the song: what a key
  * does on the INSTRUMENT screen, and the note PATTERN just wrote. One
  * at a time; the next one replaces it. */

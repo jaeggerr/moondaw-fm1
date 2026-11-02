@@ -130,6 +130,45 @@ void ui_led_mono(int track, uint32_t usable)
     ui_led_keys(usable, alone ? 1u << UI_KEY_MONO : 0u, muted ? 1u << UI_KEY_MONO : 0u);
 }
 
+/* ui.h says why EDIT is the only button this can hang on. */
+enum { SPEED_MIN = 25, SPEED_STEP = 5, SPEED_SAID = 90 }; /* 1.5 s, as the view's follow */
+static bool speed_took; /* EDIT served the speed: its release is not a tap */
+static int speed_said;  /* frames the corner still says it */
+
+void ui_speed(PlatInput *in)
+{
+    int d = in->enc[PE_SELECT];
+    if (!(in->btns >> PB_EDIT & 1u))
+        speed_took = false;
+    else if (d) {
+        int pct = player_speed() + d * SPEED_STEP;
+        in->enc[PE_SELECT] = 0; /* the cursor stays where it is: the hand is on the speed */
+        speed_took = true;
+        speed_said = SPEED_SAID;
+        player_set_speed(pct);
+    }
+    if (speed_said)
+        speed_said--;
+}
+
+bool ui_speed_took(void) { return speed_took; }
+
+const char *ui_speed_word(void)
+{
+    static char t[11];
+    int n = player_speed(), k = 6;
+    if (!speed_said)
+        return 0;
+    t[0] = 'S', t[1] = 'P', t[2] = 'E', t[3] = 'E', t[4] = 'D', t[5] = ' ';
+    if (n >= 100)
+        t[k++] = '1', t[k++] = '0', t[k++] = '0';
+    else
+        t[k++] = (char)('0' + n / 10), t[k++] = (char)('0' + n % 10);
+    t[k++] = '%';
+    t[k] = '\0';
+    return t;
+}
+
 bool ui_shifted(const UiShift *s) { return s->held || s->latch; }
 
 bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, bool ops, int track,
@@ -138,7 +177,7 @@ bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, 
     bool tapped = false;
     if (pressed & 1u << PB_EDIT)
         s->held = true, s->used = false;
-    if (s->held && keys)
+    if (s->held && (keys || ui_speed_took()))
         s->used = true;
     if (track >= 0 && (ui_shifted(s) || ops || s->mono) && (keys >> UI_KEY_MONO & 1u))
         s->mono = 1, s->muted = false;

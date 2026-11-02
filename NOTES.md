@@ -3670,3 +3670,56 @@ root. Press SAVE, miss a corner, switch off, and the work is gone. So:
   would be read as a step back by the screen under it.
 
 Nothing is freed for the hand: which song goes is its own choice.
+
+## 2026-11-02 — the listening speed
+
+Working a loop, the one thing missing was hearing it slower. Not the tempo:
+the song's `bpm` is what it is, and a knob that writes it would be a change to
+the song, in the file and in UNDO, for a question the ear asks for a minute.
+So a listening speed, 25 % to 100 %, beside the two loops of `app/loop.h` and
+under their rule: never saved, never in UNDO, back to 100 when a project opens.
+
+**EDIT held, SELECT turned**, by fives, 100 % in a hard stop at the top -- the
+tempo is found again by turning the knob up as far as it goes. Nothing above
+100: the only honest use would be checking that a slow song holds together over
+its length, and at ×1,5 the ear judges nothing. It would have cost half the
+knob's travel and a digit in the corner.
+
+**EDIT is the only button of the panel that can be held.** Every other one acts
+on the press, and that settles PLAY, which was the obvious one: PLAY pressed
+while it plays is a stop, so the speed would be set on silence -- the one thing
+it must not be, since the whole point is hearing the loop slow down under the
+hand. SEL, REC, OCT, the same. EDIT alone gives its own action back at the
+release, and only if nothing served while it was down (29/10): a detent counts
+as serving now, so the CAPS LOCK does not turn over behind the hand.
+
+**It is read once a frame, before any screen** (`ui_speed`, from `app_frame` on
+the hands as they came), and the detents it takes are rubbed out of them. One
+place, the three screens of the road untouched, and no cursor moves under the
+speed.
+
+- **The corner had no room.** PATTERN, PHRASE and SONG each say one thing there,
+  in place of another -- `said`, REC, SELECT, `LOOP 02-05`, the length, the
+  track -- and both of `grid_corner`'s slots are taken as soon as a loop is
+  posed, which is exactly when one slows down. So what says it permanently is
+  **the triangle of what plays, amber instead of cyan** (`grid_playing`): the
+  thing concerned says it, one line, the three screens at once, no space taken.
+  Dark amber on the cursor's green band, where near-black is what reads. The
+  number itself is shouted in the corner for 1.5 s after the last detent,
+  `SPEED 60%`, and 100 % is said too, once: coming back to the tempo is worth
+  a word.
+- **The swing follows, and it was free.** A step stretched by a ratio is still
+  stretched by it when the tick is longer, so a slowed song is the same song,
+  swing and all. The echo's line, counted in seconds, slows with it -- also
+  right: it is the same song.
+- **Not one multiplication on the audio path.** The speed is folded into the
+  `bpm` the ticks are counted from, at the two or three moments the tempo
+  changes -- a song starting, `FX_BPM` on a step, the knob -- and never in
+  `tick_samples_of`, which runs on every audio block and had nothing to spare
+  (29/10). `bpm_asked` holds what it would be at full speed, so a BPM effect
+  mid-song stays slowed instead of jumping back to tempo. RAMTEXT took it:
+  916 instructions, and the image still links.
+- **The frame's order is the test's order.** `pattern_test`'s `go()` now calls
+  `ui_speed` before `pattern_frame`, as `app_frame` does, which is how a run of
+  turns reads as one gesture and how the release stops being a tap. A step's
+  samples are counted twice, at the tempo and at half: 5512, then twice that.

@@ -40,7 +40,9 @@ static const char trk[] =
     "pat t0 01 len 8\n00 E-4\n"
     "arr 00 steps auto\nt0 00\n";
 
-static void go(void) { pattern_frame(&in); memset(in.enc, 0, sizeof in.enc); }
+/* One frame as app.c orders it: the listening speed takes its detents out
+ * of the hands first, then the screen is given what is left (ui.h). */
+static void go(void) { ui_speed(&in); pattern_frame(&in); memset(in.enc, 0, sizeof in.enc); }
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static void press(int b) { in.btns = 1u << b; go(); in.btns = 0; go(); }
 static void keys(uint32_t held) { in.keys = held; go(); }
@@ -60,6 +62,27 @@ static void sel(void)
 }
 /* EDIT alone: the shift's CAPS LOCK, on or off (ui.h). */
 static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
+/* The listening speed, as app.c orders the frame: ui_speed takes its
+ * detents out of the hands before the screen is given them (ui.h). EDIT
+ * is left held, so a run of these is one gesture. */
+static void speed_turn(int d)
+{
+    in.btns = 1u << PB_EDIT;
+    in.enc[PE_SELECT] = (int8_t)d;
+    go();
+}
+/* How many samples a step lasts, in blocks of 64: what is heard. */
+static int step_samples(void)
+{
+    static int16_t pcm[64 * 2];
+    uint16_t r0;
+    int n = 0;
+    player_render(pcm, 64);
+    r0 = player_row();
+    while (player_row() == r0 && n < 2000)
+        player_render(pcm, 64), n++;
+    return n * 64;
+}
 static int pat_len_of(void) { return song.patterns[0][song.arrangement[0].pattern[0]].length; }
 static const Step *st(int row) { return song_step(&song, 0, song.arrangement[0].pattern[0], row); }
 /* the player takes PLAY and STOP in its render, as on the machine */
@@ -856,6 +879,43 @@ int main(void)
         song.key_root = 0, song.key_mode = KEY_MAJOR;
         n = trk_save(&song, out, sizeof out);
         CHECK("C major is left out", n > 0 && strstr(out, "\nkey ") == 0);
+    }
+    { /* The listening speed (02/11): EDIT held, SELECT turned. */
+        int full, half;
+        player_init(&song);
+        CHECK("it opens at the song's own tempo", player_speed() == 100);
+        in.btns = 1u << PB_EDIT;
+        in.enc[PE_SELECT] = -3;
+        ui_speed(&in);
+        CHECK("EDIT held, SELECT down three: fifteen per cent off", player_speed() == 85);
+        CHECK("and the detents never reach the screen", in.enc[PE_SELECT] == 0);
+        go();
+        speed_turn(-100), speed_turn(-100);
+        CHECK("it stops at a quarter", player_speed() == 25);
+        speed_turn(100);
+        CHECK("and at the tempo, in a hard stop", player_speed() == 100);
+        speed_turn(-10);
+        CHECK("the song's own tempo never moved", song.bpm == 120);
+        in.btns = 0, go();
+        /* EDIT's own LED is lit only while its CAPS LOCK is on (pattern.c) */
+        CHECK("EDIT let go after a turn is not a tap: no CAPS LOCK", led[PB_EDIT] == PLAT_LED_OFF);
+        tap_edit();
+        CHECK("tapped with nothing served, it still latches", led[PB_EDIT] != PLAT_LED_OFF);
+        tap_edit();
+        CHECK("and lets go", led[PB_EDIT] == PLAT_LED_OFF);
+        /* what is heard really is slower: a step's samples, counted twice */
+        player_set_speed(100);
+        player_play_entry(0);
+        step_samples();
+        full = step_samples();
+        player_set_speed(50);
+        step_samples(); /* the step the change fell in */
+        half = step_samples();
+        CHECK("a step at the tempo is 5512 samples", full > 5300 && full < 5700);
+        CHECK("at half speed it lasts twice as long", half > full * 19 / 10 && half < full * 21 / 10);
+        player_stop();
+        player_init(&song);
+        CHECK("a project opening puts it back", player_speed() == 100);
     }
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
