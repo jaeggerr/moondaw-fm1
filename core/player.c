@@ -437,6 +437,10 @@ static volatile uint32_t song_loop_word;
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
 enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL, CMD_NOTE_CHORD };
+/* The step a CMD_PLAY_ENTRY sets the playhead down on, written the same way:
+ * a word beside the command and not a byte in it, so the audio side costs
+ * nothing for it -- .ram_audio has no room to spare (1/11). */
+static volatile uint16_t play_from;
 /* What a CMD_NOTE_SYL sings: written before the command is queued. */
 static char audition_syl[VOX_SYL_LEN];
 /* What a CMD_NOTE_CHORD strikes, the same way; its `b` is how many. */
@@ -1396,7 +1400,7 @@ static void start_play(bool as_song, int entry)
     song_mode = as_song;
     prb_rng = 1; /* every take rolls the same way (above) */
     arr_pos = (uint16_t)(entry >= 0 && entry < song->arrange_len ? entry : 0);
-    entry_step = 0;
+    entry_step = play_from; /* the step PLAY was asked from (player_play_entry_at) */
     entry_enter(0);
     tick_in_step = 0;
     for (int t = 0; t < SONG_MAX_TRACKS; t++) {
@@ -1426,7 +1430,7 @@ static void start_play(bool as_song, int entry)
     to_next_tick = 0; /* the tick lands on this very block */
     playing = true;
     ui_playing = 1;
-    ui_row = 0;
+    ui_row = play_from;
     ui_entry = arr_pos;
 }
 
@@ -2026,8 +2030,21 @@ MAIN_LOOP void player_init(Song *s)
     song_loop_word = 0;
 }
 
-MAIN_LOOP void player_play_song(int entry, bool once) { cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once); }
-MAIN_LOOP void player_play_entry(int entry) { cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0); }
+MAIN_LOOP void player_play_song(int entry, bool once)
+{
+    play_from = 0;
+    cmd_push(CMD_PLAY_SONG, (uint8_t)entry, once);
+}
+MAIN_LOOP void player_play_entry(int entry)
+{
+    play_from = 0;
+    cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0);
+}
+MAIN_LOOP void player_play_entry_at(int entry, int step)
+{
+    play_from = (uint16_t)(step < 0 || step >= PATTERN_MAX_STEPS ? 0 : step);
+    cmd_push(CMD_PLAY_ENTRY, (uint8_t)entry, 0);
+}
 MAIN_LOOP void player_stop(void) { cmd_push(CMD_STOP, 0, 0); }
 MAIN_LOOP void player_set_loop(int from, int len)
 {

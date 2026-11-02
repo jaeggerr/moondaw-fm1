@@ -24,13 +24,12 @@
  *          KNOB 3 walks the song's instruments and the step is heard as it turns, so
  *          the ear chooses (30/10), as SONG's KNOB 3 does with blocks
  *
- *   SELECT, KNOB 1  the step   KNOB 2  the column, through the whole step and across the
+ *   SELECT, KNOB 1  the step, the column left alone   KNOB 2  the column, through the whole step and across the
  *                        views (30/10): the four notes, the instrument, the three effects,
  *                        round again; the step's number at the head of each group (KNOB 3
  *                        the block's length), walked into going left, stepped over going right
  *   the keys  write the note under the cursor in NOTES (a chord while one is held), OCT-/OCT+
  *             their octave; on the step's number, in FX and INS they only play
- *   SELECT also brings the cursor to the step's number: the step as a whole
  *   SEQ   NOTES     FX  FX     ENV  INS; on INS, the INSTRUMENT that plays on the step
  *   EDIT  a shift, and only that (31/10): the black keys are commands while it
  *         is down (EDIT + MONO tapped: the track alone, or back to normal; held:
@@ -1091,10 +1090,13 @@ int pattern_frame(const PlatInput *in)
     }
     if (in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]) /* the hand left the step */
         au_hush();
-    cur_row += in->enc[PE_SELECT] + in->enc[PE_K1]; /* KNOB 1 too: one hand (29/10) */
+    /* SELECT and KNOB 1 are one hand (29/10), and neither touches the
+     * column: SELECT brought the cursor to the step's number until 2/11,
+     * when the column jumping out from under one knob and not the other
+     * read as a lurch with the app in hand. The number is still one detent
+     * to the left, on KNOB 2. */
+    cur_row += in->enc[PE_SELECT] + in->enc[PE_K1];
     cur_row = cur_row < 0 ? 0 : cur_row >= len ? len - 1 : cur_row;
-    if (in->enc[PE_SELECT]) /* SELECT: the step as a whole, the cursor on its number (29/10) */
-        strip_go(strip_first(view));
     if (in->enc[PE_K2]) {
         if (selecting)
             strip_turn_sel(in->enc[PE_K2]);
@@ -1141,7 +1143,7 @@ int pattern_frame(const PlatInput *in)
                 counting = false;
                 recording = true;
                 rec_live = false;
-                player_play_entry(entry);
+                player_play_entry_at(entry, cur_row);
             } else {
                 player_click(count_beat % (beats / ui_count_in) == 0); /* each bar's first beat higher */
                 count_beat++;
@@ -1203,14 +1205,11 @@ int pattern_frame(const PlatInput *in)
     if (PRESSED(PB_PLAY)) {
         au_hush();
         if (playing || counting) {
-            /* STOP leaves the cursor on the step it stopped on, as SONG's does
-             * with the phrase: the hand carries on from what it heard last and
-             * the view is already there (30/10) */
-            if (playing && player_entry() == entry) {
-                int at = player_row() % len;
-                if (at >= 0 && at < len)
-                    cur_row = at;
-            }
+            /* STOP does not move the cursor: it stayed on the step PLAY was
+             * asked from, and the view scrolls back to it on its own. It
+             * followed the playhead until 2/11, which cost the step one had
+             * pointed at and read as the less intuitive of the two with a
+             * loop under the ear (it was asked for on 30/10). */
             player_stop();
             counting = recording = false;
         } else if (rec_armed && ui_count_in) { /* armed: the bars counted in first */
@@ -1220,9 +1219,11 @@ int pattern_frame(const PlatInput *in)
         } else if (rec_armed) { /* no count: at once */
             recording = true;
             rec_live = false;
-            player_play_entry(entry);
+            player_play_entry_at(entry, cur_row);
         } else {
-            player_play_entry(entry);
+            /* PLAY from the step under the cursor, as SONG plays from the
+             * phrase under it (2/11) */
+            player_play_entry_at(entry, cur_row);
         }
     }
     ui_led_state(PB_REC, rec_armed);

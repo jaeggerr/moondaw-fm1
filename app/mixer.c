@@ -13,7 +13,7 @@
  * 1, out of sight until SELECT goes up, the row of the two returns, ROOM
  * DAMP TIME FB -- the column names change with the row.
  *
- *   SELECT, KNOB 1  the row (SELECT onto its number)     KNOB 2  the column; left of the first, the track's number
+ *   SELECT, KNOB 1  the row, the column left alone     KNOB 2  the column; left of the first, the track's number
  *   KNOB 3  the value; on a track's number: normal -> MUTE -> SOLO (monitoring,
  *           never in the file)
  *   HOME    back where it was opened from     SEQ  SONG     EDIT, GLO  the PROJECT
@@ -151,9 +151,10 @@ int mixer_frame(const PlatInput *in)
      * nothing here, so they are commands as they are -- the row's track (ui.h) */
     edit_tap = ui_shift(&shift, in, btns, keys, true, row, &said);
 
+    /* SELECT and KNOB 1 are one hand, and neither touches the column:
+     * SELECT brought the cursor onto the track's number until 2/11, as it
+     * did in SONG and PATTERN (NOTES.md) */
     row = clampi(row + in->enc[PE_SELECT] + in->enc[PE_K1], -1, song->num_tracks - 1);
-    if (in->enc[PE_SELECT]) /* SELECT: the track as a whole, the cursor on its number (29/10) */
-        col = -1;
     col = clampi(col + in->enc[PE_K2], -1, COLS - 1);
     if ((d = in->enc[PE_K3]) != 0) {
         if (col >= 0)
