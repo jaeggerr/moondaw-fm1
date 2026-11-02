@@ -60,6 +60,19 @@ static void sel(void)
     in.btns = 0;
     go();
 }
+/* The chord list: EDIT held with ARP under it (2/11). ARP alone is the chord
+ * mode, the keyboard's own, so two hands are what open the screen. */
+static void open_chords(void)
+{
+    in.btns = 1u << PB_EDIT;
+    go();
+    in.btns = 1u << PB_EDIT | 1u << PB_ARP;
+    go();
+    in.btns = 1u << PB_EDIT;
+    go();
+    in.btns = 0;
+    go();
+}
 /* EDIT alone: the shift's CAPS LOCK, on or off (ui.h). */
 static void tap_edit(void) { in.btns = 1u << PB_EDIT; go(); in.btns = 0; go(); }
 /* The listening speed, as app.c orders the frame: ui_speed takes its
@@ -795,7 +808,7 @@ int main(void)
     in.btns = 1u << PB_HOME;
     CHECK("HOME leaves", pattern_frame(&in) == PATTERN_BACK);
 
-    { /* CHORDS: ARP on the notes, from the song's key */
+    { /* CHORDS: EDIT held + ARP, the list; ARP alone, the chord mode (01/11, 02/11) */
         const Step *c;
         Song *S = &song;
         trk_load(&song, trk, sizeof trk - 1, NULL);
@@ -805,43 +818,45 @@ int main(void)
         go();
         press(PB_SEQ);
         S->key_root = 0, S->key_mode = KEY_MAJOR;
-        press(PB_ARP);
+        open_chords();
         press(PB_HOME);
         c = st(0);
-        CHECK("ARP then HOME: the step as it was", c->notes[0] == 60 && c->notes[1] == NOTE_NONE);
-        press(PB_ARP);
+        CHECK("the list then HOME: the step as it was", c->notes[0] == 60 && c->notes[1] == NOTE_NONE);
+        open_chords();
         press(PB_SEL);
         c = st(0);
         /* the keyboard's octave 0 starts on F3: the first C above it is C-4 */
         CHECK("SEL writes I of C major", c->notes[0] == 60 && c->notes[1] == 64 && c->notes[2] == 67 && c->notes[3] == NOTE_NONE);
         in.ms += 2000; /* past the second that makes two writes at one place one gesture (undo.h) */
         undo_frame(in.ms);
-        press(PB_ARP);
+        open_chords();
         enc(PE_K1, 3);
         press(PB_SEL);
         c = st(0);
-        CHECK("the fourth is vi, A minor", c->notes[0] == 57 && c->notes[1] == 60 && c->notes[2] == 64);
+        /* by degree since 2/11: the fourth row of the triads is IV, not vi */
+        CHECK("the fourth row is IV, F major", c->notes[0] == 53 && c->notes[1] == 57 && c->notes[2] == 60);
         enc(PE_ALGO, -1);
         c = st(0);
         CHECK("ALGO takes it back", c->notes[0] == 60 && c->notes[1] == 64);
         enc(PE_ALGO, 1);
         S->key_root = 9, S->key_mode = KEY_MINOR;
-        press(PB_ARP);
+        open_chords();
         press(PB_SEL);
         c = st(0);
         CHECK("A minor's i", c->notes[0] == 57 && c->notes[1] == 60 && c->notes[2] == 64);
-        press(PB_ARP);
+        open_chords();
         enc(PE_K2, 1);
         press(PB_SEL);
         c = st(0);
         CHECK("KNOB 2: the sevenths, four notes", c->notes[0] == 57 && c->notes[3] == 67);
-        press(PB_ARP);
-        enc(PE_K2, 1);
+        open_chords();
         enc(PE_K3, 1);
         press(PB_SEL);
         c = st(0);
-        CHECK("KNOB 3: Am7 with its first note up, lowest first", c->notes[0] == 57 + 3 && c->notes[3] == 69);
-        press(PB_ARP);
+        /* it opened on the sevenths, where the last one was left: the mode and
+         * the list say the same thing whichever way one goes between them */
+        CHECK("it opens where the last was left, and KNOB 3 inverts it", c->notes[0] == 57 + 3 && c->notes[3] == 69);
+        open_chords();
         enc(PE_K4, 3);
         press(PB_SEL);
         c = st(0);
@@ -851,7 +866,7 @@ int main(void)
                 if (c->fx[i].cmd == FX_ARP)
                     slot = i;
             CHECK("KNOB 4 writes the arpeggio", slot >= 0 && c->fx[slot].val == 3);
-            press(PB_ARP);
+            open_chords();
             enc(PE_K4, -3);
             press(PB_SEL);
             c = st(0);
@@ -861,7 +876,7 @@ int main(void)
             Step *w = song_step_w(S, 0, song.arrangement[0].pattern[0], 0);
             for (int i = 0; i < STEP_MAX_FX; i++)
                 w->fx[i].cmd = FX_VOL, w->fx[i].val = 5;
-            press(PB_ARP);
+            open_chords();
             enc(PE_K4, 4);
             press(PB_SEL);
             c = st(0);
@@ -870,58 +885,104 @@ int main(void)
                 w->fx[i].cmd = FX_NONE, w->fx[i].val = 0;
         }
         S->key_root = 0, S->key_mode = KEY_MAJOR;
-        /* the keys, by position */
-        press(PB_ARP);
+        /* the keys of the list, by position */
+        open_chords();
+        keys(1u << 1); keys(0); /* OP1: back to the triads, where the rest reads from */
+        enc(PE_K3, -1);         /* and to the root position: the inversion sticks as well */
         keys(1u << 4); keys(0);
         press(PB_SEL);
         c = st(0);
         CHECK("third white key: iii, E minor", c->notes[0] == 64 && c->notes[1] == 67 && c->notes[2] == 71);
-        press(PB_ARP);
+        open_chords();
         keys(1u << 12); keys(0);
         press(PB_SEL);
         c = st(0);
         CHECK("eighth white key: I an octave up", c->notes[0] == 72 && c->notes[1] == 76 && c->notes[2] == 79);
-        press(PB_ARP);
+        open_chords();
         keys(1u << 12); keys(0);
         enc(PE_K1, 1);
         enc(PE_K1, -1);
         press(PB_SEL);
         c = st(0);
         CHECK("the knobs bring it back to the row's octave", c->notes[0] == 60);
-        press(PB_ARP);
+        open_chords();
         keys(1u << 24); keys(0);
         press(PB_SEL);
         c = st(0);
         CHECK("the fifteenth white key plays nothing, the cursor stays", c->notes[0] == 60);
-        press(PB_ARP);
+        open_chords();
         keys(1u << 8); keys(0);
         keys(1u << 11); keys(0);
         press(PB_SEL);
         c = st(0);
         CHECK("OP4, then the seventh: bVII", c->notes[0] == 58 && c->notes[1] == 62 && c->notes[2] == 65);
-        press(PB_ARP);
-        keys(1u << 8); keys(0);
+        open_chords();
         keys(1u << 2); keys(0);
         press(PB_SEL);
         c = st(0);
-        CHECK("OP4 has no chord on II: the first of the section stays", c->notes[0] == 58);
-        press(PB_ARP);
+        CHECK("OP4 has no chord on II: the first of the section, bIII, stays", c->notes[0] == 63);
+        open_chords();
         keys(1u << 5); keys(0);
         keys(1u << 2); keys(0);
         press(PB_SEL);
         c = st(0);
         CHECK("OP3, then the second: its sus4", c->notes[0] == 62 && c->notes[1] == 67 && c->notes[2] == 69);
-        press(PB_FX);
+
+        /* THE CHORD MODE (2/11): ARP alone, and the keyboard is the chords */
+        open_chords();
+        keys(1u << 1); keys(0); /* the triads */
+        press(PB_HOME);
+        CHECK("ARP is dark while the mode is off", led[PB_ARP] == PLAT_LED_OFF);
         press(PB_ARP);
+        CHECK("ARP lights with the mode", led[PB_ARP] != PLAT_LED_OFF);
+        in.ms += 2000;
+        undo_frame(in.ms);
+        keys(1u << 0); keys(0);
+        c = st(0);
+        CHECK("the first white key writes I whole, no screen in the way",
+              c->notes[0] == 60 && c->notes[1] == 64 && c->notes[2] == 67 && c->notes[3] == NOTE_NONE);
+        keys(1u << 6); keys(0);
+        c = st(0);
+        CHECK("the next key writes over it: the cursor has not moved", c->notes[0] == 53 && c->notes[1] == 57);
+        CHECK("and the step after it is untouched", st(1)->notes[0] == NOTE_NONE);
+        enc(PE_K2, -1); /* the cursor onto the step's number */
+        keys(1u << 4); keys(0);
+        c = st(0);
+        CHECK("a chord is the whole step: the column has nothing to say about it",
+              c->notes[0] == 64 && c->notes[1] == 67 && c->notes[2] == 71);
+        enc(PE_K2, 1);
+        keys(1u << 8); keys(0); /* OP4: the borrowed chords */
+        keys(1u << 11); keys(0);
+        c = st(0);
+        CHECK("OP4 then the seventh: bVII, as in the list", c->notes[0] == 58 && c->notes[1] == 62);
+        open_chords();
+        press(PB_HOME);
+        CHECK("the list leaves the mode off while it is up", led[PB_ARP] == PLAT_LED_OFF);
+        press(PB_ARP);
+        keys(1u << 11); keys(0);
+        c = st(0);
+        CHECK("the mode is back where it was", c->notes[0] == 58);
+        /* the caps lock and the mode cannot both be on: the last pressed wins */
+        tap_edit();
+        CHECK("EDIT tapped takes the mode off", led[PB_ARP] == PLAT_LED_OFF && led[PB_EDIT] != PLAT_LED_OFF);
+        press(PB_ARP);
+        CHECK("and ARP takes the caps lock off", led[PB_ARP] != PLAT_LED_OFF && led[PB_EDIT] == PLAT_LED_OFF);
+        press(PB_FX);
+        CHECK("another view ends it", led[PB_ARP] == PLAT_LED_OFF);
+        open_chords();
         press(PB_SEQ);
         keys(1u << 0); keys(0);
-        CHECK("ARP in the FX view: no list, the key writes", st(0)->notes[0] == 53);
+        CHECK("neither the list nor the mode in the FX view: the key writes", st(0)->notes[0] == 53);
         S->instruments[0].engine = ENGINE_DRUM;
         {
             press(PB_ARP);
             keys(1u << 0); keys(0);
-            CHECK("on a kit ARP is nothing: the key writes", st(0)->notes[0] != 53);
+            CHECK("on a kit ARP is nothing: the key writes", led[PB_ARP] == PLAT_LED_OFF && st(0)->notes[0] != 53);
+            open_chords();
+            keys(1u << 0); keys(0);
+            CHECK("and the list does not open either", st(0)->notes[0] != 53);
         }
+        S->instruments[0].engine = ENGINE_PULSE;
     }
     { /* KEY in the file: said when it is not C major, read back */
         static char out[8192];

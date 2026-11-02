@@ -27,7 +27,16 @@ static const char *const section_name[SECTIONS] = { "TRIADS", "SEVENTHS", "SUS /
  * the chord says the quality, so the numeral says only where it stands. `key`
  * is the degree whose white key plays it, 0 for the knobs alone: a section
  * holds one chord a degree at most on the keys, and a borrowed chord or a
- * dominant sits on the degree it stands for or leads to. */
+ * dominant sits on the degree it stands for or leads to.
+ *
+ * Within a section they run by degree, I to VII, and the ones sharing a degree
+ * stand together under it, the one its white key plays first. They were by
+ * likelihood until 2/11 -- I IV V vi ii iii vii, the fewest detents to the
+ * common chord -- which stopped paying the day the keyboard began writing them:
+ * the key under the finger *is* the degree, so the list has to read as the
+ * keyboard is laid out, or the eye and the hand tell two different stories
+ * ("au sein d'une meme section les accords doivent etre tries par degres, la je
+ * ne comprends pas trop l'ordre choisi"). */
 typedef struct {
     uint8_t section, semis, q, key;
     const char *degree;
@@ -36,28 +45,28 @@ typedef struct {
 enum { CHORDS = 34 };
 static const Chord table[2][CHORDS] = {
     [KEY_MAJOR] = {
-        { 0, 0, Q_MAJ, 1, "I" },      { 0, 5, Q_MAJ, 4, "IV" },     { 0, 7, Q_MAJ, 5, "V" },     { 0, 9, Q_MIN, 6, "vi" },
-        { 0, 2, Q_MIN, 2, "ii" },     { 0, 4, Q_MIN, 3, "iii" },    { 0, 11, Q_DIM, 7, "vii" },
-        { 1, 0, Q_MAJ7, 1, "I" },     { 1, 5, Q_MAJ7, 4, "IV" },    { 1, 7, Q_7, 5, "V" },       { 1, 9, Q_M7, 6, "vi" },
-        { 1, 2, Q_M7, 2, "ii" },      { 1, 4, Q_M7, 3, "iii" },     { 1, 11, Q_M7B5, 7, "vii" },
-        { 2, 0, Q_SUS2, 0, "I" },     { 2, 0, Q_SUS4, 1, "I" },     { 2, 5, Q_SUS2, 0, "IV" },   { 2, 7, Q_SUS4, 5, "V" },
-        { 2, 0, Q_ADD9, 0, "I" },     { 2, 5, Q_ADD9, 0, "IV" },    { 2, 2, Q_SUS4, 2, "ii" },   { 2, 9, Q_SUS4, 6, "vi" },
-        { 2, 4, Q_SUS4, 3, "iii" },   { 2, 5, Q_SUS4, 4, "IV" },    { 2, 11, Q_SUS4, 7, "vii" },
-        { 3, 10, Q_MAJ, 7, "bVII" },  { 3, 5, Q_MIN, 4, "iv" },     { 3, 8, Q_MAJ, 6, "bVI" },   { 3, 3, Q_MAJ, 3, "bIII" },
-        { 4, 2, Q_7, 5, "V/V" },      { 4, 4, Q_7, 6, "V/vi" },     { 4, 9, Q_7, 2, "V/ii" },    { 4, 0, Q_7, 4, "V/IV" },
-        { 4, 11, Q_7, 3, "V/iii" },
+        { 0, 0, Q_MAJ, 1, "I" },      { 0, 2, Q_MIN, 2, "ii" },     { 0, 4, Q_MIN, 3, "iii" },   { 0, 5, Q_MAJ, 4, "IV" },
+        { 0, 7, Q_MAJ, 5, "V" },      { 0, 9, Q_MIN, 6, "vi" },     { 0, 11, Q_DIM, 7, "vii" },
+        { 1, 0, Q_MAJ7, 1, "I" },     { 1, 2, Q_M7, 2, "ii" },      { 1, 4, Q_M7, 3, "iii" },    { 1, 5, Q_MAJ7, 4, "IV" },
+        { 1, 7, Q_7, 5, "V" },        { 1, 9, Q_M7, 6, "vi" },      { 1, 11, Q_M7B5, 7, "vii" },
+        { 2, 0, Q_SUS4, 1, "I" },     { 2, 0, Q_SUS2, 0, "I" },     { 2, 0, Q_ADD9, 0, "I" },    { 2, 2, Q_SUS4, 2, "ii" },
+        { 2, 4, Q_SUS4, 3, "iii" },   { 2, 5, Q_SUS4, 4, "IV" },    { 2, 5, Q_SUS2, 0, "IV" },   { 2, 5, Q_ADD9, 0, "IV" },
+        { 2, 7, Q_SUS4, 5, "V" },     { 2, 9, Q_SUS4, 6, "vi" },    { 2, 11, Q_SUS4, 7, "vii" },
+        { 3, 3, Q_MAJ, 3, "bIII" },   { 3, 5, Q_MIN, 4, "iv" },     { 3, 8, Q_MAJ, 6, "bVI" },   { 3, 10, Q_MAJ, 7, "bVII" },
+        { 4, 9, Q_7, 2, "V/ii" },     { 4, 11, Q_7, 3, "V/iii" },   { 4, 0, Q_7, 4, "V/IV" },    { 4, 2, Q_7, 5, "V/V" },
+        { 4, 4, Q_7, 6, "V/vi" },
     },
     [KEY_MINOR] = {
-        { 0, 0, Q_MIN, 1, "i" },      { 0, 5, Q_MIN, 4, "iv" },     { 0, 7, Q_MIN, 5, "v" },     { 0, 8, Q_MAJ, 6, "VI" },
-        { 0, 3, Q_MAJ, 3, "III" },    { 0, 10, Q_MAJ, 7, "VII" },   { 0, 2, Q_DIM, 2, "ii" },
-        { 1, 0, Q_M7, 1, "i" },       { 1, 5, Q_M7, 4, "iv" },      { 1, 7, Q_M7, 5, "v" },      { 1, 8, Q_MAJ7, 6, "VI" },
-        { 1, 3, Q_MAJ7, 3, "III" },   { 1, 10, Q_7, 7, "VII" },     { 1, 2, Q_M7B5, 2, "ii" },
-        { 2, 0, Q_SUS2, 0, "i" },     { 2, 0, Q_SUS4, 1, "i" },     { 2, 5, Q_SUS2, 0, "iv" },   { 2, 7, Q_SUS4, 5, "v" },
-        { 2, 0, Q_MADD9, 0, "i" },    { 2, 8, Q_ADD9, 0, "VI" },    { 2, 5, Q_SUS4, 4, "iv" },   { 2, 3, Q_SUS4, 3, "III" },
-        { 2, 10, Q_SUS4, 7, "VII" },  { 2, 8, Q_SUS4, 6, "VI" },    { 2, 2, Q_SUS4, 2, "ii" },
-        { 3, 7, Q_MAJ, 5, "V" },      { 3, 5, Q_MAJ, 4, "IV" },     { 3, 1, Q_MAJ, 2, "bII" },   { 3, 0, Q_MAJ, 1, "I" },
-        { 4, 7, Q_7, 1, "V" },        { 4, 0, Q_7, 4, "V/iv" },     { 4, 3, Q_7, 6, "V/VI" },    { 4, 10, Q_7, 3, "V/III" },
-        { 4, 2, Q_7, 5, "V/V" },
+        { 0, 0, Q_MIN, 1, "i" },      { 0, 2, Q_DIM, 2, "ii" },     { 0, 3, Q_MAJ, 3, "III" },   { 0, 5, Q_MIN, 4, "iv" },
+        { 0, 7, Q_MIN, 5, "v" },      { 0, 8, Q_MAJ, 6, "VI" },     { 0, 10, Q_MAJ, 7, "VII" },
+        { 1, 0, Q_M7, 1, "i" },       { 1, 2, Q_M7B5, 2, "ii" },    { 1, 3, Q_MAJ7, 3, "III" },  { 1, 5, Q_M7, 4, "iv" },
+        { 1, 7, Q_M7, 5, "v" },       { 1, 8, Q_MAJ7, 6, "VI" },    { 1, 10, Q_7, 7, "VII" },
+        { 2, 0, Q_SUS4, 1, "i" },     { 2, 0, Q_SUS2, 0, "i" },     { 2, 0, Q_MADD9, 0, "i" },   { 2, 2, Q_SUS4, 2, "ii" },
+        { 2, 3, Q_SUS4, 3, "III" },   { 2, 5, Q_SUS4, 4, "iv" },    { 2, 5, Q_SUS2, 0, "iv" },   { 2, 7, Q_SUS4, 5, "v" },
+        { 2, 8, Q_SUS4, 6, "VI" },    { 2, 8, Q_ADD9, 0, "VI" },    { 2, 10, Q_SUS4, 7, "VII" },
+        { 3, 0, Q_MAJ, 1, "I" },      { 3, 1, Q_MAJ, 2, "bII" },    { 3, 5, Q_MAJ, 4, "IV" },    { 3, 7, Q_MAJ, 5, "V" },
+        { 4, 7, Q_7, 1, "V" },        { 4, 10, Q_7, 3, "V/III" },   { 4, 0, Q_7, 4, "V/iv" },    { 4, 2, Q_7, 5, "V/V" },
+        { 4, 3, Q_7, 6, "V/VI" },
     },
 };
 
@@ -78,6 +87,9 @@ static bool room; /* an effect slot for the arpeggio: its own, or an empty one *
 static bool strike, listening;
 static const char *said;
 static uint32_t prev_held;
+/* The chord mode's own (2/11): the section, inversion and arpeggio the list
+ * was last left on, which is what the keyboard writes with. */
+static int m_sec, m_inv, m_arp;
 
 static const Chord *chord(int i) { return &table[song->key_mode == KEY_MINOR][i]; }
 /* Its row in the list: the sections' names stand between the chords. */
@@ -121,7 +133,19 @@ void chords_open(const Song *s, int in, int *oct, const Step *st)
     song = s;
     instr = in;
     octave = oct;
-    cur = top = inversion = arp = 0;
+    /* It opens where the mode stands, as the mode plays what it is left on:
+     * the two say the same thing whichever way one goes between them. The
+     * arpeggio is the step's own where the step has one -- a fact about the
+     * step, and SEL writes back what the row shows -- and the mode's where
+     * it has none. */
+    cur = top = 0;
+    for (int i = 0; i < CHORDS; i++)
+        if (chord(i)->section == m_sec) {
+            cur = i;
+            break;
+        }
+    inversion = m_inv < quality[chord(cur)->q].n ? m_inv : quality[chord(cur)->q].n - 1;
+    arp = m_arp;
     high = false;
     held = -1;
     room = false;
@@ -131,6 +155,8 @@ void chords_open(const Song *s, int in, int *oct, const Step *st)
         if (st->fx[i].cmd == FX_ARP || st->fx[i].cmd == FX_NONE)
             room = true;
     }
+    if (!room)
+        arp = 0; /* nowhere to write it: the row must not promise one */
     strike = listening = false;
     said = 0;
     prev_held = 0xFFFFFFFFu;
@@ -149,11 +175,11 @@ static void section_go(int sec)
         }
 }
 
-/* The chord on degree `deg` of the section the cursor is in, -1 for none. */
-static int chord_on(int deg)
+/* The chord on degree `deg` of section `sec`, -1 for none. */
+static int chord_in(int sec, int deg)
 {
     for (int i = 0; i < CHORDS; i++)
-        if (chord(i)->section == chord(cur)->section && chord(i)->key == deg)
+        if (chord(i)->section == sec && chord(i)->key == deg)
             return i;
     return -1;
 }
@@ -167,7 +193,7 @@ static void keys_frame(uint32_t down, uint32_t keys)
             section_go(s);
     for (int w = 0; w < WHITES; w++) {
         int i;
-        if (!((keys >> white[w]) & 1u) || (i = chord_on(w % 7 + 1)) < 0)
+        if (!((keys >> white[w]) & 1u) || (i = chord_in(chord(cur)->section, w % 7 + 1)) < 0)
             continue;
         cur = i;
         high = w >= 7;
@@ -181,15 +207,15 @@ static void keys_frame(uint32_t down, uint32_t keys)
     }
 }
 
-static void keys_light(void)
+static void keys_light(int sec)
 {
     uint32_t usable = 0;
     for (int s = 0; s < SECTIONS; s++)
         usable |= 1u << op_key[s];
     for (int w = 0; w < WHITES; w++)
-        if (chord_on(w % 7 + 1) >= 0)
+        if (chord_in(sec, w % 7 + 1) >= 0)
             usable |= 1u << white[w];
-    ui_led_keys(usable, 1u << op_key[chord(cur)->section], 0);
+    ui_led_keys(usable, 1u << op_key[sec], 0);
 }
 
 int chords_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
@@ -240,18 +266,59 @@ int chords_frame(const PlatInput *in, uint32_t pressed, uint32_t keys)
     }
     if (PRESSED(PB_SEL) || PRESSED(PB_HOME) || PRESSED(PB_ARP)) {
         player_note_off();
+        m_sec = chord(cur)->section; /* what it is left on is what the keys play */
+        m_inv = inversion;
+        m_arp = arp;
         return PRESSED(PB_SEL) ? CHORDS_KEPT : CHORDS_LEFT;
     }
     if (strike && (listening || held >= 0))
         sound();
     strike = false;
     ui_led_state(PB_PLAY, listening);
-    keys_light();
+    keys_light(chord(cur)->section);
     return CHORDS_OPEN;
 #undef PRESSED
 }
 
 uint32_t chords_buttons(void) { return 1u << PB_OCTDN | 1u << PB_OCTUP; }
+
+/* --------------------------------------------------------- the mode --- */
+void chords_mode_bind(const Song *s, int in, int *oct)
+{
+    song = s;
+    instr = in;
+    octave = oct;
+}
+
+bool chords_mode_keys(uint32_t pressed, uint32_t down)
+{
+    bool struck = false;
+    for (int s = 0; s < SECTIONS; s++)
+        if ((pressed >> op_key[s]) & 1u)
+            m_sec = s;
+    for (int w = 0; w < WHITES; w++) {
+        int i, n;
+        if (!((pressed >> white[w]) & 1u) || (i = chord_in(m_sec, w % 7 + 1)) < 0)
+            continue;
+        cur = i;
+        high = w >= 7;
+        n = quality[chord(i)->q].n;
+        inversion = m_inv < n ? m_inv : n - 1; /* fewer notes than the list had */
+        arp = m_arp;
+        held = white[w];
+        struck = true;
+    }
+    if (struck)
+        sound();
+    if (held >= 0 && !((down >> held) & 1u)) {
+        held = -1;
+        player_note_off();
+    }
+    return struck;
+}
+
+void chords_mode_leds(void) { keys_light(m_sec); }
+const char *chords_mode_word(void) { return section_name[m_sec]; }
 
 /* ------------------------------------------------------------ drawing --- */
 static void hint(int x, const char *key, const char *word, bool right)
