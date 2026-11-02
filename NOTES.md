@@ -3847,3 +3847,50 @@ step's FX -- is not in. Held, a key is not a step: RETRIG and CUT would kill it 
 tick 3 and the sound would read as broken. What could go in is the colour alone
 (cutoff, reso, duty/shape, crush, velocity, the syllable, and the ARP that already
 walks the audition), and that is a choice for the panel, not for here.
+
+## 2026-11-02 — the song comes out, one WAV a track
+
+A beta's worth of playing, and nothing to carry out of it: a song lived in the
+FM-1's flash and sounded nowhere else. So a page on the site, `web/export/`,
+takes a song off the machine and writes it as audio — one file per track, or
+the whole mixed.
+
+**The render is not in the firmware, and that is the point.** The FM-1 plays a
+song in real time and only just (a chorus of DAFT-PUNK-EN once overran its
+block). Eight WAVs would mean rendering the song nine times, holding megabytes
+in 512 KB, and pushing them through a link that carries 120 bytes an answer.
+The machine already keeps the one thing worth keeping — the `.trk`, a few
+kilobytes of text — and the browser has the engine, since `web/songedit/`
+already compiles `core/player.c` to wasm. So the device gives up the file and
+the computer does the arithmetic. Nothing was added to the firmware for this
+but one export, `aud_play_once`: the arrangement once, so the sequencer says
+when a render ends rather than JavaScript doing that arithmetic a second time.
+
+- **Three choices, never two at once**: the tracks as they sound, the tracks
+  dry, or the mixdown. His call — a page that renders everything renders a lot
+  of what nobody asked for.
+- **Only the tracks that play.** A track no phrase of the arrangement names, or
+  one that strikes no note, has no file. The name is the song's, the track's
+  number and the instrument that strikes most on it: `SERIAL-3-BASS.wav`.
+- **A stem is a solo, so its sends come with it.** Dry means the sends taken
+  out of the *song* before it is rendered — the faders' REV and ECH at zero and
+  the REV and ECH step effects dropped — never the engine told to skip a stage.
+  The dry render is a render of another song, which is a thing the format can
+  say; a special case inside `player.c` would not have been.
+- **One length for all of them**, the arrangement's own at the least, plus
+  whatever still rings. Dropped into a DAW they start and end together.
+- **A cold machine per file.** Rendering twice into one wasm instance does not
+  give the same bytes: the master limiter's gain is not reset by `player_init`,
+  so the second song starts with the first one's gain still pulled down. The
+  test caught it — the same song twice into one instance differed from frame 36
+  on. Every pass now gets a fresh instance, about a millisecond.
+- **The claim is measured, not asserted.** `tests/fm_render.c` is the same
+  engine built natively. `web/export/test/render.mjs` renders a song both ways
+  and asks for them *sample for sample* over the arrangement, mixdown and
+  solo alike. Past the arrangement's end the two part on purpose: the native
+  one loops, the page lets the tail die.
+
+The master limiter stays on the mixdown and off the stems, so the stems do not
+add up to the mixdown to the bit — they correlate at 0.99 and sit within a dB
+of its level, and where they run above it is exactly where the mixdown was
+being held down. The page says so rather than hiding it.

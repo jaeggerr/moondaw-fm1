@@ -4,6 +4,7 @@
 #   make sim        the FM-1 simulated in an SDL2 window  -> build/sim/moondaw-fm1 [song.trk]
 #   make web        the same in the browser               -> build/web/
 #   make songedit   the song editor's audition engine     -> build/songedit/
+#   make export     the page that renders a song to WAV   -> build/export/
 #   make test       both, headless, the song file reader, and the voice through the app
 #   make difftest   the engine against moondaw's own, on real songs (needs ../moondaw, built)
 #
@@ -41,6 +42,10 @@ web:
 songedit:
 	web/songedit/build.sh
 
+# The export page, assembled with the modules it borrows (web/export/).
+export:
+	web/export/build.sh
+
 app/fonts.h: tools/gen_fonts.py
 	python3 tools/gen_fonts.py > $@
 
@@ -52,7 +57,7 @@ core/drum_tables.h: tools/gen_drum_tables.c
 	@mkdir -p build
 	$(CC) tools/gen_drum_tables.c -lm -o build/gen_drum_tables && build/gen_drum_tables > $@
 
-test: sim web songedit
+test: sim web songedit export
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy build/sim/moondaw-fm1 --selftest build/sim/selftest.bmp $(SELFTEST_SONG)
 	node platform/web/test.mjs
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
@@ -103,6 +108,11 @@ test: sim web songedit
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
 	@node web/songedit/test/roundtrip.mjs > build/roundtrip.log 2>&1 || { cat build/roundtrip.log; exit 1; }
 	@tail -4 build/roundtrip.log
+# The export page's WAVs against tests/fm_render.c -- the same engine, native:
+# the test asks for them sample for sample, so "what comes out of the file is
+# what came out of the speaker" is a measurement and not a promise.
+	$(CC) $(CFLAGS) tests/fm_render.c $(CORE) -o build/fm_render
+	node web/export/test/render.mjs
 	python3 tools/gen_skill.py --check
 
 difftest:
@@ -111,4 +121,4 @@ difftest:
 clean:
 	rm -rf build
 
-.PHONY: sim web songedit test difftest clean
+.PHONY: sim web songedit export test difftest clean

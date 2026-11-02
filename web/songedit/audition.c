@@ -221,6 +221,12 @@ EXPORT void aud_note_sing(int instr, int note)
 
 EXPORT void aud_note_off(void) { player_note_off(); }
 EXPORT void aud_play_song(int entry) { player_play_song(entry, false); }
+/* The arrangement once, then it stops: how web/export/ knows a render is over
+ * and how long the file is. The sequencer decides that, never the page -- the
+ * length of a phrase is the player's arithmetic (swing, ticks, auto cycles,
+ * the references between phrases) and a second copy of it in JavaScript would
+ * drift from this one. */
+EXPORT void aud_play_once(int entry) { player_play_song(entry, true); }
 EXPORT void aud_play_entry(int entry) { player_play_entry(entry); }
 EXPORT void aud_stop(void) { player_stop(); }
 EXPORT int aud_playing(void) { return player_playing(); }
