@@ -3691,6 +3691,17 @@ and two things that had been asked for read wrong under the hand.
   picked out was lost on every stop. The player takes the step in
   `player_play_entry_at`, the free byte of its PLAY command; REC's count-in
   starts there too.
+- **The PLAY that starts the transport hands the view to the playhead at once**,
+  in PATTERN, PHRASE and SONG. The autoscroll only takes over once the hand has
+  been still for GRID_FOLLOW_IDLE, 1.5 s, and the press itself counted as the
+  hand touching something -- so for 1.5 s the view stayed on the cursor while
+  the playhead ran on (fourteen steps at 138 bpm), and the follow then jumped a
+  page at a time from wherever it had got to. Starting on step 06 of a long
+  block, the grid went from 06..0D straight to 14..1B: six steps were never
+  shown. The delay itself is right and stays -- a hand on the knobs owns the
+  view -- but the press that sets the playhead going is not a hand busying
+  itself. There is no test for this: `top` is private to each screen and
+  nothing reads it back.
 
 ## 2026-11-02 — a key under the hand is the track
 

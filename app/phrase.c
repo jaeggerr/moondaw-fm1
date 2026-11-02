@@ -154,7 +154,7 @@ void phrase_open(int e, int track)
 int phrase_frame(const PlatInput *in)
 {
     uint32_t btns = in->btns & ~prev_btns, keys = in->keys & ~prev_keys;
-    bool edit_tap;
+    bool edit_tap, started = false; /* started: this frame set the playhead going */
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
@@ -215,15 +215,24 @@ int phrase_frame(const PlatInput *in)
         if (playing)
             player_stop();
         else
-            player_play_entry(entry);
+            player_play_entry(entry), started = true;
     }
 
     measure();
     grid_follow(&col, &left, song->num_tracks, CELLS);
     play_row = playing && player_entry() == entry ? player_row() % steps : -1;
-    still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]
-                ? 0
-                : still < GRID_FOLLOW_IDLE ? still + 1 : still;
+    /* The press that STARTS the transport is not the hand busying itself:
+     * the view goes with the playhead from that frame on. Counted as a
+     * touch, it held the view on the cursor for GRID_FOLLOW_IDLE frames --
+     * 1.5 s, fourteen steps at 138 bpm -- and the follow then jumped a page
+     * at a time from wherever the playhead had got to, so a whole page
+     * between the two was never shown (2/11). */
+    if (started)
+        still = GRID_FOLLOW_IDLE;
+    else
+        still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2]
+                    ? 0
+                    : still < GRID_FOLLOW_IDLE ? still + 1 : still;
     if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with what plays */
         grid_follow_play(&top, play_row, steps, GRID_ROWS);
     else
