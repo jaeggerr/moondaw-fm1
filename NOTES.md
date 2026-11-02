@@ -3762,6 +3762,13 @@ it only moves, and EDIT held is the one thing that borrows it.
   turns reads as one gesture and how the release stops being a tap. A step's
   samples are counted twice, at the tempo and at half: 5512, then twice that.
 
+- **The machine did not say it.** The gesture shipped in 0.3 with nothing in
+  `app/help.c`: HELP named the metronome and not this, so the one gesture that
+  leaves no mark on the screen until you know it was the one the machine would
+  not teach. Added after the release, on GESTURES and beside the metronome on
+  PATTERN's page -- `ui_speed` is called from `app_frame`, so it holds
+  everywhere and GESTURES is its home.
+
 ## 2026-11-02 — a metronome, on REC under the shift
 
 The machine had one click and one place to hear it: REC's count-in, the bars
