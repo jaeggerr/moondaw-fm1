@@ -15,7 +15,7 @@
  * its number fixed at the left, then the block each track plays, six
  * tracks a screen.
  *
- *   SELECT, KNOB 1  the phrase (SELECT onto its number)   KNOB 2  the track; left of the first, the phrase's number
+ *   SELECT, KNOB 1  the phrase, the column left alone   KNOB 2  the track; left of the first, the phrase's number
  *   KNOB 3  WHAT THE THING UNDER THE CURSOR IS -- on a cell its block, -- below 00
  *           and one new block past the last (NEW in the corner, the cell in C_FX
  *           until something is written in it); what it lands on is heard by itself
@@ -57,7 +57,8 @@
  *           and a section dissolved loses nothing (EDIT + OP4 does it, 31/10)
  *   keys    on a cell: play the track's instrument -- the first the block names --
  *           and write nothing; OCT- OCT+ the keyboard's octave (30/10)
- *   PLAY    the song from the cursor's phrase; with the hand still 1.5 s the view
+ *   PLAY    the song from the cursor's phrase, the view with it from that frame;
+ *           once the hand has touched something, with it still 1.5 s the view
  *           follows the phrase that plays, a page at a time. PLAY again stops it
  *           and leaves the cursor on the phrase it stopped in (30/10)
  *   FX      the MIXER      GLO   the PROJECT: what is GLObal (HOME goes home)
@@ -1534,6 +1535,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     bool acted = btns || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
                  in->enc[PE_PRESET];
     int out = SONGVIEW_STAY;
+    bool started = false; /* this frame set the playhead going: the view follows at once */
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
@@ -1584,7 +1586,11 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
 
     {   /* The cursor walks slots, not rows: a marker is one of them, and
          * the detent that reaches it stops there before going on to the
-         * phrase it names. KNOB 1 too: one hand (29/10). */
+         * phrase it names. KNOB 1 too: one hand (29/10) -- and the same
+         * hand down to the column, which neither of them touches. SELECT
+         * brought the cursor onto the phrase's number until 2/11, when the
+         * column jumping out from under one knob and not the other read as
+         * a lurch with the app in hand. */
         int d = in->enc[PE_SELECT] + in->enc[PE_K1];
         while (d > 0) {
             if (on_mark)
@@ -1604,8 +1610,6 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         if (on_mark) /* a marker has no cells: the cursor is on it, whole */
             col = -1;
     }
-    if (in->enc[PE_SELECT]) /* SELECT: the phrase as a whole, the cursor on its number (29/10) */
-        col = -1;
     col += in->enc[PE_K2];
     {   /* a reference wears one cell where a phrase wears eight, so the
          * cursor has two places on it: its number, and the cell. Where the
@@ -1765,6 +1769,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
                 row = at;
         } else {
             player_play_song(row, false);
+            started = true;
         }
     }
     if (PRESSED(PB_FX))
@@ -1779,10 +1784,19 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     if (settle > 0 && --settle == 0)
         audition_start();
     play_row = playing ? player_entry() : -1;
-    still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3] ||
-                    in->enc[PE_K4]
-                ? 0
-                : still < GRID_FOLLOW_IDLE ? still + 1 : still;
+    /* The press that STARTS the transport is not the hand busying itself:
+     * the view goes with the playhead from that frame on. Counted as a
+     * touch, it held the view on the cursor for GRID_FOLLOW_IDLE frames --
+     * 1.5 s, fourteen steps at 138 bpm -- and the follow then jumped a page
+     * at a time from wherever the playhead had got to, so a whole page
+     * between the two was never shown (2/11). */
+    if (started)
+        still = GRID_FOLLOW_IDLE;
+    else
+        still = btns || keys || in->keys || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] ||
+                        in->enc[PE_K3] || in->enc[PE_K4]
+                    ? 0
+                    : still < GRID_FOLLOW_IDLE ? still + 1 : still;
     if (play_row >= 0 && still >= GRID_FOLLOW_IDLE) /* autoscroll: the view goes with the phrase that plays */
         follow_play_marked(play_row);
     else

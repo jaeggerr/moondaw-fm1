@@ -16,6 +16,9 @@ void player_init(Song *s); /* the song it plays; call once, and stopped */
 /* From the main loop. Queued, taken up at the next audio block. */
 void player_play_song(int entry, bool once);
 void player_play_entry(int entry); /* loops one phrase */
+/* The same, the playhead set down on one of its steps: PATTERN plays
+ * from where the cursor is (2/11). */
+void player_play_entry_at(int entry, int step);
 void player_stop(void);
 /* Restricts a phrase played by player_play_entry to the steps
  * [from, from + len), at once, even mid-playback. len 0 = the whole

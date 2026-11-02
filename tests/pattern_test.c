@@ -531,10 +531,26 @@ int main(void)
     in.btns = 0;
     go();
     CHECK("and a tap: back to normal", !player_muted(0) && !player_soloed(0));
+    /* SELECT only moves, as KNOB 1 does: the column stays where it is
+     * (2/11). The step's number is one detent to the left, on KNOB 2. */
+    enc(PE_K2, -20);          /* left to the first number: the end of the strip */
     enc(PE_SELECT, 1);
-    CHECK("SELECT puts the cursor on the step's number: the keys only play",
+    CHECK("on the step's number the keys only play",
           (keys(1u << 1), keys(0), st(1)->notes[0] == NOTE_NONE || st(1)->notes[0] != 54));
-    enc(PE_SELECT, -1);
+    enc(PE_K2, 1);            /* the first note column */
+    enc(PE_SELECT, 1);
+    keys(1u << 1);
+    keys(0);
+    CHECK("SELECT leaves the column alone: the key writes on the step it reached",
+          st(2)->notes[0] != NOTE_NONE);
+    in.btns = 1u << PB_EDIT;  /* the step empty again, as what follows expects */
+    go();
+    keys(1u << 8);            /* OP4 clears it */
+    keys(0);
+    in.btns = 0;
+    go();
+    enc(PE_SELECT, -2);
+    enc(PE_K2, -20);
 
     /* REC: armed, a bar counted in, the keys written where the playhead is */
     {
@@ -673,8 +689,9 @@ int main(void)
         go();
     }
 
-    /* STOP leaves the cursor on the step it stopped on (30/10): the phrase
-     * plays from its top while the cursor waits further down */
+    /* PLAY starts on the step under the cursor, and STOP leaves the cursor
+     * there: the view comes back to it instead of following the playhead
+     * (2/11, where the other way round read as the less intuitive) */
     enc(PE_K2, -10);
     enc(PE_K2, 1);            /* a note column, so a key writes where the cursor is */
     enc(PE_K1, -20);
@@ -683,11 +700,12 @@ int main(void)
     pump();
     press(PB_PLAY);
     pump();
-    press(PB_PLAY);           /* stop, the playhead still on row 0 */
+    CHECK("PLAY starts on the step under the cursor", player_row() == 5);
+    press(PB_PLAY);           /* stop */
     pump();
     keys(1u << 16);
     keys(0);
-    CHECK("STOP puts the cursor on the step it stopped on", st(0)->notes[0] == 69);
+    CHECK("STOP leaves the cursor where PLAY was asked from", st(5)->notes[0] == 69);
     for (int i = 0; i < 2; i++)
         enc(PE_ALGO, -1);     /* that note taken back */
 
