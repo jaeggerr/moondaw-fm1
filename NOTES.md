@@ -3731,8 +3731,36 @@ tries a sound was the one place the sound was not the song's.
 - **The default VOL of a track is 100**, moondaw's preview level: on a fresh track
   a key sounds exactly as loud as it did before.
 
-The other half of his idea -- on a step that carries FX, playing the key with the
-step's FX -- is not in. Held, a key is not a step: RETRIG and CUT would kill it at
-tick 3 and the sound would read as broken. What could go in is the colour alone
-(cutoff, reso, duty/shape, crush, velocity, the syllable, and the ARP that already
-walks the audition), and that is a choice for the panel, not for here.
+Then the other half, his own idea, judged on the panel the same afternoon: on a
+step that carries FX, the key plays with the step's FX.
+
+- **A held key carries what describes a sound, not what describes a step's
+  length.** In: VOL VEL PAN REV ECH FLT RES CRS RAT DUT WAV SMP ARP VIB TRM. Out:
+  DLY CUT GAT RET STR, because a key is not a step -- CUT or RET would kill or
+  chop it mid-note and the sound would read as broken, not as an effect; SLI and
+  SCP, which reach back to the step before; SWP, which drifts without end under a
+  note nobody lets go; TSP, which would make the keyboard lie about its own
+  pitch while one is choosing a note to write; RMP and PRB, which only mean
+  anything from one step to the next; and BPM, which is the song's and not a
+  sound's at all.
+- **The sifting is the main loop's work** (`audition_carries`, in `.flash_text`),
+  so the audio core carries the policy's cost in neither code nor cycles. It is
+  handed three sifted FX and calls the `apply_fx` the song's rows already use --
+  the same setters, the same clamps, the same ramp slots -- rather than a second
+  reading of the same effects.
+- **VIB and TRM needed the audition's own ticks widened.** `apply_pitch` ran on
+  it only under ARP (31/10); now vibrato and tremolo breathe under a held key
+  too, which is the whole point of them.
+- **RAMTEXT took 96 bytes more than it had.** What paid for it: FX_SMP was being
+  read in three places (trigger_step's own loop, apply_fx's silence about it, and
+  the audition's). It is one `case` in `apply_fx` now, with its default beside the
+  other one-shots at the top of `process_row`. Equivalent on playback -- the one
+  path that triggers a step `process_row` never applied is `anticipate_vox`, and
+  that is VOX only, while `fx.smp` is read only for ENGINE_SAMPLE, so the two
+  never meet. **112 bytes left in RAMTEXT** after it: the next thing on the audio
+  path pays for itself or moves something to flash.
+- **A step's FX follow the cursor, so the same key sounds different a row down.**
+  That is the point -- hearing a step before writing it -- but it is a different
+  kind of thing from the mix above, which is a property of the track and holds
+  still. REC is the one place they part: the key writes at the recording row
+  while the FX come from the row under the cursor.

@@ -929,6 +929,65 @@ int main(void)
         CHECK("and the track's REV is in it: the room is heard under the key", wet > dry);
         player_note_off();
     }
+    /* And the step's own FX under the key (2/11): the ones that describe a
+     * sound are carried, the ones that only mean something over a step's
+     * length are not -- a held key is not a step. */
+    {
+        static int16_t audio[1024 * 2];
+        long open_ = 0, shut = 0, after = 0;
+        Step *w;
+
+        trk_load(&song, trk, sizeof trk - 1, NULL);
+        player_init(&song);
+        pattern_open(&song, 0, 0);
+        go();
+        player_note_off();
+        for (int i = 0; i < 80; i++)
+            player_render(audio, 1024);
+
+        /* The cursor is on step 00, which the file leaves with fGAT03 on it.
+         * Nothing of the sort reaches a key: it is still sounding long after
+         * the third tick of a step would have closed it. */
+        w = song_step_w(&song, 0, song.arrangement[0].pattern[0], 0);
+        w->fx[0].cmd = FX_CUT, w->fx[0].val = 1;
+        w->fx[1].cmd = FX_RET, w->fx[1].val = 1;
+        go();
+        player_note_on(0, 60);
+        for (int i = 0; i < 40; i++) /* well past a step: ticks 6 at 120 bpm */
+            player_render(audio, 1024);
+        for (int i = 0; i < 1024 * 2; i++)
+            after += audio[i] < 0 ? -audio[i] : audio[i];
+        CHECK("CUT and RET on the step do not touch a key held under the hand", after > 0);
+        player_note_off();
+        for (int i = 0; i < 80; i++)
+            player_render(audio, 1024);
+
+        /* FLT is a sound, so the key takes it: the same note through a
+         * filter shut down to 30 Hz is far quieter than through an open one. */
+        w->fx[0].cmd = FX_NONE;
+        w->fx[1].cmd = FX_NONE;
+        go();
+        player_note_on(0, 60);
+        for (int i = 0; i < 16; i++) {
+            player_render(audio, 1024);
+            for (int k = 0; k < 1024 * 2; k++)
+                open_ += audio[k] < 0 ? -audio[k] : audio[k];
+        }
+        player_note_off();
+        for (int i = 0; i < 80; i++)
+            player_render(audio, 1024);
+        w->fx[0].cmd = FX_FLT, w->fx[0].val = 0;
+        go();
+        player_note_on(0, 60);
+        for (int i = 0; i < 16; i++) {
+            player_render(audio, 1024);
+            for (int k = 0; k < 1024 * 2; k++)
+                shut += audio[k] < 0 ? -audio[k] : audio[k];
+        }
+        CHECK("FLT on the step is in the key: shut, the same note is quieter",
+              open_ > 0 && shut < open_ / 2);
+        player_note_off();
+    }
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }
