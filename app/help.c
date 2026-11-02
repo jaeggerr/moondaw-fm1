@@ -27,8 +27,7 @@ static const Item home_items[] = {
     { "HOME", "back to the menu" },
 };
 static const Item song_items[] = {
-    { "SELECT", "phrase, onto its number" },
-    { "KNOB 1", "phrase" },
+    { "SELECT, KNOB 1", "phrase" },
     { "KNOB 2", "track" },
     { "KNOB 3 on a cell", "its pattern" },
     { "  at rest", "it plays by itself" },
@@ -88,8 +87,7 @@ static const Item phrase_items[] = {
     { "HOME", "back to SONG" },
 };
 static const Item pattern_items[] = {
-    { "SELECT", "step, onto its number" },
-    { "KNOB 1", "step" },
+    { "SELECT, KNOB 1", "step" },
     { "KNOB 2", "column" },
     { "KNOB 3", "note, instr., effect" },
     { "KNOB 4", "an effect's value" },
@@ -114,8 +112,8 @@ static const Item pattern_items[] = {
     { "OP6, no selection", "a loop's end, then other" },
     { "MONO", "solo; held: mute" },
     { "ALGO", "undo left, redo right" },
-    { "PLAY", "the phrase, round" },
-    { "  again", "stop, the cursor there" },
+    { "PLAY", "round, from the cursor" },
+    { "  again", "stop; the cursor stays" },
     { "REC", "armed: PLAY counts in" },
     { "  then keys", "record; OFF when let go" },
     { "GLO", "the project" },
@@ -150,8 +148,7 @@ static const Item instrument_items[] = {
     { "HOME", "back to the pattern" },
 };
 static const Item mixer_items[] = {
-    { "SELECT", "track, onto its number" },
-    { "KNOB 1", "track" },
+    { "SELECT, KNOB 1", "track" },
     { "KNOB 2", "column" },
     { "KNOB 3", "value" },
     { "KNOB 3 on a number", "normal, mute, solo" },
@@ -181,9 +178,9 @@ static const Item settings_items[] = {
     { "HOME", "back, kept" },
 };
 static const Item gestures_items[] = {
-    { "KNOB 1, KNOB 2", "move: row, column" },
+    { "SELECT, KNOB 1", "move: the row" },
+    { "KNOB 2", "move: the column" },
     { "KNOB 3, KNOB 4", "change" },
-    { "SELECT", "row, onto its number" },
     { "SEL", "into what is under" },
     { "HOME", "back" },
     { "HOME held", "the menu, from anywhere" },

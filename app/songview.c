@@ -15,7 +15,7 @@
  * its number fixed at the left, then the block each track plays, six
  * tracks a screen.
  *
- *   SELECT, KNOB 1  the phrase (SELECT onto its number)   KNOB 2  the track; left of the first, the phrase's number
+ *   SELECT, KNOB 1  the phrase, the column left alone   KNOB 2  the track; left of the first, the phrase's number
  *   KNOB 3  WHAT THE THING UNDER THE CURSOR IS -- on a cell its block, -- below 00
  *           and one new block past the last (NEW in the corner, the cell in C_FX
  *           until something is written in it); what it lands on is heard by itself
@@ -1585,7 +1585,11 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
 
     {   /* The cursor walks slots, not rows: a marker is one of them, and
          * the detent that reaches it stops there before going on to the
-         * phrase it names. KNOB 1 too: one hand (29/10). */
+         * phrase it names. KNOB 1 too: one hand (29/10) -- and the same
+         * hand down to the column, which neither of them touches. SELECT
+         * brought the cursor onto the phrase's number until 2/11, when the
+         * column jumping out from under one knob and not the other read as
+         * a lurch with the app in hand. */
         int d = in->enc[PE_SELECT] + in->enc[PE_K1];
         while (d > 0) {
             if (on_mark)
@@ -1605,8 +1609,6 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         if (on_mark) /* a marker has no cells: the cursor is on it, whole */
             col = -1;
     }
-    if (in->enc[PE_SELECT]) /* SELECT: the phrase as a whole, the cursor on its number (29/10) */
-        col = -1;
     col += in->enc[PE_K2];
     {   /* a reference wears one cell where a phrase wears eight, so the
          * cursor has two places on it: its number, and the cell. Where the
