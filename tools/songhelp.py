@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""proto/song-help.html -- SONG wearing the help. Drawn, not built.
+"""proto/song-help.html -- SONG wearing the help. Drawn first, then built.
 
 Nothing here is firmware. The measurements are SONG's own (a 16 px head,
 then rows of 28, GRID_ROW in app/grid.h) read off a picture of the real
 screen, proto/song-help/song.png; the overlay is drawn over them.
 
-The shape was settled on 02/11: the help is a foot of two rows of six,
-not a frame on four sides. What is NOT settled is the vocabulary -- six
-characters a cell -- and whether SEL earns a cell at all.
+The shape was settled on 02/11 -- a foot of two rows of six, not a frame
+on four sides -- and built the same evening (app/coat.h). The drawings
+below are what was argued from; what the machine then changed is said at
+the foot of the page.
 
     python3 tools/songhelp.py            # writes proto/song-help.html
     python3 tools/songhelp.py --inline F # the same, pictures carried inside
@@ -172,25 +173,48 @@ figure img{ image-rendering:pixelated; }
 
 
 def main():
-    ref = pathlib.Path("proto/song-help/song.png")
-    today = ('<figure><img src="data:image/png;base64,%s" alt="SONG as it is: eight rows of phrases">'
-             % base64.b64encode(ref.read_bytes()).decode())
+    def real(name, alt):
+        b = pathlib.Path("proto/song-help", name + ".png").read_bytes()
+        return ('<figure><img src="data:image/png;base64,%s" alt="%s">'
+                % (base64.b64encode(b).decode(), alt))
+
+    today = real("song", "SONG as it is: eight rows of phrases")
 
     p = [STYLE, '<div class="wrap">',
-         '  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; shape chosen 2 November 2026 &middot; not built</div>',
+         '  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; drawn and then built, 2 November 2026</div>',
          '  <h1>SONG, <em>wearing the help</em></h1>',
          '''  <p class="lede">The help stops being a screen and becomes a <strong>coat</strong>: you
   switch it on, the view stays the view, and the foot of the panel says what the twelve buttons do
   <strong>right now</strong> &mdash; which changes as the cursor moves. It stays on until you switch
   it off.</p>
-  <p class="lede"><b>The shape is settled and the words are not.</b> A foot of two rows of six was
-  chosen over a frame on four sides, for the reason below. What is still open is the vocabulary
-  &mdash; six characters a cell &mdash; and whether SEL earns a cell at all.</p>
-  <p class="lede"><b>Nothing here is firmware.</b> The picture on the left below is the real SONG,
-  read off the machine. Everything with a foot on it is drawn by hand, over SONG's own measurements:
-  a 16&nbsp;px head and rows of 28 (<code>GRID_ROW</code>).</p>''']
+  <p class="lede"><b>These drawings are what it was argued from, and it is now on the machine</b>
+  (<code>app/coat.h</code>). They are kept as drawn: the picture on the left below is the real
+  SONG of that morning, everything with a foot on it is by hand, over SONG's own measurements
+  &mdash; a 16&nbsp;px head and rows of 28 (<code>GRID_ROW</code>). <b>What the panel then changed
+  is at the foot of this page</b>, because that is the part no drawing could have told us.</p>''']
 
-    p += ['  <section>', '    <span class="tag">The cost, first</span>',
+    p += ['  <section>', '    <span class="tag">On the machine</span>',
+          '    <h2>And here it is <em>for real</em></h2>',
+          '''    <p>Out of the firmware the same evening, not drawn. The cursor moves one column and
+    three cells change: this is the whole argument in two pictures.</p>''',
+          '    <div class="pair">',
+          '      ', real("coat-number", "SONG with the foot: the cursor on the phrase number, LFO DELETE and SEQ COPY live"),
+          '        <figcaption>On the phrase number. SEL says STEPS; LFO and SEQ are awake, '
+          'DELETE and COPY.</figcaption></figure>',
+          '      ', real("coat-cell", "SONG with the foot: the cursor on a pattern cell, LFO and SEQ dark"),
+          '        <figcaption>One column right, on a cell. SEL says PATTERN; LFO and SEQ have gone '
+          'dark, because here they do nothing.</figcaption></figure>',
+          '    </div>',
+          '    <div class="pair">',
+          '      ', real("coat-edit", "SONG with the foot showing the black keys while EDIT is held"),
+          '        <figcaption>EDIT held. The twelve step aside for the OP keys, MONO, and EDIT + '
+          'SELECT &mdash; true on every screen.</figcaption></figure>',
+          '      <div style="flex:1 1 300px;min-width:280px">',
+          '''        <p>The rules between the cells are not in the drawings: they were added because
+        of what the panel did without them. <b>SEL and ENV, PATTERN and SECTION, ran into one
+        word.</b></p>''',
+          '      </div>', '    </div>', '  </section>',
+          '  <section>', '    <span class="tag">The cost, first &mdash; as it was argued</span>',
           '    <h2>Eight rows <em>become six</em></h2>',
           '''    <p>SONG fills the panel to the pixel: a 16&nbsp;px head and eight rows of 28 make
     exactly 240. There is no spare room, so the help has to <b>take</b> some. Two rows of 28 at the
@@ -267,7 +291,24 @@ def main():
       that makes it work.</li>
     </ul>''', '  </section>']
 
-    p += ['  <section>', '    <span class="tag">The real cost, said plainly</span>',
+    p += ['  <section>', '    <span class="tag">What the panel changed</span>',
+          '    <h2>Two things <em>the drawing could not say</em></h2>',
+          '''    <ul class="notes">
+      <li><b>The twelve read as one word.</b> SEL says PATTERN and ENV says SECTION, side by side,
+      each filling its cell: on the panel they ran together. The drawing had warned that six
+      characters was the budget &mdash; it had not shown that two full cells touching is unreadable
+      even when each word fits. <b>There is a rule between the cells now</b>, which also makes the
+      grid read as a grid, which was the point of it.</li>
+      <li><b>A word that will not fit drops to CONDENSED 11 before it is given up.</b> PATTERN and
+      PROJECT are both over the budget by a hair. The first build dropped them and left two cyan
+      names with nothing under them &mdash; a cell saying a button does something and refusing to
+      say what, which is the worst cell on the panel. It is still never shortened: past 11 the cell
+      goes dark, name and all.</li>
+      <li><b>The CAPS LOCK became visible, unasked.</b> EDIT tapped latches the black keys on in
+      SONG. The foot follows the latch and not the thumb, so it stays on the OP keys until EDIT is
+      tapped again &mdash; a state only the EDIT LED used to say.</li>
+    </ul>''', '  </section>',
+          '  <section>', '    <span class="tag">The real cost, said plainly</span>',
           '    <h2>Every screen <em>has to keep its word</em></h2>',
           '''    <p>The drawing is the easy half. The hard half is that each screen has to name its
     buttons, and go on naming them correctly as the cursor moves and the code changes. Each screen
@@ -275,9 +316,9 @@ def main():
     (<code>ui_led_guide</code>). What does not exist is the <b>word</b>, and the word that changes
     with the cursor.</p>
     <p>That is where this could turn into the over-complicated thing you did not want. A line
-    forgotten and the help lies, which is worse than no help. It is not a reason to drop it; it is
-    the reason to start with one screen and EDIT's legend, and see whether keeping them true is
-    cheap or a chore.</p>''', '  </section>', '</div>', '']
+    forgotten and the help lies, which is worse than no help. <b>SONG is the one screen that wears
+    it</b>, and the others keep their eight rows and show nothing, switched on or not &mdash; on
+    purpose, until keeping one screen true turns out to be cheap or a chore.</p>''', '  </section>', '</div>', '']
 
     out = pathlib.Path("proto/song-help.html")
     html = "\n".join(p)
