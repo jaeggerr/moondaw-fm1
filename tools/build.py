@@ -183,7 +183,7 @@ def build_app():
         units.append(SRC / "app" / "gfx.c")
         flags.append("-DGFX_SPECIMEN=1")
     elif app != "hello":                           # the bring-up build stays as small as it can be
-        units += [SRC / "app" / f for f in ("grid.c", "menu.c", "songview.c", "pattern.c", "instrument.c", "mixer.c", "namer.c", "syllable.c", "chords.c", "room.c", "settings.c", "system.c", "samples.c", "help.c", "fx_help.c", "project.c", "remote.c", "canvas.c", "phrase.c", "edit.c", "undo.c", "loop.c", "link.c", "ui.c", "gfx.c", "splash.c")]
+        units += [SRC / "app" / f for f in ("grid.c", "menu.c", "songview.c", "pattern.c", "instrument.c", "mixer.c", "namer.c", "syllable.c", "chords.c", "room.c", "settings.c", "system.c", "samples.c", "help.c", "fx_help.c", "coat.c", "project.c", "remote.c", "canvas.c", "phrase.c", "edit.c", "undo.c", "loop.c", "link.c", "ui.c", "gfx.c", "splash.c")]
         units += [ *sorted((SRC / "core").glob("*.c"))]
     objs = [OUT / f"{u.parent.name}_{u.stem}.o" for u in units]
     tc_all(("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),

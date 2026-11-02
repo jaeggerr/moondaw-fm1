@@ -32,6 +32,11 @@ static int fails, last;
 static void go(void) { undo_frame(in.ms); last = project_frame(&in); memset(in.enc, 0, sizeof in.enc); in.ms += 2000; }
 static void enc(int e, int d) { in.enc[e] = (int8_t)d; go(); }
 static int press(int b) { int r; in.btns = 1u << b; go(); r = last; in.btns = 0; go(); return r; }
+/* To a row by its place, not by stepping from the last one: the order of
+ * the list is a design decision and it has moved once already (SPEED and
+ * METRONOME went under BPM on 02/11). */
+enum { R_NAME, R_BPM, R_SPEED, R_METRO, R_KEY, R_SWING, R_METER, R_STEP, R_TICKS, R_TRACKS };
+static void row_to(int n) { enc(PE_SELECT, -20); enc(PE_SELECT, n); }
 #define CHECK(what, cond) do { if (!(cond)) { printf("FAIL  %s\n", what); fails++; } } while (0)
 #define S app_song
 
@@ -43,10 +48,10 @@ int main(void)
     project_open();
     go();
 
-    enc(PE_SELECT, 1);
+    row_to(R_BPM);
     enc(PE_K3, 20);
     CHECK("BPM", S.bpm == 140 && app_dirty);
-    enc(PE_SELECT, 1);
+    row_to(R_KEY);
     CHECK("KEY: C major with no word of it", S.key_root == 0 && S.key_mode == KEY_MAJOR);
     enc(PE_K3, 1);
     CHECK("KEY: a notch, the same tonic in minor", S.key_root == 0 && S.key_mode == KEY_MINOR);
@@ -56,19 +61,19 @@ int main(void)
     CHECK("KEY stops at B minor", S.key_root == 11 && S.key_mode == KEY_MINOR);
     enc(PE_K3, -23);
     CHECK("KEY: back to C major", S.key_root == 0 && S.key_mode == KEY_MAJOR);
-    enc(PE_SELECT, 1);
+    row_to(R_SWING);
     enc(PE_K3, 100);
     CHECK("SWING stops at 75", S.swing == SWING_MAX);
-    enc(PE_SELECT, 1);
+    row_to(R_METER);
     enc(PE_K3, -1);
     CHECK("METER: beats in a bar, 3 for a waltz", S.beats_per_bar == 3);
-    enc(PE_SELECT, 1);
+    row_to(R_STEP);
     enc(PE_K3, -1);
     CHECK("STEP: steps a beat, 3 for triplets", S.steps_per_beat == 3);
-    enc(PE_SELECT, 1);
+    row_to(R_TICKS);
     enc(PE_K3, 100);
     CHECK("TICKS stops at its most", S.ticks_per_step == TICKS_MAX);
-    enc(PE_SELECT, 1);
+    row_to(R_TRACKS);
     enc(PE_K3, -100);
     CHECK("TRACKS stops at one", S.num_tracks == 1);
     enc(PE_ALGO, -1);
@@ -79,6 +84,28 @@ int main(void)
     CHECK("past the last, nothing", S.num_tracks == 1);
     enc(PE_ALGO, -1);
     CHECK("and back", S.num_tracks == 8);
+
+    {   /* SPEED and METRONOME are the machine's listening, not the file: KNOB 3
+         * moves them, and neither marks the project changed (02/11). */
+        bool was = app_dirty;
+        app_dirty = false;
+        row_to(R_SPEED);
+        enc(PE_K3, -4);
+        CHECK("SPEED comes down by fives", player_speed() == 80);
+        enc(PE_K3, -100);
+        CHECK("SPEED stops at 25", player_speed() == 25);
+        enc(PE_K3, 100);
+        CHECK("and at 100", player_speed() == 100);
+        row_to(R_METRO);
+        enc(PE_K3, 1);
+        CHECK("METRONOME on", player_metro());
+        enc(PE_K3, 1);
+        CHECK("and turning the same way again leaves it on", player_metro());
+        enc(PE_K3, -1);
+        CHECK("METRONOME off", !player_metro());
+        CHECK("neither is the project", !app_dirty);
+        app_dirty = was;
+    }
 
     enc(PE_SELECT, -10);       /* NAME */
     press(PB_SEL);

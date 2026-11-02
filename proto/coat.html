@@ -1,0 +1,310 @@
+<meta charset="utf-8">
+<title>The coat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{ --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --dim:#5A6470; --accent:#7FD962; --title:#62C8D9; --mute:#9E5555;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif; color-scheme:dark; }
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose); font-family:var(--sf);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:clamp(36px,6vw,56px); line-height:.98; color:var(--prose-hi); }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; }
+h2 em{ font-style:normal; color:var(--accent); }
+section{ margin-top:72px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--title); display:block; margin-bottom:8px; }
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:2px; background:var(--dim); }
+.pair{ display:flex; gap:22px; flex-wrap:wrap; margin-top:26px; align-items:flex-start; }
+figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
+figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.5; max-width:300px; }
+.scr, figure img{ display:block; width:300px; height:300px; border-radius:4px;
+  box-shadow:0 0 0 2px #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+figure img{ image-rendering:pixelated; }
+.scr text{ font-variant-ligatures:none; }
+.scr .c20{ font-family:var(--cond); font-weight:600; font-size:19px; }
+.scr .c12{ font-family:var(--cond); font-weight:600; font-size:12px; letter-spacing:.02em; }
+.scr .c10{ font-family:var(--cond); font-weight:600; font-size:10px; letter-spacing:.06em; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; built 2&ndash;3 November 2026</div>
+  <h1>The help, <em>worn on the screen</em></h1>
+  <p class="lede">HELP was a screen you left your work to read. The coat is the other
+  thing: you switch it on, the view stays the view, and the foot of the panel says what the twelve
+  buttons do <strong>right now</strong> &mdash; which changes as the cursor moves. It stays on until
+  you switch it off. <strong>OCT&minus; and OCT+ together</strong> put it on and take it off.</p>
+  <p class="lede"><b>Four screens wear it</b>: SONG, PATTERN, MIXER, and PROJECT through two rows of
+  its own. Every picture below with a foot on it is the machine's framebuffer, not a drawing &mdash;
+  the two hand-drawn ones are marked, and they are the argument that came before the thing.</p>
+  <section>
+    <span class="tag">The gesture</span>
+    <h2>The one chord <em>the panel had left</em></h2>
+    <p>Every button on this machine acts on its press &mdash; <code>app/ui.h</code> says
+    it plainly: <b>EDIT is the only one that can be held</b>. No modifier can be pressed before a
+    second button without its own action going off first: HOME&nbsp;+&nbsp;anything has already
+    stepped back, SAVE&nbsp;+&nbsp;anything has already saved.</p>
+    <p><b>OCT&minus; and OCT+ are the exception, and by accident.</b> Every screen reads them in the
+    same frame and in opposite directions, so the two together move the keyboard's octave by exactly
+    nothing. The chord is read in <code>app/app.c</code> before any screen sees the frame, and the
+    two buttons are rubbed out of it, so even that nothing never happens.</p>
+  </section>
+  <section>
+    <span class="tag">Why it is not a list</span>
+    <h2>It changes <em>under the cursor</em></h2>
+    <p>A fixed list of shortcuts says what exists somewhere. This says what is possible
+    here. The two pictures are the same screen, the cursor moved one column: off the phrase number
+    onto a pattern cell, and <b>SEQ and LFO go dark</b> &mdash; they copy and delete a phrase, and
+    there is no phrase under the cursor any more &mdash; while SEL stops saying STEPS and says
+    PATTERN.</p>
+    <div class="pair">
+<figure><img src="coat/song-number.png" alt="SONG with the foot: the cursor on the phrase number, SEQ COPY and LFO DELETE live">
+        <figcaption>On the phrase number. SEQ copies the one below, LFO deletes it.</figcaption></figure>
+<figure><img src="coat/song-cell.png" alt="SONG with the foot: the cursor on a pattern cell, SEQ and LFO showing a dash">
+        <figcaption>One column right. Both say &mdash;, which is an answer and not a hole.</figcaption></figure>
+    </div>
+    <p><b>A dash is information.</b> A cell with a name and nothing under it means
+    something else: there is a gesture here and the word would not fit at any size. Two states, two
+    readings &mdash; the first build had one blank cell doing both jobs, and it read as dead.</p>
+  </section>
+  <section>
+    <span class="tag">EDIT held</span>
+    <h2>The foot becomes <em>the keyboard itself</em></h2>
+    <p>While EDIT is down the twelve are not what the hand is about to press &mdash; the
+    black keys are. So the foot swaps. The first build laid them in a flat row of six and he could
+    not read it; <b>it is the keyboard's own shape now</b> (his design): a row of the foot is one
+    octave, three keys together then two, so a key is found by its place in the group rather than by
+    counting. Row one is F#3&nbsp;G#3&nbsp;A#3 then C#4&nbsp;D#4, row two the octave above.</p>
+    <p>All ten are drawn. <b>PIT, GLO and POLY are printed on the panel</b> (NOTES.md, 29/10) and
+    command nothing, so they say &mdash;. F#5 opens a third octave no OP lives in and is left out.
+    The foot follows the CAPS LOCK rather than the thumb, so a tap of EDIT leaves the keys up until
+    it is tapped again &mdash; a state only the EDIT LED used to tell.</p>
+    <div class="pair">
+<figure><img src="coat/keys.png" alt="The foot showing the black keys in groups of three and two">
+        <figcaption>The ten black keys of two octaves, in the shape they lie in.</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <span class="tag">PATTERN</span>
+    <h2>Three views, <em>three feet</em></h2>
+    <p>PATTERN is the screen the coat earns its two rows on. It is three views of the
+    same steps, and that is what moves: <b>the view you are not in is the button that goes there</b>,
+    so FX goes dark on the effects and SEQ goes dark on the notes. ARP offers the chords only where
+    the keys play notes. And SEL opens something only where there is something to open.</p>
+    <div class="pair">
+<figure><img src="coat/pattern-notes.png" alt="PATTERN, the notes: FX EFFECTS, ENV INSTR, ARP CHORDS">
+        <figcaption>NOTES. SEL, LFO and SEQ say &mdash;.</figcaption></figure>
+<figure><img src="coat/pattern-fx.png" alt="PATTERN, the effects: SEL wakes as SYLLABLE">
+        <figcaption>FX. SEL wakes as SYLLABLE, in the small size, which is the only one it fits.</figcaption></figure>
+    </div>
+    <div class="pair">
+<figure><img src="coat/pattern-ins.png" alt="PATTERN, the instruments: SEL and ENV both say OPEN">
+        <figcaption>INS. SEL and ENV do the same thing and both say it.</figcaption></figure>
+      <div style="flex:1 1 300px;min-width:280px">
+        <p><b>LFO is dark on all three.</b> It does nothing on this screen at all, and
+        the cell is drawn to say so: learning that a button is never for you here is worth a cell.
+        </p>
+      </div>
+    </div>
+  </section>
+  <section>
+    <span class="tag">MIXER</span>
+    <h2>Eleven dashes <em>are the truth</em></h2>
+    <p>MIXER was the last screen with <code>ui_shift</code>, so the last where the EDIT
+    layer existed without the foot naming it. Six of its twelve cells are dashes: <b>this screen is
+    knobs and MONO</b>, and the foot saying so plainly is the most useful thing it can say about it.
+    EDIT carries PROJECT there &mdash; on MIXER the tap goes to the project and never latches, so
+    the guide leaves the LED dark while the cell can say it.</p>
+    <div class="pair">
+<figure><img src="coat/mixer.png" alt="MIXER with the foot: six cells of twelve are dashes">
+        <figcaption>A screen that answers almost none of the twelve, saying so.</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <span class="tag">PROJECT</span>
+    <h2>The slow way in, <em>teaching the fast one</em></h2>
+    <p>Two gestures had no home on the foot because they are not of the moment: the
+    listening speed and the metronome, both EDIT held plus something. They are rows of PROJECT now,
+    straight under BPM, <b>and the foot says the gesture for the row the cursor is on</b> (his
+    design). You find the thing by the slow path and the screen hands you the fast one &mdash; which
+    is how anyone has ever graduated from menus to shortcuts.</p>
+    <p>Neither is written to the file: <code>player_init</code> puts both back when a project opens,
+    and neither dirties the song nor enters UNDO. A rule marking them off was tried and taken out:
+    the foot already makes the distinction.</p>
+    <div class="pair">
+<figure><img src="coat/project-speed.png" alt="PROJECT: SPEED under BPM, the foot saying EDIT + SELECT">
+        <figcaption>SPEED, with EDIT + SELECT at the foot.</figcaption></figure>
+<figure><img src="coat/project-metro.png" alt="PROJECT: METRONOME, the foot saying EDIT + REC">
+        <figcaption>METRONOME. The list is ten rows now, so it scrolls.</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <span class="tag">How the shape was chosen &mdash; drawn, before any of it</span>
+    <h2>A foot, <em>and not a frame</em></h2>
+    <p>These two are hand-drawn, over SONG's own measurements &mdash; a 16&nbsp;px head
+    and rows of 28. They are what the decision was made on. SONG fills the panel to the pixel, so
+    the help has to <b>take</b>: two rows of 28 at the foot leave six phrases instead of eight.</p>
+    <p>A frame on four sides was the other idea. A column down each side costs a third of the width
+    to hold two labels nobody can read sideways. <b>The foot costs less and buys more</b>, because
+    the panel's buttons are two rows of six: draw two rows of six and the cell you read sits where
+    the button sits under your thumb. Top right on the screen is top right under your hand.</p>
+    <div class="pair">
+<figure><img src="coat/song-off.png" alt="SONG as it is with the coat off: eight rows">
+        <figcaption>The real SONG, coat off. Eight phrases, no room spare.</figcaption></figure>
+      <figure>
+<svg class="scr" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="240" height="240" fill="#000000"/>
+<rect x="0" y="0" width="240" height="184" fill="#000000"/>
+<text x="62.2" y="12.0" text-anchor="middle" class="c12" fill="#FFFFFF">KICK</text>
+<text x="94.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">SNARE</text>
+<text x="126.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">BASS</text>
+<text x="159.2" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">CHOR</text>
+<text x="191.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">LEAD</text>
+<text x="223.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">ROBO</text>
+<line x1="45" y1="16" x2="45" y2="184" stroke="#282828"/>
+<text x="22.0" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="62.2" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="94.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="126.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="159.2" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="191.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="22.0" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="62.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="22.0" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="62.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<rect x="0" y="101" width="240" height="26" fill="#7FD962"/>
+<text x="22.0" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">03</text>
+<text x="62.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="94.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="126.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="159.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="191.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="223.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<rect x="49.0" y="103" width="26.3" height="22" fill="none" stroke="#0B1409" stroke-width="1.5"/>
+<text x="22.0" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">04</text>
+<text x="62.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="223.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="22.0" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">05</text>
+<text x="62.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="159.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="177.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<line x1="0" y1="184" x2="240" y2="184" stroke="#282828"/>
+<rect x="0.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">FX</text>
+<text x="20.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">MIXER</text>
+<rect x="40.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">SEL</text>
+<text x="60.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">OPEN</text>
+<rect x="80.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">ENV</text>
+<text x="100.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">SECT.</text>
+<rect x="120.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="195.0" text-anchor="middle" class="c10" fill="#4C4C4C">LFO</text>
+<rect x="160.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">EDIT</text>
+<text x="180.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">KEYS</text>
+<rect x="200.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">GLO</text>
+<text x="220.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">PROJ.</text>
+<rect x="0.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">HOME</text>
+<text x="20.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">BACK</text>
+<rect x="40.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">SAVE</text>
+<text x="60.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">WRITE</text>
+<rect x="80.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">ARP</text>
+<rect x="120.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">SEQ</text>
+<rect x="160.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">PLAY</text>
+<text x="180.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">FROM 03</text>
+<rect x="200.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">REC</text>
+</svg>
+        <figcaption>Hand-drawn, 2 November. The words are not the built ones: SECT. and PROJ. were guesses at what would fit.</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <span class="tag">What the panel changed</span>
+    <h2>Five things <em>no drawing could say</em></h2>
+    <ul class="notes">
+      <li><b>The twelve read as one word.</b> SEL saying PATTERN and ENV saying SECTION, side by
+      side, each filling its cell: on the panel they ran together. There is a rule between the cells
+      now, which also makes the grid read as a grid.</li>
+      <li><b>A word too wide drops a size, then another.</b> CONDENSED 12, then 11, then 9 &mdash;
+      the name's own size &mdash; before it is given up. SYLLABLE fits at none of the ordinary
+      sizes and is perfectly readable at the last one. It is never shortened: an abbreviation
+      nobody reads is worse than nothing.</li>
+      <li><b>A blank cell was saying two things at once.</b> The first build dropped the name along
+      with the word, so SEL on the effects read as dead while it opened the syllable. The name is
+      always drawn now, and a button with nothing to do says &mdash;.</li>
+      <li><b>The CAPS LOCK became visible, unasked.</b> EDIT tapped latches the black keys on. The
+      foot follows the latch, so it stays on the keys until EDIT is tapped again.</li>
+      <li><b>A song with sections costs more than two rows.</b> A section marker takes a slot, so
+      six rows of LEOMOTEUR show four phrases and two markers. The drawing could not have known.</li>
+    </ul>
+  </section>
+  <section>
+    <span class="tag">Written down so nobody fixes them again</span>
+    <h2>Two faults <em>that were not faults</em></h2>
+    <ul class="notes">
+      <li><b>GESTURES already documents EDIT held + REC and EDIT held + SELECT.</b> I had read the
+      SONG, PATTERN and PHRASE pages and concluded the gestures were written nowhere but PATTERN.
+      The page that exists for what is true everywhere is where they were.</li>
+      <li><b>The listening speed already goes back to 100.</b> <code>player_init</code> does it, and
+      it runs whenever a project is adopted. I had read <code>ui_speed</code>, which only applies
+      the speed, and concluded nothing reset it. There is no trap to close.</li>
+    </ul>
+  </section>
+  <section>
+    <span class="tag">Left open</span>
+    <h2>What <em>is not done</em></h2>
+    <ul class="notes">
+      <li><b>PHRASE and INSTRUMENT wear nothing</b> and keep their eight rows, switched on or not.
+      INSTRUMENT has no <code>ui_shift</code>; PHRASE is a screen whose future is its own
+      question.</li>
+      <li><b>The pages are still flat.</b> SONG's HELP page is forty-four lines with no grouping.
+      The coat answers the moment; the reference still reads like a dump.</li>
+      <li><b>The metronome is a knob, not a toggle.</b> Right for ON, left for OFF, consistent with
+      every other row of PROJECT and perhaps wrong for a thing with two states.</li>
+      <li><b>Six characters a cell</b> remains the budget, and the vocabulary has to be built inside
+      it. Each word is one more thing to keep true as the screens change.</li>
+    </ul>
+  </section>
+</div>
