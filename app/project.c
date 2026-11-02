@@ -22,20 +22,22 @@
  *           (the file's steps_per_beat)
  *   HOME    back where it was opened from     SEQ  SONG     FX  the MIXER
  *   ALGO    UNDO left, REDO right     SAVE  as printed */
-enum { S_NAME, S_BPM, S_KEY, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, S_SPEED, S_METRO, SETTINGS };
+enum { S_NAME, S_BPM, S_SPEED, S_METRO, S_KEY, S_SWING, S_METER, S_STEP, S_TICKS, S_TRACKS, SETTINGS };
 enum { SPEED_STEP = 5 };
 enum { LABEL_X = 14, VALUE_X = 120 };
 
 #define song (&app_song)
 
-static const char *const label[SETTINGS] = { "NAME",  "BPM",   "KEY",   "SWING", "METER",
-                                             "STEP",  "TICKS", "TRACKS", "SPEED", "METRONOME" };
+static const char *const label[SETTINGS] = { "NAME",  "BPM",   "SPEED", "METRONOME", "KEY",
+                                             "SWING", "METER", "STEP",  "TICKS",     "TRACKS" };
 
-/* The last two are not the project: they are how the machine is listening to
- * it, and they are not written to the file (player_init puts both back when a
- * project opens). A rule above SPEED says so, and they are reachable here so
- * that the gesture is not the only way in -- the foot then says what the
- * gesture is, which is how one stops needing this screen (his design, 02/11). */
+/* SPEED and METRONOME are not the project: they are how the machine is
+ * listening to it, and they are not written to the file (player_init puts
+ * both back when a project opens). Nothing marks them off -- a rule was
+ * tried and taken out (02/11) -- they sit under BPM because that is where
+ * the hand goes. They are reachable here so that the gesture is not the
+ * only way in, and the foot then says what the gesture is, which is how
+ * one stops needing this screen (his design). */
 static const char *const gesture[SETTINGS] = { [S_SPEED] = "EDIT + SELECT", [S_METRO] = "EDIT + REC" };
 static const char *const gesture_say[SETTINGS] = { [S_SPEED] = "slower, faster", [S_METRO] = "on, off" };
 static int row, top;
@@ -159,6 +161,7 @@ static void draw(void)
 {
     char s[STORE_NAME + 4], n[12];
     int lost = app_not_carried();
+    int bar = SETTINGS > shown_rows() ? 6 : 0; /* the scroll bar's own six pixels */
     grid_clear();
     if (said)
         grid_corner(said, grid_said_ink(said), 0, 0);
@@ -177,17 +180,17 @@ static void draw(void)
     }
     for (int v = 0; v < shown_rows() && top + v < SETTINGS; v++) {
         int k = top + v;
+        (void)0;
         bool here = k == row;
-        if (k == S_SPEED) /* under this, the machine's listening, not the file */
-            gfx_fill(0, grid_y(v), PLAT_W, 1, C_TRACK, 255);
         if (here) {
-            grid_band(v, PLAT_W - 4);
-            grid_hollow(v, VALUE_X - 6, PLAT_W - VALUE_X);
+            grid_band(v, PLAT_W - 4 - bar);
+            grid_hollow(v, VALUE_X - 6, PLAT_W - VALUE_X - bar);
         }
         gfx_text(F_COND20, LABEL_X, grid_base(v), label[k], here ? C_ON_ACC : C_DIM);
         value_of(k, s);
         gfx_text(F_COND20, VALUE_X, grid_base(v), s, here ? C_ACCENT : C_TEXT);
     }
+    grid_bar_rows(top, SETTINGS, shown_rows());
     if (gesture[row]) { /* the fast way to the row one is on */
         int y = PLAT_H - GRID_ROW, x;
         gfx_fill(0, y, PLAT_W, 1, C_TRACK, 255);
