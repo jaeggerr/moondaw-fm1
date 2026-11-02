@@ -727,6 +727,32 @@ int main(void)
         go(); /* the head is drawn with all of this, and nothing falls over */
     }
 
+    /* A key where the cursor rests plays the track's instrument in the
+     * track's mix, not dry (2/11): hard left in MIXER, nothing on the right. */
+    {
+        static int16_t audio[1024 * 2];
+        long left = 0, right = 0;
+
+        trk_load(&app_song, trk, sizeof trk - 1, NULL);
+        player_init(&app_song);
+        songview_open(true); /* the cursor on track 0's cell of phrase 00 */
+        go();
+        app_song.track_init[0].pan = -64;
+        in.keys = 1u << 0;
+        go(); /* the key down: the audition takes the cell's track */
+        in.keys = 0;
+        for (int i = 0; i < 16; i++) {
+            player_render(audio, 1024);
+            for (int k = 0; k < 1024; k++) {
+                int32_t l = audio[2 * k], r = audio[2 * k + 1];
+                left += l < 0 ? -l : l;
+                right += r < 0 ? -r : r;
+            }
+        }
+        CHECK("a key on a cell is heard in the track's mix, hard left and not in the middle",
+              left > 0 && right == 0);
+        player_note_off();
+    }
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }

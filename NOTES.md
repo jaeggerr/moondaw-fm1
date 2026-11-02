@@ -3813,3 +3813,37 @@ What the test covers is the gesture: on, off, that the shift takes REC so
 nothing is armed, that the caps lock leaves REC alone, and that a fresh player
 has it off. The beat itself has no test -- the click is not observable from the
 host without exposing `click_req` -- and was judged on the panel.
+
+## 2026-11-02 — a key under the hand is the track
+
+Piano on a step, and the instrument came out dry: the mixing was not in it. The
+audition has a track of its own one past the song's (`tracks[AUDITION]`), and it
+was rendered straight into the output -- moondaw's preview level, dead centre,
+nothing to the room and nothing to the delay. So the one place the hand actually
+tries a sound was the one place the sound was not the song's.
+
+- **Where the cursor rests on a track, the audition is that track**: its VOL, its
+  PAN, its REV and its ECH, as MIXER shows them. The screen says which track
+  every frame (`player_audition_track`, -1 for none) and the player reads it when
+  the note is struck, as `start_play` reads it for the song's tracks. SONG,
+  PATTERN and PHRASE each say their column; INSTRUMENT says none and previews
+  dry, an instrument being set on no track. CHOOSE INSTRUMENT, the chords and the
+  syllable stand on a step of PATTERN's track, so they borrow it too.
+- **MUTE and SOLO are left out.** A key under the hand always sounds, or a track
+  turned down to nothing would read as a broken machine.
+- **A fader moved while a key is held is heard under the next key**, not that one:
+  there is no `track_follow_mixer` on the audition.
+- **The audition goes down the same path as a track of the song** now
+  (`render_track`), which is the whole of why what it sends reaches the returns.
+  It had its own copy of that path -- the blep, the singing, the samples, the
+  drums, the chain, eight lines saying what render_track already said. Taking the
+  copy out is what paid for the routing: RAMTEXT links with 388 bytes free and
+  nothing had to move to flash this time.
+- **The default VOL of a track is 100**, moondaw's preview level: on a fresh track
+  a key sounds exactly as loud as it did before.
+
+The other half of his idea -- on a step that carries FX, playing the key with the
+step's FX -- is not in. Held, a key is not a step: RETRIG and CUT would kill it at
+tick 3 and the sound would read as broken. What could go in is the colour alone
+(cutoff, reso, duty/shape, crush, velocity, the syllable, and the ARP that already
+walks the audition), and that is a choice for the panel, not for here.

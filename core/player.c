@@ -453,6 +453,9 @@ static char audition_syl[VOX_SYL_LEN];
 /* What a CMD_NOTE_CHORD strikes, the same way; its `b` is how many. */
 static uint8_t audition_chord[STEP_MAX_NOTES];
 static uint8_t audition_arp; /* its ticks a note, 0 for all of them at once */
+/* The track a CMD_NOTE_* borrows its mix from, -1 = dry; written the same
+ * way, by the screen that holds the cursor. */
+static int8_t audition_at = -1;
 static volatile struct { uint8_t type, a, b; } cmd_q[8];
 static volatile uint8_t cmd_w, cmd_r;
 
@@ -1464,10 +1467,13 @@ static void handle_cmds(void)
         } else if (type == CMD_STOP) {
             stop_play();
         } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL || type == CMD_NOTE_CHORD) {
-            /* The audition: one note and its layers, at the level moondaw
-             * previews at, outside the song and its sends. A chord strikes
-             * the notes of a step together, as trigger_step does -- what
-             * the step itself would sound (30/10). */
+            /* The audition: one note and its layers, in the mix of the
+             * track the cursor is on -- its VOL, its PAN and what it sends
+             * to the room and to the delay, so a key under the hand sounds
+             * like the track sounds (2/11). On no track it previews dry, at
+             * the level moondaw previews at. A chord strikes the notes of a
+             * step together, as trigger_step does -- what the step itself
+             * would sound (30/10). */
             Track *tr = &tracks[AUDITION];
             const uint8_t one = b;
             const uint8_t *notes = type == CMD_NOTE_CHORD ? audition_chord : &one;
@@ -1495,8 +1501,16 @@ static void handle_cmds(void)
             tr->fx.has_held = arp > 0;
             tr->fx.arp = arp;
             tr->fx.arp_idx = tr->fx.arp_count = 0;
-            tr->chain.pan = 0;
-            chain_note_on(&tr->chain, 100, VEL_FULL, in, in->cutoff, in->reso);
+            {
+                const TrackInit *ti = audition_at >= 0 && audition_at < song->num_tracks
+                                          ? &song->track_init[audition_at]
+                                          : 0;
+                tr->chain.pan = ti ? ti->pan : 0;
+                tr->fx.send = ti ? ti->send : 0;
+                tr->fx.echo = ti ? ti->echo : 0;
+                chain_note_on(&tr->chain, ti ? ti->volume : 100, VEL_FULL, in,
+                              in->cutoff, in->reso);
+            }
             tr->used = true;
         } else if (type == CMD_NOTE_OFF) {
             /* A drum is not ended by its key: it rings out (below). */
@@ -1867,19 +1881,13 @@ static void render_tracks(int32_t *out, int frames)
         }
     }
 
-    {   /* the audition, dry */
+    {   /* the audition, through the mix it borrowed: the same path as a
+         * track of the song, so what it sends reaches the returns below. */
         Track *tr = &tracks[AUDITION];
         if (reap_due)
             track_reap(tr);
         if (tr->used) {
-            blep_begin(&tr->blep, frames);
-            for (int v = 0; v < TRACK_MAX_VOICES; v++)
-                osc_draw(&tr->voices[v].osc, &tr->blep);
-            blep_read(&tr->blep, ln->mono, frames);
-            track_sing(tr, ln->mono, frames);
-            track_samples(tr, ln->mono, frames);
-            drum_render(AUDITION, ln->mono, frames);
-            chain_process(&tr->chain, ln->mono, out, frames);
+            render_track(tr, ln, out, frames, false);
             /* Once it has closed it is put away CLEAN. A song's track
              * keeps running between notes and its filters settle; this
              * one stops being rendered, and what its DC block and its
@@ -2032,6 +2040,7 @@ MAIN_LOOP void player_init(Song *s)
     tracks[AUDITION].fx.syl[0] = 'A';
     tracks[AUDITION].fx.syl[1] = '\0';
     play_speed = 100, tick_num = (uint32_t)FS * 15u; /* a project opens at its own tempo */
+    audition_at = -1;
     bpm = s->bpm;
     playing = false;
     to_next_tick = 0;
@@ -2078,6 +2087,10 @@ MAIN_LOOP int player_speed(void) { return play_speed; }
 MAIN_LOOP void player_set_song_loop(int from, int to)
 {
     song_loop_word = from < 0 || to < from ? 0 : ((uint32_t)from & 0xFFFFu) | (((uint32_t)to + 1) & 0xFFFFu) << 16;
+}
+MAIN_LOOP void player_audition_track(int track)
+{
+    audition_at = track >= 0 && track < SONG_MAX_TRACKS ? (int8_t)track : -1;
 }
 MAIN_LOOP void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
 MAIN_LOOP void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }

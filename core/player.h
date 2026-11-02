@@ -41,6 +41,14 @@ void player_set_song_loop(int from, int to);
  * longer, so a slowed song is the same song, swing and all. */
 void player_set_speed(int pct);
 int player_speed(void);
+/* The mix the auditions that follow are heard in: the VOL, the PAN, the
+ * REV and the ECH of `track`, as MIXER shows them -- a key played where
+ * the cursor rests on a track sounds like that track sounds, and not dry
+ * (2/11). A screen says it every frame; -1, where the cursor is on no
+ * track, previews dry at moondaw's preview level. MUTE and SOLO are left
+ * out: a key under the hand always sounds. A fader moved while a key is
+ * held is heard on the next key, not under that one. */
+void player_audition_track(int track);
 /* A note outside the song, on an instrument of the song: what a key
  * does on the INSTRUMENT screen, and the note PATTERN just wrote. One
  * at a time; the next one replaces it. */
