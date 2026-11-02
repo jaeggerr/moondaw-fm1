@@ -230,8 +230,7 @@ What each screen answers, as HELP on the device says it. The words are the machi
 
 | | |
 |---|---|
-| `SELECT` | track, onto its number |
-| `KNOB 1` | track |
+| `SELECT, KNOB 1` | track |
 | `KNOB 2` | column |
 | `KNOB 3` | value |
 | `KNOB 3 on a number` | normal, mute, solo |
@@ -270,9 +269,9 @@ What each screen answers, as HELP on the device says it. The words are the machi
 
 | | |
 |---|---|
-| `KNOB 1, KNOB 2` | move: row, column |
+| `SELECT, KNOB 1` | move: the row |
+| `KNOB 2` | move: the column |
 | `KNOB 3, KNOB 4` | change |
-| `SELECT` | row, onto its number |
 | `SEL` | into what is under |
 | `HOME` | back |
 | `HOME held` | the menu, from anywhere |

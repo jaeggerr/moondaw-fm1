@@ -3676,8 +3676,9 @@ Nothing is freed for the hand: which song goes is its own choice.
 Everything for the beta being in, the app was finally played rather than built,
 and two things that had been asked for read wrong under the hand.
 
-- **SELECT no longer jumps the cursor to the row's number**, in SONG and in
-  PATTERN. It was asked for on 29/10 — the row as a whole, one detent away — and
+- **SELECT no longer jumps the cursor to the row's number**, in SONG, in
+  PATTERN and in MIXER -- the three screens where it did, and HELP's GESTURES
+  page states it as one rule for all of them. It was asked for on 29/10 — the row as a whole, one detent away — and
   beside KNOB 1, which moves and leaves the column alone, the column vanishing
   out from under one knob and not the other is a lurch. The two knobs are now
   the same hand down to the column. The number is still one detent to the left,

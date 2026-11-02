@@ -148,8 +148,7 @@ static const Item instrument_items[] = {
     { "HOME", "back to the pattern" },
 };
 static const Item mixer_items[] = {
-    { "SELECT", "track, onto its number" },
-    { "KNOB 1", "track" },
+    { "SELECT, KNOB 1", "track" },
     { "KNOB 2", "column" },
     { "KNOB 3", "value" },
     { "KNOB 3 on a number", "normal, mute, solo" },
@@ -179,9 +178,9 @@ static const Item settings_items[] = {
     { "HOME", "back, kept" },
 };
 static const Item gestures_items[] = {
-    { "KNOB 1, KNOB 2", "move: row, column" },
+    { "SELECT, KNOB 1", "move: the row" },
+    { "KNOB 2", "move: the column" },
     { "KNOB 3, KNOB 4", "change" },
-    { "SELECT", "row, onto its number" },
     { "SEL", "into what is under" },
     { "HOME", "back" },
     { "HOME held", "the menu, from anywhere" },
