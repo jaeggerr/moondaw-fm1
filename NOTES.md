@@ -3694,7 +3694,8 @@ tries a sound was the one place the sound was not the song's.
   (`render_track`), which is the whole of why what it sends reaches the returns.
   It had its own copy of that path -- the blep, the singing, the samples, the
   drums, the chain, eight lines saying what render_track already said. Taking the
-  copy out paid for the routing: nothing had to move to flash this time.
+  copy out is what paid for the routing: RAMTEXT links with 396 bytes free and
+  nothing had to move to flash this time.
 - **The default VOL of a track is 100**, moondaw's preview level: on a fresh track
   a key sounds exactly as loud as it did before.
 
