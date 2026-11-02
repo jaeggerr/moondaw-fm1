@@ -1,0 +1,492 @@
+<meta charset="utf-8">
+<title>SONG, wearing the help</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{ --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --dim:#5A6470; --accent:#7FD962; --title:#62C8D9; --mute:#9E5555;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif; color-scheme:dark; }
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose); font-family:var(--sf);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:clamp(36px,6vw,56px); line-height:.98; color:var(--prose-hi); }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; }
+h2 em{ font-style:normal; color:var(--accent); }
+section{ margin-top:72px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--title); display:block; margin-bottom:8px; }
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:2px; background:var(--dim); }
+.pair{ display:flex; gap:22px; flex-wrap:wrap; margin-top:26px; align-items:flex-start; }
+figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
+figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.5; max-width:300px; }
+.scr, figure img{ display:block; width:300px; height:300px; border-radius:4px;
+  box-shadow:0 0 0 2px #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+figure img{ image-rendering:pixelated; }
+.scr text{ font-variant-ligatures:none; }
+.scr .c20{ font-family:var(--cond); font-weight:600; font-size:19px; }
+.scr .c12{ font-family:var(--cond); font-weight:600; font-size:12px; letter-spacing:.02em; }
+.scr .c10{ font-family:var(--cond); font-weight:600; font-size:10px; letter-spacing:.06em; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; shape chosen 2 November 2026 &middot; not built</div>
+  <h1>SONG, <em>wearing the help</em></h1>
+  <p class="lede">The help stops being a screen and becomes a <strong>coat</strong>: you
+  switch it on, the view stays the view, and the foot of the panel says what the twelve buttons do
+  <strong>right now</strong> &mdash; which changes as the cursor moves. It stays on until you switch
+  it off.</p>
+  <p class="lede"><b>The shape is settled and the words are not.</b> A foot of two rows of six was
+  chosen over a frame on four sides, for the reason below. What is still open is the vocabulary
+  &mdash; six characters a cell &mdash; and whether SEL earns a cell at all.</p>
+  <p class="lede"><b>Nothing here is firmware.</b> The picture on the left below is the real SONG,
+  read off the machine. Everything with a foot on it is drawn by hand, over SONG's own measurements:
+  a 16&nbsp;px head and rows of 28 (<code>GRID_ROW</code>).</p>
+  <section>
+    <span class="tag">The cost, first</span>
+    <h2>Eight rows <em>become six</em></h2>
+    <p>SONG fills the panel to the pixel: a 16&nbsp;px head and eight rows of 28 make
+    exactly 240. There is no spare room, so the help has to <b>take</b> some. Two rows of 28 at the
+    foot &mdash; one per row of the panel &mdash; leaves six phrases visible instead of eight.</p>
+    <p><b>The foot, and not a frame all round &mdash; chosen 02/11.</b> A column down each side
+    would cost a third of the width to hold two labels nobody can read sideways. The foot costs
+    less and buys more, because the panel's buttons are <b>two rows of six</b>: draw two rows of
+    six and the cell you read sits where the button sits under your thumb. There is nothing to
+    look up &mdash; top right on the screen is top right under your hand.</p>
+    <div class="pair">
+      <figure><img src="data:image/png;base64,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" alt="SONG as it is: eight rows of phrases"><figcaption>Today. Eight phrases, no room spare.</figcaption></figure>
+      <figure>
+<svg class="scr" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="240" height="240" fill="#000000"/>
+<rect x="0" y="0" width="240" height="184" fill="#000000"/>
+<text x="62.2" y="12.0" text-anchor="middle" class="c12" fill="#FFFFFF">KICK</text>
+<text x="94.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">SNARE</text>
+<text x="126.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">BASS</text>
+<text x="159.2" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">CHOR</text>
+<text x="191.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">LEAD</text>
+<text x="223.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">ROBO</text>
+<line x1="45" y1="16" x2="45" y2="184" stroke="#282828"/>
+<text x="22.0" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="62.2" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="94.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="126.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="159.2" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="191.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="22.0" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="62.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="22.0" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="62.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<rect x="0" y="101" width="240" height="26" fill="#7FD962"/>
+<text x="22.0" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">03</text>
+<text x="62.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="94.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="126.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="159.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="191.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="223.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<rect x="49.0" y="103" width="26.3" height="22" fill="none" stroke="#0B1409" stroke-width="1.5"/>
+<text x="22.0" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">04</text>
+<text x="62.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="223.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="22.0" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">05</text>
+<text x="62.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="159.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="177.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<line x1="0" y1="184" x2="240" y2="184" stroke="#282828"/>
+<rect x="0.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">FX</text>
+<text x="20.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">MIXER</text>
+<rect x="40.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">SEL</text>
+<text x="60.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">OPEN</text>
+<rect x="80.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">ENV</text>
+<text x="100.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">SECT.</text>
+<rect x="120.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="195.0" text-anchor="middle" class="c10" fill="#4C4C4C">LFO</text>
+<rect x="160.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">EDIT</text>
+<text x="180.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">KEYS</text>
+<rect x="200.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">GLO</text>
+<text x="220.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">PROJ.</text>
+<rect x="0.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">HOME</text>
+<text x="20.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">BACK</text>
+<rect x="40.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">SAVE</text>
+<text x="60.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">WRITE</text>
+<rect x="80.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">ARP</text>
+<rect x="120.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">SEQ</text>
+<rect x="160.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">PLAY</text>
+<text x="180.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">FROM 03</text>
+<rect x="200.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">REC</text>
+</svg>
+        <figcaption>The help on, the cursor on a pattern cell. Six phrases, and the twelve named at the foot.</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <span class="tag">What makes it worth the two rows</span>
+    <h2>It changes <em>under the cursor</em></h2>
+    <p>A fixed list of shortcuts is what we already have, and it is why you were not
+    convinced. This is not that: move the cursor off the pattern cell onto the <b>phrase number</b>
+    and two dark cells wake up &mdash; SEQ copies the phrase below, LFO deletes it &mdash; while
+    SEL stops saying PATTERN and starts saying STEPS. <b>The screen tells you what is possible
+    here, not what exists somewhere.</b></p>
+    <div class="pair">
+      <figure>
+<svg class="scr" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="240" height="240" fill="#000000"/>
+<rect x="0" y="0" width="240" height="184" fill="#000000"/>
+<text x="62.2" y="12.0" text-anchor="middle" class="c12" fill="#FFFFFF">KICK</text>
+<text x="94.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">SNARE</text>
+<text x="126.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">BASS</text>
+<text x="159.2" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">CHOR</text>
+<text x="191.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">LEAD</text>
+<text x="223.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">ROBO</text>
+<line x1="45" y1="16" x2="45" y2="184" stroke="#282828"/>
+<text x="22.0" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="62.2" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="94.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="126.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="159.2" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="191.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="22.0" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="62.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="22.0" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="62.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<rect x="0" y="101" width="240" height="26" fill="#7FD962"/>
+<text x="22.0" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">03</text>
+<text x="62.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="94.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="126.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="159.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="191.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="223.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<rect x="49.0" y="103" width="26.3" height="22" fill="none" stroke="#0B1409" stroke-width="1.5"/>
+<text x="22.0" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">04</text>
+<text x="62.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="223.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="22.0" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">05</text>
+<text x="62.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="159.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="177.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<line x1="0" y1="184" x2="240" y2="184" stroke="#282828"/>
+<rect x="0.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">FX</text>
+<text x="20.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">MIXER</text>
+<rect x="40.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">SEL</text>
+<text x="60.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">OPEN</text>
+<rect x="80.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">ENV</text>
+<text x="100.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">SECT.</text>
+<rect x="120.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="195.0" text-anchor="middle" class="c10" fill="#4C4C4C">LFO</text>
+<rect x="160.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">EDIT</text>
+<text x="180.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">KEYS</text>
+<rect x="200.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">GLO</text>
+<text x="220.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">PROJ.</text>
+<rect x="0.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">HOME</text>
+<text x="20.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">BACK</text>
+<rect x="40.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">SAVE</text>
+<text x="60.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">WRITE</text>
+<rect x="80.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">ARP</text>
+<rect x="120.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">SEQ</text>
+<rect x="160.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">PLAY</text>
+<text x="180.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">FROM 03</text>
+<rect x="200.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">REC</text>
+</svg>
+        <figcaption>On a cell. SEQ and LFO are dark: they do nothing here.</figcaption></figure>
+      <figure>
+<svg class="scr" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="240" height="240" fill="#000000"/>
+<rect x="0" y="0" width="240" height="184" fill="#000000"/>
+<text x="62.2" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">KICK</text>
+<text x="94.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">SNARE</text>
+<text x="126.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">BASS</text>
+<text x="159.2" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">CHOR</text>
+<text x="191.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">LEAD</text>
+<text x="223.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">ROBO</text>
+<line x1="45" y1="16" x2="45" y2="184" stroke="#282828"/>
+<text x="22.0" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="62.2" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="94.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="126.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="159.2" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="191.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="22.0" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="62.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="22.0" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="62.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<rect x="0" y="101" width="240" height="26" fill="#7FD962"/>
+<text x="22.0" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">03</text>
+<text x="62.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="94.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="126.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="159.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="191.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="223.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<rect x="3" y="103" width="38" height="22" fill="none" stroke="#0B1409" stroke-width="1.5"/>
+<text x="22.0" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">04</text>
+<text x="62.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="223.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="22.0" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">05</text>
+<text x="62.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="159.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="177.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<line x1="0" y1="184" x2="240" y2="184" stroke="#282828"/>
+<rect x="0.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">FX</text>
+<text x="20.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">MIXER</text>
+<rect x="40.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">SEL</text>
+<text x="60.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">STEPS</text>
+<rect x="80.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">ENV</text>
+<text x="100.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">SECT.</text>
+<rect x="120.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">LFO</text>
+<text x="140.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">DELETE</text>
+<rect x="160.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">EDIT</text>
+<text x="180.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">KEYS</text>
+<rect x="200.0" y="184" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="195.0" text-anchor="middle" class="c10" fill="#62C8D9">GLO</text>
+<text x="220.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">PROJ.</text>
+<rect x="0.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="20.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">HOME</text>
+<text x="20.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">BACK</text>
+<rect x="40.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="60.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">SAVE</text>
+<text x="60.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">WRITE</text>
+<rect x="80.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="100.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">ARP</text>
+<rect x="120.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="140.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">SEQ</text>
+<text x="140.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">COPY</text>
+<rect x="160.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="180.0" y="223.0" text-anchor="middle" class="c10" fill="#62C8D9">PLAY</text>
+<text x="180.0" y="236.0" text-anchor="middle" class="c12" fill="#FFFFFF">FROM 03</text>
+<rect x="200.0" y="212" width="40.0" height="28" fill="none"/>
+<text x="220.0" y="223.0" text-anchor="middle" class="c10" fill="#4C4C4C">REC</text>
+</svg>
+        <figcaption>On the number. Two cells light, SEL changes its word.</figcaption></figure>
+    </div>
+    <p>Dark is information too. A cell that never lights on this screen teaches the
+    machine's shape faster than a page of prose: ARP and REC do nothing in SONG, and you learn it
+    without being told.</p>
+  </section>
+  <section>
+    <span class="tag">EDIT held</span>
+    <h2>The foot <em>changes hands</em></h2>
+    <p>While EDIT is down the twelve are not what you are about to press &mdash; the
+    black keys are. So the foot swaps: the six OP keys and MONO, in the order they lie under the
+    fingers, and the two things EDIT answers to on the panel. It goes when EDIT goes.</p>
+    <p>This is the piece I would build first even if you drop the rest. <b>EDIT held is exactly the
+    second you cannot remember whether cut is OP3 or OP4</b>, and it needs no mode at all: you are
+    already holding the button that asks for it.</p>
+    <div class="pair">
+      <figure>
+<svg class="scr" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="240" height="240" fill="#000000"/>
+<rect x="0" y="0" width="240" height="184" fill="#000000"/>
+<text x="62.2" y="12.0" text-anchor="middle" class="c12" fill="#FFFFFF">KICK</text>
+<text x="94.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">SNARE</text>
+<text x="126.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">BASS</text>
+<text x="159.2" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">CHOR</text>
+<text x="191.5" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">LEAD</text>
+<text x="223.8" y="12.0" text-anchor="middle" class="c12" fill="#5A6470">ROBO</text>
+<line x1="45" y1="16" x2="45" y2="184" stroke="#282828"/>
+<text x="22.0" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="62.2" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="94.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="126.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="159.2" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="191.5" y="37.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="37.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="22.0" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="62.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="65.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="223.8" y="65.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<text x="22.0" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="62.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="93.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<rect x="0" y="101" width="240" height="26" fill="#7FD962"/>
+<text x="22.0" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">03</text>
+<text x="62.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="94.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="126.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="159.2" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<text x="191.5" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">--</text>
+<text x="223.8" y="121.0" text-anchor="middle" class="c20" fill="#0B1409">00</text>
+<rect x="49.0" y="103" width="26.3" height="22" fill="none" stroke="#0B1409" stroke-width="1.5"/>
+<text x="22.0" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">04</text>
+<text x="62.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="94.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="159.2" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="223.8" y="149.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="22.0" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">05</text>
+<text x="62.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="94.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="126.8" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">02</text>
+<text x="159.2" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">01</text>
+<text x="191.5" y="177.0" text-anchor="middle" class="c20" fill="#FFFFFF">00</text>
+<text x="223.8" y="177.0" text-anchor="middle" class="c20" fill="#5A6470">--</text>
+<line x1="0" y1="184" x2="240" y2="184" stroke="#282828"/>
+<text x="17.1" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">OP1</text>
+<text x="17.1" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">COPY</text>
+<text x="51.4" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">OP2</text>
+<text x="51.4" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">PASTE</text>
+<text x="85.7" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">OP3</text>
+<text x="85.7" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">CUT</text>
+<text x="120.0" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">OP4</text>
+<text x="120.0" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">CLEAR</text>
+<text x="154.3" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">OP5</text>
+<text x="154.3" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">SELECT</text>
+<text x="188.6" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">OP6</text>
+<text x="188.6" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">LOOP</text>
+<text x="222.9" y="195.0" text-anchor="middle" class="c10" fill="#7FD962">MONO</text>
+<text x="222.9" y="208.0" text-anchor="middle" class="c12" fill="#FFFFFF">SOLO</text>
+<text x="6.0" y="231.0" text-anchor="start" class="c12" fill="#5A6470">REC  metronome</text>
+<text x="234.0" y="231.0" text-anchor="end" class="c12" fill="#5A6470">SELECT  speed 25-100%</text>
+</svg>
+        <figcaption>EDIT held, over the same SONG. The twelve step aside.</figcaption></figure>
+      <div style="flex:1 1 300px;min-width:280px">
+        <ul class="notes">
+          <li><b>It could be permanent.</b> Nothing says this bar has to wait for the help to be on.
+          Held EDIT is a deliberate gesture; showing the legend every time costs two rows for as
+          long as the thumb is down, and no mode to remember.</li>
+          <li><b>MONO sits at the right</b> because that is where it lies on the keyboard, well
+          past OP6. The order on screen is the order under the hand.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section>
+    <span class="tag">Still open</span>
+    <h2>Four things <em>to shoot down</em></h2>
+    <ul class="notes">
+      <li><b>I kept SEL, against what you said.</b> You called it obvious, and on most screens it
+      is &mdash; but in SONG it is the one control that changes meaning four times: a pattern, a
+      phrase's steps, what a REF plays, a section's name. Either it earns its cell or we admit the
+      cell grid has a hole in it. Your call.</li>
+      <li><b>GLO is the project, not the mixer.</b> FX opens the mixer. The example in your message
+      had them swapped, and it is worth knowing it was the panel that misled you, not your memory:
+      that is an argument for the coat.</li>
+      <li><b>Six characters a cell, and the drawing proved it.</b> 40&nbsp;px at CONDENSED 12.
+      The first version of this page had SEL say PATTERN and ENV say SECTION, and the two words
+      ran into each other on the screen. They are OPEN and SECT. here. <b>SECT. is the failure
+      mode</b>, not the layout: an abbreviation nobody reads is worse than a dark cell, and if the
+      vocabulary cannot be built at six characters the foot wants three rows of four instead &mdash;
+      which costs a third row and breaks the match with the panel. That is the trade to settle on
+      the machine.</li>
+      <li><b>OCT&minus; and OCT+ are not in the grid.</b> They are not on the two rows of six &mdash;
+      they live by the knobs, left of the screen. Putting them in the grid would break the one rule
+      that makes it work.</li>
+    </ul>
+  </section>
+  <section>
+    <span class="tag">The real cost, said plainly</span>
+    <h2>Every screen <em>has to keep its word</em></h2>
+    <p>The drawing is the easy half. The hard half is that each screen has to name its
+    buttons, and go on naming them correctly as the cursor moves and the code changes. Each screen
+    already declares <i>which</i> buttons are live &mdash; that is the mask behind the LEDs
+    (<code>ui_led_guide</code>). What does not exist is the <b>word</b>, and the word that changes
+    with the cursor.</p>
+    <p>That is where this could turn into the over-complicated thing you did not want. A line
+    forgotten and the help lies, which is worse than no help. It is not a reason to drop it; it is
+    the reason to start with one screen and EDIT's legend, and see whether keeping them true is
+    cheap or a chore.</p>
+  </section>
+</div>
