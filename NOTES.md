@@ -3764,3 +3764,22 @@ step that carries FX, the key plays with the step's FX.
   kind of thing from the mix above, which is a property of the track and holds
   still. REC is the one place they part: the key writes at the recording row
   while the FX come from the row under the cursor.
+
+## 2026-11-02 — the toolchain segfaults at random, and a failed build lies
+
+Three of eight `./build.sh` runs this afternoon died with `clang: error: unable to
+execute command: Segmentation fault` -- on `app/app.c`, then `app/room.c`, then
+`loader/crt0_ldr.S`, none of them touched by the change being built. A plain retry
+passed every time. clang 4.0.1 is what the JieLi toolchain ships, and
+`tools/build.py:95` runs `ThreadPoolExecutor(len(cmds))` -- one clang per file, no
+ceiling, which on this many files is where a frontend that old falls over. Capping
+the pool at the core count would be the fix; it has not been done.
+
+- **A retry is the first thing to try**, not a hunt through the diff. The file
+  named in the crash is not the file at fault.
+- **A failed build leaves the last good `build/*.bin` in place.** So
+  `ramtext.bin` and `ramaudio.bin` read after a failure are the PREVIOUS build's,
+  and a RAMTEXT measurement taken there is a number from code that is not on
+  disk any more. It can say there is room where there is none. Delete them before
+  a build whose size you mean to trust, or read the size off the same run that
+  printed `ok image ...`.
