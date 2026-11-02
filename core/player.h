@@ -34,7 +34,9 @@ void player_set_song_loop(int from, int to);
 /* The listening speed, per cent of the song's tempo: 25 to 100, 100 off.
  * What is heard slows down, the song's `bpm` does not move -- a listening
  * tool like the two loops above, never in the file, never in UNDO, and
- * back to 100 when a project opens (player_init). The swing follows it:
+ * back to 100 when a project opens (player_init). It costs the audio path
+ * nothing: the whole of it is in the tick's numerator, which the main loop
+ * works out. The swing follows it:
  * a step stretched by a ratio is still stretched by it when the tick is
  * longer, so a slowed song is the same song, swing and all. */
 void player_set_speed(int pct);

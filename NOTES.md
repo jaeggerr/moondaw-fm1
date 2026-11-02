@@ -3745,13 +3745,18 @@ it only moves, and EDIT held is the one thing that borrows it.
   stretched by it when the tick is longer, so a slowed song is the same song,
   swing and all. The echo's line, counted in seconds, slows with it -- also
   right: it is the same song.
-- **Not one multiplication on the audio path.** The speed is folded into the
-  `bpm` the ticks are counted from, at the two or three moments the tempo
-  changes -- a song starting, `FX_BPM` on a step, the knob -- and never in
-  `tick_samples_of`, which runs on every audio block and had nothing to spare
-  (29/10). `bpm_asked` holds what it would be at full speed, so a BPM effect
-  mid-song stays slowed instead of jumping back to tempo. RAMTEXT took it:
-  916 instructions, and the image still links.
+- **Not one instruction on the audio path, at the second attempt.** The first
+  version folded the speed into the `bpm` the ticks are counted from, at each
+  moment the tempo changes -- and one of those moments is `FX_BPM` on a step,
+  which runs in the render. It linked on its own. Merged with the evening's
+  other work it did not: **RAMTEXT overflowed by 8 bytes**, the division by 100
+  having pulled its helper into RAM with it. So the speed went where it costs
+  nothing: `tick_num`, the tick's numerator, `FS * 15` scaled once by the main
+  loop in `player_set_speed`. `tick_samples_of` reads it and does exactly what
+  it did before, `bpm` is the asked tempo again and `FX_BPM` is one store, so a
+  BPM effect mid-song stays slowed with nothing to recompute. The lesson is the
+  one of 29/10 and 01/11, a third time: a feature that fits alone is not a
+  feature that fits.
 - **The frame's order is the test's order.** `pattern_test`'s `go()` now calls
   `ui_speed` before `pattern_frame`, as `app_frame` does, which is how a run of
   turns reads as one gesture and how the release stops being a tap. A step's

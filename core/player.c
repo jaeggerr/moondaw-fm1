@@ -410,19 +410,13 @@ static int16_t vox_owner[VOX_VOICES]; /* track * TRACK_MAX_VOICES + voice, -1 */
 static bool playing, song_mode, song_once;
 static uint16_t arr_pos, arr_play, ref_nth, entry_step;
 static uint8_t tick_in_step, tick_parity;
-static uint16_t bpm;      /* the tempo the ticks are counted at: what was asked, slowed */
-static uint16_t bpm_asked; /* what it would be at full speed: the song's, or FX_BPM's */
+static uint16_t bpm;
 static uint8_t play_speed = 100; /* the listening speed, per cent (player.h) */
-
-/* The speed is folded in here, at the two or three moments the tempo
- * changes, and never in tick_samples_of: the tick is counted on every
- * audio block and that path had no multiplication to spare (29/10,
- * firmware/app.ld). */
-static void bpm_fold(void)
-{
-    uint32_t n = (uint32_t)bpm_asked * play_speed / 100u;
-    bpm = (uint16_t)(n > 0u ? n : 1u);
-}
+/* A tick's numerator, FS * 15 scaled by the listening speed: the whole of
+ * the speed, worked out by the main loop alone (player_set_speed). The
+ * audio path reads it and does what it always did -- the tick is counted
+ * on every block and RAMTEXT had nothing to spare (02/11, firmware/app.ld). */
+static uint32_t tick_num = (uint32_t)FS * 15u;
 static int32_t to_next_tick;
 static int32_t master = 1024; /* Q10 */
 
@@ -959,7 +953,7 @@ static void apply_fx(int t, const Step *st)
                 if (tr->voices[j].wave == 0 && tr->voices[j].osc.engine == ENGINE_WAVE)
                     osc_set_timbre(&tr->voices[j].osc, v);
             break;
-        case FX_BPM: bpm_asked = v < 20 ? 20 : v, bpm_fold(); break;
+        case FX_BPM: bpm = v < 20 ? 20 : v; break;
         case FX_TSP: tr->fx.transpose = (int16_t)(((int)v - 64) * 100); break;
         case FX_SLI: tr->fx.glide = (uint16_t)(v * 16); break;
         case FX_VIB: tr->fx.vib = v; break;
@@ -1408,8 +1402,7 @@ static void advance_entry(void)
 
 static void start_play(bool as_song, int entry)
 {
-    bpm_asked = song->bpm;
-    bpm_fold();
+    bpm = song->bpm;
     song_mode = as_song;
     prb_rng = 1; /* every take rolls the same way (above) */
     arr_pos = (uint16_t)(entry >= 0 && entry < song->arrange_len ? entry : 0);
@@ -1612,7 +1605,8 @@ static void player_tick(void)
 }
 
 /* Samples in a tick: FS * 60 / (bpm * 4 steps * ticks), which is
- * FS * 15 / (bpm * ticks). Swing stretches the even step of each pair
+ * FS * 15 / (bpm * ticks) -- `tick_num` is that FS * 15, and the
+ * listening speed is already in it (02/11). Swing stretches the even step of each pair
  * and shrinks the odd one by the same amount. */
 /* How long a tick lasts, in samples. `swung` asks for the swing to be in
  * it: one tick long, the next short, which is where the notes fall. What
@@ -1622,7 +1616,7 @@ static void player_tick(void)
  * through a pitch bend twice a step (30/10, NOTES.md). */
 static int32_t tick_samples_of(bool swung)
 {
-    uint32_t num = (uint32_t)FS * 15u, den = (uint32_t)bpm * song->ticks_per_step;
+    uint32_t num = tick_num, den = (uint32_t)bpm * song->ticks_per_step;
     int32_t n;
     if (swung && playing && song->swing > SWING_MIN && song->swing <= SWING_MAX) {
         num *= tick_parity == 0 ? song->swing : 100u - song->swing;
@@ -2032,9 +2026,8 @@ MAIN_LOOP void player_init(Song *s)
     drum_init();
     tracks[AUDITION].fx.syl[0] = 'A';
     tracks[AUDITION].fx.syl[1] = '\0';
-    play_speed = 100; /* a project opens at its own tempo */
-    bpm_asked = s->bpm;
-    bpm_fold();
+    play_speed = 100, tick_num = (uint32_t)FS * 15u; /* a project opens at its own tempo */
+    bpm = s->bpm;
     playing = false;
     to_next_tick = 0;
     cmd_r = cmd_w;
@@ -2069,7 +2062,9 @@ MAIN_LOOP void player_set_loop(int from, int len)
 MAIN_LOOP void player_set_speed(int pct)
 {
     play_speed = (uint8_t)(pct < 25 ? 25 : pct > 100 ? 100 : pct);
-    bpm_fold(); /* one store of `bpm`: the audio side reads it whole */
+    /* A tick lasts 100 / speed of what it did: the division is the main
+     * loop's, and one store of `tick_num` is what the audio side sees. */
+    tick_num = (uint32_t)FS * 15u * 100u / play_speed;
 }
 
 MAIN_LOOP int player_speed(void) { return play_speed; }
