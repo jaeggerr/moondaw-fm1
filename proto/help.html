@@ -1,0 +1,312 @@
+<meta charset="utf-8">
+<title>HELP, under the hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+
+<!--
+  MOONDAW - HELP reached from the work. Proposed 02/11, NOT built.
+
+  The screens are real pixels and not CSS: a throwaway patch of app/help.c
+  and app/app.c, shot through build/web/moondaw.wasm (web_fb), and reverted
+  the same day. Nothing of it is in app/. The panels beside the screens are
+  drawn by tools/help_page.py, which writes this file.
+-->
+
+<style>
+:root{
+  --page:#070A0F; --rule:#1B2231; --prose:#8E99A8; --prose-hi:#D6DCE4;
+  --dim:#5A6470; --accent:#7FD962; --title:#62C8D9; --mute:#9E5555;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --cond:'Barlow Condensed','Helvetica Neue',Arial,sans-serif;
+  --sf:-apple-system, BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; background:var(--page); color:var(--prose);
+  font-family:var(--sf); font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:880px; margin:0 auto; padding-inline:20px; padding-block:52px 96px; }
+.eyebrow{ font-family:var(--mono); font-size:11px; font-weight:600;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+h1{ margin:16px 0 0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:clamp(36px,6vw,56px); line-height:.98; color:var(--prose-hi); text-wrap:balance; }
+h1 em{ font-style:normal; color:var(--accent); }
+.lede{ max-width:64ch; margin:18px 0 0; font-size:16px; }
+.lede strong, p b{ color:var(--prose-hi); font-weight:600; }
+code{ font-family:var(--mono); font-size:.9em; color:var(--title); }
+h2{ margin:0; font-family:var(--cond); font-weight:700; text-transform:uppercase;
+  font-size:30px; color:var(--prose-hi); line-height:1; text-wrap:balance; }
+h2 em{ font-style:normal; color:var(--accent); }
+section{ margin-top:76px; }
+section > p{ max-width:64ch; margin:14px 0 0; }
+.tag{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--title); display:block; margin-bottom:8px; }
+ul.notes{ margin:14px 0 0; padding:0; list-style:none; max-width:68ch;
+  display:flex; flex-direction:column; gap:10px; }
+ul.notes li{ padding-left:16px; position:relative; font-size:14.5px; }
+ul.notes li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:2px; background:var(--dim); }
+.budget{ display:grid; margin-top:26px; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+@media (min-width:760px){ .budget{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.budget > div{ padding:14px 20px 14px 0; min-width:0; }
+@media (min-width:760px){ .budget > div + div{ padding-left:20px; border-left:1px solid var(--rule); } }
+.budget .k{ display:block; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; color:var(--title); }
+.budget .k.no{ color:var(--mute); } .budget .k.yes{ color:var(--accent); }
+.budget p{ margin:0; font-size:14px; }
+
+/* The panel: 240 px square. Shown doubled. */
+figure{ margin:0; display:flex; flex-direction:column; gap:10px; }
+figure img{ display:block; width:300px; max-width:100%; height:auto; image-rendering:pixelated;
+  border-radius:4px; box-shadow:0 0 0 2px #000, 0 24px 50px -18px rgba(0,0,0,.8); }
+figcaption{ font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.5; max-width:300px; }
+.duo{ margin-top:26px; display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+.duo .said{ flex:1 1 300px; min-width:280px; }
+.panel{ display:block; width:100%; max-width:460px; height:auto; margin-top:4px; }
+.panel .bl{ font-family:var(--cond); font-weight:600; font-size:13px; fill:#8E99A8; letter-spacing:.04em; }
+.panel .bl.on{ fill:#0B1409; }
+.panel .kl{ font-family:var(--mono); font-size:9px; fill:#5A6470; }
+.panel .kl.on{ fill:#7FD962; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">MOONDAW &middot; FM-1 &middot; proposed 2 November 2026 &middot; not built</div>
+  <h1>Help <em>where the hand already is</em></h1>
+  <p class="lede">HELP has a page for every screen and no way to it: one walks back to
+  HOME's root and opens it from the menu, which nobody does in the middle of a bar. This proposes a
+  gesture of its own &mdash; <strong>OCT&minus; and OCT+ pressed together</strong>, from any screen
+  &mdash; opening <strong>the page of the screen in front</strong>, HOME going back to the work
+  rather than out to the menu. And the line under the cursor <strong>lighting its controls on the
+  panel</strong>: help read with the eyes down on the keys.</p>
+  <p class="lede"><b>None of it is in the firmware.</b> The screens below are real pixels &mdash; a
+  patch written to take these pictures, and thrown away. What is kept is the picture and the
+  argument.</p>
+  <section>
+    <span class="tag">The gesture</span>
+    <h2>The one chord <em>the panel had left</em></h2>
+    <p>Every button on this machine acts on its press &mdash; <code>app/ui.h</code> says
+    it plainly: <b>EDIT is the only one that can be held</b>. So no modifier can be pressed before a
+    second button without its own action going off first: HOME&nbsp;+&nbsp;anything has already
+    stepped back, SAVE&nbsp;+&nbsp;anything has already saved.</p>
+    <p><b>OCT&minus; and OCT+ are the exception, and by accident.</b> Every screen reads them in the
+    same frame and in opposite directions, so the two together move the keyboard's octave by exactly
+    nothing. The chord would be read in <code>app/app.c</code> before any screen sees the frame, the
+    two buttons rubbed out of it, so even that nothing never happens.</p>
+    <div class="duo">
+      <figure><img src="help/5-chord.png" alt="HELP HOME: SELECT KNOB 1 move, SEL go, SYSTEM, SAMPLES">
+        <figcaption>The chord pressed on HOME's root. No list, no menu: the page.</figcaption></figure>
+      <div class="said">
+<svg class="panel" viewBox="0 0 480 172" xmlns="http://www.w3.org/2000/svg">
+<rect x="8" y="10" width="54" height="26" rx="4" fill="#7FD962" stroke="#2A313B"/><text x="35" y="28" text-anchor="middle" class="bl on">OCT−</text>
+<rect x="8" y="44" width="54" height="26" rx="4" fill="#7FD962" stroke="#2A313B"/><text x="35" y="62" text-anchor="middle" class="bl on">OCT+</text>
+<rect x="84" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="113" y="28" text-anchor="middle" class="bl">FX</text>
+<rect x="150" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="179" y="28" text-anchor="middle" class="bl">SEL</text>
+<rect x="216" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="245" y="28" text-anchor="middle" class="bl">ENV</text>
+<rect x="282" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="311" y="28" text-anchor="middle" class="bl">LFO</text>
+<rect x="348" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="377" y="28" text-anchor="middle" class="bl">EDIT</text>
+<rect x="414" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="443" y="28" text-anchor="middle" class="bl">GLO</text>
+<rect x="84" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="113" y="62" text-anchor="middle" class="bl">HOME</text>
+<rect x="150" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="179" y="62" text-anchor="middle" class="bl">SAVE</text>
+<rect x="216" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="245" y="62" text-anchor="middle" class="bl">ARP</text>
+<rect x="282" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="311" y="62" text-anchor="middle" class="bl">SEQ</text>
+<rect x="348" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="377" y="62" text-anchor="middle" class="bl">PLAY</text>
+<rect x="414" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="443" y="62" text-anchor="middle" class="bl">REC</text>
+<rect x="8.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="37.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="67.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="96.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="126.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="155.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="185.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="214.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="244.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="273.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="303.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="332.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="362.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="391.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="421.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="450.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="27.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="36.5" y="156" text-anchor="middle" class="kl">OP1</text>
+<rect x="56.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="66.0" y="156" text-anchor="middle" class="kl">OP2</text>
+<rect x="86.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="95.5" y="156" text-anchor="middle" class="kl">OP3</text>
+<rect x="145.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="154.5" y="156" text-anchor="middle" class="kl">OP4</text>
+<rect x="174.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="184.0" y="156" text-anchor="middle" class="kl">OP5</text>
+<rect x="233.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="243.0" y="156" text-anchor="middle" class="kl">OP6</text>
+<rect x="263.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="292.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="351.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="361.0" y="156" text-anchor="middle" class="kl">MONO</text>
+<rect x="381.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="440.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+</svg>
+        <p style="font-size:14px">Pressed together, released together. Nothing else on the panel answers to two buttons, so nothing else can be hit by mistake.</p>
+      </div>
+    </div>
+  </section>
+  <section>
+    <span class="tag">The page</span>
+    <h2>A cursor, <em>and the panel says the rest</em></h2>
+    <p>A page is a block of text one scrolls. It would become a <b>cursor</b>, a line at a time,
+    with a green bar at the left of the line it is on &mdash; and the line's controls would
+    <b>light on the machine</b>. Reading stops being a translation: the three keys named under
+    your fingers are the three keys lit under your fingers.</p>
+    <p>The words are the ones the pages are already written in. Each line is read for whole words
+    the machine knows &mdash; the fourteen buttons, and OP1 to OP6 and MONO, the black keys EDIT
+    gives a command to &mdash; so a page lights itself and nothing is written twice.
+    <b>SELECT is not SEL</b>: whole words only.</p>
+    <div class="duo">
+      <figure><img src="help/3-ops.png" alt="PATTERN, the cursor on OP1 OP2 OP3, copy paste cut">
+        <figcaption>PATTERN, the cursor on the clipboard line.</figcaption></figure>
+      <div class="said">
+<svg class="panel" viewBox="0 0 480 172" xmlns="http://www.w3.org/2000/svg">
+<rect x="8" y="10" width="54" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="35" y="28" text-anchor="middle" class="bl">OCT−</text>
+<rect x="8" y="44" width="54" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="35" y="62" text-anchor="middle" class="bl">OCT+</text>
+<rect x="84" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="113" y="28" text-anchor="middle" class="bl">FX</text>
+<rect x="150" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="179" y="28" text-anchor="middle" class="bl">SEL</text>
+<rect x="216" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="245" y="28" text-anchor="middle" class="bl">ENV</text>
+<rect x="282" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="311" y="28" text-anchor="middle" class="bl">LFO</text>
+<rect x="348" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="377" y="28" text-anchor="middle" class="bl">EDIT</text>
+<rect x="414" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="443" y="28" text-anchor="middle" class="bl">GLO</text>
+<rect x="84" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="113" y="62" text-anchor="middle" class="bl">HOME</text>
+<rect x="150" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="179" y="62" text-anchor="middle" class="bl">SAVE</text>
+<rect x="216" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="245" y="62" text-anchor="middle" class="bl">ARP</text>
+<rect x="282" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="311" y="62" text-anchor="middle" class="bl">SEQ</text>
+<rect x="348" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="377" y="62" text-anchor="middle" class="bl">PLAY</text>
+<rect x="414" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="443" y="62" text-anchor="middle" class="bl">REC</text>
+<rect x="8.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="37.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="67.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="96.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="126.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="155.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="185.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="214.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="244.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="273.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="303.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="332.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="362.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="391.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="421.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="450.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="27.0" y="94" width="19" height="44" rx="2" fill="#7FD962" stroke="#0A0D12"/>
+<text x="36.5" y="156" text-anchor="middle" class="kl on">OP1</text>
+<rect x="56.5" y="94" width="19" height="44" rx="2" fill="#7FD962" stroke="#0A0D12"/>
+<text x="66.0" y="156" text-anchor="middle" class="kl on">OP2</text>
+<rect x="86.0" y="94" width="19" height="44" rx="2" fill="#7FD962" stroke="#0A0D12"/>
+<text x="95.5" y="156" text-anchor="middle" class="kl on">OP3</text>
+<rect x="145.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="154.5" y="156" text-anchor="middle" class="kl">OP4</text>
+<rect x="174.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="184.0" y="156" text-anchor="middle" class="kl">OP5</text>
+<rect x="233.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="243.0" y="156" text-anchor="middle" class="kl">OP6</text>
+<rect x="263.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="292.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="351.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="361.0" y="156" text-anchor="middle" class="kl">MONO</text>
+<rect x="381.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="440.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+</svg>
+        <p style="font-size:14px">The three black keys light where the hand plays them. A knob has no LED, so what KNOB&nbsp;3 does is only ever read.</p>
+      </div>
+    </div>
+    <div class="duo">
+      <figure><img src="help/4-edit.png" alt="PATTERN, the cursor on EDIT held, black keys: commands">
+        <figcaption>Four lines higher: one button, and it is the shift itself.</figcaption></figure>
+      <div class="said">
+<svg class="panel" viewBox="0 0 480 172" xmlns="http://www.w3.org/2000/svg">
+<rect x="8" y="10" width="54" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="35" y="28" text-anchor="middle" class="bl">OCT−</text>
+<rect x="8" y="44" width="54" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="35" y="62" text-anchor="middle" class="bl">OCT+</text>
+<rect x="84" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="113" y="28" text-anchor="middle" class="bl">FX</text>
+<rect x="150" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="179" y="28" text-anchor="middle" class="bl">SEL</text>
+<rect x="216" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="245" y="28" text-anchor="middle" class="bl">ENV</text>
+<rect x="282" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="311" y="28" text-anchor="middle" class="bl">LFO</text>
+<rect x="348" y="10" width="58" height="26" rx="4" fill="#7FD962" stroke="#2A313B"/><text x="377" y="28" text-anchor="middle" class="bl on">EDIT</text>
+<rect x="414" y="10" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="443" y="28" text-anchor="middle" class="bl">GLO</text>
+<rect x="84" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="113" y="62" text-anchor="middle" class="bl">HOME</text>
+<rect x="150" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="179" y="62" text-anchor="middle" class="bl">SAVE</text>
+<rect x="216" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="245" y="62" text-anchor="middle" class="bl">ARP</text>
+<rect x="282" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="311" y="62" text-anchor="middle" class="bl">SEQ</text>
+<rect x="348" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="377" y="62" text-anchor="middle" class="bl">PLAY</text>
+<rect x="414" y="44" width="58" height="26" rx="4" fill="#15191F" stroke="#2A313B"/><text x="443" y="62" text-anchor="middle" class="bl">REC</text>
+<rect x="8.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="37.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="67.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="96.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="126.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="155.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="185.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="214.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="244.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="273.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="303.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="332.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="362.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="391.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="421.0" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="450.5" y="94" width="28" height="70" rx="3" fill="#D8D8D8" stroke="#0A0D12"/>
+<rect x="27.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="36.5" y="156" text-anchor="middle" class="kl">OP1</text>
+<rect x="56.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="66.0" y="156" text-anchor="middle" class="kl">OP2</text>
+<rect x="86.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="95.5" y="156" text-anchor="middle" class="kl">OP3</text>
+<rect x="145.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="154.5" y="156" text-anchor="middle" class="kl">OP4</text>
+<rect x="174.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="184.0" y="156" text-anchor="middle" class="kl">OP5</text>
+<rect x="233.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="243.0" y="156" text-anchor="middle" class="kl">OP6</text>
+<rect x="263.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="292.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="351.5" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<text x="361.0" y="156" text-anchor="middle" class="kl">MONO</text>
+<rect x="381.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+<rect x="440.0" y="94" width="19" height="44" rx="2" fill="#1A1A1A" stroke="#0A0D12"/>
+</svg>
+        <p style="font-size:14px">PLAY and REC are never taken: their LEDs are their state, and a help that lied about what is playing would be worse than none.</p>
+      </div>
+    </div>
+  </section>
+  <section>
+    <span class="tag">To take out</span>
+    <h2>The cursor that <em>moves by itself</em></h2>
+    <p>HELP opens with its cursor already on the topic of the last screen worked on
+    &mdash; a help of where you were, for a screen nobody reaches. Read from the menu, with no
+    memory of why, <b>it looks like a fault</b>: the list opens on PATTERN and the line reads
+    &ldquo;white: where you came from&rdquo;, explaining a cleverness that cost a walk back to the
+    root. It should go. <b>The list opens on its first topic</b> and says nothing, because the page
+    you actually want is one chord away from the screen you are on.</p>
+    <div class="duo">
+      <figure><img src="help/1-list.png" alt="The HELP list: HOME, SONG, PHRASE, PATTERN, SYLLABLE, INSTRUMENT, MIXER">
+        <figcaption>The list, on HOME. No footer, no ink for a screen you crossed.</figcaption></figure>
+      <div class="said">
+        <div class="budget"><div><span class="k yes">What it gains</span><p>Nothing to
+        explain. A list that opens where lists open.</p></div><div><span class="k no">What it
+        costs</span><p>Through the menu, the topic is found by turning. Four turns at most, and
+        the menu is no longer the way in.</p></div></div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <span class="tag">Left open</span>
+    <h2>The pages <em>are still flat</em></h2>
+    <ul class="notes">
+      <li><b>SONG's page is forty-four lines.</b> A cursor makes them walkable, not scannable.
+      What they want is a grouping &mdash; the cursor's own gestures, then the commands, then the
+      way out &mdash; under a grey intertitle. That is a content job, ten pages of it, and no part
+      of it was tried here.</li>
+      <li><b>A carousel was considered and dropped.</b> One page at a time hides everything you did
+      not ask for, and the thing you look up in a hurry is never the slide you are on.</li>
+      <li><b>EFFECTS does not light anything.</b> Its lines are effect names, not controls.</li>
+      <li><b>A line that names PLAY cannot light it.</b> PLAY's LED belongs to the transport.</li>
+    </ul>
+  </section>
+</div>
