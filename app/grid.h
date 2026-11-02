@@ -71,6 +71,9 @@ void grid_playing(int vis, bool band);
 void grid_rule(int vis);
 /* The scroll bar, when `n` rows do not fit. */
 void grid_bar(int top, int n);
+/* The same for a screen showing fewer than GRID_ROWS of them -- one
+ * wearing the coat, which takes two off the foot (app/coat.h). */
+void grid_bar_rows(int top, int n, int rows);
 /* Both, for the screens whose rows are all alike. */
 void grid_frame(int top, int n);
 

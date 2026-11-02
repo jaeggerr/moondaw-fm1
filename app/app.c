@@ -36,6 +36,7 @@
 #include "pattern.h"
 #include "project.h"
 #include "canvas.h"
+#include "coat.h"
 #include "remote.h"
 #include "room.h"
 #include "songview.h"
@@ -450,6 +451,25 @@ void app_frame(const PlatInput *real)
                 canvas_frame(in); /* its last frame: the hand's gestures stay collected */
             go_root();
         }
+    }
+
+    {   /* The coat (02/11): OCT- + OCT+ together puts the help ON the screen, and
+         * the same chord takes it off again -- it stays until it is taken off. It
+         * is the one chord the panel has left, every button but EDIT acting on its
+         * press (app/ui.h, app/coat.h). The two are read here, before any screen
+         * sees the frame, and rubbed out of it so no keyboard octave moves under
+         * the hand; pressed on the same frame they move it in opposite directions
+         * and by nothing anyway. */
+        const uint32_t chord = 1u << PB_OCTDN | 1u << PB_OCTUP;
+        static bool pressed;
+        bool both = (mine.btns & chord) == chord;
+        if (both && !pressed) {
+            coat_on = !coat_on;
+            gfx_invalidate();
+        }
+        if (both)
+            mine.btns &= ~chord;
+        pressed = both;
     }
 
     if (screen == AT_CANVAS) {

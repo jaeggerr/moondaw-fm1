@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "songview.h"
 
+#include "coat.h"
+
 #include "../core/player.h"
 #include "app.h"
 #include "edit.h"
@@ -1007,7 +1009,12 @@ static int sec_rank(int s)
     return s >= 0 && s < song->section_count && !sec_is_ref(s) ? k : -1;
 }
 
-/* The eight slots of the grid, from phrase `first` down: a marker where a
+/* How many rows SONG shows: eight, less the two the coat takes off the
+ * foot while it is worn (app/coat.h). Everything that lays the grid out
+ * counts in these, not in GRID_ROWS -- the arrays stay the full size. */
+static int vis_rows(void) { return GRID_ROWS - coat_rows(); }
+
+/* The slots of the grid, from phrase `first` down: a marker where a
  * section opens, then the phrase itself. The grid stops being
  * "one visible row, one phrase" the day a marker exists. */
 static int slot_row[GRID_ROWS];
@@ -1016,10 +1023,10 @@ static int slots;
 static void lay_out(int first)
 {
     slots = 0;
-    for (int r = first; r < song->arrange_len && slots < GRID_ROWS; r++) {
+    for (int r = first; r < song->arrange_len && slots < vis_rows(); r++) {
         if (sec_opens(r)) {
             slot_row[slots] = r, slot_mark[slots] = true;
-            if (++slots >= GRID_ROWS)
+            if (++slots >= vis_rows())
                 break;
         }
         slot_row[slots] = r, slot_mark[slots] = false, slots++;
@@ -1038,7 +1045,7 @@ static int slot_of(int r, bool mark)
  * until the row the cursor is on has a slot. */
 static void follow_marked(void)
 {
-    grid_follow(&row, &top, song->arrange_len, GRID_ROWS);
+    grid_follow(&row, &top, song->arrange_len, vis_rows());
     for (;;) {
         lay_out(top);
         if (slot_of(row, on_mark && sec_opens(row)) >= 0 || top >= row)
@@ -1061,7 +1068,7 @@ static void follow_play_marked(int play)
         return;
     top = play;
     lay_out(top);
-    while (top > 0 && slots < GRID_ROWS) {
+    while (top > 0 && slots < vis_rows()) {
         int up = top - 1;
         lay_out(up);
         if (slot_of(play, false) < 0)
@@ -1345,6 +1352,40 @@ static int strike_alpha(const SongEntry *e, int track)
     return quarter == 0 ? 255 : quarter == 1 ? 110 : 0;
 }
 
+/* What the twelve do on SONG, under the cursor where it is now (app/coat.h).
+ * The cursor stands on one of four things and three buttons change with it:
+ * SEL, which means something different on each, and SEQ and LFO, which are
+ * the phrase's own and dark anywhere else. The rest hold wherever you are.
+ *
+ * A word longer than its cell is dropped by the coat rather than cut, so
+ * these are chosen to fit: whatever does not, says less or says nothing. */
+static const char *const *coat_words(void)
+{
+    static const char *w[COAT_BTNS];
+
+    w[PB_FX] = "MIXER";
+    w[PB_ENV] = "SECTION";
+    w[PB_GLO] = "PROJECT";
+    w[PB_HOME] = "BACK";
+    w[PB_SAVE] = "WRITE";
+    w[PB_EDIT] = "KEYS";
+    w[PB_PLAY] = player_playing() ? "STOP" : "PLAY";
+    w[PB_ARP] = w[PB_REC] = 0; /* SONG has nothing for them, and the dark says so */
+    w[PB_SEQ] = w[PB_LFO] = 0;
+    if (on_mark)
+        w[PB_SEL] = "NAME";
+    else if (col >= 0)
+        w[PB_SEL] = "PATTERN";
+    else if (is_ref(row))
+        w[PB_SEL] = "GO TO";
+    else {
+        w[PB_SEL] = "STEPS";
+        w[PB_SEQ] = "COPY";   /* the phrase below */
+        w[PB_LFO] = "DELETE"; /* twice */
+    }
+    return w;
+}
+
 /* ---------------------------------------------------------- drawing --- */
 static void draw(void)
 {
@@ -1391,7 +1432,7 @@ static void draw(void)
         band = r == row && !on_mark;
         asked = band && col < 0 && ask_delete;
         if (band)
-            gfx_slab(2, grid_y(v) + 1, PLAT_W - 4 - (n > GRID_ROWS ? 6 : 0), GRID_ROW - 2,
+            gfx_slab(2, grid_y(v) + 1, PLAT_W - 4 - (n > vis_rows() ? 6 : 0), GRID_ROW - 2,
                      asked ? C_MUTE : C_ACCENT, 255);
         if (selecting && anchored) { /* the SELECTION, under the cells, as PATTERN's */
             int r0, r1, c0, c1;
@@ -1399,7 +1440,7 @@ static void draw(void)
             if (r >= r0 && r <= r1) {
                 int a = c0 < left ? left : c0, b = c1 > left + CELLS - 1 ? left + CELLS - 1 : c1;
                 if (c0 < 0)
-                    gfx_fill(2, grid_y(v), PLAT_W - 4 - (n > GRID_ROWS ? 6 : 0), GRID_ROW, C_SEL, 255);
+                    gfx_fill(2, grid_y(v), PLAT_W - 4 - (n > vis_rows() ? 6 : 0), GRID_ROW, C_SEL, 255);
                 else if (b >= a)
                     gfx_fill(GRID_CELL_X + (a - left) * CELL_W, grid_y(v), (b - a + 1) * CELL_W, GRID_ROW, C_SEL,
                              255);
@@ -1418,7 +1459,7 @@ static void draw(void)
             bool on = band && col >= 0;
             int x;
             if (on)
-                grid_hollow(v, GRID_CELL_X, PLAT_W - 4 - (n > GRID_ROWS ? 6 : 0) - GRID_CELL_X);
+                grid_hollow(v, GRID_CELL_X, PLAT_W - 4 - (n > vis_rows() ? 6 : 0) - GRID_CELL_X);
             x = gfx_text(F_COND20, GRID_CELL_X + 6, grid_base(v),
                          e->ref_kind == REF_SECTION ? "REF SEC" : "REF", grid_ink(band, on, C_DIM));
             gfx_text(F_COND20, x + 8, grid_base(v), grid_hex2(s, e->ref_target), grid_ink(band, on, C_FX));
@@ -1469,11 +1510,12 @@ static void draw(void)
             nc = left + CELLS - c0;
         if (c0 + nc > tracks)
             nc = tracks - c0;
-        if (v0 >= 0 && v0 < GRID_ROWS && nc > 0)
+        if (v0 >= 0 && v0 < vis_rows() && nc > 0)
             gfx_frame_rect(GRID_CELL_X + (c0 - left) * CELL_W, grid_y(v0), nc * CELL_W,
                            grid_y(v1) + GRID_ROW - grid_y(v0), C_FX, 255);
     }
-    grid_bar(top, n);
+    grid_bar_rows(top, n, vis_rows());
+    coat_draw(coat_words(), ui_shifted(&shift));
 }
 
 /* -------------------------------------------------------------- api --- */
