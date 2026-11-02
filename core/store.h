@@ -55,4 +55,30 @@ int store_delete(int slot);
  * save, commit or delete. */
 int store_map(int slot, uint8_t *sectors, int max);
 
+/* --------------------------------------------------------- shrink --- */
+/* Rewrites a file smaller, in the sectors it already holds: it asks for
+ * no free sector, which is the whole point -- the moment a sample has to
+ * go is the moment the flash is full. The file is NOT whole while this
+ * runs: a power cut leaves the slot empty, never half a file. So it is
+ * only for what the computer can send again (the sample bank,
+ * core/bank.h); a song goes through store_save_*, which does not touch
+ * the old file before its commit.
+ *
+ * The new file is given in order, piece by piece: store_shrink_put for
+ * bytes from memory, store_shrink_copy for a range of the file as it is
+ * now, store_shrink_read to look at such a range first. A piece must
+ * never land above where it came from -- `at` at or over what the new
+ * file already holds, which is what lets a sector be read before it is
+ * written over, and is refused otherwise. The new file must fit the
+ * sectors the old one has. Sectors are not read back against their
+ * checksum on the way through: the result carries its own, and what
+ * built it can be sent again.
+ *
+ * Nothing of the slot may be read in place while this runs: bank_hold. */
+int store_shrink_begin(int slot);
+int store_shrink_put(const char *data, uint32_t n);
+int store_shrink_copy(uint32_t at, uint32_t len);
+int store_shrink_read(uint32_t at, char *out, uint32_t n);
+int store_shrink_commit(void);
+
 #endif

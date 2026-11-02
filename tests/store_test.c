@@ -72,6 +72,17 @@ static int save(int slot, const char *name, const char *data, uint32_t n)
     return rc ? rc : store_save_commit();
 }
 
+/* The file without the `drop` bytes at `at`, written over itself. */
+static int shrink_keep(int slot, uint32_t at, uint32_t drop, uint32_t n)
+{
+    int rc = store_shrink_begin(slot);
+    if (!rc)
+        rc = store_shrink_copy(0, at);
+    if (!rc)
+        rc = store_shrink_copy(at + drop, n - at - drop);
+    return rc ? rc : store_shrink_commit();
+}
+
 static long load(int slot, char *out, uint32_t cap)
 {
     long n = 0, got;
@@ -183,6 +194,98 @@ int main(void)
                total, olds, news, bad);
         CHECK("a cut save leaves the old file or the new one", bad == 0 && olds > 0);
     }
+    {   /* shrink: a file rewritten smaller in the sectors it already
+         * holds, with not one free sector left on the flash -- which is
+         * the whole reason it exists. */
+        char *big = make(5, 60000), *want = malloc(60000), *fill;
+        char head[4] = { 'S', 'M', 'P', '1' }, probe[4];
+        uint32_t room, keep = 1000 + 60000 - 21000;
+        int rc;
+
+        memset(nor, 0xFF, sizeof nor);
+        store_mount();
+        CHECK("the bank saves", save(1, "BANK", big, 60000) == 0);
+        room = store_free();
+        fill = make(6, room);
+        CHECK("the rest of the flash fills", save(2, "SONGS", fill, room) == 0);
+        CHECK("nothing is free any more", store_free() == 0);
+        /* the first four bytes new, the next thousand as they were,
+         * twenty thousand dropped, then the rest */
+        memcpy(want, head, 4);
+        memcpy(want + 4, big + 4, 1000 - 4);
+        memcpy(want + 1000, big + 21000, 60000 - 21000);
+        rc = store_shrink_begin(1);
+        if (!rc)
+            rc = store_shrink_put(head, 4);
+        if (!rc)
+            rc = store_shrink_read(1000, probe, 4);
+        if (!rc)
+            rc = store_shrink_copy(4, 1000 - 4);
+        if (!rc)
+            rc = store_shrink_copy(21000, 60000 - 21000);
+        if (!rc)
+            rc = store_shrink_commit();
+        CHECK("shrinks with no free sector at all", rc == 0);
+        CHECK("looked ahead at the file as it was", !memcmp(probe, big + 1000, 4));
+        CHECK("keeps what it kept, to the byte",
+              load(1, out, sizeof out) == (long)keep && !memcmp(out, want, keep));
+        CHECK("keeps the name, and says the new size",
+              store_info(1, name, &bytes) == 0 && !strcmp(name, "BANK") && bytes == keep);
+        CHECK("gives the sectors it no longer needs back", store_free() > 20000);
+        CHECK("and the file beside it is untouched",
+              load(2, out, sizeof out) == (long)room && !memcmp(out, fill, room));
+        CHECK("a piece that would land above where it came from is refused",
+              store_shrink_begin(1) == 0 && store_shrink_copy(0, 10) == 0 &&
+                  store_shrink_copy(0, 10) != 0);
+        store_mount();
+        CHECK("and that leaves the file as it was", load(1, out, sizeof out) == (long)keep);
+        free(big), free(want), free(fill);
+    }
+
+    {   /* The power dies at every operation of a shrink. What is left
+         * must be the smaller file or nothing at all -- never half of it
+         * -- the song beside it must not notice, and the machine must
+         * still be able to save. */
+        static uint8_t before[sizeof nor];
+        char *big = make(7, 40000), *want = malloc(40000);
+        uint32_t keep = 1000 + 40000 - 21000;
+        long total, news = 0, empties = 0, bad = 0;
+
+        memcpy(want, big, 1000);
+        memcpy(want + 1000, big + 21000, 40000 - 21000);
+        memset(nor, 0xFF, sizeof nor);
+        store_mount();
+        save(0, "SONG", a, 9000);
+        save(1, "BANK", big, 40000);
+        memcpy(before, nor, sizeof nor);
+        ops = 0;
+        shrink_keep(1, 1000, 20000, 40000);
+        total = ops;
+        for (long cut = 1; cut <= total; cut++) {
+            memcpy(nor, before, sizeof nor);
+            store_mount();
+            ops = 0;
+            cut_at = cut;
+            shrink_keep(1, 1000, 20000, 40000);
+            cut_at = -1; /* power back */
+            store_mount();
+            if (!store_has(1))
+                empties++;
+            else if (load(1, out, sizeof out) == (long)keep && !memcmp(out, want, keep))
+                news++;
+            else
+                bad++;
+            if (load(0, out, sizeof out) != 9000 || memcmp(out, a, 9000))
+                bad++;
+            if (save(1, "AGAIN", c, 100) != 0 || load(1, out, sizeof out) != 100)
+                bad++;
+        }
+        printf("power cut at each of %ld operations of a shrink: %ld times the smaller file, %ld nothing, %ld bad\n",
+               total, news, empties, bad);
+        CHECK("a cut shrink leaves the smaller file or nothing", bad == 0 && empties > 0);
+        free(big), free(want);
+    }
+
     free(a), free(b), free(c);
     printf("store test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

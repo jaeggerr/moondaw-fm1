@@ -83,7 +83,7 @@ int main(void)
 
     /* SETTINGS: from HOME's root menu, KNOB 3 the value, kept across a restart */
     home();
-    in.enc[PE_K1] = 2;          /* CONTINUE, PROJECTS, SETTINGS */
+    in.enc[PE_K1] = 3;          /* CONTINUE, PROJECTS, SAMPLES, SETTINGS */
     go();
     press(PB_SEL);
     {

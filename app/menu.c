@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "menu.h"
 
+#include "../core/bank.h"
 #include "../core/player.h"
 #include "app.h"
 #include "gfx.h"
@@ -67,7 +68,8 @@ static int opt_cur, opt_row;    /* opt_row: the project the panel is about */
 static char new_name[STORE_NAME + 1];
 static const char *opt_said;
 static int item;     /* the root's cursor */
-static const char *const item_word[MENU_ITEMS] = { "CONTINUE", "PROJECTS", "SETTINGS", "SYSTEM", "HELP" };
+static const char *const item_word[MENU_ITEMS] = { "CONTINUE", "PROJECTS", "SAMPLES", "SETTINGS", "SYSTEM",
+                                                   "HELP" };
 
 static bool before(const char *a, const char *b)
 {
@@ -356,7 +358,10 @@ static void draw_root(void)
         int y = BAR_TOP + i * ROW, base = y + 2 + FONTS[F_COND20].ascent;
         bool here = i == item;
         char n[8];
-        const char *right = i == MENU_CONTINUE ? app_name : i == MENU_PROJECTS ? ui_dec(n, nrows) : "";
+        const char *right = i == MENU_CONTINUE ? app_name
+                            : i == MENU_PROJECTS ? ui_dec(n, nrows)
+                            : i == MENU_SAMPLES  ? ui_dec(n, bank_count())
+                                                 : "";
         int x = PLAT_W - 10 - gfx_text_w(F_COND20, right) - (i == MENU_CONTINUE && app_dirty ? 13 : 0);
         if (here)
             gfx_slab(2, y + 1, PLAT_W - 4, ROW - 2, C_ACCENT, 255);
@@ -552,7 +557,9 @@ int menu_frame(const PlatInput *in)
                 listing = true;
                 refresh();
                 scroll_to(open_row >= 0 ? open_row : 0, true);
-            } else if (item == MENU_SETTINGS)
+            } else if (item == MENU_SAMPLES)
+                to = MENU_TO_SAMPLES;
+            else if (item == MENU_SETTINGS)
                 to = MENU_TO_SETTINGS;
             else if (item == MENU_SYSTEM)
                 to = MENU_TO_SYSTEM;

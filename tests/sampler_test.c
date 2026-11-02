@@ -5,6 +5,9 @@
  *   2. the bank: written into a store whose free sectors are scattered,
  *      found by every spelling of a song's name, read in place across
  *      its sectors; a damaged one is no bank; slot 32 beside .LAST;
+ *   2b. a sample taken out of the bank: the hole closes in the flash the
+ *      bank already holds, what came down plays the frames it had, and
+ *      the last one takes the file with it;
  *   3. `smp`, `zone` and `fSMP` read and written back, twice the same;
  *   4. a SMPL voice: an octave up rings half as long, a zone plays, an
  *      fSMP plays its entry, a name the bank lacks is silent, the bank
@@ -125,6 +128,19 @@ static int put(int slot, const char *name, const uint8_t *data, uint32_t n)
     if (store_save_begin(slot, name) != STORE_OK || store_save_put((const char *)data, n) != STORE_OK)
         return -1;
     return store_save_commit();
+}
+
+/* A slot's bytes back out of the store. */
+static uint32_t grab(int slot, uint8_t *out, uint32_t cap)
+{
+    uint32_t n = 0;
+    int32_t got;
+
+    if (store_load_begin(slot) != STORE_OK)
+        return 0;
+    while (n + 4096 <= cap && (got = store_load_get((char *)out + n, 4096)) > 0)
+        n += (uint32_t)got;
+    return n;
 }
 
 /* ---------------------------------------------------------- a voice --- */
@@ -284,6 +300,78 @@ int main(int argc, char **argv)
             store_mount();
             bank_mount();
         }
+    }
+
+    /* 2b. a sample out of the bank: the hole closed in place */
+    {
+        static uint8_t after[sizeof bankfile];
+        Src src[3] = { { "tone", a, SMP_RATE }, { "Beep", b, SMP_RATE / 2 }, { "click", c, 3000 } };
+        uint32_t size = build(src, 3), frames, old_at[3], blocks[3], room, got, at0, at1;
+        char nm[BANK_NAME_LEN];
+
+        for (int i = 0; i < 3; i++) {
+            memcpy(&old_at[i], bankfile + BANK_HEAD + BANK_ENTRY * i + BANK_NAME_LEN + 4, 4);
+            blocks[i] = (src[i].frames + SMP_BLOCK_FRAMES - 1) / SMP_BLOCK_FRAMES * SMP_BLOCK;
+        }
+        ramflash_blank();
+        store_mount();
+        CHECK("the bank of three is there", put(BANK_SLOT, BANK_FILE, bankfile, size) == STORE_OK);
+        store_mount();
+        bank_mount();
+        room = store_free();
+        CHECK("the middle sample goes", bank_delete(1) == STORE_OK);
+        CHECK("the bank is one shorter", bank_count() == 2);
+        CHECK("the first is as it was",
+              bank_entry(0, nm, &frames) && !strcmp(nm, "tone") && frames == SMP_RATE);
+        CHECK("the last kept its name and its length",
+              bank_entry(1, nm, &frames) && !strcmp(nm, "click") && frames == 3000);
+        CHECK("the one between is gone, the others answer in its place",
+              bank_find("beep") < 0 && bank_find("tone") == 0 && bank_find("click") == 1);
+        CHECK("the file lost exactly that sample's blocks", bank_bytes() == size - blocks[1]);
+        CHECK("and the flash got the room back", store_free() > room);
+
+        got = grab(BANK_SLOT, after, sizeof after);
+        memcpy(&at0, after + BANK_HEAD + BANK_NAME_LEN + 4, 4);
+        memcpy(&at1, after + BANK_HEAD + BANK_ENTRY + BANK_NAME_LEN + 4, 4);
+        CHECK("the file on flash is the shorter one", got == size - blocks[1]);
+        CHECK("it still opens as a bank of two", !memcmp(after, "SMP1", 4) && after[4] == 2);
+        CHECK("what was before the hole did not move at all", at0 == old_at[0]);
+        CHECK("what was after it came down by the hole", at1 == old_at[2] - blocks[1]);
+        CHECK("and the blocks themselves are the same bytes",
+              !memcmp(after + at0, bankfile + old_at[0], blocks[0]) &&
+                  !memcmp(after + at1, bankfile + old_at[2], blocks[2]));
+
+        {   /* and the voice reads them where they are now */
+            SmpVoice v;
+            bool same = true;
+            int32_t g = (int32_t)(((65536u >> 4) * 16000u) >> 15);
+            song_init(&song);
+            strcpy(song.smp[5].name, "click.wav");
+            bank_resolve(&song);
+            decode(bankfile + old_at[2], 3000, dec);
+            smp_init(&v);
+            CHECK("a voice starts on the sample that moved", smp_start(&v, 5, 60, 60, 0, 65536));
+            for (int i = 0; i < 3000 * 2; i += 128) {
+                memset(buf, 0, 128 * sizeof *buf);
+                smp_render(&v, buf, 128);
+                for (int j = 0; j < 128 && i + j < 3000 * 2; j += 2)
+                    same &= buf[j] == (dec[(i + j) / 2] * g) >> 12;
+            }
+            CHECK("and plays the frames it had before it came down", same);
+        }
+
+        CHECK("the first can go as well",
+              bank_delete(0) == STORE_OK && bank_count() == 1 && bank_find("click") == 0);
+        CHECK("and the last takes the file with it",
+              bank_delete(0) == STORE_OK && bank_count() == 0 && !store_has(BANK_SLOT));
+        CHECK("a sample that is not there is no error", bank_delete(0) == STORE_ERR_NONE);
+        /* the three back, and entry 05 the tone again: what the rest of
+         * this test plays is the song section 2 left behind */
+        song_init(&song);
+        strcpy(song.smp[5].name, "samples/tone.wav");
+        put(BANK_SLOT, BANK_FILE, bankfile, size);
+        store_mount();
+        bank_mount();
     }
 
     /* 3. smp, zone and fSMP, read and written back */

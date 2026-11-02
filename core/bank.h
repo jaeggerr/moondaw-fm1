@@ -53,4 +53,16 @@ bool bank_entry(int i, char name[BANK_NAME_LEN], uint32_t *frames);
 /* The bank's sample a song's name plays, -1 none. */
 int bank_find(const char *song_name);
 
+/* Takes sample `i` out of the bank and closes the hole behind it, in the
+ * flash the bank already holds: no free sector is needed (core/store.h,
+ * store_shrink_*), which is the point -- a sample has to go exactly when
+ * there is no room left. The last sample takes the file with it. The song
+ * is resolved again after it, and one of its names the bank no longer has
+ * is silent, as it always was.
+ *
+ * The song must be stopped and the voices held first (as app/link.c does
+ * before it writes the bank): the flash is about to be written, and a
+ * power cut during it leaves the bank empty -- the computer has it. */
+int bank_delete(int i);
+
 #endif

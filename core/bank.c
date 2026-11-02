@@ -130,3 +130,75 @@ bool bank_entry(int i, char name[BANK_NAME_LEN], uint32_t *frames)
     *frames = rd32(e + BANK_NAME_LEN);
     return true;
 }
+
+static uint32_t ld32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
+}
+
+static void st32(uint8_t *p, uint32_t v)
+{
+    p[0] = (uint8_t)v, p[1] = (uint8_t)(v >> 8), p[2] = (uint8_t)(v >> 16), p[3] = (uint8_t)(v >> 24);
+}
+
+/* The bank without sample `i`, written over the bank itself. What makes it
+ * a plain shift: a sample is a whole number of blocks, so the hole it
+ * leaves is a multiple of SMP_BLOCK and every block that comes down lands
+ * on a block boundary again -- none of them crosses a sector, nothing is
+ * decoded, and the entries after the hole only have their place lowered.
+ * The index keeps the size it had, padded as the packer pads it, so the
+ * blocks begin where they began and everything before the hole does not
+ * move at all. */
+int bank_delete(int i)
+{
+    static const char zero[BANK_ENTRY];
+    uint32_t e = BANK_HEAD + (uint32_t)i * BANK_ENTRY, hole, at, head_end, pad, sz = size;
+    uint8_t h[BANK_HEAD], b[4];
+    int rc, n = count;
+
+    if (i < 0 || i >= n)
+        return STORE_ERR_NONE;
+    if (n == 1) { /* nothing left to close up: the file goes */
+        bank_hold();
+        rc = store_delete(BANK_SLOT);
+        bank_mount();
+        return rc;
+    }
+    hole = (rd32(e + BANK_NAME_LEN) + SMP_BLOCK_FRAMES - 1) / SMP_BLOCK_FRAMES * SMP_BLOCK;
+    at = rd32(e + BANK_NAME_LEN + 4);
+    head_end = rd32(BANK_HEAD + BANK_NAME_LEN + 4); /* entry 0's: where the blocks begin */
+    bank_hold();                                    /* from here nothing of it is read in place */
+    if ((rc = store_shrink_begin(BANK_SLOT)) != STORE_OK) {
+        bank_mount();
+        return rc;
+    }
+    h[0] = 'S', h[1] = 'M', h[2] = 'P', h[3] = '1';
+    h[4] = (uint8_t)(n - 1);
+    h[5] = h[6] = h[7] = 0;
+    rc = store_shrink_put((const char *)h, BANK_HEAD);
+    if (rc == STORE_OK && i)
+        rc = store_shrink_copy(BANK_HEAD, (uint32_t)i * BANK_ENTRY);
+    for (int j = i + 1; j < n && rc == STORE_OK; j++) {
+        uint32_t f = BANK_HEAD + (uint32_t)j * BANK_ENTRY;
+        rc = store_shrink_copy(f, BANK_NAME_LEN + 4); /* its name and its length */
+        if (rc == STORE_OK)
+            rc = store_shrink_read(f + BANK_NAME_LEN + 4, (char *)b, 4);
+        if (rc == STORE_OK) {
+            st32(b, ld32(b) - hole); /* its place, a hole lower */
+            rc = store_shrink_put((const char *)b, 4);
+        }
+    }
+    for (pad = head_end - (BANK_HEAD + (uint32_t)(n - 1) * BANK_ENTRY); pad && rc == STORE_OK;) {
+        uint32_t k = pad < sizeof zero ? pad : sizeof zero;
+        rc = store_shrink_put(zero, k);
+        pad -= k;
+    }
+    if (rc == STORE_OK)
+        rc = store_shrink_copy(head_end, at - head_end); /* the blocks before it */
+    if (rc == STORE_OK && sz > at + hole)
+        rc = store_shrink_copy(at + hole, sz - at - hole); /* and those after */
+    if (rc == STORE_OK)
+        rc = store_shrink_commit();
+    bank_mount(); /* the bank as it is now, under the song's names */
+    return rc;
+}

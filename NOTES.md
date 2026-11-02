@@ -4010,3 +4010,67 @@ section, the inversion and the arpeggio are set.
 `pattern_test` drives the new gestures: the list through EDIT + ARP eighteen
 times, the mode's keys, the two modes pushing each other off, and the lamp. None
 of it has been judged on the panel yet.
+
+## 2026-11-02 — a sample comes out of the bank, without the computer
+
+« Il manque un menu dans SYSTEM pour pouvoir effacer les samples non ? » It was
+missing, and SYSTEM was the wrong place for it: that screen promises in its own
+header that nothing changes there. What was really missing was the other half of
+the bank. The computer could fill it (`tools/fm1_samples.py`), and nothing on the
+machine could take anything out of it -- so a sample never played sat on a song's
+worth of flash until someone found a USB cable.
+
+My first answer was one ERASE SAMPLES, the whole bank at once, because the bank
+arrives whole from the computer. He turned it down in one line: « c'est pas
+terrible si ça efface tous les samples sinon on est dépendant d'un ordinateur. »
+Right, and it was the lazy half of the answer. Deleting one sample means closing
+the hole it leaves, and the format turns out to have been built for it without
+anyone planning that:
+
+- a sample is a whole number of 255-byte blocks, and sixteen blocks fill a
+  sector's payload exactly, so the hole is always a multiple of 255 and every
+  block that comes down lands on a block boundary again. Nothing is decoded,
+  nothing is re-encoded, no block ends up across a sector.
+- the store finds a file's sectors by scanning for (slot, generation, seq), not
+  by where they lie, so the new generation can be written into the old one's own
+  sectors, seq for seq.
+- and the data moves *down*, so a sector is always read before it is written
+  over: read the tail of sector k and the head of k+1, erase k, write it.
+
+Which gives the thing that matters: **the compaction needs no free sector at
+all.** That was the point — the moment a sample has to go is the moment the
+flash is full, and a rewrite that asks for room as big as the bank would fail
+exactly then. `store_shrink_*` asks for nothing but the 4 KB sector buffer the
+store already had.
+
+The power cut is handled by the design that was already there, not by anything
+new. While it runs, the new generation has no committed count and the old one
+has lost its first sector, so neither is complete and the slot simply does not
+mount: the samples are gone, the songs are untouched, and the computer still has
+the bank. `store_test` now cuts the power at each of the eleven flash operations
+of a shrink and checks exactly that — never half a file. The one thing that did
+need care: any *other* generation of the slot left whole on the flash would come
+back as the file once the live one's first sector went, with its blocks pointing
+where the new file has already written. It gets erased first, as `store_delete`
+does and for the same reason.
+
+Two details the layout forced:
+
+- the index keeps the size it had, padded as the packer pads it, so the blocks
+  begin where they began. Shrinking the index by one entry would move the first
+  block by 32 bytes — not a multiple of 255 — and that would re-lay out the
+  whole bank for nothing.
+- the entries after the hole keep their name and their length and only have
+  their place lowered, by a constant. Four bytes of RAM, read back out of the
+  file as it is while the new one is being written.
+
+SAMPLES sits in the root menu next to PROJECTS, with the count at its right as
+PROJECTS has: the samples by name, what each takes at its right, FREE in the
+corner so the reason for the screen is visible, SEL then SEL again to delete.
+Asked first, like PROJECTS' DELETE — a flash erase has no UNDO. Filling the bank
+stays the computer's job; here one can only be taken away.
+
+Not judged on the panel yet. `sampler_test` deletes the middle of three samples
+and checks that the one before it has not moved a byte, that the one after it
+came down by exactly the hole, that both decode to the same bytes as before, and
+that a voice plays the moved sample frame for frame.

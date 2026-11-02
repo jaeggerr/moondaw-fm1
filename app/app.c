@@ -22,6 +22,7 @@
 #include "gfx.h"
 #include "help.h"
 #include "settings.h"
+#include "samples.h"
 #include "system.h"
 #include "ui.h"
 #include "instrument.h"
@@ -53,7 +54,7 @@ int app_cpu, app_block, app_worst;
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
 static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS,
-              AT_HELP, AT_SYSTEM } screen;
+              AT_HELP, AT_SYSTEM, AT_SAMPLES } screen;
 /* The help of where one was: the topic of the last screen worked on, PATTERN's
  * SYLLABLE included -- HELP opens on it. */
 static int help_topic = HELP_GESTURES;
@@ -65,7 +66,7 @@ void app_mark_dirty(void) { app_dirty = true; }
 const char *app_screen(void)
 {
     static const char *const name[] = { "HOME", "SONG", "PHRASE", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
-                                        "CANVAS", "SETTINGS", "HELP", "SYSTEM" };
+                                        "CANVAS", "SETTINGS", "HELP", "SYSTEM", "SAMPLES" };
     return name[screen];
 }
 
@@ -459,6 +460,11 @@ void app_frame(const PlatInput *real)
             screen = AT_MENU;
             menu_open(MENU_SYSTEM);
         }
+    } else if (screen == AT_SAMPLES) {
+        if (!samples_frame(in)) {
+            screen = AT_MENU;
+            menu_open(MENU_SAMPLES);
+        }
     } else if (screen == AT_HELP) {
         if (!help_frame(in)) {
             screen = AT_MENU;
@@ -600,6 +606,10 @@ void app_frame(const PlatInput *real)
         case MENU_TO_SETTINGS:
             screen = AT_SETTINGS;
             settings_open();
+            break;
+        case MENU_TO_SAMPLES:
+            screen = AT_SAMPLES;
+            samples_open();
             break;
         case MENU_TO_SYSTEM:
             screen = AT_SYSTEM;

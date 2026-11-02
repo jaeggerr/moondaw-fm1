@@ -199,15 +199,25 @@ int main(void)
 
     home();                   /* SYSTEM, from the root: and back */
     sel(-10);
-    sel(3);
+    sel(4);
     press(PB_SEL);
     CHECK("SYSTEM opens from the root", !strcmp(app_screen(), "SYSTEM"));
     press(PB_HOME);
     CHECK("and HOME goes back to the root", !strcmp(app_screen(), "HOME"));
 
+    home();                   /* SAMPLES, from the root: and back */
+    sel(-10);
+    sel(2);
+    press(PB_SEL);
+    CHECK("SAMPLES opens from the root", !strcmp(app_screen(), "SAMPLES"));
+    press(PB_SEL);            /* an empty bank: nothing to ask about */
+    CHECK("an empty bank has nothing to delete", !strcmp(app_screen(), "SAMPLES"));
+    press(PB_HOME);
+    CHECK("and HOME goes back to the root", !strcmp(app_screen(), "HOME"));
+
     home();                   /* HELP, from the root: and back */
     sel(-10);
-    sel(4);                   /* CONTINUE PROJECTS SETTINGS SYSTEM HELP */
+    sel(5);                   /* CONTINUE PROJECTS SAMPLES SETTINGS SYSTEM HELP */
     press(PB_SEL);
     CHECK("HELP opens from the root", !strcmp(app_screen(), "HELP"));
     press(PB_SEL);            /* a page */

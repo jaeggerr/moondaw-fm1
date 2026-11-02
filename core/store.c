@@ -341,3 +341,191 @@ int store_map(int slot, uint8_t *sectors, int max)
             return STORE_ERR_CORRUPT;
     return n;
 }
+
+/* ----------------------------------------------------------- shrink --- */
+/* Where every sector of the file lies, read before the first erase: the
+ * new generation goes into those same sectors, seq for seq, and each one
+ * is read before it is written over. What the new file takes from the old
+ * never sits below where it lands, so by the time sector `seq` is erased
+ * nothing still to be read is in it (store.h). */
+static struct {
+    int slot;
+    uint16_t gen, old;
+    uint8_t seq, homes, home[SECTORS];
+    uint32_t fill, out; /* out: bytes of the new file given so far */
+    bool open;
+} sh;
+
+/* The sector of the file as it is that holds its byte `at`, and where in
+ * that sector's payload it is. NO_SECTOR past the file's end, or where
+ * the new file has already caught up with it. */
+static uint8_t source(uint32_t at, uint32_t *off)
+{
+    uint32_t p = at + STORE_NAME, s = p / PAYLOAD;
+
+    if (at < sh.out || s >= sh.homes)
+        return NO_SECTOR;
+    *off = p - s * PAYLOAD;
+    return sh.home[s];
+}
+
+static int shrink_flush(void)
+{
+    uint8_t k;
+
+    if (sh.seq >= sh.homes)
+        return STORE_ERR_FULL; /* not smaller after all */
+    k = sh.home[sh.seq];
+    buf[0] = 'M', buf[1] = 'D', buf[2] = 'W', buf[3] = '1';
+    buf[4] = (uint8_t)sh.slot;
+    buf[5] = sh.seq;
+    wr16(buf + 6, sh.gen);
+    wr16(buf + 8, (uint16_t)sh.fill);
+    wr16(buf + 10, crc16(buf + HEAD, sh.fill));
+    wr16(buf + 12, 0xFFFF);
+    wr16(buf + 14, 0xFFFF);
+    for (uint32_t i = HEAD + sh.fill; i < SECTOR; i++)
+        buf[i] = 0xFF;
+    info[k].slot = NO_SECTOR;
+    if (plat_flash_erase(k) != 0 || plat_flash_prog(k * SECTOR, buf, HEAD + sh.fill) != 0)
+        return STORE_ERR_IO;
+    {   /* read back: what is on flash is what was meant, as a save does */
+        uint16_t want = rd16(buf + 10);
+        uint32_t n = sh.fill;
+        if (plat_flash_read(k * SECTOR, buf, HEAD + n) != 0 || rd16(buf + 8) != n ||
+            crc16(buf + HEAD, n) != want)
+            return STORE_ERR_IO;
+    }
+    sh.seq++;
+    sh.fill = 0;
+    return STORE_OK;
+}
+
+int store_shrink_begin(int slot)
+{
+    uint8_t f;
+
+    if (!store_has(slot))
+        return STORE_ERR_NONE;
+    f = first[slot];
+    sh.slot = slot;
+    sh.old = info[f].gen;
+    sh.homes = (uint8_t)info[f].count;
+    for (int q = 0; q < sh.homes; q++)
+        if ((sh.home[q] = find(slot, sh.old, q)) == NO_SECTOR)
+            return STORE_ERR_CORRUPT;
+    /* A generation nothing on flash carries, as a save picks one. */
+    sh.gen = (uint16_t)(sh.old + 1);
+    for (uint32_t k = 0; k < SECTORS; k++)
+        if (info[k].slot == slot && info[k].gen == sh.gen) {
+            sh.gen++;
+            k = (uint32_t)-1;
+        }
+    /* The name, before any erase: the file keeps the one it has. */
+    if (plat_flash_read(sh.home[0] * SECTOR + HEAD, buf + HEAD, STORE_NAME) != 0)
+        return STORE_ERR_IO;
+    /* Any other generation of the slot goes first: left whole on flash,
+     * it would come back as the file the moment this one's first sector
+     * is erased -- and its blocks would be read where the new file has
+     * written. store_delete clears a slot for the same reason. */
+    for (uint32_t k = 0; k < SECTORS; k++)
+        if (info[k].slot == slot && info[k].gen != sh.old) {
+            if (plat_flash_erase(k) != 0)
+                return STORE_ERR_IO;
+            info[k].slot = NO_SECTOR;
+        }
+    sh.seq = 0;
+    sh.fill = STORE_NAME;
+    sh.out = 0;
+    sh.open = true;
+    sv.open = ldr.open = false; /* the three share the sector buffer */
+    return STORE_OK;
+}
+
+int store_shrink_put(const char *data, uint32_t n)
+{
+    if (!sh.open)
+        return STORE_ERR_NONE;
+    while (n) {
+        uint32_t room = PAYLOAD - sh.fill, take = n < room ? n : room;
+        int rc;
+        for (uint32_t i = 0; i < take; i++)
+            buf[HEAD + sh.fill + i] = (uint8_t)data[i];
+        sh.fill += take;
+        sh.out += take;
+        data += take;
+        n -= take;
+        if (sh.fill == PAYLOAD && (rc = shrink_flush()) != STORE_OK) {
+            sh.open = false;
+            return rc;
+        }
+    }
+    return STORE_OK;
+}
+
+int store_shrink_read(uint32_t at, char *out, uint32_t n)
+{
+    if (!sh.open)
+        return STORE_ERR_NONE;
+    while (n) {
+        uint32_t off, take;
+        uint8_t k = source(at, &off);
+        if (k == NO_SECTOR)
+            return STORE_ERR_NONE;
+        take = PAYLOAD - off < n ? PAYLOAD - off : n;
+        if (plat_flash_read(k * SECTOR + HEAD + off, (uint8_t *)out, take) != 0)
+            return STORE_ERR_IO;
+        at += take, out += take, n -= take;
+    }
+    return STORE_OK;
+}
+
+int store_shrink_copy(uint32_t at, uint32_t len)
+{
+    if (!sh.open)
+        return STORE_ERR_NONE;
+    while (len) {
+        uint32_t off, room = PAYLOAD - sh.fill, take;
+        uint8_t k = source(at, &off);
+        int rc;
+        if (k == NO_SECTOR) { /* past the file, or over what is written */
+            sh.open = false;
+            return STORE_ERR_NONE;
+        }
+        take = len < room ? len : room;
+        if (take > PAYLOAD - off)
+            take = PAYLOAD - off;
+        if (plat_flash_read(k * SECTOR + HEAD + off, buf + HEAD + sh.fill, take) != 0)
+            return STORE_ERR_IO;
+        sh.fill += take;
+        sh.out += take;
+        at += take;
+        len -= take;
+        if (sh.fill == PAYLOAD && (rc = shrink_flush()) != STORE_OK) {
+            sh.open = false;
+            return rc;
+        }
+    }
+    return STORE_OK;
+}
+
+int store_shrink_commit(void)
+{
+    uint8_t c[4];
+    int rc;
+
+    if (!sh.open)
+        return STORE_ERR_NONE;
+    sh.open = false;
+    if ((sh.fill || sh.seq == 0) && (rc = shrink_flush()) != STORE_OK)
+        return rc;
+    /* The commit, a save's four bytes: before them nothing of the slot
+     * mounts, after them the smaller file is the file. The sectors the
+     * old generation had past this one answer to a generation whose
+     * first sector is gone -- mount counts them free. */
+    wr16(c, sh.seq);
+    wr16(c + 2, (uint16_t)~sh.seq);
+    if (plat_flash_prog(sh.home[0] * SECTOR + 12, c, 4) != 0)
+        return STORE_ERR_IO;
+    return store_mount();
+}

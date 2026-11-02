@@ -20,6 +20,8 @@ static const Item home_items[] = {
     { "SELECT, KNOB 1", "move" },
     { "SEL", "go: CONTINUE, PROJECTS..." },
     { "SYSTEM", "flash left, version, CPU" },
+    { "SAMPLES", "what the bank holds" },
+    { "in SAMPLES: SEL", "delete one, room back" },
     { "PLAY on CONTINUE", "play the open project" },
     { "in PROJECTS: SEL", "open the project" },
     { "in PROJECTS: PLAY", "play it, staying here" },
