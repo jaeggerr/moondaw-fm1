@@ -3,6 +3,7 @@
 
 #include "../core/player.h"
 #include "app.h"
+#include "coat.h"
 #include "gfx.h"
 #include "grid.h"
 #include "ui.h"
@@ -29,6 +30,26 @@ static UiShift shift;
 
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 static int nrows(void) { return song->num_tracks + 1; }
+/* Eight rows, less the two the coat takes off the foot (app/coat.h). */
+static int vis_rows(void) { return GRID_ROWS - coat_rows(); }
+
+/* What the twelve do on MIXER (app/coat.h). Almost nothing: this screen is
+ * knobs and MONO, and the foot saying so in eleven dashes is the truest
+ * thing it can say about it. EDIT goes to the PROJECT here rather than
+ * shifting the keys, and it is the one screen where the tap is the
+ * gesture, so the cell carries it even though the LED never does. */
+static const char *const *coat_words(void)
+{
+    static const char *w[COAT_BTNS];
+
+    w[PB_GLO] = w[PB_EDIT] = "PROJECT";
+    w[PB_SEQ] = "SONG";
+    w[PB_HOME] = "BACK";
+    w[PB_SAVE] = "WRITE";
+    w[PB_PLAY] = player_playing() ? "STOP" : "PLAY";
+    w[PB_FX] = w[PB_SEL] = w[PB_ENV] = w[PB_LFO] = w[PB_ARP] = w[PB_REC] = 0;
+    return w;
+}
 
 static int state(int t) { return player_soloed(t) ? 2 : player_muted(t) ? 1 : 0; }
 
@@ -85,14 +106,14 @@ static void draw(void)
         grid_corner("MIXER", C_DIM, 0, 0);
     for (int c = 0; c < COLS; c++)
         grid_head(GRID_CELL_X + c * CELL_W, CELL_W, row < 0 ? fx_head[c] : track_head[c], c == col);
-    for (int v = 0; v < GRID_ROWS && top + v < nrows(); v++) {
+    for (int v = 0; v < vis_rows() && top + v < nrows(); v++) {
         int r = top + v - 1, base = grid_base(v);
         bool band = r == row, on_num = band && col < 0;
         bool silent = r >= 0 && (player_muted(r) || (any_solo() && !player_soloed(r)));
         uint16_t num = r < 0 || (r >= 0 && player_soloed(r)) ? C_TITLE : player_muted(r) ? C_MUTE : C_TEXT;
 
         if (band)
-            grid_band(v, PLAT_W - 4 - (nrows() > GRID_ROWS ? 6 : 0));
+            grid_band(v, PLAT_W - 4 - (nrows() > vis_rows() ? 6 : 0));
         if (on_num)
             grid_hollow(v, GRID_NUM_X - 7, GRID_CELL_X - GRID_NUM_X + 3);
         num = grid_ink(band, on_num, num);
@@ -121,7 +142,8 @@ static void draw(void)
                       silent || (r >= 0 && c >= 2 && !val) ? C_DIM : C_TEXT);
         }
     }
-    grid_frame(top, nrows());
+    grid_frame_rows(top, nrows(), vis_rows());
+    coat_draw(coat_words(), ui_shifted(&shift));
 }
 
 /* -------------------------------------------------------------- api --- */
@@ -173,7 +195,7 @@ int mixer_frame(const PlatInput *in)
     }
 
     vis = row + 1; /* rows as drawn: the returns first */
-    grid_follow(&vis, &top, nrows(), GRID_ROWS);
+    grid_follow(&vis, &top, nrows(), vis_rows());
     ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_GLO | 1u << PB_SEQ); /* the PROJECT (EDIT does it too, unlit: ui.h), SONG */
     ui_led_mono(row, row >= 0 ? 1u << UI_KEY_MONO : 0u); /* MONO usable, lit alone, half muted */

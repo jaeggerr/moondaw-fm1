@@ -63,11 +63,6 @@ static void cell_at(int x, int cw, int r, const char *name, const char *word, ui
     gfx_text(F_COND9, x + (cw - w) / 2, y + NAME_Y, name, ink);
 }
 
-static void cell(int c, int r, const char *name, const char *word, uint16_t ink)
-{
-    cell_at(c * CELL_W, CELL_W, r, name, word, ink, C_TEXT);
-}
-
 static void draw_keys(void)
 {
     for (int r = 0; r < 2; r++)
@@ -95,6 +90,10 @@ void coat_draw(const char *const *words, bool edit_held)
      * one word (seen on the panel, 02/11). */
     for (int c = 1; c < COLS; c++)
         gfx_fill(c * CELL_W, TOP + 2, 1, PLAT_H - TOP - 4, C_TRACK, 255);
+    /* A button with nothing to do here says "--", as the mute black keys do
+     * (his ask, 03/11): a cell with a name and nothing under it reads as a
+     * cell whose word would not fit, and the two must not look alike. */
     for (int b = 0; b < COAT_BTNS; b++)
-        cell(b % COLS, b / COLS, btn[b], words[b], words[b] ? C_TITLE : C_TEXT_FAINT);
+        cell_at((b % COLS) * CELL_W, CELL_W, b / COLS, btn[b], words[b] ? words[b] : "--",
+                words[b] ? C_TITLE : C_TEXT_FAINT, words[b] ? C_TEXT : C_DIM);
 }
