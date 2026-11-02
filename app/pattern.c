@@ -1124,7 +1124,7 @@ int pattern_frame(const PlatInput *in)
     if ((d = in->enc[PE_K4]) != 0 && view == V_FX && cur_col >= 0 && !selecting)
         turn_fx_val(cur_row, cur_col, d);
 
-    if (PRESSED(PB_REC)) { /* armed, or not; stopping it stops the count */
+    if (PRESSED(PB_REC) && !shift.held) { /* armed, or not; stopping it stops the count */
         au_hush();
         rec_armed = !rec_armed;
         recording = rec_armed && playing;

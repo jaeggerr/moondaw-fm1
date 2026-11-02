@@ -140,6 +140,14 @@ bool ui_shift(UiShift *s, const PlatInput *in, uint32_t pressed, uint32_t keys, 
         s->held = true, s->used = false;
     if (s->held && keys)
         s->used = true;
+    /* EDIT's one button: REC turns the metronome over, and REC alone still
+     * arms (02/11). The latch is the black keys' own, so this asks for EDIT
+     * held -- a CAPS LOCK that took REC away from recording would be a trap. */
+    if (s->held && (pressed >> PB_REC & 1u)) {
+        player_toggle_metro();
+        s->used = true;
+        *said = player_metro() ? "METRO ON" : "METRO OFF";
+    }
     if (track >= 0 && (ui_shifted(s) || ops || s->mono) && (keys >> UI_KEY_MONO & 1u))
         s->mono = 1, s->muted = false;
     else if (s->mono && (in->keys >> UI_KEY_MONO & 1u) && ++s->mono == MONO_HOLD && track >= 0) {

@@ -567,6 +567,44 @@ int main(void)
             enc(PE_ALGO, -1); /* the recording taken back */
     }
 
+    /* EDIT held + REC: the metronome (02/11). REC alone still arms, which is
+     * what the block above showed; here the shift takes it instead. */
+    {
+        static int16_t audio[1024 * 2];
+        CHECK("the metronome is off until it is asked for", !player_metro());
+        in.btns = 1u << PB_EDIT;
+        go();
+        in.btns = 1u << PB_EDIT | 1u << PB_REC;
+        go();
+        in.btns = 1u << PB_EDIT;
+        go();
+        in.btns = 0;
+        go();
+        CHECK("EDIT held + REC turns it on", player_metro());
+        /* armed, PLAY would count a bar in before the song moved: it plays at once */
+        in.ms += 1000;
+        press(PB_PLAY);
+        player_render(audio, 1024);
+        CHECK("the shift took REC: nothing was armed, PLAY plays", player_playing());
+        press(PB_PLAY);
+        player_render(audio, 1024);
+        in.btns = 1u << PB_EDIT;
+        go();
+        in.btns = 1u << PB_EDIT | 1u << PB_REC;
+        go();
+        in.btns = 0;
+        go();
+        CHECK("and again turns it off", !player_metro());
+        /* the latch is the black keys' own: REC still arms under it */
+        tap_edit();
+        press(PB_REC);
+        CHECK("under the caps lock REC is REC again, not the metronome", !player_metro());
+        press(PB_REC); /* unarmed */
+        tap_edit();
+        player_init(&song);
+        CHECK("nothing is kept: a fresh player has it off", !player_metro());
+    }
+
     /* the step's number */
     enc(PE_K2, -1);
     enc(PE_K3, -4);
