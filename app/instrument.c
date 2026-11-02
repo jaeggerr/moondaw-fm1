@@ -624,6 +624,7 @@ int instrument_frame(const PlatInput *in)
 #define PRESSED(b) ((btns >> (b)) & 1u)
 
     prev_btns = in->btns;
+    player_audition_track(-1); /* an instrument is set on no track: previewed dry (2/11) */
     if (btns || keys || in->enc[PE_SELECT] || in->enc[PE_K2] || in->enc[PE_K1] || in->enc[PE_K3] ||
         in->enc[PE_PRESET]) /* PRESETS too: a word about this instrument is not about the next */
         said = 0;

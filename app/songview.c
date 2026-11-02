@@ -1539,6 +1539,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     prev_btns = in->btns;
     keys = in->keys & ~prev_keys, prev_keys = in->keys;
     playing = player_playing();
+    player_audition_track(col); /* heard in the mix of the track under the cursor (2/11) */
     loop_keep(-1); /* a loop a phrase's steps carried is not this screen's */
     if (acted)
         said = 0;

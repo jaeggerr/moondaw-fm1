@@ -857,6 +857,60 @@ int main(void)
         n = trk_save(&song, out, sizeof out);
         CHECK("C major is left out", n > 0 && strstr(out, "\nkey ") == 0);
     }
+    /* The keys are heard in the mix of the track the cursor is on, not dry
+     * (2/11): PATTERN says which track, and the audition takes its PAN and
+     * what it sends to the room, as MIXER shows them. */
+    {
+        static int16_t audio[1024 * 2];
+        long left = 0, right = 0, dry = 0, wet = 0;
+
+        trk_load(&song, trk, sizeof trk - 1, NULL); /* a kit was put on 00 above */
+        player_init(&song);
+        pattern_open(&song, 0, 0);
+        song.track_init[0].pan = -64; /* hard left in MIXER */
+        go();                         /* the screen says the track it stands on */
+        player_note_off();            /* and what the cursor landing auditioned is let go */
+        for (int i = 0; i < 80; i++)
+            player_render(audio, 1024);
+        player_note_on(0, 60);
+        for (int i = 0; i < 16; i++) {
+            player_render(audio, 1024);
+            for (int k = 0; k < 1024; k++) {
+                int32_t l = audio[2 * k], r = audio[2 * k + 1];
+                left += l < 0 ? -l : l;
+                right += r < 0 ? -r : r;
+            }
+        }
+        CHECK("a key on a track panned hard left comes out on the left alone",
+              left > 0 && right == 0);
+        player_note_off();
+        for (int i = 0; i < 80; i++) /* let it close, and nothing is ringing: REV was 0 */
+            player_render(audio, 1024);
+
+        /* The same key with the track's REV wide open: the room is under it,
+         * so there is more of it than dry. */
+        song.track_init[0].pan = 0;
+        go();
+        player_note_on(0, 60);
+        for (int i = 0; i < 24; i++) {
+            player_render(audio, 1024);
+            for (int k = 0; k < 1024 * 2; k++)
+                dry += audio[k] < 0 ? -audio[k] : audio[k];
+        }
+        player_note_off();
+        for (int i = 0; i < 80; i++)
+            player_render(audio, 1024);
+        song.track_init[0].send = 127;
+        go();
+        player_note_on(0, 60);
+        for (int i = 0; i < 24; i++) {
+            player_render(audio, 1024);
+            for (int k = 0; k < 1024 * 2; k++)
+                wet += audio[k] < 0 ? -audio[k] : audio[k];
+        }
+        CHECK("and the track's REV is in it: the room is heard under the key", wet > dry);
+        player_note_off();
+    }
     printf("pattern test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
 }
