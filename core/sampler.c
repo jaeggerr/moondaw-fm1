@@ -24,7 +24,7 @@ static const uint8_t *sec[SMP_MAX_SECTORS];
 static uint32_t nsec;
 static struct {
     uint32_t at, frames;
-} map[SONG_SMP_MAX];
+} map[SONG_SMP_MAX + 1]; /* the last is SMP_PREVIEW */
 static volatile uint8_t gen;
 
 /* The last block a voice fetched, its place in the bank: kept across a reset on the FM-1 (the trail, player.c). */
@@ -57,7 +57,7 @@ void smp_hold(void)
 {
     gen++;
     nsec = 0;
-    for (int i = 0; i < SONG_SMP_MAX; i++)
+    for (int i = 0; i <= SONG_SMP_MAX; i++) /* the preview entry too */
         map[i].frames = 0;
 }
 
@@ -71,7 +71,7 @@ void smp_attach(const uint8_t *const *payloads, int n)
 
 void smp_map(int i, uint32_t at, uint32_t frames)
 {
-    if (i < 0 || i >= SONG_SMP_MAX)
+    if (i < 0 || i > SMP_PREVIEW)
         return;
     map[i].frames = 0; /* never half of one entry and half of another */
     map[i].at = at;
@@ -140,7 +140,7 @@ static void recompute(SmpVoice *v)
 bool smp_start(SmpVoice *v, int smp, uint8_t note, uint8_t root, int tune, uint32_t gain_q16)
 {
     v->playing = false;
-    if (smp < 0 || smp >= SONG_SMP_MAX || map[smp].frames == 0)
+    if (smp < 0 || smp > SMP_PREVIEW || map[smp].frames == 0)
         return false;
     v->gen = gen;
     v->at = map[smp].at;

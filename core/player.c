@@ -443,7 +443,8 @@ static volatile uint32_t loop_word; /* from | len << 16: one word, so the audio 
 static volatile uint32_t song_loop_word;
 
 /* Main loop -> audio. One writer, one reader, eight slots. */
-enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL, CMD_NOTE_CHORD };
+enum { CMD_PLAY_SONG = 1, CMD_PLAY_ENTRY, CMD_STOP, CMD_NOTE_ON, CMD_NOTE_OFF, CMD_NOTE_SYL, CMD_NOTE_CHORD,
+       CMD_NOTE_SMP };
 /* The step a CMD_PLAY_ENTRY sets the playhead down on, written the same way:
  * a word beside the command and not a byte in it, so the audio side costs
  * nothing for it -- .ram_audio has no room to spare (1/11). */
@@ -456,6 +457,9 @@ static uint8_t audition_arp; /* its ticks a note, 0 for all of them at once */
 /* The track a CMD_NOTE_* borrows its mix from, -1 = dry; written the same
  * way, by the screen that holds the cursor. */
 static int8_t audition_at = -1;
+/* SAMPLES plays a sample through this one, written by the main loop
+ * before the command that reads it (player_audition_sample). */
+static InstrumentDef smp_preview;
 /* And the FX of the step it stands on, already sifted down to the ones a
  * held key can carry (player_audition_at, in the flash); FX_NONE for the
  * slots that carry nothing. */
@@ -612,7 +616,10 @@ static void voice_start(Track *tr, const InstrumentDef *in, uint8_t timbre,
     if (in->engine == ENGINE_DRUM)
         drum_hit((int)(tr - tracks), timbre, note, tr->fx.velocity, in->drum);
     if (in->engine == ENGINE_SAMPLE)
-        smp_strike(&v->smp, song, (int)(in - song->instruments), tr->fx.smp, note);
+        /* The instrument's index is only what a zone is looked up by: with
+         * fx.smp naming the entry there is none to look up, and `in` may
+         * not be one of the song's at all (the preview). */
+        smp_strike(&v->smp, song, tr->fx.smp >= 0 ? 0 : (int)(in - song->instruments), tr->fx.smp, note);
     v->active = v->sounding = true;
     for (int l = 0; l < waves - 1; l++) {
         const Layer *ly = &in->layers[l];
@@ -1468,7 +1475,8 @@ static void handle_cmds(void)
             song_once = false;
         } else if (type == CMD_STOP) {
             stop_play();
-        } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL || type == CMD_NOTE_CHORD) {
+        } else if (type == CMD_NOTE_ON || type == CMD_NOTE_SYL || type == CMD_NOTE_CHORD ||
+                   type == CMD_NOTE_SMP) {
             /* The audition: one note and its layers, in the mix of the
              * track the cursor is on -- its VOL, its PAN and what it sends
              * to the room and to the delay -- and then in the colour the
@@ -1490,7 +1498,12 @@ static void handle_cmds(void)
                 syl_copy(fx->syl, audition_syl);
                 fx->syl_written = true;
             }
-            const InstrumentDef *in = &song->instruments[a % SONG_MAX_INSTR];
+            /* A sample heard from SAMPLES belongs to no song: it sounds
+             * through an instrument of the player's own, and fx.smp names
+             * the bank's entry, so no zone is looked up (core/sampler.c,
+             * smp_strike). */
+            const InstrumentDef *in = type == CMD_NOTE_SMP ? &smp_preview
+                                                           : &song->instruments[a % SONG_MAX_INSTR];
             waves = instr_waves(in);
             maxn = TRACK_MAX_VOICES / waves;
             tr->last_inst = a;
@@ -1514,6 +1527,8 @@ static void handle_cmds(void)
             tr->sec_level = VOL_FULL;
             chain_set_crush(&tr->chain, 0, 0);
             apply_fx(AUDITION, audition_fx); /* SMP among them, before the notes start */
+            if (type == CMD_NOTE_SMP)
+                fx->smp = SMP_PREVIEW; /* the bank's own entry, not a zone's */
             for (int v = 0; v < TRACK_MAX_VOICES; v++)
                 if (tr->voices[v].sounding)
                     voice_stop(tr, &tr->voices[v]);
@@ -2138,6 +2153,16 @@ MAIN_LOOP void player_audition_at(int track, const StepFx *sfx, int n)
         audition_fx[k++].cmd = FX_NONE;
 }
 MAIN_LOOP void player_note_on(int instr, uint8_t note) { cmd_push(CMD_NOTE_ON, (uint8_t)instr, note); }
+MAIN_LOOP void player_audition_sample(uint32_t at, uint32_t frames)
+{
+    song_instr_default(&smp_preview);
+    smp_preview.engine = ENGINE_SAMPLE;
+    smp_preview.attack = smp_preview.decay = 0;
+    smp_preview.sustain = 255;
+    smp_preview.release = 12; /* a one-shot: it ends on its own */
+    smp_map(SMP_PREVIEW, at, frames);
+    cmd_push(CMD_NOTE_SMP, 0, 60); /* 60 is the root smp_strike gives a named entry */
+}
 MAIN_LOOP void player_note_off(void) { cmd_push(CMD_NOTE_OFF, 0, 0); }
 MAIN_LOOP void player_note_sing(int instr, uint8_t note, const char *syl)
 {

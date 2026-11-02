@@ -9,7 +9,14 @@
  * its right and what is left of the flash in the corner. SELECT or KNOB 1
  * moves, SEL asks, SEL again deletes -- a flash erase has no UNDO, as in
  * PROJECTS' DELETE -- HOME goes back. Filling the bank stays the
- * computer's (tools/fm1_samples.py); here one can only be taken away. */
+ * computer's (tools/fm1_samples.py); here one can only be taken away.
+ *
+ * PLAY hears the one under the cursor (2/11, his ask): « des fois que le
+ * nom n'est pas clair ». tr9_mtom says little and tr9_ltom says the same
+ * thing; the sound says which of the two can go. It is heard through no
+ * instrument of the song and no zone, as it was recorded
+ * (core/player.h, player_audition_sample). While a song plays, PLAY keeps
+ * the reflex it has everywhere else and stops it. */
 #ifndef SAMPLES_H
 #define SAMPLES_H
 

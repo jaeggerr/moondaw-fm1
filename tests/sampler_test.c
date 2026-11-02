@@ -493,6 +493,34 @@ int main(int argc, char **argv)
         snprintf(what, sizeof what, "the bank held, the voices stop (%.3g)", e_held);
         CHECK(what, e_held < 1e6);
         bank_mount();
+
+        {   /* a sample of the bank heard on its own, named by nothing in
+             * the song and reached by no zone: what SAMPLES plays with
+             * PLAY (core/player.h, player_audition_sample) */
+            static int32_t pcm[256];
+            uint32_t at, frames;
+            double heard = 0, quiet = 0;
+            trk_load(&song, src, sizeof src - 1, NULL);
+            bank_resolve(&song);
+            player_init(&song);
+            CHECK("the bank says where a sample lies", bank_place(2, &at, &frames) && frames == 3000);
+            CHECK("and nothing of the song names it", bank_find("click") == 2 && song_zone(&song, 0, 60)->smp != 2);
+            for (int i = 0; i < FS / 4; i += 128) { /* the transport stopped: silence */
+                memset(pcm, 0, sizeof pcm);
+                player_render_raw(pcm, 128);
+                quiet += energy(pcm, 256);
+            }
+            player_audition_at(-1, 0, 0); /* dry, at the preview level */
+            player_audition_sample(at, frames);
+            for (int i = 0; i < FS / 4; i += 128) {
+                memset(pcm, 0, sizeof pcm);
+                player_render_raw(pcm, 128);
+                heard += energy(pcm, 256);
+            }
+            snprintf(what, sizeof what, "a sample plays through no instrument of the song (%.3g, %.3g)",
+                     quiet, heard);
+            CHECK(what, quiet == 0 && heard > 1e8);
+        }
     }
 
     /* 5. a bank from the tool, and a song of moondaw's */

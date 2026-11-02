@@ -116,6 +116,17 @@ void bank_resolve(const Song *s)
     }
 }
 
+bool bank_place(int i, uint32_t *at, uint32_t *frames)
+{
+    uint32_t e = BANK_HEAD + (uint32_t)i * BANK_ENTRY;
+
+    if (i < 0 || i >= count)
+        return false;
+    *at = rd32(e + BANK_NAME_LEN + 4) + STORE_NAME;
+    *frames = rd32(e + BANK_NAME_LEN);
+    return true;
+}
+
 int bank_count(void) { return count; }
 uint32_t bank_bytes(void) { return size; }
 

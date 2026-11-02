@@ -73,6 +73,25 @@ static void hint(int x, const char *key, const char *word, bool right)
     gfx_text(F_COND14, x + 5, PLAT_H - 6, word, C_DIM);
 }
 
+static void hint_mid(const char *key, const char *word)
+{
+    hint((PLAT_W - (gfx_text_w(F_COND14, key) + 5 + gfx_text_w(F_COND14, word))) / 2, key, word, false);
+}
+
+/* The sample under the cursor, heard as it was recorded: through no
+ * instrument of the song and no zone, dry at the preview level
+ * (core/player.h). A name like tr9_mtom says little; the sound says
+ * whether it can go. */
+static void hear(int i)
+{
+    uint32_t at, frames;
+
+    if (!bank_place(i, &at, &frames))
+        return;
+    player_audition_at(-1, 0, 0);
+    player_audition_sample(at, frames);
+}
+
 static void draw_list(void)
 {
     char s[24];
@@ -108,8 +127,10 @@ static void draw_list(void)
         gfx_fill(PLAT_W - 4, TOP, 2, ROWS * ROW, C_TRACK, 255);
         gfx_fill(PLAT_W - 4, y, 2, h < 4 ? 4 : h, C_DIM, 255);
     }
-    if (nrows)
+    if (nrows) {
         hint(6, "SEL", "DELETE", false);
+        hint_mid("PLAY", "HEAR");
+    }
     hint(PLAT_W - 6, "HOME", "BACK", true);
 }
 
@@ -148,8 +169,14 @@ bool samples_frame(const PlatInput *in)
     int cur0 = cur;
 
     prev_btns = in->btns;
-    if ((btns >> PB_PLAY & 1u) && player_playing()) /* stop, from anywhere */
-        player_stop();
+    /* PLAY is the sample under the cursor -- and, while a song plays, the
+     * reflex every screen has, which is to stop it. */
+    if (btns >> PB_PLAY & 1u) {
+        if (player_playing())
+            player_stop();
+        else if (nrows && !asking)
+            hear(cur);
+    }
     ui_led_state(PB_PLAY, player_playing());
     ui_led_guide(1u << PB_SEL | 1u << PB_HOME);
     if (asking) {

@@ -4074,3 +4074,37 @@ Not judged on the panel yet. `sampler_test` deletes the middle of three samples
 and checks that the one before it has not moved a byte, that the one after it
 came down by exactly the hole, that both decode to the same bytes as before, and
 that a voice plays the moved sample frame for frame.
+
+### PLAY écoute le sample sous le curseur
+
+« Ce serait bien si PLAY jouait le sample sur lequel est le curseur pour savoir
+si on peut l'effacer des fois que le nom n'est pas clair. » Évident, et la
+banque de la 909 le prouve : `tr9_ltom` et `tr9_mtom` ne disent rien, et ce sont
+justement les deux qu'on hésite à effacer.
+
+Ce qui manquait : un sample de la banque n'appartient à aucun instrument. Le
+chemin d'écoute du player part d'un instrument de la chanson
+(`player_note_on(instr, note)`), et une banque n'en a pas. Trois petites choses
+l'ont ouvert :
+
+- une entrée de table que nulle chanson ne possède, `SMP_PREVIEW`, juste après
+  les SONG_SMP_MAX que `bank_resolve` remplit. `smp_hold` l'efface avec les
+  autres, donc un sample qui vient de partir ne peut pas être joué depuis une
+  place périmée ;
+- un instrument à nous dans le player : moteur SAMPLE, une enveloppe de
+  one-shot, aucune zone. `fx.smp` nomme l'entrée de la banque, et `smp_strike`
+  joue l'entrée nommée à la racine C-4 sans chercher de zone ;
+- `bank_place`, qui dit où un sample est posé, comme `smp_map` le veut.
+
+La branche d'écoute du player est reprise telle quelle — la piste AUDITION, son
+mixage, ses FX tamisés — avec un seul choix à faire : le pointeur d'instrument.
+Au passage, l'index d'instrument que `voice_start` calculait par soustraction de
+pointeurs n'est plus calculé quand `fx.smp` nomme déjà l'entrée : il ne servait
+qu'à chercher une zone, et le preview n'est pas dans le tableau de la chanson.
+
+PLAY garde partout ailleurs le réflexe d'arrêter la chanson, donc ici : chanson
+en train de jouer, PLAY l'arrête ; sinon, PLAY écoute. Le pied de l'écran le dit
+— SEL DELETE, PLAY HEAR, HOME BACK — parce qu'un geste que HELP ne dit pas est
+exactement ce qui a été corrigé hier.
+
+Pas encore jugé sur le panneau.

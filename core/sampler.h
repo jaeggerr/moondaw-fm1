@@ -25,6 +25,11 @@
 #define SMP_BLOCK        255 /* 4080, a sector's payload, is 16 of them */
 #define SMP_BLOCK_FRAMES 505 /* the predictor, then 252 bytes of codes */
 #define SMP_MAX_SECTORS  80  /* the store has 73 */
+/* The table entry no song owns, past its SONG_SMP_MAX: what SAMPLES plays
+ * to let an unclear name be heard before it is deleted (app/samples.c).
+ * smp_hold clears it with the rest, so a sample that has just gone cannot
+ * be played from a stale place. */
+#define SMP_PREVIEW      SONG_SMP_MAX
 
 typedef struct {
     const uint8_t *p;  /* the next byte of codes */

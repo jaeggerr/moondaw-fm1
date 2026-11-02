@@ -65,4 +65,9 @@ int bank_find(const char *song_name);
  * power cut during it leaves the bank empty -- the computer has it. */
 int bank_delete(int i);
 
+/* Where sample `i` lies, as smp_map wants it (the bank's payload, with
+ * the store's name counted in) and how long it is: what it takes to play
+ * one that no song names. False past the last. */
+bool bank_place(int i, uint32_t *at, uint32_t *frames);
+
 #endif

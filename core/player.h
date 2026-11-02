@@ -68,6 +68,12 @@ void player_note_chord(int instr, const uint8_t *notes, int n);
  * song's tempo whether it plays or not. */
 void player_note_arp(int instr, const uint8_t *notes, int n, int arp);
 void player_note_off(void);
+/* A sample of the bank heard on its own, through no instrument of the
+ * song and no zone: the sound as it was recorded, dry at the preview
+ * level unless player_audition_at says otherwise. `at` and `frames` are
+ * the bank's (core/bank.h, bank_place). SAMPLES plays what the cursor is
+ * on with it, so an unclear name can be heard before it is deleted. */
+void player_audition_sample(uint32_t at, uint32_t frames);
 void player_toggle_mute(int track);
 void player_set_master(int pot);   /* 0..1023 */
 
