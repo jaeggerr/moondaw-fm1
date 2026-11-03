@@ -4284,3 +4284,42 @@ Et le menu ne s'ouvrait pas du tout sur une référence, parce que la branche
 code mort. Le supprimer est le chantier suivant, pas celui-ci.
 
 Jugé sur le panneau : pas encore.
+
+## 2026-11-03 — PHRASE est supprimée
+
+L'écran PHRASE — « SONG's grid turned to steps », une ligne par pas, une colonne
+par piste, la note que chaque piste joue à ce pas — n'existe plus. Il n'était
+atteignable que par `SEL` sur un numéro de phrase, et depuis que ce geste ouvre
+le menu THE PHRASE il ne l'était plus du tout.
+
+Verdict d'usage, répété : jamais utilisé. La capacité perdue, nommée pour que
+personne ne la cherche en vain : c'était **le seul endroit pour écrire des notes
+en travers des pistes à un même pas**, une tranche horizontale. On écrit
+maintenant piste par piste, dans PATTERN.
+
+Ce qui est parti : `app/phrase.c`, `app/phrase.h`, `tests/phrase_test.c`, la page
+d'aide `phrase_items` et le sujet `HELP_PHRASE`, le code de retour
+`SONGVIEW_PHRASE`, l'écran `AT_PHRASE` et tout son aiguillage dans `app.c`, et
+`pattern_from_phrase()`, qui n'existait que pour poser le curseur de PATTERN sur
+le pas d'où PHRASE l'avait ouvert. Trois listes de build. `make test` passe de
+vingt-trois étapes à vingt-deux.
+
+Trois pièges rencontrés, pour la prochaine suppression d'écran :
+
+1. **Les `loop_clear()` commentés « the loop was a phrase's » servent toujours.**
+   PHRASE posait des boucles sur les pas, mais PATTERN aussi : retirer l'appel
+   avec l'écran aurait laissé une boucle de pas survivre au retour vers SONG. Le
+   commentaire était faux, pas l'appel ; seul le commentaire a changé.
+2. **`pages[HELP_EFFECTS]` est dimensionné par l'énumération.** Retirer un sujet
+   et oublier sa `PAGE()` aurait décalé toutes les pages suivantes en silence —
+   le compilateur ne se plaint que dans l'autre sens. Les deux tableaux ont
+   rétréci d'exactement un.
+3. **Le chemin `PATTERN_BACK` avait deux issues et n'en a plus qu'une.** GLO
+   depuis PATTERN revenait « là où il a été ouvert », ce qui ne peut plus être
+   que SONG ; le `case` retombe donc directement sur `PATTERN_SONG`.
+
+Et les trois vérifications d'UNDO qui passaient par PHRASE — rien à prendre en
+arrivant, une touche écrit une note, UNDO la retire — sont portées sur PATTERN,
+qui écrit les notes par le même `edit.c`.
+
+Jugé sur le panneau : pas encore.

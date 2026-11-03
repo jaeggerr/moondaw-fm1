@@ -1024,12 +1024,6 @@ bool pattern_open(Song *s, int e, int t)
     return true;
 }
 
-void pattern_from_phrase(int row)
-{
-    cur_row = row < 0 ? 0 : row >= pat_len() ? pat_len() - 1 : row;
-    top = cur_row >= vis_rows() ? cur_row - vis_rows() / 2 : 0;
-}
-
 int pattern_instr(void) { return edit_instr_at(song, track, pat, cur_row); }
 int pattern_entry(void) { return entry; }
 bool pattern_in_syllable(void) { return writing_syl; }

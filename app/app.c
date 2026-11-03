@@ -4,13 +4,12 @@
  *
  *   HOME     (menu.c)      where the machine opens: the projects, by name
  *   SONG     (songview.c)  the arrangement: phrases down, tracks across
- *   PHRASE   (phrase.c)    one phrase, step by step
  *   PATTERN  (pattern.c)   one block of one track, in three views
  *   INSTRUMENT (instrument.c)  one sound, from the step that calls it
  *   MIXER    (mixer.c)     the tracks' levels and sends, the returns: FX
  *   PROJECT  (project.c)   name, tempo, key, swing, meter, step, ticks, tracks: EDIT
  *
- * The road down is HOME -> SONG -> PHRASE -> PATTERN, SEL a level down,
+ * The road down is HOME -> SONG -> PATTERN, SEL a level down,
  * GLO a level up, HOME home from anywhere (NOTES.md, 28/10). INSTRUMENT
  * still has the 10/10 look. */
 #include "app.h"
@@ -31,7 +30,6 @@
 #include "edit.h"
 #include "link.h"
 #include "loop.h"
-#include "phrase.h"
 #include "undo.h"
 #include "pattern.h"
 #include "project.h"
@@ -54,7 +52,7 @@ int app_cpu, app_block, app_worst;
 
 static TrkReport report;       /* what the last load could not carry */
 static volatile uint8_t ready; /* the audio side renders only while set */
-static enum { AT_MENU, AT_SONG, AT_PHRASE, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS,
+static enum { AT_MENU, AT_SONG, AT_PATTERN, AT_INSTRUMENT, AT_MIXER, AT_PROJECT, AT_CANVAS, AT_SETTINGS,
               AT_HELP, AT_SYSTEM, AT_SAMPLES } screen;
 /* The help of where one was: the topic of the last screen worked on, PATTERN's
  * SYLLABLE included -- HELP opens on it. */
@@ -66,7 +64,7 @@ void app_mark_dirty(void) { app_dirty = true; }
 
 const char *app_screen(void)
 {
-    static const char *const name[] = { "HOME", "SONG", "PHRASE", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
+    static const char *const name[] = { "HOME", "SONG", "PATTERN", "INSTRUMENT", "MIXER", "PROJECT",
                                         "CANVAS", "SETTINGS", "HELP", "SYSTEM", "SAMPLES" };
     return name[screen];
 }
@@ -87,8 +85,6 @@ static void leave_canvas(void)
     screen = canvas_from;
     if (screen == AT_MENU)
         menu_open(MENU_CONTINUE);
-    else if (screen == AT_PHRASE)
-        phrase_resume();
     else if (screen == AT_PATTERN || screen == AT_INSTRUMENT)
         screen = AT_PATTERN, pattern_resume();
     else if (screen == AT_MIXER)
@@ -384,10 +380,8 @@ static void back_to(int from)
         instrument_resume();
     else if (screen == AT_PATTERN)
         pattern_resume();
-    else if (screen == AT_PHRASE)
-        phrase_resume();
     else
-        loop_clear(), songview_open(false); /* the loop was a phrase's */
+        loop_clear(), songview_open(false); /* the loop was a block's steps */
 }
 
 void app_frame(const PlatInput *real)
@@ -521,35 +515,7 @@ void app_frame(const PlatInput *real)
         case PROJECT_MIXER:
             screen = AT_MIXER;
             mixer_from = project_from;
-            mixer_open("PRJ", project_from == AT_PHRASE    ? phrase_entry()
-                              : project_from == AT_PATTERN ? pattern_entry()
-                                                           : songview_entry());
-            break;
-        }
-    } else if (screen == AT_PHRASE) {
-        switch (phrase_frame(in)) {
-        case PHRASE_BACK:
-            screen = AT_SONG;
-            loop_clear(), songview_open(false); /* the loop was a phrase's */
-            break;
-        case PHRASE_PATTERN:
-            if (pattern_open(&app_song, phrase_entry(), phrase_track())) {
-                pattern_from_phrase(phrase_row());
-                pattern_from = AT_PHRASE;
-                screen = AT_PATTERN;
-            }
-            break;
-        case PHRASE_MIXER:
-            screen = AT_MIXER;
-            mixer_from = AT_PHRASE;
-            mixer_open("PHR", phrase_entry());
-            break;
-        case PHRASE_PROJECT:
-            screen = AT_PROJECT;
-            project_from = AT_PHRASE;
-            project_open();
-            break;
-        default:
+            mixer_open("PRJ", project_from == AT_PATTERN ? pattern_entry() : songview_entry());
             break;
         }
     } else if (screen == AT_INSTRUMENT) {
@@ -566,16 +532,10 @@ void app_frame(const PlatInput *real)
         }
     } else if (screen == AT_PATTERN) {
         switch (pattern_frame(in)) {
-        case PATTERN_BACK: /* GLO: back where it was opened from */
-            if (pattern_from == AT_PHRASE) {
-                screen = AT_PHRASE;
-                phrase_resume();
-                break;
-            }
-            /* fallthrough */
+        case PATTERN_BACK: /* GLO: back where it was opened from -- SONG, since 3/11 */
         case PATTERN_SONG:
             screen = AT_SONG;
-            loop_clear(), songview_open(false); /* the loop was a phrase's */
+            loop_clear(), songview_open(false); /* the loop was a block's steps */
             break;
         case PATTERN_INSTR:
             screen = AT_INSTRUMENT;
@@ -606,10 +566,6 @@ void app_frame(const PlatInput *real)
                 pattern_from = AT_SONG;
                 screen = AT_PATTERN;
             }
-            break;
-        case SONGVIEW_PHRASE:
-            screen = AT_PHRASE;
-            phrase_open(entry, track);
             break;
         case SONGVIEW_BACK:
             go_root();
@@ -646,7 +602,7 @@ void app_frame(const PlatInput *real)
     }
     {   /* HELP's topic: where the hand was working -- a screen it did something on,
          * not one it went back through (HOME from PATTERN crosses SONG) */
-        static const int8_t topic[] = { [AT_SONG] = HELP_SONG, [AT_PHRASE] = HELP_PHRASE, [AT_PATTERN] = HELP_PATTERN,
+        static const int8_t topic[] = { [AT_SONG] = HELP_SONG, [AT_PATTERN] = HELP_PATTERN,
                                         [AT_INSTRUMENT] = HELP_INSTRUMENT, [AT_MIXER] = HELP_MIXER,
                                         [AT_PROJECT] = HELP_PROJECT, [AT_SETTINGS] = HELP_SETTINGS };
         bool worked = (in->btns & ~(1u << PB_HOME)) || in->keys;
@@ -661,7 +617,7 @@ void app_frame(const PlatInput *real)
         ui_led_guide(0); /* the canvas: the script's own (LED) */
     if (screen != AT_PATTERN)
         ui_led_state(PB_REC, false); /* REC is PATTERN's */
-    if (screen != AT_PATTERN && screen != AT_SONG && screen != AT_PHRASE && screen != AT_MIXER &&
+    if (screen != AT_PATTERN && screen != AT_SONG && screen != AT_MIXER &&
         screen != AT_INSTRUMENT)
         ui_led_keys(0, 0, 0); /* the keys light for PATTERN's ops, MONO where a track is in front,
                                * and a kit's drums on INSTRUMENT (30/10) */

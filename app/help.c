@@ -80,20 +80,6 @@ static const Item song_items[] = {
     { "ALGO", "undo left, redo right" },
     { "HOME", "back to the menu" },
 };
-static const Item phrase_items[] = {
-    { "SELECT, KNOB 1", "step" },
-    { "KNOB 2", "track" },
-    { "keys", "write the note" },
-    { "OCT- OCT+", "the keyboard's octave" },
-    { "SEL, EDIT", "the track's pattern" },
-    { "EDIT held + MONO", "solo; held: mute" },
-    { "EDIT held + OP6", "a loop's end, then other" },
-    { "FX", "the mixer" },
-    { "GLO", "the project" },
-    { "PLAY", "the phrase, round" },
-    { "ALGO", "undo left, redo right" },
-    { "HOME", "back to SONG" },
-};
 static const Item pattern_items[] = {
     { "SELECT, KNOB 1", "step" },
     { "KNOB 2", "column" },
@@ -210,11 +196,11 @@ static const struct {
     const Item *items;
     int n;
 } pages[HELP_EFFECTS] = {
-    PAGE(home_items),     PAGE(song_items),       PAGE(phrase_items),  PAGE(pattern_items),
+    PAGE(home_items),     PAGE(song_items),       PAGE(pattern_items),
     PAGE(syllable_items), PAGE(instrument_items), PAGE(mixer_items),   PAGE(project_items),
     PAGE(settings_items), PAGE(gestures_items),
 };
-static const char *const topic_word[HELP_TOPICS] = { "HOME",  "SONG",    "PHRASE",   "PATTERN",  "SYLLABLE", "INSTRUMENT",
+static const char *const topic_word[HELP_TOPICS] = { "HOME",  "SONG",    "PATTERN",  "SYLLABLE", "INSTRUMENT",
                                                      "MIXER", "PROJECT", "SETTINGS", "GESTURES", "EFFECTS" };
 
 enum { LIST_TOP = 18, LIST_ROWS = 7, PAGE_TOP = 22, ITEM_H = 52, ITEMS = 4 };

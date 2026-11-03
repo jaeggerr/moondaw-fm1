@@ -18,7 +18,7 @@
 
 #include "../platform/platform.h"
 
-enum { HELP_HOME, HELP_SONG, HELP_PHRASE, HELP_PATTERN, HELP_SYLLABLE, HELP_INSTRUMENT, HELP_MIXER,
+enum { HELP_HOME, HELP_SONG, HELP_PATTERN, HELP_SYLLABLE, HELP_INSTRUMENT, HELP_MIXER,
        HELP_PROJECT, HELP_SETTINGS, HELP_GESTURES, HELP_EFFECTS, HELP_TOPICS };
 /* `topic` where the cursor starts: the screen one came from. */
 void help_open(int topic);

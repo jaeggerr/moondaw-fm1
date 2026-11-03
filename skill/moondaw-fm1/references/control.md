@@ -146,23 +146,6 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `ALGO` | undo left, redo right |
 | `HOME` | back to the menu |
 
-### PHRASE
-
-| | |
-|---|---|
-| `SELECT, KNOB 1` | step |
-| `KNOB 2` | track |
-| `keys` | write the note |
-| `OCT- OCT+` | the keyboard's octave |
-| `SEL, EDIT` | the track's pattern |
-| `EDIT held + MONO` | solo; held: mute |
-| `EDIT held + OP6` | a loop's end, then other |
-| `FX` | the mixer |
-| `GLO` | the project |
-| `PLAY` | the phrase, round |
-| `ALGO` | undo left, redo right |
-| `HOME` | back to SONG |
-
 ### PATTERN
 
 | | |

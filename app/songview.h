@@ -9,7 +9,7 @@
 
 #include "../platform/platform.h"
 
-enum { SONGVIEW_STAY, SONGVIEW_PATTERN, SONGVIEW_MIXER, SONGVIEW_PHRASE, SONGVIEW_PROJECT, SONGVIEW_BACK };
+enum { SONGVIEW_STAY, SONGVIEW_PATTERN, SONGVIEW_MIXER, SONGVIEW_PROJECT, SONGVIEW_BACK };
 int songview_entry(void); /* the phrase under the cursor */
 int songview_top(void);   /* the first phrase of the page: where the view is */
 
@@ -17,7 +17,8 @@ void songview_open(bool reset_cursor);
 /* Leaving by HOME: a block panel open is closed as by GLO. */
 void songview_cancel(void);
 /* One frame. SONGVIEW_PATTERN: EDIT opened a block; *entry and *track say
- * which. SONGVIEW_PHRASE: SEL opened a phrase by its number. */
+ * which. SEL on a phrase's number opens THE PHRASE, a panel of this
+ * screen's own, so no code comes back for it (3/11). */
 int songview_frame(const PlatInput *in, int *entry, int *track);
 
 #endif

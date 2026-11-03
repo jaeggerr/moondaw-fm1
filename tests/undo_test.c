@@ -7,7 +7,6 @@
 
 #include "../app/app.h"
 #include "../app/pattern.h"
-#include "../app/phrase.h"
 #include "../app/songview.h"
 #include "../app/undo.h"
 #include "../core/player.h"
@@ -39,17 +38,15 @@ static const char trk[] =
 
 static PlatInput in;
 static int fails;
-static enum { ON_SECTION, ON_PATTERN, ON_SONG } on;
+static enum { ON_PATTERN, ON_SONG } on;
 static void go(void)
 {
     int e, t;
     undo_frame(in.ms);
     if (on == ON_SONG)
         songview_frame(&in, &e, &t);
-    else if (on == ON_PATTERN)
-        pattern_frame(&in);
     else
-        phrase_frame(&in);
+        pattern_frame(&in);
     memset(in.enc, 0, sizeof in.enc);
     in.ms += 16;
 }
@@ -70,7 +67,10 @@ int main(void)
     trk_load(&app_song, trk, sizeof trk - 1, NULL);
     player_init(&app_song);
     undo_reset(&app_song);
-    phrase_open(0, 0);
+    /* These three were written through PHRASE, which is gone since 3/11.
+     * PATTERN writes a note with a key the same way -- edit.c is shared --
+     * so the journal is asked the same question from there. */
+    pattern_open(&app_song, 0, 0);
     go();
     CHECK("a song just opened has nothing to take back", !undo_can());
 

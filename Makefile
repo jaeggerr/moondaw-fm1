@@ -23,7 +23,7 @@ else ifneq ($(filter $(APP),type),)
 SRCS    := app/$(APP).c app/gfx.c app/term.c
 CFLAGS  += -DGFX_SPECIMEN=1
 else
-UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/syllable.c app/chords.c app/room.c app/settings.c app/system.c app/samples.c app/help.c app/fx_help.c app/coat.c app/project.c app/remote.c app/canvas.c app/phrase.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c app/splash.c
+UI      := app/grid.c app/link.c app/menu.c app/songview.c app/pattern.c app/instrument.c app/mixer.c app/namer.c app/syllable.c app/chords.c app/room.c app/settings.c app/system.c app/samples.c app/help.c app/fx_help.c app/coat.c app/project.c app/remote.c app/canvas.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c app/splash.c
 SRCS    := app/$(APP).c $(UI) app/term.c $(CORE)
 endif
 HDRS    := platform/platform.h $(wildcard app/*.h core/*.h)
@@ -63,10 +63,10 @@ core/drum_tables.h: tools/gen_drum_tables.c
 # out of step with the steps below only mislabels the banner -- it can never
 # change a result.
 #
-# Measured 3/11, builds already up to date: 2m42s in all. The long ones are
+# Measured 3/11, builds already up to date: around 2m40s in all. The long ones are
 # remotetest 24s, fm_render 17s, vox_test 13s, persist_test and menu_test 11s;
 # nothing else reaches 10s. A cold tree adds the four builds, not measured.
-STEPS := 23
+STEPS := 22
 T0    := build/.test-t0
 STEP  := build/.test-step
 
@@ -110,11 +110,8 @@ test: test-start sim web songedit export
 	$(call say,project_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/project_test.c app/project.c app/namer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/project_test
 	build/project_test
-	$(call say,phrase_test)
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/phrase_test
-	build/phrase_test
 	$(call say,undo_test)
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/coat.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/undo_test
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/songview.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/coat.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/undo_test
 	build/undo_test
 	$(call say,link_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c core/bank.c core/sampler.c core/song.c -o build/link_test
