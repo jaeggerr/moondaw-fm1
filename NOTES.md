@@ -4225,3 +4225,62 @@ l'insertion au milieu et la suppression, jusqu'à ce que le menu de `SEL` sur un
 numéro existe — INSERT ABOVE, supprimer, vider.
 
 Jugé sur le panneau : la maquette oui, le firmware pas encore.
+
+## 2026-11-03 — THE PHRASE, un menu, et SEQ et LFO rendus libres
+
+`SEL` sur le numéro d'une phrase ouvre maintenant **THE PHRASE** : six lignes,
+tout ce qu'on peut faire à la ligne entière.
+
+```
+INSERT ABOVE
+DELETE            the row goes
+CLEAR             the row stays        EDIT + OP4
+COPY              all tracks           EDIT + OP1
+PASTE             over this one        EDIT + OP2
+CUT               copy, then clear     EDIT + OP3
+```
+
+**Pourquoi ce menu existe.** `SEQ` ajoutait une phrase et `LFO` en supprimait
+une, tous deux posés le 28/10 sous l'étiquette « provisional » et jamais
+choisis. `LFO` n'avait aucun rapport avec supprimer, et aucun des deux ne se
+trouvait sans le manuel. Le 3/11 : les deux sortent, le menu prend leur travail.
+
+**DELETE et CLEAR voisinent exprès**, « the row goes » sous « the row stays ».
+C'était le même geste jusqu'ici — `OP4` vidait, `LFO` supprimait, deux boutons
+qui se lisaient pareil — et ce sont les mots qui les distinguent, pas la place.
+
+**Aucun des deux ne demande deux fois.** Ouvrir le menu et choisir la ligne
+*est* le second regard, celui pour lequel `LFO` demandait d'appuyer une seconde
+fois. `ask_delete` et sa bande rouge disparaissent avec lui.
+
+**Le raccourci est sur la ligne, pas en footer.** Le dessin proposé était celui
+de GLO — un footer qui apparaît sous le curseur. Dans GLO le footer est la
+seule place libre ; ici les quatre raccourcis tiennent à droite de leur propre
+ligne, donc on les apprend d'un coup d'œil au lieu d'un à la fois. Les deux
+lignes qui changent la forme du morceau n'en ont aucun, et cette absence dit
+quelque chose de vrai : il n'y a pas de chemin plus court, c'est voulu.
+
+**`insert_phrase_at(at)` remplace `insert_phrase()`**, et une seule règle couvre
+les trois façons d'arriver : la section se prend sur la ligne **au-dessus**.
+Glissée entre deux lignes d'une section, la nouvelle y entre ; placée devant la
+ligne qui ouvre une section, elle reste dehors — une phrase mise avant le
+refrain n'est pas le refrain ; en haut du morceau il n'y a pas de ligne au-dessus
+à qui demander, donc aucune section.
+
+**Sur une référence, le numéro et la cellule se séparent.** Le numéro est la
+ligne : son menu s'y ouvre, donc on peut enfin supprimer une référence comme une
+phrase. La cellule est le pointeur : `SEL` y suit ce qu'elle désigne. Le manteau
+dit `PHRASE` sur l'un et `GO TO` sur l'autre — il disait `PATTERN` sur la
+cellule d'une référence, ce qui était faux depuis le début.
+
+**Deux écarts trouvés par les tests, pas par moi.** `INSERT ABOVE` laisse le
+curseur où il est — la nouvelle phrase prend sa place — là où `SEQ` le portait
+une ligne plus bas ; un test d'UNDO visait la phrase 02 par cet effet de bord.
+Et le menu ne s'ouvrait pas du tout sur une référence, parce que la branche
+`is_ref` de `SEL` passait avant celle du numéro.
+
+**PHRASE n'est plus atteignable.** Plus rien ne renvoie `SONGVIEW_PHRASE`, donc
+`phrase_open` n'est jamais appelé : l'écran, ses tests et sa page d'aide sont du
+code mort. Le supprimer est le chantier suivant, pas celui-ci.
+
+Jugé sur le panneau : pas encore.

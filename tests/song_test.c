@@ -105,6 +105,24 @@ static uint16_t foot_px(int vis, int t, int up)
 /* The bar as it stands off the band: on the black, in the colour of what
  * plays, along the floor itself. */
 static bool foot_bar(int vis, int t) { return foot_px(vis, t, 0) == C_TITLE; }
+/* The phrase's menu (3/11), which took SEQ's and LFO's work: SEL on a
+ * number opens it, SELECT walks it, SEL does the row it rests on. */
+enum { M_INSERT, M_DELETE, M_CLEAR, M_COPY, M_PASTE, M_CUT };
+static void menu_do(int item)
+{
+    press(PB_SEL);
+    if (item)
+        enc(PE_SELECT, item);
+    press(PB_SEL);
+}
+/* And + NEW at the foot of the list: a phrase appended at the end, the
+ * cursor following it. */
+static void new_phrase(void)
+{
+    enc(PE_SELECT, 60);
+    press(PB_SEL);
+}
+
 #define E(i) (app_song.arrangement[i])
 /* The slots of the grid the page spends from phrase `top` down to `play`:
  * one for the phrase, one more where a section opens over it. Past
@@ -184,8 +202,6 @@ int main(void)
     CHECK("turning back from it leaves nothing behind",
           E(0).pattern[0] == 0 && song_pattern_blank(&app_song, 0, 2));
 
-    press(PB_SEQ);
-    CHECK("SEQ on a block does nothing", last == SONGVIEW_STAY);
     /* EDIT: the SELECTION of blocks, the black keys its commands (30/10).
      * A tap of EDIT is the CAPS LOCK of that shift and nothing more: the
      * keys turn into commands, the SELECTION stays OP5's (31/10). */
@@ -280,15 +296,18 @@ int main(void)
 
     enc(PE_K2, -1);           /* the phrase's number */
     press(PB_SEQ);
-    CHECK("SEQ on the number opens an empty phrase right below, named by nothing",
-          app_song.arrange_len == 4 && E(1).pattern[0] == PATTERN_NONE && E(1).level[0] == VOL_FULL &&
-              E(1).steps == 0 && E(1).kind == ENTRY_PHRASE && !E(1).name[0] && songview_entry() == 1);
+    press(PB_LFO);
+    CHECK("SEQ and LFO do nothing at all now: the menu has their work",
+          app_song.arrange_len == 3 && last == SONGVIEW_STAY);
+
+    menu_do(M_INSERT);
+    CHECK("INSERT ABOVE puts an empty phrase in the cursor's place, the rest moving down",
+          app_song.arrange_len == 4 && E(0).pattern[0] == PATTERN_NONE && E(0).level[0] == VOL_FULL &&
+              E(0).steps == 0 && E(0).kind == ENTRY_PHRASE && !E(0).name[0] && songview_entry() == 0);
     CHECK("and the reference still points at the phrase it pointed at",
           E(3).kind == ENTRY_REF && E(3).ref_target == 2);
-    press(PB_LFO);
-    CHECK("one LFO deletes nothing", app_song.arrange_len == 4);
-    press(PB_LFO);
-    CHECK("two delete the phrase, and the reference follows its target up",
+    menu_do(M_DELETE);
+    CHECK("DELETE takes the row away at once, the reference following its target up",
           app_song.arrange_len == 3 && E(2).ref_target == 1);
 
 
@@ -301,7 +320,8 @@ int main(void)
     CHECK("all the way down is AUTO again", E(0).steps == 0);
 
     press(PB_SEL);
-    CHECK("SEL on the number asks for its SECTION", last == SONGVIEW_PHRASE && entry == 0);
+    CHECK("SEL on the number opens the phrase's menu and the screen stays", last == SONGVIEW_STAY);
+    press(PB_HOME); /* out of it, changing nothing */
     go();
     enc(PE_ALGO, -1);
     CHECK("ALGO to the left takes the last edit back", E(0).steps != 0 || app_song.arrange_len == 3);
@@ -405,8 +425,9 @@ int main(void)
         undo_reset(&app_song); /* the journal: nothing above here used it */
         enc(PE_SELECT, -20);  /* phrase 00, the top of the song */
         enc(PE_K2, -1);       /* its number */
-        press(PB_SEQ);        /* two empty phrases below it: something to point at */
-        press(PB_SEQ);
+        enc(PE_SELECT, 1);    /* two empty phrases right under 00: something to point at */
+        menu_do(M_INSERT);
+        menu_do(M_INSERT);
         enc(PE_SELECT, -20);
         before = app_song.arrange_len;
         CHECK("phrase 00 holds blocks of its own to start with",
@@ -476,10 +497,12 @@ int main(void)
         pump();
         CHECK("HOME ends the ear", !player_playing());
 
-        {
+        {   /* on its cell, which is the pointer; its number is the row's own,
+             * and SEL there opens the row's menu instead (3/11) */
             int at = song_entry_resolve(&app_song, 0, 0);
+            enc(PE_K2, 5);
             press(PB_SEL);
-            CHECK("SEL on a reference goes to the phrase it plays, and opens no list",
+            CHECK("SEL on a reference's cell goes to the phrase it plays, and opens no list",
                   last == SONGVIEW_STAY && at == 2 && songview_entry() == at);
         }
     }
@@ -499,9 +522,9 @@ int main(void)
         enc(PE_K2, -1);
         while (app_song.arrangement[songview_entry()].kind == ENTRY_REF)
             enc(PE_SELECT, -1);
-        press(PB_SEQ);
-        press(PB_SEQ);
-        press(PB_SEQ);
+        new_phrase();
+        new_phrase();
+        new_phrase();
         base = app_song.arrange_len;
         r0 = base - 3;
         CHECK("three phrases of their own, in no section",
@@ -550,9 +573,8 @@ int main(void)
               app_song.arrange_len == base && E(base - 1).section == 0);
 
         undo_frame(t += 1000);
-        press(PB_LFO); /* LFO is the phrase's, never the section's */
-        press(PB_LFO);
-        CHECK("LFO on a marker deletes nothing", app_song.arrange_len == base);
+        press(PB_SEQ), press(PB_LFO); /* both are dead buttons on SONG now */
+        CHECK("neither SEQ nor LFO touches the song any more", app_song.arrange_len == base);
 
         press(PB_SEL); /* SEL on a marker: its name, typed */
         letter('O');
@@ -767,14 +789,10 @@ int main(void)
         enc(PE_SELECT, -40);  /* phrase 00, which holds blocks of its own */
         enc(PE_K2, -1);       /* its number */
         press(PB_SEL);
-        CHECK("SEL on a phrase's number goes down into it", last == SONGVIEW_PHRASE);
+        press(PB_HOME);
+        CHECK("SEL on a phrase's number opens its menu, HOME leaves it", last == SONGVIEW_STAY);
 
         enc(PE_SELECT, 60);   /* to the bottom: the invitation */
-        press(PB_SEQ);
-        CHECK("SEQ on the invitation makes nothing: it is not a phrase",
-              app_song.arrange_len == was);
-        press(PB_LFO), press(PB_LFO);
-        CHECK("and neither does LFO, twice", app_song.arrange_len == was);
         n = (int)E(was - 1).steps;
         enc(PE_K4, 3);
         CHECK("KNOB 4 turns nothing there: the last phrase keeps its length",
@@ -794,8 +812,9 @@ int main(void)
 
         enc(PE_SELECT, -1);   /* off it, onto the phrase just made */
         press(PB_SEL);
-        CHECK("one detent up leaves it: SEL goes down into the phrase again",
-              last == SONGVIEW_PHRASE);
+        press(PB_HOME);       /* the menu opened instead: HOME leaves it alone */
+        CHECK("one detent up leaves it: SEL opens the phrase's menu again",
+              last == SONGVIEW_STAY && app_song.arrange_len == was + 2);
     }
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;

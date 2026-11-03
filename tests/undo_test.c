@@ -147,21 +147,30 @@ int main(void)
     memcpy(before, app_song.arrangement, sizeof before);
     enc(PE_SELECT, 1);
     enc(PE_K2, -1);
-    press(PB_LFO);
-    press(PB_LFO);
-    CHECK("LFO, twice, removed phrase 01",
+    /* The phrase's menu, since 3/11: SEL opens it on INSERT ABOVE, one
+     * detent down is DELETE, SEL does it. SEQ and LFO had this work until
+     * then, LFO asking twice; the menu is the second look now. */
+    press(PB_SEL);
+    enc(PE_SELECT, 1);
+    press(PB_SEL);
+    CHECK("DELETE in the phrase's menu removed phrase 01",
           app_song.arrange_len == 2 && app_song.arrangement[1].pattern[0] == 0);
     undo();
     CHECK("UNDO brings the phrase back where it was",
           app_song.arrange_len == 3 && !memcmp(before, app_song.arrangement, 3 * sizeof(SongEntry)));
-    press(PB_SEQ);
-    CHECK("SEQ on the number added one", app_song.arrange_len == 4);
+    press(PB_SEL);
+    press(PB_SEL);
+    CHECK("INSERT ABOVE added one", app_song.arrange_len == 4);
     undo();
     CHECK("and UNDO removes it", app_song.arrange_len == 3 && !undo_can());
 
     /* NEW in CHOOSE PATTERN writes twice -- the block's length and the cell
      * that names it -- and one press takes both back (30/10) */
     wait(2000);
+    /* INSERT ABOVE leaves the cursor where it was -- the new phrase takes
+     * its place -- where SEQ used to carry it down a row. This check has
+     * always been about phrase 02, so it goes there itself now. */
+    enc(PE_SELECT, 1);
     enc(PE_K2, 1);            /* the cursor on a cell again */
     enc(PE_PRESET, 1);        /* CHOOSE PATTERN */
     enc(PE_SELECT, 20);       /* its last row: NEW */

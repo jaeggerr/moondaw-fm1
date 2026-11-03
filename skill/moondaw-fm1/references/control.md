@@ -117,8 +117,12 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `  in the list` | --, a section, or NEW |
 | `  NEW` | makes one, and names it |
 | `SEL on a cell` | edit the pattern |
-| `SEL on a number` | the phrase, step by step |
-| `SEL on a REF` | go to what it plays |
+| `SEL on a number` | THE PHRASE: its menu |
+| `  INSERT ABOVE` | an empty one before it |
+| `  DELETE` | the row goes, the rest up |
+| `  CLEAR` | its blocks go, the row stays |
+| `  COPY PASTE CUT` | the phrase, all tracks |
+| `SEL on a REF cell` | go to what it plays |
 | `SEL on a marker` | name the section |
 | `SEL on + NEW` | a phrase at the end, empty |
 | `EDIT held` | black keys: commands |
@@ -133,8 +137,6 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `OP6` | loop these phrases |
 | `OP6, none stretched` | a loop's end, then other |
 | `MONO` | solo; held: mute |
-| `SEQ on a number` | a new phrase below, empty |
-| `LFO on a number` | delete the phrase: twice |
 | `keys` | the track's instrument |
 | `OCT- OCT+` | the keyboard's octave |
 | `FX` | the mixer |
