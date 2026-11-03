@@ -25,7 +25,7 @@ One line of `key=value`, meant to be read as it is:
 
 | | |
 |---|---|
-| `screen=` | `HOME` `SONG` `PHRASE` `PATTERN` `INSTRUMENT` `MIXER` `PROJECT` `CANVAS` `SETTINGS` `HELP` `SYSTEM` |
+| `screen=` | `HOME` `SONG` `PATTERN` `INSTRUMENT` `MIXER` `PROJECT` `CANVAS` `SETTINGS` `HELP` `SYSTEM` |
 | `song=` `slot=` `dirty=` | what is open, where it lives, whether it has unsaved edits |
 | `playing=` `phrase=` `step=` | what is playing and exactly where the playhead is |
 | `bpm=` `phrases=` `tracks=` | the song's shape |

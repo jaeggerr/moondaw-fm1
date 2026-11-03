@@ -61,12 +61,14 @@ run(8);
 press("SEL");                   /* CONTINUE -> SONG */
 turn(SELECT, 3);
 shot("song");
-press("SEL");                   /* a row -> its SECTION */
-shot("section");
-press("FX");                    /* FX on SECTION is the MIXER */
+turn(KNOB2, -1);                /* left of the first track: the phrase's number */
+press("SEL");                   /* the number -> THE PHRASE, the row's own menu */
+shot("phrase-menu");
+press("HOME");                  /* out of the menu, changing nothing */
+press("FX");                    /* FX on SONG is the MIXER */
 shot("mixer");
-press("HOME");
-turn(KNOB2, 2);                 /* the third track, a melody */
+press("HOME");                  /* back to SONG */
+turn(KNOB2, 3);                 /* from the number to the third track, a melody */
 press("SEL");                   /* a block -> PATTERN */
 shot("pattern");
 press("FX");                    /* the same block's effects */

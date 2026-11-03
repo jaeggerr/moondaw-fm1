@@ -51,7 +51,7 @@ Every picture here comes out of the firmware's own framebuffer
 <table>
   <tr>
     <td align="center"><img src="docs/readme/song.png" width="240" alt="SONG: the arrangement, one row a phrase and one column a track"><br><b>SONG</b><br>the arrangement</td>
-    <td align="center"><img src="docs/readme/section.png" width="240" alt="PHRASE: all the tracks of a phrase side by side"><br><b>PHRASE</b><br>every track at once</td>
+    <td align="center"><img src="docs/readme/phrase-menu.png" width="240" alt="THE PHRASE: the menu SEL opens on a phrase number, with the shortcut for each beside it"><br><b>THE PHRASE</b><br>what a row can do</td>
     <td align="center"><img src="docs/readme/pattern.png" width="240" alt="PATTERN: a block's steps, up to four notes a step"><br><b>PATTERN</b><br>up to four notes a step</td>
   </tr>
   <tr>
@@ -73,9 +73,9 @@ pat t1 01 len 64
 
 ## What it does
 
-- **Songs**: an arrangement of phrases (SONG), each phrase the blocks its
-  tracks play (PHRASE), each block its steps (PATTERN): up to four notes,
-  an instrument and three effects a step, 8 tracks. The device holds 31 songs.
+- **Songs**: an arrangement of phrases (SONG), each phrase holding one block
+  per track, each block its steps (PATTERN): up to four notes, an instrument
+  and three effects a step, 8 tracks. The device holds 31 songs.
 - **Sounds**: PULSE, NOISE and WAVE chip voices, SMPL (your own samples),
   VOX (a singing voice that sings the syllables you write) and DRUM
   (Felucca's drum voices), with an envelope, a filter, layers, reverb and

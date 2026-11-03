@@ -333,8 +333,8 @@ comes from where.
 - **The hit is the envelope**: a kit's track stays open, each
   piece of a track is a mono lane, the lanes sound together, the
   closed hi-hat chokes the open one. An OFF or a GAT still closes the
-  track with the instrument's release. On INSTRUMENT, PATTERN and
-  PHRASE, the first C key (the 8th) is the kick.
+  track with the instrument's release. On INSTRUMENT and PATTERN, the
+  first C key (the 8th) is the kick.
 - **12 lanes shared** by all tracks, 3.4 KB of RAM; about
   20 KB of flash.
 - **Estimated cost** (not yet measured on the device): about 2 % of a
