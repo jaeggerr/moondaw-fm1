@@ -133,6 +133,12 @@ without a computer. It does not replace path 1.
 
 ## 2. Bluetooth
 
+> **Superseded, 03/11/2026 — see [`bluetooth.md`](bluetooth.md).** This section
+> is wrong on two points. JieLi's SDK is Apache-2.0, which *is* GPL-3.0
+> compatible, so the licence objection below does not hold; and a classic
+> BR/EDR stack with A2DP has since been written and runs on real FM-1s. Its
+> conclusion stands only for *audio in*, which is what this note was about.
+
 ### The hardware: yes, there is a radio and an antenna
 
 - The AC791N ("WL82" in the SDK) has 802.11b/g/n Wi-Fi, classic Bluetooth
