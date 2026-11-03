@@ -4075,161 +4075,158 @@ and checks that the one before it has not moved a byte, that the one after it
 came down by exactly the hole, that both decode to the same bytes as before, and
 that a voice plays the moved sample frame for frame.
 
-### PLAY écoute le sample sous le curseur
+### PLAY listens to the sample under the cursor
 
 « Ce serait bien si PLAY jouait le sample sur lequel est le curseur pour savoir
-si on peut l'effacer des fois que le nom n'est pas clair. » Évident, et la
-banque de la 909 le prouve : `tr9_ltom` et `tr9_mtom` ne disent rien, et ce sont
-justement les deux qu'on hésite à effacer.
+si on peut l'effacer des fois que le nom n'est pas clair. » Obvious, and the 909
+bank proves it: `tr9_ltom` and `tr9_mtom` say nothing, and they are exactly the
+two one hesitates to erase.
 
-Ce qui manquait : un sample de la banque n'appartient à aucun instrument. Le
-chemin d'écoute du player part d'un instrument de la chanson
-(`player_note_on(instr, note)`), et une banque n'en a pas. Trois petites choses
-l'ont ouvert :
+What was missing: a sample in the bank belongs to no instrument. The player's
+listening path starts from an instrument of the song (`player_note_on(instr,
+note)`), and a bank has none. Three small things opened it:
 
-- une entrée de table que nulle chanson ne possède, `SMP_PREVIEW`, juste après
-  les SONG_SMP_MAX que `bank_resolve` remplit. `smp_hold` l'efface avec les
-  autres, donc un sample qui vient de partir ne peut pas être joué depuis une
-  place périmée ;
-- un instrument à nous dans le player : moteur SAMPLE, une enveloppe de
-  one-shot, aucune zone. `fx.smp` nomme l'entrée de la banque, et `smp_strike`
-  joue l'entrée nommée à la racine C-4 sans chercher de zone ;
-- `bank_place`, qui dit où un sample est posé, comme `smp_map` le veut.
+- a table entry no song owns, `SMP_PREVIEW`, just past the SONG_SMP_MAX that
+  `bank_resolve` fills. `smp_hold` clears it with the others, so a sample that
+  has just gone cannot be played from a stale place;
+- an instrument of our own in the player: SAMPLE engine, a one-shot envelope, no
+  zones. `fx.smp` names the bank entry, and `smp_strike` plays the named entry
+  at root C-4 without looking for a zone;
+- `bank_place`, which says where a sample is laid, as `smp_map` wants it.
 
-La branche d'écoute du player est reprise telle quelle — la piste AUDITION, son
-mixage, ses FX tamisés — avec un seul choix à faire : le pointeur d'instrument.
-Au passage, l'index d'instrument que `voice_start` calculait par soustraction de
-pointeurs n'est plus calculé quand `fx.smp` nomme déjà l'entrée : il ne servait
-qu'à chercher une zone, et le preview n'est pas dans le tableau de la chanson.
+The player's listening branch is taken as it is — the AUDITION track, its mix,
+its dimmed FX — with one choice to make: the instrument pointer. On the way, the
+instrument index that `voice_start` worked out by subtracting pointers is no
+longer worked out when `fx.smp` already names the entry: it served only to look
+for a zone, and the preview is not in the song's table.
 
-PLAY garde partout ailleurs le réflexe d'arrêter la chanson, donc ici : chanson
-en train de jouer, PLAY l'arrête ; sinon, PLAY écoute. Le pied de l'écran le dit
-— SEL DELETE, PLAY HEAR, HOME BACK — parce qu'un geste que HELP ne dit pas est
-exactement ce qui a été corrigé hier.
+PLAY keeps everywhere else the reflex of stopping the song, so here: song
+playing, PLAY stops it; otherwise, PLAY listens. The foot of the screen says so
+— SEL DELETE, PLAY HEAR, HOME BACK — because a gesture HELP does not state is
+exactly what was corrected the day before.
 
-Pas encore jugé sur le panneau.
+Not judged on the panel yet.
 
-### UNUSED, et pourquoi pas deux sections
+### UNUSED, and why not two sections
 
 « Quels samples sont inutilisés ? D'ailleurs ce serait peut-être intéressant de
 le marquer, non ? Ou faire deux sections, used et unused. »
 
-La réponse sur sa machine, lue en tirant les douze morceaux par le lien : sur
-vingt samples, **six que rien ne nomme** — `tr9_crash` (11 KB), `tr9_ohh` (7),
-`tr9_ltom` (7), `tr9_mtom` (5), `tr9_htom` (5), `tr9_rim` (1), soit 36 KB quand
-il ne lui reste que 16 KB de libre. Un seul morceau nomme des samples,
-SMPL-DEMO ; KIDS-DRUM et les autres passent par le moteur DRUM. Et les deux toms
-qu'il n'arrivait pas à distinguer sont justement tous les deux inutilisés.
+The answer on his machine, read by pulling the twelve songs over the link: of
+twenty samples, **six that nothing names** — `tr9_crash` (11 KB), `tr9_ohh` (7),
+`tr9_ltom` (7), `tr9_mtom` (5), `tr9_htom` (5), `tr9_rim` (1), which is 36 KB
+when only 16 KB are left free. One song names samples, SMPL-DEMO; KIDS-DRUM and
+the rest go through the DRUM engine. And the two toms he could not tell apart
+are precisely both unused.
 
-**Un marqueur, pas deux sections.** Trois raisons, dans l'ordre d'importance :
+**A mark, not two sections.** Three reasons, in order of weight:
 
-1. *Inutilisé par quoi ?* Le firmware ne connaissait que la table du morceau en
-   mémoire. Un marqueur bâti là-dessus aurait invité exactement la faute qu'il
-   doit prévenir : `tr9_kick` est inutilisé par FX KEYS, le morceau ouvert, et
-   indispensable à SMPL-DEMO. Donc `bank_used` lit **la flash** : chaque slot
-   relu comme le texte qu'il est, les lignes `smp` cherchées dans la banque.
-   Pas d'analyse de morceau — `trk_load` demanderait le morceau entier en
-   mémoire — juste un balayage de lignes, 82 KB parcourus une fois à
-   l'ouverture de l'écran. Et la flash est toute la vérité ici : rejoindre HOME
-   repose le morceau en mémoire, donc quand SAMPLES s'ouvre il ne reste aucun
-   travail non sauvé qui pourrait en nommer un.
-2. Deux sections feraient bouger les lignes sous le pouce : le jour où un
-   morceau nomme `tr9_ohh`, il saute de section. La liste se lit par nom.
-3. Le sens de l'échec. Marquer les utilisés, c'est laisser une ligne non marquée
-   quand un morceau ne se lit pas — et une ligne non marquée inviterait à
-   l'effacer. Marquer les inutilisés échoue dans le bon sens : `knows` tombe à
-   faux et plus rien n'est dit.
+1. *Unused by what?* The firmware knew only the song table in memory. A mark
+   built on that would have invited exactly the mistake it must prevent:
+   `tr9_kick` is unused by FX KEYS, the open song, and indispensable to
+   SMPL-DEMO. So `bank_used` reads **the flash**: every slot read back as the
+   text it is, the `smp` lines looked for in the bank. No song parsing —
+   `trk_load` would want the whole song in memory — just a sweep of lines,
+   82 KB walked once when the screen opens. And the flash is the whole truth
+   here: going back to HOME lays the song down in memory again, so when SAMPLES
+   opens there is no unsaved work left that could name one.
+2. Two sections would move the rows under the thumb: the day a song names
+   `tr9_ohh`, it jumps section. The list reads by name.
+3. The direction of failure. Marking the used ones means leaving a row unmarked
+   when a song cannot be read — and an unmarked row would invite erasing it.
+   Marking the unused ones fails the right way: `knows` goes false and nothing
+   is said at all.
 
-Le mot est petit, à gauche de la taille, et il s'efface si un nom long vient à sa
-rencontre : la taille est ce qui doit rester lisible. La question le redit dans
-l'autre sens au moment de décider — « Nothing names it. » en vert, ou « A SONG
-NAMES IT. » en rouge, qui est la seule des deux qui vaut un avertissement.
+The word is small, left of the size, and it gives way if a long name comes to
+meet it: the size is what must stay readable. The question says it the other way
+round at the moment of deciding — « Nothing names it. » in green, or « A SONG
+NAMES IT. » in red, which is the only one of the two worth a warning.
 
-Pas encore jugé sur le panneau.
+Not judged on the panel yet.
 
-## 2026-11-03 — une nouvelle phrase naît vide
+## 2026-11-03 — a new phrase is born empty
 
-`SEQ` sur le numéro d'une phrase ajoutait une **copie** de la ligne où était le
-curseur. Personne n'avait choisi ça : la ligne est dans le commit du 28/10 sous
-l'étiquette « Buttons with no mockup yet, provisional », posée pour que l'opération
-reste atteignable pendant que les trois écrans étaient reconstruits. Le 3/11 elle
-est jugée à l'usage, et le verdict est simple — rien ne dit que la phrase suivante
-veut les mêmes blocs. Si on veut une copie, on copie ; par défaut on part de rien.
+`SEQ` on a phrase's number added a **copy** of the row the cursor was on.
+Nobody had chosen that: the line is in the commit of 28/10 under the label
+"Buttons with no mockup yet, provisional", posted so the operation stayed
+reachable while the three screens were rebuilt. On 3/11 it was judged by use,
+and the verdict is simple — nothing says the next phrase wants the same
+blocks. If a copy is wanted, copy; by default you start from nothing.
 
-Ce que la nouvelle ligne **n'hérite pas** : les blocs (`PATTERN_NONE` partout),
-les niveaux (`VOL_FULL`), la longueur (`steps = 0`, donc AUTO), le nom.
+What the new row does **not** inherit: the blocks (`PATTERN_NONE` throughout),
+the levels (`VOL_FULL`), the length (`steps = 0`, so AUTO), the name.
 
-Ce qu'elle hérite, et c'est le seul piège : la **section**. Une section est une
-suite de lignes voisines portant le même index, et `song_sections_normalize`
-coupe la suite dès qu'une ligne l'interrompt. Une ligne sans section glissée au
-milieu d'une section la couperait donc en deux, et les lignes d'après perdraient
-la leur. La section n'est pas ce que la ligne contient, c'est l'endroit où elle
-est : elle se prend sur la voisine.
+What it does inherit, and it is the one trap: the **section**. A section is a
+run of neighbouring rows carrying the same index, and `song_sections_normalize`
+cuts the run as soon as a row interrupts it. A sectionless row slipped inside a
+section would therefore cut it in two, and the rows after it would lose theirs.
+A section is not what the row holds, it is where the row is: it comes from the
+neighbour.
 
-Reste à décider, et discuté le 3/11 sans être construit : `SEQ` et `LFO` sortent
-(COPY, PASTE, CUT, CLEAR sur un numéro agissent déjà sur la phrase entière,
-`sel_rect` étendant la sélection à toutes les pistes dès que le curseur est sur
-le numéro) ; une ligne `NEW` en bas de la grille pour allonger le morceau par la
-fin ; `SEL` sur le numéro ouvre un menu — INSERT ABOVE, supprimer, vider — avec
-le footer qui enseigne le raccourci, comme les lignes SPEED et METRONOME de GLO.
-La distinction à tenir : **vider** une phrase (EDIT + OP4, la ligne reste) n'est
-pas la **supprimer** (la ligne part, tout ce qui suit remonte, les REF suivent).
+Still to decide, discussed on 3/11 without being built: `SEQ` and `LFO` go
+(COPY, PASTE, CUT, CLEAR on a number already act on the whole phrase,
+`sel_rect` widening the selection to every track as soon as the cursor is on
+the number); a `NEW` row at the foot of the grid to grow the song from the end;
+`SEL` on the number opens a menu — INSERT ABOVE, delete, clear — with the foot
+teaching the shortcut, as GLO's SPEED and METRONOME rows do. The distinction to
+hold: **clearing** a phrase (EDIT + OP4, the row stays) is not **deleting** it
+(the row goes, everything below moves up, the REFs follow).
 
-Jugé sur le panneau : pas encore.
+Judged on the panel on 3/11: kept.
 
-## 2026-11-03 — la ligne qui invite, au bout de la liste
+## 2026-11-03 — the row that invites, at the end of the list
 
-Ajouter une phrase se faisait avec `SEQ` sur un numéro — un raccourci posé en
-dépannage le 28/10, jamais choisi, et introuvable sans le manuel. Et il ne
-pouvait rien insérer avant la première ligne, puisqu'il insérait toujours en
-`row + 1`.
+Adding a phrase was `SEQ` on a number — a shortcut posted as a stopgap on
+28/10, never chosen, and unfindable without the manual. And it could insert
+nothing before the first row, since it always inserted at `row + 1`.
 
-Décidé sur le panneau le 3/11, après avoir dessiné quatre pages : une ligne de
-plus au bout de la liste des phrases, `+ NEW`, sur laquelle `SEL` ouvre une
-phrase vide à la fin du morceau. L'opération la plus fréquente devient visible
-sur l'écran de travail : rien à connaître, rien à ouvrir.
+Decided on the panel on 3/11, after four pages were drawn: one more row at the
+end of the list of phrases, `+ NEW`, on which `SEL` opens an empty phrase at
+the end of the song. The most frequent operation becomes visible on the working
+screen: nothing to know, nothing to open.
 
-Trois choses sont venues du code plutôt que de l'idée, et valent mieux qu'elle :
+Three things came from the code rather than from the idea, and they are better
+than it:
 
-1. **`+ NEW` existait déjà.** La liste des blocs de PATTERN et les menus
-   l'écrivent ainsi, à `x = 16` en CONDENSED 20, et `theme.h` nomme même sa
-   couleur : `C_DIM`, « what is there but not the point: + NEW, empty ». Ce
-   n'était pas un motif à inventer. Gris et non blanc, jugé sur le panneau
-   contre la version blanche de PATTERN : la ligne est du mobilier permanent au
-   bas de chaque morceau, et le bandeau vert lui donne toute sa présence quand
-   le curseur arrive.
-2. **Elle ne porte pas de filet.** `+ NEW` fait 46 px, le filet qui sépare le
-   numéro des cellules est à 47. Mais SONG a déjà une ligne sans filet — le
-   marqueur de section, « the marker crosses the whole width ». Ce qui n'est pas
-   une phrase ne porte pas la grille des phrases, et ça la fait lire comme une
-   invitation plutôt que comme une phrase vide.
-3. **`row` ne quitte jamais la dernière phrase.** Le curseur sur l'invitation est
-   un drapeau, `on_new`, exactement comme `on_mark` laisse `row` sur la phrase
-   qu'un marqueur nomme. Tous les `entry_at(row)` du fichier restent donc dans
-   les bornes, et seuls les gestes qui doivent différer posent la question. Le
-   dessin inverse — `row == arrange_len` — aurait demandé une garde partout.
+1. **`+ NEW` already existed.** PATTERN's block list and the menus write it that
+   way, at `x = 16` in CONDENSED 20, and `theme.h` even names its colour:
+   `C_DIM`, "what is there but not the point: + NEW, empty". It was not a
+   pattern to invent. Grey and not white, judged on the panel against
+   PATTERN's white version: the row is permanent furniture at the foot of every
+   song, and the green band gives it all the presence it needs when the cursor
+   arrives.
+2. **It carries no rule.** `+ NEW` is 46 px wide and the rule that separates the
+   number from the cells is at 47. But SONG already has a row without one — the
+   section's marker, "the marker crosses the whole width". What is not a phrase
+   does not wear the phrase grid, and that makes it read as an invitation
+   rather than as an empty phrase.
+3. **`row` never leaves the last phrase.** The cursor on the invitation is a
+   flag, `on_new`, exactly as `on_mark` leaves `row` on the phrase a marker
+   names. Every `entry_at(row)` in the file therefore stays in bounds, and only
+   the gestures that must differ ask the question. The other design —
+   `row == arrange_len` — would have needed a guard everywhere.
 
-Deux conséquences qu'il a fallu trancher :
+Two consequences that had to be settled:
 
-- **Tourner SELECT à fond atteint l'invitation**, plus la dernière phrase. C'est
-  ce que fait la liste des blocs de PATTERN, donc c'est juste ; trois tests qui
-  visaient « la dernière phrase » en tournant à fond ont été corrigés, pas le
+- **Turning SELECT to the bottom reaches the invitation**, not the last phrase.
+  That is what PATTERN's block list does, so it is right; three tests that
+  aimed at "the last phrase" by spinning to the bottom were corrected, not the
   code.
-- **Elle ne remplit pas la page pendant la lecture.** `follow_play_marked`
-  remonte la vue tant que la grille n'est pas pleine ; si l'invitation comptait,
-  elle volerait à l'œil une phrase du morceau en train de jouer. Le remplissage
-  compte `phrase_slots()`, pas `slots`.
+- **It does not fill the page while the song plays.** `follow_play_marked`
+  pulls the view up as long as the grid is not full; if the invitation counted,
+  it would steal a phrase of the playing song from the eye. Filling counts
+  `phrase_slots()`, not `slots`.
 
-`SEQ` et `LFO` restent pour l'instant : ils sont encore le seul chemin vers
-l'insertion au milieu et la suppression, jusqu'à ce que le menu de `SEL` sur un
-numéro existe — INSERT ABOVE, supprimer, vider.
+`SEQ` and `LFO` stay for now: they are still the only way to insert in the
+middle and to delete, until the menu on `SEL` over a number exists — INSERT
+ABOVE, delete, clear.
 
-Jugé sur le panneau : la maquette oui, le firmware pas encore.
+Judged on the panel on 3/11: the mockup, then the firmware. Kept.
 
-## 2026-11-03 — THE PHRASE, un menu, et SEQ et LFO rendus libres
+## 2026-11-03 — THE PHRASE, a menu, and SEQ and LFO handed back
 
-`SEL` sur le numéro d'une phrase ouvre maintenant **THE PHRASE** : six lignes,
-tout ce qu'on peut faire à la ligne entière.
+`SEL` on a phrase's number now opens **THE PHRASE**: six rows, everything that
+can be done to the row whole.
 
 ```
 INSERT ABOVE
@@ -4240,86 +4237,86 @@ PASTE             over this one        EDIT + OP2
 CUT               copy, then clear     EDIT + OP3
 ```
 
-**Pourquoi ce menu existe.** `SEQ` ajoutait une phrase et `LFO` en supprimait
-une, tous deux posés le 28/10 sous l'étiquette « provisional » et jamais
-choisis. `LFO` n'avait aucun rapport avec supprimer, et aucun des deux ne se
-trouvait sans le manuel. Le 3/11 : les deux sortent, le menu prend leur travail.
+**Why the menu exists.** `SEQ` added a phrase and `LFO` deleted one, both posted
+on 28/10 under the label "provisional" and never chosen. `LFO` had nothing to
+do with deleting, and neither could be found without the manual. On 3/11 both
+go, and the menu takes their work.
 
-**DELETE et CLEAR voisinent exprès**, « the row goes » sous « the row stays ».
-C'était le même geste jusqu'ici — `OP4` vidait, `LFO` supprimait, deux boutons
-qui se lisaient pareil — et ce sont les mots qui les distinguent, pas la place.
+**DELETE and CLEAR are neighbours on purpose**, "the row goes" under "the row
+stays". It was the same gesture until now — `OP4` cleared, `LFO` deleted, two
+buttons that read alike — and it is the words that tell them apart, not the
+place.
 
-**Aucun des deux ne demande deux fois.** Ouvrir le menu et choisir la ligne
-*est* le second regard, celui pour lequel `LFO` demandait d'appuyer une seconde
-fois. `ask_delete` et sa bande rouge disparaissent avec lui.
+**Neither asks twice.** Opening the menu and choosing the row *is* the second
+look, the one `LFO` asked for with a second press. `ask_delete` and its red
+band go with it.
 
-**Le raccourci est sur la ligne, pas en footer.** Le dessin proposé était celui
-de GLO — un footer qui apparaît sous le curseur. Dans GLO le footer est la
-seule place libre ; ici les quatre raccourcis tiennent à droite de leur propre
-ligne, donc on les apprend d'un coup d'œil au lieu d'un à la fois. Les deux
-lignes qui changent la forme du morceau n'en ont aucun, et cette absence dit
-quelque chose de vrai : il n'y a pas de chemin plus court, c'est voulu.
+**The shortcut is on the row, not in a footer.** The design proposed was GLO's —
+a footer appearing under the cursor. In GLO the footer is the only free space;
+here the four shortcuts fit to the right of their own rows, so they are learnt
+at a glance instead of one at a time. The two rows that change the shape of the
+song have none, and that absence says something true: there is no shorter path,
+by design.
 
-**`insert_phrase_at(at)` remplace `insert_phrase()`**, et une seule règle couvre
-les trois façons d'arriver : la section se prend sur la ligne **au-dessus**.
-Glissée entre deux lignes d'une section, la nouvelle y entre ; placée devant la
-ligne qui ouvre une section, elle reste dehors — une phrase mise avant le
-refrain n'est pas le refrain ; en haut du morceau il n'y a pas de ligne au-dessus
-à qui demander, donc aucune section.
+**`insert_phrase_at(at)` replaces `insert_phrase()`**, and one rule covers all
+three ways in: the section comes from the row **above**. Slipped between two
+rows of a section, the new phrase joins it; placed in front of the row that
+opens a section, it stays outside — a phrase put before the chorus is not the
+chorus; at the top of the song there is no row above to ask, so it is in no
+section.
 
-**Sur une référence, le numéro et la cellule se séparent.** Le numéro est la
-ligne : son menu s'y ouvre, donc on peut enfin supprimer une référence comme une
-phrase. La cellule est le pointeur : `SEL` y suit ce qu'elle désigne. Le manteau
-dit `PHRASE` sur l'un et `GO TO` sur l'autre — il disait `PATTERN` sur la
-cellule d'une référence, ce qui était faux depuis le début.
+**On a reference the number and the cell part company.** The number is the row:
+its menu opens there, so a reference can at last be deleted like a phrase. The
+cell is the pointer: `SEL` follows what it names. The coat says `PHRASE` on one
+and `GO TO` on the other — it said `PATTERN` on a reference's cell, which was
+wrong from the start.
 
-**Deux écarts trouvés par les tests, pas par moi.** `INSERT ABOVE` laisse le
-curseur où il est — la nouvelle phrase prend sa place — là où `SEQ` le portait
-une ligne plus bas ; un test d'UNDO visait la phrase 02 par cet effet de bord.
-Et le menu ne s'ouvrait pas du tout sur une référence, parce que la branche
-`is_ref` de `SEL` passait avant celle du numéro.
+**Two gaps found by the tests, not by me.** `INSERT ABOVE` leaves the cursor
+where it is — the new phrase takes its place — where `SEQ` carried it one row
+down; an UNDO test aimed at phrase 02 through that side effect. And the menu did
+not open at all on a reference, because `SEL`'s `is_ref` branch came before the
+number's.
 
-**PHRASE n'est plus atteignable.** Plus rien ne renvoie `SONGVIEW_PHRASE`, donc
-`phrase_open` n'est jamais appelé : l'écran, ses tests et sa page d'aide sont du
-code mort. Le supprimer est le chantier suivant, pas celui-ci.
+Judged on the panel on 3/11: kept, both departures included. The shortcut stays
+**on the row** and not in a footer under the cursor as the gesture had been
+described — the four are learnt at a glance. And `DELETE` **does not ask** for
+confirmation: opening the menu and choosing the row is the second look, and
+`ALGO` to the left catches the accident. Propose neither again.
 
-Jugé sur le panneau : pas encore.
+## 2026-11-03 — PHRASE is deleted
 
-## 2026-11-03 — PHRASE est supprimée
+The PHRASE screen — "SONG's grid turned to steps", one row a step, one column a
+track, the note each track plays there — no longer exists. It was reachable
+only by `SEL` on a phrase's number, and since that gesture opens the THE PHRASE
+menu it was reachable by nothing at all.
 
-L'écran PHRASE — « SONG's grid turned to steps », une ligne par pas, une colonne
-par piste, la note que chaque piste joue à ce pas — n'existe plus. Il n'était
-atteignable que par `SEL` sur un numéro de phrase, et depuis que ce geste ouvre
-le menu THE PHRASE il ne l'était plus du tout.
+The verdict was use, stated twice: never opened. The capability lost, named so
+nobody hunts for it in vain: it was **the only place to write notes across the
+tracks at one step**, a horizontal slice. Notes are written track by track now,
+in PATTERN.
 
-Verdict d'usage, répété : jamais utilisé. La capacité perdue, nommée pour que
-personne ne la cherche en vain : c'était **le seul endroit pour écrire des notes
-en travers des pistes à un même pas**, une tranche horizontale. On écrit
-maintenant piste par piste, dans PATTERN.
+What went: `app/phrase.c`, `app/phrase.h`, `tests/phrase_test.c`, the
+`phrase_items` help page and the `HELP_PHRASE` topic, the `SONGVIEW_PHRASE`
+return code, the `AT_PHRASE` screen and all its dispatch in `app.c`, and
+`pattern_from_phrase()`, which existed only to put PATTERN's cursor on the step
+PHRASE had opened it from. Three build lists. `make test` goes from twenty-three
+steps to twenty-two.
 
-Ce qui est parti : `app/phrase.c`, `app/phrase.h`, `tests/phrase_test.c`, la page
-d'aide `phrase_items` et le sujet `HELP_PHRASE`, le code de retour
-`SONGVIEW_PHRASE`, l'écran `AT_PHRASE` et tout son aiguillage dans `app.c`, et
-`pattern_from_phrase()`, qui n'existait que pour poser le curseur de PATTERN sur
-le pas d'où PHRASE l'avait ouvert. Trois listes de build. `make test` passe de
-vingt-trois étapes à vingt-deux.
+Three traps met, for the next screen that goes:
 
-Trois pièges rencontrés, pour la prochaine suppression d'écran :
+1. **The `loop_clear()` calls commented "the loop was a phrase's" are still
+   needed.** PHRASE set loops on steps, but so does PATTERN: dropping the call
+   with the screen would have let a step loop outlive the way back to SONG. The
+   comment was wrong, not the call; only the comment changed.
+2. **`pages[HELP_EFFECTS]` is sized by the enum.** Removing a topic and
+   forgetting its `PAGE()` would have shifted every later page silently — the
+   compiler only complains the other way round. Both tables lost exactly one.
+3. **The `PATTERN_BACK` path had two ways out and now has one.** GLO from
+   PATTERN went back "where it was opened from", which can only be SONG now, so
+   the `case` falls straight through to `PATTERN_SONG`.
 
-1. **Les `loop_clear()` commentés « the loop was a phrase's » servent toujours.**
-   PHRASE posait des boucles sur les pas, mais PATTERN aussi : retirer l'appel
-   avec l'écran aurait laissé une boucle de pas survivre au retour vers SONG. Le
-   commentaire était faux, pas l'appel ; seul le commentaire a changé.
-2. **`pages[HELP_EFFECTS]` est dimensionné par l'énumération.** Retirer un sujet
-   et oublier sa `PAGE()` aurait décalé toutes les pages suivantes en silence —
-   le compilateur ne se plaint que dans l'autre sens. Les deux tableaux ont
-   rétréci d'exactement un.
-3. **Le chemin `PATTERN_BACK` avait deux issues et n'en a plus qu'une.** GLO
-   depuis PATTERN revenait « là où il a été ouvert », ce qui ne peut plus être
-   que SONG ; le `case` retombe donc directement sur `PATTERN_SONG`.
+And the three UNDO checks that went through PHRASE — nothing to take back on
+opening, a key writes a note, UNDO removes it — are asked of PATTERN, which
+writes notes through the same `edit.c`.
 
-Et les trois vérifications d'UNDO qui passaient par PHRASE — rien à prendre en
-arrivant, une touche écrit une note, UNDO la retire — sont portées sur PATTERN,
-qui écrit les notes par le même `edit.c`.
-
-Jugé sur le panneau : pas encore.
+Judged on the panel on 3/11: deleted, and nothing is missed in use.
