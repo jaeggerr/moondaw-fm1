@@ -1,9 +1,11 @@
 # Bluetooth on the FM-1: what the radio can do
 
-03/11/2026. Research only: no code touched, nothing installed, the radio was
-never turned on. This supersedes the Bluetooth section of
+03/11/2026, in two passes. Sections 1 to 5 are research: read in other people's
+repositories, nothing built, the radio not turned on. **Section 6 is not**: late
+the same day the radio was turned on, on this FM-1, and what it says was
+measured here. This supersedes the Bluetooth section of
 [`audio-entree.md`](audio-entree.md), which was written on 29/10 and is wrong on
-two points (last section).
+two points (second to last section).
 
 ## In short
 
@@ -151,7 +153,80 @@ there is no analog input on the board anyway); **LE Audio / LC3**, which needs
 Bluetooth 5.2 isochronous channels while the chip is announced at 5.0; two BLE
 links at once; Secure Connections.
 
-## 6. A trap if a companion tool is ever written on the Mac
+## 6. Turning it on: measured on this FM-1, 03/11
+
+Everything above was read. This was run. Optimist built `--classic --profile
+bt-debug --set BLE=1 --set COMPILER=0` and installed on this machine, with its
+own `SYSTEM > BT MIDI > MODE` set to MAN, advertises as `FM1-9662` at **-51 dBm**
+and a Mac sees it. So the radio works on this unit, with a firmware of ours, and
+the rest of this section is what it took to get there.
+
+**The factory trims really are intact.** The doc above says they must be,
+because MOONDAW never writes to `0x0E8000`. Now read: the calibration area is
+found at `0x0E8000`, all four records present and passing their checks, and the
+radio's start-up program runs every one of its sections (the complete set is
+`0000EDFC`) with no bus timeout and no bad operation. Nothing had to be
+recovered.
+
+**The radio starts before USB.** This is the one that costs a day if you get it
+wrong. Stock starts the radio first, and so does Optimist -- its `main.c` runs
+`ble_midi_init()` in the `DUAL_STOCK_NOW` path "before the audio, IRQs still
+on", ahead of `usb_start()`. Put `usb_start()` first, as looked prudent to me
+(a radio start-up that hangs with no USB yet leaves no way to reinstall), and
+the radio programs perfectly, sits in its advertising state, takes its
+interrupts at the advertising interval -- and transmits nothing. The boot guard
+already covers the case the other order was defending against.
+
+**The supply is more than two levels.** `firmware.c` raises VDC14 to 7 and
+SYSVDD to 15; stock's own start-up also hands the 1.4 V rail from the LDO to
+the DC-DC, sets `VD14_HD_SEL` and VDDIOM, arms the 2.6 V low-voltage detector,
+and biases the **Bluetooth** DC-DC (`P3_ANA_CON7 = 0xA5`, `CON8 = 0x96`).
+Optimist has the sequence in `hal/fm1_supply.h` under `FELUCCA_STOCK_SUPPLY`,
+with a read-back that says whether it took. Nothing here proves the radio needs
+the whole of it, but a regulator the radio has of its own is not a thing to
+leave unconfigured.
+
+(Separately, and not about the radio: until 03/11 those two levels were raised
+only inside `#if FM1_CPU1`, so `MOONDAW_CPU1=0` -- the fallback build -- ran at
+the boot loader's 1.40 V and 1.26 V. One core reads the flash and the SRAM as
+much as two. Fixed in `firmware.c`.)
+
+**Do not strip the TIMER5 interrupt.** All of the USB SIE traffic lives there,
+enumeration included; `firmware.c` says so and means it literally. A firmware
+that drops the USB poll from that ISR boots, draws its screen and does not
+exist for the host -- no MIDI port, nothing in `ioreg` -- and the only way back
+is UBOOT by hand.
+
+**The CDC console looks dead on macOS.** `usb.c` gates `ep3_tx()` on
+`cdc.dtr`, and macOS opens the port without ever sending
+`SET_CONTROL_LINE_STATE`, so the boot trace sits in the ring and nothing comes
+out. Dropping the gate costs nothing: `ep3_tx()` returns at once while the
+previous packet is unconsumed, so writing to a host that is not reading loses
+nothing. MOONDAW ships `FELUCCA_CDC 0`, so this only bites whoever turns it on
+-- and anyone bringing up a radio will want to.
+
+**Two sizes that are not what they look like.** `BLE_LL_MAX_OCTETS` sizes the
+engine's transmit buffers as well as the data length extension, so lowering it
+to 27 to avoid untested DLE will silently stop advertising if the advertising
+payload is longer than that. And the baseband RAM block the engine reads and
+writes is placed by the linker: forcing it to a coarser alignment moved it and
+stopped the advertising outright. The engine cares where that block lands, in
+some way not written down anywhere found.
+
+**Cost, as built here.** Peripheral role only, no central, no bonding, no
+BLE-MIDI: about 13 KB of image over the same firmware without it, on top of the
+5,795-byte packed radio start-up program. Optimist's own figures for its full
+peripheral role (28.7 KB flash, 6.4 KB RAM) include the parts left out here.
+
+**One thing that did not come out clean.** A firmware of mine that is not
+Optimist got the radio advertising and then, on a later boot of the same image,
+did not -- with the console showing the start-up landing differently from one
+boot to the next (the VCO band search finding a crossing or not, the receive
+interrupt firing or staying put). Optimist is steady on this same unit, so a
+repeatable bring-up is clearly reachable; whatever makes it repeatable is not
+in this document. Worth knowing before anyone budgets a weekend for it.
+
+## 7. A trap if a companion tool is ever written on the Mac
 
 Measured on 03/11/2026 with a signed probe and a phone scanner: **macOS silently
 drops manufacturer-specific data** from `CBPeripheralManager` advertising.
@@ -160,9 +235,23 @@ drops manufacturer-specific data** from `CBPeripheralManager` advertising.
 
 So a Mac cannot stand in for a BLE device that has to be recognised by its
 advertisement. Linux with BlueZ can; so can the FM-1, since Optimist builds its
-advertising bytes by hand.
+advertising bytes by hand -- confirmed on air on 03/11 (section 6).
 
-## 7. Corrections to `audio-entree.md`
+A second trap on the same machine, and this one wastes an evening quietly: **a
+bare `python3` cannot scan at all.** It carries no
+`NSBluetoothAlwaysUsageDescription`, so CoreBluetooth does not prompt -- it
+aborts the process with `SIGABRT` and prints nothing, not even on stderr. The
+crash report in `~/Library/Logs/DiagnosticReports` is the only place that names
+the reason. Run such a tool from a terminal that has been granted Bluetooth in
+System Settings; the responsible app's permission is what counts, and the same
+applies to anything else built on bleak.
+
+And when a scanner does run: **do not take the first device it finds.** Several
+devices can advertise the same service, and a tool that assumes one will tell
+you confidently about the wrong one. Match on something that identifies the
+device you mean.
+
+## 8. Corrections to `audio-entree.md`
 
 That note (29/10) says three things that no longer hold:
 
@@ -175,7 +264,7 @@ That note (29/10) says three things that no longer hold:
 3. Its conclusion "Bluetooth: do nothing for audio" still stands for *audio in*,
    but the wider "do nothing" deserves reopening.
 
-## 8. What is not settled
+## 9. What is not settled
 
 - **The real cost on an FM-1 is unmeasured**: neither the BLE interrupt
   durations nor the software AES-CCM. The 36 µs figure is from an emulator.
@@ -186,9 +275,16 @@ That note (29/10) says three things that no longer hold:
 - No official AC791N datasheet was found; the radio specifications come from the
   SDK's README, i.e. from the chip maker, which is solid but not a signed
   document.
+- **What makes the bring-up repeatable** is not understood (section 6, last
+  paragraph). Optimist's is; a firmware of mine that is not Optimist got the
+  radio advertising on one boot and silent on the next, from the same image.
+- The placement rule for the baseband RAM block is not written down anywhere
+  found; it was only observed that moving it breaks transmission.
 
 ## Sources
 
+- **Measured here, 03/11**: section 6, and the second and third traps of section
+  7. An FM-1, a Mac, Optimist built and installed, its console read over CDC.
 - Local: `~/fw-AC79_AIoT_SDK` (`README.md`, `LICENSE`, `cpu/wl82/liba/btctrler.a`,
   `btstack.a`, `include_lib/btstack/le/att.h`, `ble_api.h`,
   `apps/common/config/bt_profile_config.c`,
