@@ -36,7 +36,11 @@
  *           listens to the one the cursor rests on (30/10)
  *   SEL     on a cell: its block, in PATTERN; on the number: the PHRASE; on a
  *           reference: the phrase it plays (31/10); on a section's marker: its
- *           name, typed (31/10)
+ *           name, typed (31/10); on + NEW, the slot past the last phrase: an
+ *           empty phrase at the end of the song, the cursor following it (3/11)
+ *   + NEW   the list's last slot, grey and without a rule, as PATTERN's blocks
+ *           write it. Turning SELECT to the bottom reaches it; it is the whole
+ *           of what the cursor can do there, so every other button goes dark
  *   ENV     the SECTION of the phrases the SELECTION covers -- of the row under
  *           the cursor with none, of the whole section on its marker: CHOOSE
  *           SECTION, which is --, the song's sections and NEW (31/10). ENV is a
@@ -53,7 +57,7 @@
  *           then the other), and the same phrases again forget it (30/10). On a
  *           section's marker OP4 clears the section away and leaves its phrases
  *           (31/10)
- *   SEQ     on the number: a copy of the phrase below (on a cell: free, 29/10)
+ *   SEQ     on the number: a new empty phrase below (on a cell: free, 29/10)
  *   LFO     on the number: delete the phrase (twice) -- a reference's too. Never on
  *           a section's marker: LFO is there to ask twice before something is lost,
  *           and a section dissolved loses nothing (EDIT + OP4 does it, 31/10)
@@ -234,18 +238,31 @@ static void undo_arrangement(void)
         undo_bytes(song->sections, (uint32_t)song->section_count * sizeof song->sections[0]);
 }
 
-/* A copy of the phrase under the cursor, right below it. The name stays
- * with the original: a name marks one phrase. */
+/* A new phrase is born empty (3/11): it used to be a copy of the row the
+ * cursor stood on, and nothing says the next phrase wants the same blocks.
+ * Its section it does inherit -- that is where the row is, not what it
+ * holds, and a sectionless row dropped inside a section would cut it in
+ * two (song_sections_normalize). */
 static void insert_phrase(void)
 {
+    SongEntry *e;
+
     if (song->arrange_len >= SONG_ARRANGE_LEN)
         return;
     undo_arrangement();
     shift_refs(row + 1, 1, -1);
     for (int i = song->arrange_len; i > row + 1; i--)
         *entry_at(i) = *entry_at(i - 1);
-    *entry_at(row + 1) = *entry_at(row);
-    entry_at(row + 1)->name[0] = '\0';
+    e = entry_at(row + 1);
+    for (int t = 0; t < SONG_MAX_TRACKS; t++) {
+        e->pattern[t] = PATTERN_NONE;
+        e->level[t] = VOL_FULL;
+    }
+    e->steps = 0; /* AUTO */
+    e->name[0] = '\0';
+    e->kind = ENTRY_PHRASE;
+    e->ref_kind = e->ref_target = 0;
+    e->section = entry_at(row)->section;
     song->arrange_len++;
     song_sections_normalize(song);
     row++;
@@ -971,6 +988,13 @@ static void cp_draw(void)
  * nothing, is the trap; OP4 is his call and the better one. */
 static int sec_of(int r) { return r >= 0 && r < song->arrange_len ? entry_at(r)->section : SECTION_NONE; }
 static bool on_mark; /* the cursor stands on a section's marker, not on a phrase */
+/* And one slot past the last phrase stands the invitation (3/11): + NEW,
+ * where SEL opens an empty phrase at the end of the song. `row` stays on
+ * the last phrase while this is set, as on_mark leaves it on the phrase a
+ * marker names -- so every entry_at(row) below stays in bounds and only
+ * what must differ asks. Appending is the common move; a phrase anywhere
+ * else is INSERT ABOVE's, in the menu SEL will open on a number. */
+static bool on_new;
 
 static bool sec_first(int r) { return sec_of(r) != SECTION_NONE && (r == 0 || sec_of(r - 1) != sec_of(r)); }
 /* A REF SEC row is given a section of ITS OWN when a file is read
@@ -1019,25 +1043,45 @@ static int vis_rows(void) { return GRID_ROWS - coat_rows(); }
  * "one visible row, one phrase" the day a marker exists. */
 static int slot_row[GRID_ROWS];
 static bool slot_mark[GRID_ROWS];
+static bool slot_new[GRID_ROWS]; /* the invitation, past the last phrase */
 static int slots;
 static void lay_out(int first)
 {
     slots = 0;
     for (int r = first; r < song->arrange_len && slots < vis_rows(); r++) {
         if (sec_opens(r)) {
-            slot_row[slots] = r, slot_mark[slots] = true;
+            slot_row[slots] = r, slot_mark[slots] = true, slot_new[slots] = false;
             if (++slots >= vis_rows())
                 break;
         }
-        slot_row[slots] = r, slot_mark[slots] = false, slots++;
+        slot_row[slots] = r, slot_mark[slots] = false, slot_new[slots] = false, slots++;
+    }
+    /* The invitation closes the list, but only once the last phrase is on
+     * the page: scrolled above it, the page is full of phrases and the row
+     * it would take is a phrase's. follow_marked pushes `top` until it fits. */
+    if (slots < vis_rows()) {
+        slot_row[slots] = song->arrange_len, slot_mark[slots] = false, slot_new[slots] = true;
+        slots++;
     }
 }
+static int slot_of_new(void)
+{
+    for (int v = 0; v < slots; v++)
+        if (slot_new[v])
+            return v;
+    return -1;
+}
+/* The slots the song itself fills. Pulling the view up to fill the grid
+ * counts in these: the invitation is a row of the page, but it is not a
+ * phrase, and a page "full" of it would cost the ear a phrase it could
+ * have seen while the song plays. */
+static int phrase_slots(void) { return slots - (slot_of_new() >= 0 ? 1 : 0); }
 /* The slot a phrase is in, -1 when it is off the page; `mark` asks for
  * its marker instead. */
 static int slot_of(int r, bool mark)
 {
     for (int v = 0; v < slots; v++)
-        if (slot_row[v] == r && slot_mark[v] == mark)
+        if (slot_row[v] == r && slot_mark[v] == mark && !slot_new[v])
             return v;
     return -1;
 }
@@ -1045,6 +1089,17 @@ static int slot_of(int r, bool mark)
  * until the row the cursor is on has a slot. */
 static void follow_marked(void)
 {
+    if (on_new) { /* the list is one longer than the song while it is there */
+        int at = song->arrange_len;
+        grid_follow(&at, &top, song->arrange_len + 1, vis_rows());
+        for (;;) {
+            lay_out(top);
+            if (slot_of_new() >= 0 || top >= song->arrange_len)
+                break;
+            top++;
+        }
+        return;
+    }
     grid_follow(&row, &top, song->arrange_len, vis_rows());
     for (;;) {
         lay_out(top);
@@ -1068,7 +1123,7 @@ static void follow_play_marked(int play)
         return;
     top = play;
     lay_out(top);
-    while (top > 0 && slots < vis_rows()) {
+    while (top > 0 && phrase_slots() < vis_rows()) {
         int up = top - 1;
         lay_out(up);
         if (slot_of(play, false) < 0)
@@ -1353,9 +1408,11 @@ static int strike_alpha(const SongEntry *e, int track)
 }
 
 /* What the twelve do on SONG, under the cursor where it is now (app/coat.h).
- * The cursor stands on one of four things and three buttons change with it:
+ * The cursor stands on one of five things and three buttons change with it:
  * SEL, which means something different on each, and SEQ and LFO, which are
- * the phrase's own and dark anywhere else. The rest hold wherever you are.
+ * the phrase's own and dark anywhere else. The rest hold wherever you are --
+ * except on the invitation, where the keys play nothing and a section has no
+ * phrase to hold, so EDIT and ENV go dark too.
  *
  * A word longer than its cell is dropped by the coat rather than cut, so
  * these are chosen to fit: whatever does not, says less or says nothing. */
@@ -1372,6 +1429,11 @@ static const char *const *coat_words(void)
     w[PB_PLAY] = player_playing() ? "STOP" : "PLAY";
     w[PB_ARP] = w[PB_REC] = 0; /* SONG has nothing for them, and the dark says so */
     w[PB_SEQ] = w[PB_LFO] = 0;
+    if (on_new) { /* the invitation: one thing to do, and the rest says so */
+        w[PB_SEL] = "NEW";
+        w[PB_ENV] = w[PB_EDIT] = 0;
+        return w;
+    }
     if (on_mark)
         w[PB_SEL] = "NAME";
     else if (col >= 0)
@@ -1380,7 +1442,7 @@ static const char *const *coat_words(void)
         w[PB_SEL] = "GO TO";
     else {
         w[PB_SEL] = "STEPS";
-        w[PB_SEQ] = "COPY";   /* the phrase below */
+        w[PB_SEQ] = "NEW";    /* an empty phrase below */
         w[PB_LFO] = "DELETE"; /* twice */
     }
     return w;
@@ -1424,12 +1486,25 @@ static void draw(void)
         int r = slot_row[v];
         const SongEntry *e = entry_at(r);
         bool band, asked;
+        if (slot_new[v]) { /* the invitation: + NEW, as PATTERN's block list writes it */
+            if (on_new)
+                gfx_slab(2, grid_y(v) + 1, PLAT_W - 4 - (n + 1 > vis_rows() ? 6 : 0), GRID_ROW - 2, C_ACCENT, 255);
+            /* grey, not white: it is there and not the point until it is
+               wanted (theme.h names C_DIM for it), and the band gives it all
+               the presence it needs once the cursor arrives. Chosen on the
+               panel, 3/11. And no rule, as the marker has none: what is not
+               a phrase does not wear the phrase grid. */
+            gfx_text(F_COND20, 16, grid_base(v), "+ NEW", on_new ? C_ON_ACC : C_DIM);
+            if (song->arrange_len >= SONG_ARRANGE_LEN) /* as PATTERN says FULL */
+                gfx_text(F_COND20, 84, grid_base(v), "FULL", on_new ? C_ON_ACC : C_MUTE);
+            continue;
+        }
         if (slot_mark[v]) { /* the marker that opens a section, over the row it names */
             draw_marker(v, sec_of(r), on_mark && r == row);
             continue; /* and no rule: the marker crosses the whole width */
         }
         grid_rule(v);
-        band = r == row && !on_mark;
+        band = r == row && !on_mark && !on_new;
         asked = band && col < 0 && ask_delete;
         if (band)
             gfx_slab(2, grid_y(v) + 1, PLAT_W - 4 - (n > vis_rows() ? 6 : 0), GRID_ROW - 2,
@@ -1514,7 +1589,7 @@ static void draw(void)
             gfx_frame_rect(GRID_CELL_X + (c0 - left) * CELL_W, grid_y(v0), nc * CELL_W,
                            grid_y(v1) + GRID_ROW - grid_y(v0), C_FX, 255);
     }
-    grid_bar_rows(top, n, vis_rows());
+    grid_bar_rows(top, n + 1, vis_rows()); /* the invitation is a row of the list */
     coat_draw(coat_words(), ui_shifted(&shift));
 }
 
@@ -1526,7 +1601,7 @@ void songview_open(bool reset_cursor)
 {
     if (reset_cursor)
         row = top = col = left = 0;
-    on_mark = false;
+    on_mark = on_new = false;
     if (row >= song->arrange_len)
         row = song->arrange_len - 1;
     if (col >= song->num_tracks)
@@ -1559,6 +1634,8 @@ static uint32_t usable(void)
      * SELECTION is on is OP5's own light (ui.h, 31/10) */
     uint32_t u = 1u << PB_FX | 1u << PB_GLO | 1u << PB_HOME | 1u << PB_PLAY | 1u << PB_SAVE | 1u << PB_ENV |
                  (shift.latch ? 1u << PB_EDIT : 0u);
+    if (on_new) /* SEL makes the phrase; a section wants a phrase to hold first */
+        return (u & ~(1u << PB_ENV)) | 1u << PB_SEL;
     if (on_mark) /* SEL names it; ENV is how its rows change; nothing else is its */
         return u | 1u << PB_SEL;
     if (is_ref(row)) /* LFO deletes the row, SEL goes to what it plays */
@@ -1642,17 +1719,21 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
                 on_mark = false;
             else if (row + 1 < song->arrange_len)
                 row++, on_mark = sec_opens(row);
+            else
+                on_new = true; /* the slot past the last phrase */
             d--;
         }
         while (d < 0) {
-            if (!on_mark && sec_opens(row))
+            if (on_new)
+                on_new = false;
+            else if (!on_mark && sec_opens(row))
                 on_mark = true;
             else if (row > 0)
                 row--, on_mark = false;
             d++;
         }
         row = row < 0 ? 0 : row >= song->arrange_len ? song->arrange_len - 1 : row;
-        if (on_mark) /* a marker has no cells: the cursor is on it, whole */
+        if (on_mark || on_new) /* neither has cells: the cursor is on it, whole */
             col = -1;
     }
     col += in->enc[PE_K2];
@@ -1670,7 +1751,8 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
     /* KNOB 4 is how much, wherever the cursor is: the cell's level, the
      * phrase's length on its number, the reference's on either of its two
      * places (31/10). KNOB 3 beside it is what the thing IS. */
-    if (in->enc[PE_K4] && !selecting && on_mark)
+    if (on_new) { /* nothing to turn: the row is an invitation, not a phrase */
+    } else if (in->enc[PE_K4] && !selecting && on_mark)
         turn_span(in->enc[PE_K4]);
     else if (in->enc[PE_K4] && !selecting && is_ref(row))
         turn_ref_steps(in->enc[PE_K4]);
@@ -1680,7 +1762,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         turn_level(in->enc[PE_K4]);
     else if (btns || in->enc[PE_SELECT] || in->enc[PE_K1] || in->enc[PE_K2] || in->enc[PE_K3])
         level_said = false;
-    if (in->enc[PE_K3] && !selecting) {
+    if (in->enc[PE_K3] && !selecting && !on_new) {
         if (on_mark) {
             /* a section has no other kind to be: KNOB 3 says nothing here */
         } else if (is_ref(row) && col >= 0) {
@@ -1700,7 +1782,18 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
      * number, the block itself in PATTERN on a cell -- the panel of blocks
      * that stood between them is gone, KNOB 3 chooses and the ear says which
      * (30/10). An empty cell has no block to open. */
-    if (PRESSED(PB_SEL) && on_mark) { /* SEL on a NAME is the namer, here as in PROJECT */
+    if (PRESSED(PB_SEL) && on_new) {
+        /* The phrase lands after the last one and the cursor follows it, so
+         * the hand carries on in the song instead of on the invitation. It
+         * is born empty, and takes the last phrase's section: a song ending
+         * inside one grows inside it (insert_phrase). */
+        int was = song->arrange_len;
+        insert_phrase();
+        if (song->arrange_len > was)
+            on_new = false;
+        else
+            said = "FULL"; /* red, by its first letter (grid_said_ink) */
+    } else if (PRESSED(PB_SEL) && on_mark) { /* SEL on a NAME is the namer, here as in PROJECT */
         namer_open(song->sections[sec_of(row)], SONG_NAME_LEN);
         sec_naming = true;
     } else if (PRESSED(PB_SEL) && is_ref(row)) {
@@ -1722,7 +1815,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
         else if (entry_at(row)->pattern[col] < TRACK_MAX_PATTERNS)
             out = SONGVIEW_PATTERN;
     }
-    if (PRESSED(PB_ENV)) { /* ENV: envelop these phrases in a section */
+    if (PRESSED(PB_ENV) && !on_new) { /* ENV: envelop these phrases in a section */
         audition_end();
         settle = 0;
         if (trying)
@@ -1733,7 +1826,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             return SONGVIEW_STAY;
         }
     }
-    if (PRESSED(PB_SEQ) && !is_ref(row) && col < 0 && !on_mark)
+    if (PRESSED(PB_SEQ) && !is_ref(row) && col < 0 && !on_mark && !on_new)
         insert_phrase();
     /* EDIT is the shift and nothing else, and a tap of it is that shift's
      * CAPS LOCK (31/10): the black keys stay commands until EDIT is tapped
@@ -1744,12 +1837,12 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
      * wanted. MONO, in either: the track alone, or muted (ui.h). */
     if (ui_shift(&shift, in, btns, keys, selecting, col, &said))
         shift.latch = !shift.latch;
-    if ((keys & 1u << UI_OP_SEL) && (selecting || ui_shifted(&shift)) && !on_mark) {
+    if ((keys & 1u << UI_OP_SEL) && (selecting || ui_shifted(&shift)) && !on_mark && !on_new) {
         selecting = !selecting;
         anchored = selecting;
         an_row = row, an_col = col;
     }
-    if (selecting || ui_shifted(&shift)) {
+    if ((selecting || ui_shifted(&shift)) && !on_new) {
         if (keys & 1u << UI_OP_COPY)
             sel_op(UI_OP_COPY);
         if (keys & 1u << UI_OP_PASTE)
@@ -1762,7 +1855,7 @@ int songview_frame(const PlatInput *in, int *entry, int *track)
             sel_op(UI_KEY_LOOP);
         keys = 0; /* the keyboard is the commands' here: no note is played */
     }
-    if (PRESSED(PB_LFO) && col < 0 && !on_mark) { /* LFO deletes a phrase, and only that */
+    if (PRESSED(PB_LFO) && col < 0 && !on_mark && !on_new) { /* LFO deletes a phrase, and only that */
         if (ask_delete)
             delete_phrase();
         ask_delete = !ask_delete;

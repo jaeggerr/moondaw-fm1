@@ -4146,3 +4146,82 @@ l'autre sens au moment de décider — « Nothing names it. » en vert, ou « A 
 NAMES IT. » en rouge, qui est la seule des deux qui vaut un avertissement.
 
 Pas encore jugé sur le panneau.
+
+## 2026-11-03 — une nouvelle phrase naît vide
+
+`SEQ` sur le numéro d'une phrase ajoutait une **copie** de la ligne où était le
+curseur. Personne n'avait choisi ça : la ligne est dans le commit du 28/10 sous
+l'étiquette « Buttons with no mockup yet, provisional », posée pour que l'opération
+reste atteignable pendant que les trois écrans étaient reconstruits. Le 3/11 elle
+est jugée à l'usage, et le verdict est simple — rien ne dit que la phrase suivante
+veut les mêmes blocs. Si on veut une copie, on copie ; par défaut on part de rien.
+
+Ce que la nouvelle ligne **n'hérite pas** : les blocs (`PATTERN_NONE` partout),
+les niveaux (`VOL_FULL`), la longueur (`steps = 0`, donc AUTO), le nom.
+
+Ce qu'elle hérite, et c'est le seul piège : la **section**. Une section est une
+suite de lignes voisines portant le même index, et `song_sections_normalize`
+coupe la suite dès qu'une ligne l'interrompt. Une ligne sans section glissée au
+milieu d'une section la couperait donc en deux, et les lignes d'après perdraient
+la leur. La section n'est pas ce que la ligne contient, c'est l'endroit où elle
+est : elle se prend sur la voisine.
+
+Reste à décider, et discuté le 3/11 sans être construit : `SEQ` et `LFO` sortent
+(COPY, PASTE, CUT, CLEAR sur un numéro agissent déjà sur la phrase entière,
+`sel_rect` étendant la sélection à toutes les pistes dès que le curseur est sur
+le numéro) ; une ligne `NEW` en bas de la grille pour allonger le morceau par la
+fin ; `SEL` sur le numéro ouvre un menu — INSERT ABOVE, supprimer, vider — avec
+le footer qui enseigne le raccourci, comme les lignes SPEED et METRONOME de GLO.
+La distinction à tenir : **vider** une phrase (EDIT + OP4, la ligne reste) n'est
+pas la **supprimer** (la ligne part, tout ce qui suit remonte, les REF suivent).
+
+Jugé sur le panneau : pas encore.
+
+## 2026-11-03 — la ligne qui invite, au bout de la liste
+
+Ajouter une phrase se faisait avec `SEQ` sur un numéro — un raccourci posé en
+dépannage le 28/10, jamais choisi, et introuvable sans le manuel. Et il ne
+pouvait rien insérer avant la première ligne, puisqu'il insérait toujours en
+`row + 1`.
+
+Décidé sur le panneau le 3/11, après avoir dessiné quatre pages : une ligne de
+plus au bout de la liste des phrases, `+ NEW`, sur laquelle `SEL` ouvre une
+phrase vide à la fin du morceau. L'opération la plus fréquente devient visible
+sur l'écran de travail : rien à connaître, rien à ouvrir.
+
+Trois choses sont venues du code plutôt que de l'idée, et valent mieux qu'elle :
+
+1. **`+ NEW` existait déjà.** La liste des blocs de PATTERN et les menus
+   l'écrivent ainsi, à `x = 16` en CONDENSED 20, et `theme.h` nomme même sa
+   couleur : `C_DIM`, « what is there but not the point: + NEW, empty ». Ce
+   n'était pas un motif à inventer. Gris et non blanc, jugé sur le panneau
+   contre la version blanche de PATTERN : la ligne est du mobilier permanent au
+   bas de chaque morceau, et le bandeau vert lui donne toute sa présence quand
+   le curseur arrive.
+2. **Elle ne porte pas de filet.** `+ NEW` fait 46 px, le filet qui sépare le
+   numéro des cellules est à 47. Mais SONG a déjà une ligne sans filet — le
+   marqueur de section, « the marker crosses the whole width ». Ce qui n'est pas
+   une phrase ne porte pas la grille des phrases, et ça la fait lire comme une
+   invitation plutôt que comme une phrase vide.
+3. **`row` ne quitte jamais la dernière phrase.** Le curseur sur l'invitation est
+   un drapeau, `on_new`, exactement comme `on_mark` laisse `row` sur la phrase
+   qu'un marqueur nomme. Tous les `entry_at(row)` du fichier restent donc dans
+   les bornes, et seuls les gestes qui doivent différer posent la question. Le
+   dessin inverse — `row == arrange_len` — aurait demandé une garde partout.
+
+Deux conséquences qu'il a fallu trancher :
+
+- **Tourner SELECT à fond atteint l'invitation**, plus la dernière phrase. C'est
+  ce que fait la liste des blocs de PATTERN, donc c'est juste ; trois tests qui
+  visaient « la dernière phrase » en tournant à fond ont été corrigés, pas le
+  code.
+- **Elle ne remplit pas la page pendant la lecture.** `follow_play_marked`
+  remonte la vue tant que la grille n'est pas pleine ; si l'invitation comptait,
+  elle volerait à l'œil une phrase du morceau en train de jouer. Le remplissage
+  compte `phrase_slots()`, pas `slots`.
+
+`SEQ` et `LFO` restent pour l'instant : ils sont encore le seul chemin vers
+l'insertion au milieu et la suppression, jusqu'à ce que le menu de `SEL` sur un
+numéro existe — INSERT ABOVE, supprimer, vider.
+
+Jugé sur le panneau : la maquette oui, le firmware pas encore.

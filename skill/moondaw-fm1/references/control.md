@@ -120,6 +120,7 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `SEL on a number` | the phrase, step by step |
 | `SEL on a REF` | go to what it plays |
 | `SEL on a marker` | name the section |
+| `SEL on + NEW` | a phrase at the end, empty |
 | `EDIT held` | black keys: commands |
 | `EDIT tapped` | the same, as a caps lock |
 | `  tapped again` | out |
@@ -132,7 +133,7 @@ What each screen answers, as HELP on the device says it. The words are the machi
 | `OP6` | loop these phrases |
 | `OP6, none stretched` | a loop's end, then other |
 | `MONO` | solo; held: mute |
-| `SEQ on a number` | copy the phrase below |
+| `SEQ on a number` | a new phrase below, empty |
 | `LFO on a number` | delete the phrase: twice |
 | `keys` | the track's instrument |
 | `OCT- OCT+` | the keyboard's octave |

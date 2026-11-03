@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SONG's hands, without a screen: the arrangement is edited as the
  * panel would (the grid of 28/10: SELECT the phrase, KNOB 2 the track or
- * the number, KNOB 3 the value, SEL the block or the section, SEQ a copy of
- * the phrase) and read back. */
+ * the number, KNOB 3 the value, SEL the block or the section, SEQ an
+ * empty phrase) and read back. */
 #include <stdio.h>
 #include <string.h>
 
@@ -280,8 +280,9 @@ int main(void)
 
     enc(PE_K2, -1);           /* the phrase's number */
     press(PB_SEQ);
-    CHECK("SEQ on the number copies the phrase right below, without its name",
-          app_song.arrange_len == 4 && E(1).pattern[0] == 0 && !E(1).name[0] && songview_entry() == 1);
+    CHECK("SEQ on the number opens an empty phrase right below, named by nothing",
+          app_song.arrange_len == 4 && E(1).pattern[0] == PATTERN_NONE && E(1).level[0] == VOL_FULL &&
+              E(1).steps == 0 && E(1).kind == ENTRY_PHRASE && !E(1).name[0] && songview_entry() == 1);
     CHECK("and the reference still points at the phrase it pointed at",
           E(3).kind == ENTRY_REF && E(3).ref_target == 2);
     press(PB_LFO);
@@ -289,6 +290,7 @@ int main(void)
     press(PB_LFO);
     CHECK("two delete the phrase, and the reference follows its target up",
           app_song.arrange_len == 3 && E(2).ref_target == 1);
+
 
     enc(PE_SELECT, -5);
     enc(PE_K4, 1);
@@ -403,7 +405,7 @@ int main(void)
         undo_reset(&app_song); /* the journal: nothing above here used it */
         enc(PE_SELECT, -20);  /* phrase 00, the top of the song */
         enc(PE_K2, -1);       /* its number */
-        press(PB_SEQ);        /* two copies below it: something to point at */
+        press(PB_SEQ);        /* two empty phrases below it: something to point at */
         press(PB_SEQ);
         enc(PE_SELECT, -20);
         before = app_song.arrange_len;
@@ -492,7 +494,8 @@ int main(void)
         int base, r0;
 
         undo_frame(t += 1000);
-        enc(PE_SELECT, 40); /* the last phrase, then three fresh ones under it */
+        enc(PE_SELECT, 40); /* the bottom is the invitation; one back up is the phrase */
+        enc(PE_SELECT, -1);
         enc(PE_K2, -1);
         while (app_song.arrangement[songview_entry()].kind == ENTRY_REF)
             enc(PE_SELECT, -1);
@@ -507,6 +510,7 @@ int main(void)
 
         /* EDIT on a number takes whole phrases; the cursor stretches it */
         enc(PE_SELECT, 40);
+        enc(PE_SELECT, -1); /* off the invitation first */
         enc(PE_SELECT, -2);
         enc(PE_K2, -1);
         sel_mode();
@@ -752,6 +756,46 @@ int main(void)
         CHECK("a key on a cell is heard in the track's mix, hard left and not in the middle",
               left > 0 && right == 0);
         player_note_off();
+    }
+    {   /* + NEW, the slot past the last phrase (3/11). The cursor stands on
+         * it with `row` still on the last phrase, so what tells the two
+         * apart is what SEL does: on the invitation it makes a phrase, on a
+         * number it goes down into PHRASE. Last of all the checks, since it
+         * leaves the song one phrase longer than it found it. */
+        int was = app_song.arrange_len, n;
+
+        enc(PE_SELECT, -40);  /* phrase 00, which holds blocks of its own */
+        enc(PE_K2, -1);       /* its number */
+        press(PB_SEL);
+        CHECK("SEL on a phrase's number goes down into it", last == SONGVIEW_PHRASE);
+
+        enc(PE_SELECT, 60);   /* to the bottom: the invitation */
+        press(PB_SEQ);
+        CHECK("SEQ on the invitation makes nothing: it is not a phrase",
+              app_song.arrange_len == was);
+        press(PB_LFO), press(PB_LFO);
+        CHECK("and neither does LFO, twice", app_song.arrange_len == was);
+        n = (int)E(was - 1).steps;
+        enc(PE_K4, 3);
+        CHECK("KNOB 4 turns nothing there: the last phrase keeps its length",
+              (int)E(was - 1).steps == n);
+
+        press(PB_SEL);
+        CHECK("SEL on it opens an empty phrase at the end of the song",
+              app_song.arrange_len == was + 1 && E(was).pattern[0] == PATTERN_NONE &&
+                  E(was).steps == 0 && E(was).kind == ENTRY_PHRASE && !E(was).name[0]);
+        CHECK("and stays on the screen, the cursor following the phrase it made",
+              last == SONGVIEW_STAY && songview_entry() == was);
+
+        enc(PE_SELECT, 9);    /* as far down as the knob goes */
+        press(PB_SEL);
+        CHECK("the cursor stops on the invitation and never past it",
+              app_song.arrange_len == was + 2);
+
+        enc(PE_SELECT, -1);   /* off it, onto the phrase just made */
+        press(PB_SEL);
+        CHECK("one detent up leaves it: SEL goes down into the phrase again",
+              last == SONGVIEW_PHRASE);
     }
     printf("song test: %s\n", fails ? "FAIL" : "ok");
     return fails ? 1 : 0;
