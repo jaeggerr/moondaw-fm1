@@ -57,46 +57,90 @@ core/drum_tables.h: tools/gen_drum_tables.c
 	@mkdir -p build
 	$(CC) tools/gen_drum_tables.c -lm -o build/gen_drum_tables && build/gen_drum_tables > $@
 
-test: sim web songedit export
+# `make test` runs for minutes, and a run with no voice is a run you cannot
+# leave (3/11). Every step says its place and the time since the start; the
+# count is kept in a file because each recipe line is its own shell. STEPS
+# out of step with the steps below only mislabels the banner -- it can never
+# change a result.
+#
+# Measured 3/11, builds already up to date: 2m42s in all. The long ones are
+# remotetest 24s, fm_render 17s, vox_test 13s, persist_test and menu_test 11s;
+# nothing else reaches 10s. A cold tree adds the four builds, not measured.
+STEPS := 23
+T0    := build/.test-t0
+STEP  := build/.test-step
+
+define say
+@mkdir -p build; i=$$(( $$(cat $(STEP) 2>/dev/null || echo 0) + 1 )); echo $$i > $(STEP); \
+ printf '\n\033[36m== [%2d/%d] %-16s\033[0m %s\n' $$i $(STEPS) "$(1)" \
+   "$$(printf '%dm%02ds' $$(( ($$(date +%s) - $$(cat $(T0))) / 60 )) $$(( ($$(date +%s) - $$(cat $(T0))) % 60 )))"
+endef
+
+test-start:
+	@mkdir -p build; date +%s > $(T0); echo 0 > $(STEP); \
+	  printf '\n\033[36m== make test\033[0m  %d steps, about 3 min with the builds up to date; longest step remotetest, 25s\n' $(STEPS); \
+	  printf '   building sim, web, songedit, export first -- they say nothing until done\n'
+
+test: test-start sim web songedit export
+	$(call say,sim selftest)
 	SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy build/sim/moondaw-fm1 --selftest build/sim/selftest.bmp $(SELFTEST_SONG)
+	$(call say,web)
 	node platform/web/test.mjs
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
+	$(call say,pattern_test)
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/pattern_test.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/coat.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/pattern_test
 	build/pattern_test
+	$(call say,store_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/store_test.c core/store.c -o build/store_test
 	build/store_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/midi_test.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/midi_test
+	$(call say,midi_test)
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/midi_test.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/coat.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c $(CORE) -o build/midi_test
 	build/midi_test
+	$(call say,persist_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/persist_test.c app/app.c $(UI) $(CORE) -o build/persist_test
 	build/persist_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/song_test
+	$(call say,song_test)
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/song_test.c app/songview.c app/grid.c app/coat.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/song_test
 	build/song_test
+	$(call say,instrument_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/instrument_test.c app/instrument.c app/namer.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c core/bank.c core/store.c -o build/instrument_test
 	build/instrument_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/mixer_test
+	$(call say,mixer_test)
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/mixer_test.c app/mixer.c app/grid.c app/coat.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/mixer_test
 	build/mixer_test
+	$(call say,project_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/project_test.c app/project.c app/namer.c app/grid.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/project_test
 	build/project_test
+	$(call say,phrase_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/phrase_test.c app/phrase.c app/grid.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/phrase_test
 	build/phrase_test
-	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/undo_test
+	$(call say,undo_test)
+	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/undo_test.c app/phrase.c app/songview.c app/pattern.c app/syllable.c app/chords.c app/grid.c app/coat.c app/namer.c app/edit.c app/undo.c app/loop.c app/ui.c app/gfx.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/undo_test
 	build/undo_test
+	$(call say,link_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/link_test.c app/link.c core/store.c core/bank.c core/sampler.c core/song.c -o build/link_test
 	build/link_test
+	$(call say,linktest)
 	tests/linktest.sh $(MOONDAW)/songs/KIDS.trk
+	$(call say,remotetest)
 	UI="$(UI)" CORE="$(CORE)" tests/remotetest.sh $(MOONDAW)/songs/KIDS.trk
+	$(call say,menu_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/menu_test.c app/app.c $(UI) $(CORE) -o build/menu_test
 	build/menu_test
+	$(call say,vox_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/vox_test.c app/app.c $(UI) $(CORE) -o build/vox_test -lm
 	@V="tests/vox-styles.trk"; for s in robot-demo LEOMOTEUR DAFT-PUNK DAFT-PUNK-EN; do \
 	   [ -f $(MOONDAW)/songs/$$s.trk ] && V="$$V $(MOONDAW)/songs/$$s.trk"; done; build/vox_test $$V
+	$(call say,drum_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/drum_test.c core/song.c core/trk.c core/synth.c core/fx.c core/player.c core/drum.c core/sampler.c -o build/drum_test
 	build/drum_test
+	$(call say,sampler_test)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/sampler_test.c $(CORE) -o build/sampler_test -lm
 	@if ls $(MOONDAW)/instruments/tr909/*.wav >/dev/null 2>&1 && [ -f $(MOONDAW)/songs/KIDS.trk ]; then \
 	   python3 tools/fm1_samples.py pack build/test-bank.bin $(MOONDAW)/instruments/tr909/*.wav >/dev/null && \
 	   rm -rf build/test-bank && python3 tools/fm1_samples.py get --bank build/test-bank.bin -o build/test-bank >/dev/null && \
 	   build/sampler_test build/test-bank.bin build/test-bank $(MOONDAW)/songs/KIDS.trk; \
 	 else build/sampler_test; fi
+	$(call say,trkcheck)
 	$(CC) $(CFLAGS) -fsanitize=address,undefined tests/trkcheck.c core/song.c core/trk.c -o build/trkcheck
 # A pipeline exits with the status of its LAST command, so a failure read
 # through `cut` or `tail` came back green -- thirteen real round-trip
@@ -106,14 +150,19 @@ test: sim web songedit export
 	   build/trkcheck $(MOONDAW)/songs/*.trk > build/trkcheck.log || { cat build/trkcheck.log; exit 1; }; \
 	   cut -c1-72 build/trkcheck.log; \
 	 else echo "trkcheck: no songs in $(MOONDAW)/songs, skipped"; fi
+	$(call say,songedit roundtrip)
 	@node web/songedit/test/roundtrip.mjs > build/roundtrip.log 2>&1 || { cat build/roundtrip.log; exit 1; }
 	@tail -4 build/roundtrip.log
 # The export page's WAVs against tests/fm_render.c -- the same engine, native:
 # the test asks for them sample for sample, so "what comes out of the file is
 # what came out of the speaker" is a measurement and not a promise.
+	$(call say,fm_render)
 	$(CC) $(CFLAGS) tests/fm_render.c $(CORE) -o build/fm_render
 	node web/export/test/render.mjs
+	$(call say,skill reference)
 	python3 tools/gen_skill.py --check
+	@printf '\n\033[32m== make test: all green\033[0m in %s\n\n' \
+	  "$$(printf '%dm%02ds' $$(( ($$(date +%s) - $$(cat $(T0))) / 60 )) $$(( ($$(date +%s) - $$(cat $(T0))) % 60 )))"
 
 difftest:
 	MOONDAW=$(MOONDAW) tests/difftest.sh 30 $(MOONDAW)/songs/*.trk tests/vox-styles.trk
@@ -121,4 +170,4 @@ difftest:
 clean:
 	rm -rf build
 
-.PHONY: sim web songedit export test difftest clean
+.PHONY: sim web songedit export test-start test difftest clean

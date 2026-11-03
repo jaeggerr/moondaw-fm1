@@ -12,3 +12,6 @@ docs/**/*.wav
 
 # the session folder of the editor (worktrees, local settings)
 /.claude/
+
+# what the python in tools/ leaves behind when it is imported
+tools/__pycache__/
