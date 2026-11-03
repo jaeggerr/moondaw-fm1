@@ -7,6 +7,6 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define MOONDAW_VERSION "0.3"
+#define MOONDAW_VERSION "0.4"
 
 #endif
