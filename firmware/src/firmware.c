@@ -529,11 +529,22 @@ static void fm1_main(void)
         remote_boot_info = plat_boot_info;
     if (&player_clock)
         player_clock = fm1_us;
-#if FM1_CPU1
     /* The rails as M-VAVE's firmware sets them (under load at the boot loader's, some units misread the flash
-     * and the SRAM), then the second core: at power-on, before the audio and the timers, interrupts off. */
+     * and the SRAM): at power-on, before the audio and the timers, interrupts off.
+     *
+     * Outside FM1_CPU1 since 03/11. They were raised only in the two-core build, because the misreads that
+     * prompted it were the second core's -- but MOONDAW_CPU1=0 is the fallback build, the one that runs when
+     * the second core could not be trusted, and it was the one left at the boot loader's 1.40 V and 1.26 V.
+     * The flash and the SRAM are read by one core as much as by two. Up only, VDC14 first: SYSVDD is
+     * regulated from it.
+     *
+     * This is the short form. Stock's own start-up does more -- it hands the 1.4 V rail from the LDO to the
+     * DC-DC, sets VD14_HD_SEL and VDDIOM, arms the 2.6 V low-voltage detector, and biases the Bluetooth
+     * DC-DC (P3_ANA_CON7 / CON8) -- and anything that turns the radio on wants all of it
+     * (docs/bluetooth.md, "Turning it on"). */
     fm1_vdc14_raise(7);
     fm1_sysvdd_raise(15);
+#if FM1_CPU1
     fm1_cpu1_bar_build(build_id());
     {
         uint32_t f = irq_save();
